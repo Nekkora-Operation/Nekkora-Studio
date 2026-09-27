@@ -1,3 +1,91 @@
-# Nekkora Studio
+# Nekkora Studio — Nekkora Swing UI
 
-Repositório do Nekkora Studio e da sua base visual (Nekkora Swing UI).
+Base visual do **Nekkora Studio** em Java Swing: um design system completo em que **nenhuma tela decide cor,
+fonte, borda, espaçamento ou comportamento visual por conta própria**. As telas escolhem *intenções*
+(`NekkoraButton.Variant.PRIMARY`, `Status.SUCCESS`, `TypeStyle.H2`, `Spacing.SPACE_6`) e a biblioteca decide
+a aparência a partir dos tokens do tema ativo.
+
+![Tela Studio fictícia — Sakura Dark](docs/img/studio-sakura-dark.png)
+
+| Midnight Dark | Porcelain Light | Sage Light |
+|---|---|---|
+| ![](docs/img/studio-midnight-dark.png) | ![](docs/img/studio-porcelain-light.png) | ![](docs/img/studio-sage-light.png) |
+
+## Módulos
+
+```
+nekkora-design-tokens   → tokens semânticos + 4 temas (sem Swing)
+nekkora-swing-ui        → tema/LaF, tipografia, ícones, marca, componentes e padrões genéricos de estúdio
+nekkora-swing-showcase  → "Nekkora Design System Showcase" + tela Studio fictícia
+(futuro) nekkora-studio-ui → peças específicas do Studio (canvas de processo, nós, ...)
+(futuro) Studio          → a aplicação
+```
+
+Camadas: **Tokens → Temas → Primitivas → Componentes → Padrões → Studio**. Detalhes em
+[docs/ARQUITETURA.md](docs/ARQUITETURA.md).
+
+## Requisitos
+
+- JDK 21+
+- Maven 3.9+ (ou o wrapper incluído: `./mvnw` / `mvnw.cmd`)
+
+## Comandos
+
+```bash
+./mvnw verify                      # compila + 71 testes (contraste, componentes, teclado, golden screenshots, lint)
+./showcase.sh                      # abre o Showcase (Windows: showcase.cmd)
+./showcase.sh --studio             # abre direto a tela Studio fictícia
+./showcase.sh --theme=midnight-dark --page=dados
+java -Dflatlaf.uiScale=1.5 -jar nekkora-swing-showcase/target/nekkora-showcase.jar   # simular 150% de DPI
+```
+
+Atalhos no Showcase: **Ctrl+Shift+T** alterna tema. Na tela Studio: **F5** executar, **Ctrl+S** salvar,
+**Ctrl+B / Ctrl+Alt+B** recolhem navegador/propriedades, **Ctrl+K** busca, **Shift+F10** menu de contexto.
+
+## Uso rápido
+
+```java
+public static void main(String[] args) {
+    SwingUtilities.invokeLater(() -> {
+        Nekkora.install();                              // tema salvo (ou Sakura Dark), fontes, tooltips
+        NekkoraFrame frame = new NekkoraFrame("Nekkora Studio");
+
+        NekkoraFormField nome = new NekkoraFormField("Nome", new NekkoraTextField("Ex.: Conciliação"))
+                .required().helper("Aparece na navegação.");
+        NekkoraButton salvar = NekkoraButton.primary("Salvar").withIcon(IconName.SAVE);
+
+        NekkoraStack form = NekkoraStack.vertical(Spacing.SPACE_6);
+        form.setPadding(Spacing.SPACE_8);
+        form.addAll(nome, new NekkoraStatusBadge(Status.RUNNING), salvar);
+
+        frame.getContentPane().add(form);
+        frame.sizeToScreen();
+        frame.setVisible(true);
+    });
+}
+
+ThemeManager.setTheme(NekkoraThemes.PORCELAIN_LIGHT);   // ao vivo, sem reiniciar
+```
+
+## Temas
+
+| Tema | Modo | Caráter |
+|---|---|---|
+| **Sakura Dark** (padrão) | escuro | identidade/autoral — rosa elegante sobre ameixa |
+| **Midnight Dark** | escuro | técnico/profissional |
+| **Porcelain Light** | claro | neutro/institucional |
+| **Sage Light** | claro | calmo e sofisticado |
+
+As paletas são as mesmas da `nekkora-lib` (web). Os tokens são derivados da paleta por regras de modo e
+**testados para contraste WCAG AA** (texto, ações, status, foco).
+
+## Documentação
+
+- [Arquitetura](docs/ARQUITETURA.md) — camadas, tokens, tema, FlatLaf como infraestrutura, DPI, acessibilidade.
+- [Componentes](docs/COMPONENTES.md) — catálogo da V1 e como usar.
+- [Contribuindo](docs/CONTRIBUINDO.md) — regra de contribuição, lint de design, testes, Definition of Done.
+
+## Licenças de fontes
+
+Sora, Inter e JetBrains Mono são distribuídas com a biblioteca sob a SIL Open Font License 1.1
+(`nekkora-swing-ui/src/main/resources/com/nekkora/ui/fonts/OFL-*.txt`).

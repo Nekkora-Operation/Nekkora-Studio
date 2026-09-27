@@ -1,0 +1,6 @@
+*.png binary
+*.ttf binary
+*.jar binary
+*.cmd text eol=crlf
+*.sh text eol=lf
+mvnw text eol=lf
