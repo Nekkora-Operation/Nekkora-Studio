@@ -24,6 +24,10 @@
   versionadas** (`golden/windows/` estava fora do Git antes desta missão e assim permaneceu). As de Linux, versionadas,
   não puderam ser verificadas nesta máquina; o único rótulo Sora da composição golden é o título do topo, sem nada à
   direita, então não se espera deslocamento — a confirmar no próximo build Linux.
+  *Atualização de 2026-10-14:* o golden Windows original passou a ser versionado, sem regeneração. No Linux (Docker),
+  a STUDIO-001 não altera a composição golden, e a folga de títulos funciona. O golden Linux só passa com JDK até o
+  21.0.10, por uma mudança de métrica do próprio JDK a partir do 21.0.11. Detalhes e recomendação em
+  `reports/studio-001-golden-baselines-report.md`.
 - **150%**: a tela disponível é 1920×1080 (área útil 1920×1032). A execução real a 150% usou 1920×1032 físicos
   (≈1280×688 lógicos); 1366×768 lógicos a 150% (2049×1152 físicos) não cabem nesta tela e foram verificados de forma
   headless por `Scale150Test`.

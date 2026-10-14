@@ -40,6 +40,10 @@ componentes de tipografia e os tokens. Copie o `DesignLintTest` para o módulo d
 - Mudança visual intencional ⇒ `./mvnw test -Dnekkora.golden.update=true` e revise as imagens em
   `nekkora-swing-ui/src/test/resources/golden/<sistema>/`. (Na primeira execução em Windows/macOS as
   imagens de referência daquele sistema são gravadas.)
+- Golden screenshots dependem da versão do JDK, não só do sistema: o golden Linux versionado corresponde ao
+  Temurin 21.0.10 ou anterior. A partir do 21.0.11, a métrica dos títulos em Sora mudou e o teste falha no Linux
+  sem nenhuma mudança de código. O golden Windows corresponde ao Microsoft OpenJDK 21.0.12. Diferença inesperada ⇒
+  compare primeiro o JDK com o do baseline, sem regenerar (ver `reports/studio-001-golden-baselines-report.md`).
 - Ícones: edite `tools/extra-icons.txt` (grade 24×24, `D` duo, `S` traço, `F` sólido) e rode
   `node tools/extract-icons.mjs <icons.tsx> tools/extra-icons.txt > .../nekkora-icons.txt` +
   `node tools/gen-icon-enum.mjs ... > .../IconName.java`.
