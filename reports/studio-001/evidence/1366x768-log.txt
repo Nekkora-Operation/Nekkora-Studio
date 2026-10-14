@@ -1,0 +1,38 @@
+Tela: java.awt.Rectangle[x=0,y=0,width=1920,height=1032] · flatlaf.uiScale=(padrão)
+Janela 1366x768, tema Sakura Dark
+OK    S001-001 abre sem login/licença, direto no Studio
+OK    S001-002 estado vazio, sem automações fictícias
+captura 1366x768-01-inicial-vazio.png (1366x768)
+captura 1366x768-02-dialogo-nova-automacao.png (1366x768)
+OK    S001-003 automação criada no domínio
+captura 1366x768-03-automacao-criada.png (1366x768)
+OK    S001-004 nome vazio mantém o diálogo aberto com mensagem
+captura 1366x768-04-validacao-nome-obrigatorio.png (1366x768)
+OK    S001-004 nada foi criado
+OK    S001-007 sessões na ordem
+captura 1366x768-05-multiplas-sessoes.png (1366x768)
+captura 1366x768-06-dialogo-nova-etapa.png (1366x768)
+OK    S001-009 sequência 01..07 na ordem do domínio
+OK    S001-009 numeração visual exibida 01..07
+captura 1366x768-07-sessoes-com-etapas.png (1366x768)
+foco após o clique: com.nekkora.ui.data.NekkoraList
+OK    S001-011 clique seleciona a etapa 04
+OK    S001-011 seleção por teclado atualiza propriedades
+captura 1366x768-08-propriedades-da-etapa.png (1366x768)
+OK    S001-012 diálogo de detalhes corresponde à etapa
+OK    S001-013 diálogo sem identificadores internos
+captura 1366x768-09-dialogo-detalhes-da-etapa.png (1366x768)
+OK    S001-018 Esc fecha e devolve o foco
+OK    S001-013 janela principal sem UUIDs
+OK    S001-016 Sakura Dark mantém 7 etapas e a seleção
+captura 1366x768-10-tema-sakura-dark.png (1366x768)
+OK    S001-016 Midnight Dark mantém 7 etapas e a seleção
+captura 1366x768-10-tema-midnight-dark.png (1366x768)
+OK    S001-016 Porcelain Light mantém 7 etapas e a seleção
+captura 1366x768-10-tema-porcelain-light.png (1366x768)
+OK    S001-016 Sage Light mantém 7 etapas e a seleção
+captura 1366x768-10-tema-sage-light.png (1366x768)
+OK    S001-021 aviso de perda ao fechar
+captura 1366x768-11-aviso-ao-fechar.png (1366x768)
+OK    S001-021 cancelar mantém o Studio aberto
+Fim: 0 falha(s).

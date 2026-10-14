@@ -17,7 +17,7 @@ Componentes nekkora-swing-ui        typography, button, input, container, naviga
                                     state, technical, file, workflow, search, brand, action
 Padrões     nekkora-swing-ui        studio: Workbench (Navegador | Área | Inspector), Navigator, Inspector,
                                     PropertiesGroup, WorkArea, StatusBar
-Studio      (futuro)                telas do produto + nekkora-studio-ui (canvas de processo etc.)
+Studio      nekkora-studio-*        domínio (Java puro), UI do produto e aplicação — ver docs/studio-001/
 ```
 
 Dependências só descem: tokens não conhecem Swing; a UI não conhece o domínio (Automation, Process,

@@ -16,10 +16,14 @@ a aparência a partir dos tokens do tema ativo.
 ```
 nekkora-design-tokens   → tokens semânticos + 4 temas (sem Swing)
 nekkora-swing-ui        → tema/LaF, tipografia, ícones, marca, componentes e padrões genéricos de estúdio
-nekkora-swing-showcase  → "Nekkora Design System Showcase" + tela Studio fictícia
-(futuro) nekkora-studio-ui → peças específicas do Studio (canvas de processo, nós, ...)
-(futuro) Studio          → a aplicação
+nekkora-swing-showcase  → "Nekkora Design System Showcase" + tela Studio fictícia (demonstração)
+nekkora-studio-domain   → modelo de automações: Automação → Sessões lógicas → Etapas (Java puro)
+nekkora-studio-ui       → peças visuais do Studio (navegação, automação, sessões, etapas, propriedades, diálogos)
+nekkora-studio-app      → a aplicação Nekkora Studio (jar executável)
 ```
+
+O Nekkora Studio funcional nasceu na missão STUDIO-001 — veja [docs/studio-001](docs/studio-001/architecture.md) e o
+[relatório](reports/studio-001-final-report.md).
 
 Camadas: **Tokens → Temas → Primitivas → Componentes → Padrões → Studio**. Detalhes em
 [docs/ARQUITETURA.md](docs/ARQUITETURA.md).
@@ -32,7 +36,10 @@ Camadas: **Tokens → Temas → Primitivas → Componentes → Padrões → Stud
 ## Comandos
 
 ```bash
-./mvnw verify                      # compila + 71 testes (contraste, componentes, teclado, golden screenshots, lint)
+./mvnw verify                      # compila + 162 testes (tokens, design system, Showcase e Studio)
+./studio.sh                        # abre o Nekkora Studio (Windows: studio.cmd)
+./studio.sh --theme=porcelain-light
+java -jar nekkora-studio-app/target/nekkora-studio.jar          # depois de ./mvnw package
 ./showcase.sh                      # abre o Showcase (Windows: showcase.cmd)
 ./showcase.sh --studio             # abre direto a tela Studio fictícia
 ./showcase.sh --theme=midnight-dark --page=dados
