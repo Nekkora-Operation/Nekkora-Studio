@@ -9,12 +9,15 @@
   <version>1.0.0-SNAPSHOT</version>
   <packaging>pom</packaging>
   <name>Nekkora Studio (parent)</name>
-  <description>Nekkora Swing UI — design system desktop do Nekkora Studio.</description>
+  <description>Nekkora Studio — design system Swing (Nekkora Swing UI) e a aplicação desktop do Studio.</description>
 
   <modules>
     <module>nekkora-design-tokens</module>
     <module>nekkora-swing-ui</module>
     <module>nekkora-swing-showcase</module>
+    <module>nekkora-studio-domain</module>
+    <module>nekkora-studio-ui</module>
+    <module>nekkora-studio-app</module>
   </modules>
 
   <properties>
@@ -35,6 +38,16 @@
       <dependency>
         <groupId>com.nekkora</groupId>
         <artifactId>nekkora-swing-ui</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.nekkora</groupId>
+        <artifactId>nekkora-studio-domain</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.nekkora</groupId>
+        <artifactId>nekkora-studio-ui</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
