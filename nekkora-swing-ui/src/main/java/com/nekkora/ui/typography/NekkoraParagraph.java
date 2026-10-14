@@ -11,6 +11,7 @@ public class NekkoraParagraph extends JTextArea {
     private TypeStyle style = TypeStyle.BODY;
     private TextTone tone = TextTone.SECONDARY;
     private int columnsHint = 48;
+    private boolean estimating;
 
     public NekkoraParagraph(String text) {
         super(text);
@@ -52,17 +53,26 @@ public class NekkoraParagraph extends JTextArea {
         if (getParent() == null || getWidth() == 0) {
             // estimativa inicial razoável antes de haver largura real
             int w = getFontMetrics(getFont()).charWidth('n') * columnsHint;
-            setSize(w, Short.MAX_VALUE);
+            estimating = true;
+            try {
+                setSize(w, Short.MAX_VALUE);
+            } finally {
+                estimating = false;
+            }
         }
         return super.getPreferredSize();
     }
 
-    /** Ao mudar de largura, a altura preferida muda (quebra de linha): pede novo layout. */
+    /**
+     * Ao mudar de largura, a altura preferida muda (quebra de linha): pede novo layout. A estimativa feita em
+     * {@link #getPreferredSize()} não conta como mudança real — senão um parágrafo posto em uma área de largura
+     * zero (ex.: grupo recolhido) alternaria entre a estimativa e zero, revalidando para sempre na EDT.
+     */
     @Override
     public void setBounds(int x, int y, int width, int height) {
         boolean widthChanged = width != getWidth();
         super.setBounds(x, y, width, height);
-        if (widthChanged && width > 0 && super.getPreferredSize().height != height) {
+        if (!estimating && widthChanged && width > 0 && super.getPreferredSize().height != height) {
             javax.swing.SwingUtilities.invokeLater(this::revalidate);
         }
     }

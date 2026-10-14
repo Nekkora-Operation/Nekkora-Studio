@@ -1,0 +1,48 @@
+{
+  "_note": "Recorte mínimo e sanitizado no formato do PageMap 0.2.0 (ElementDescriptor + ElementAccessPath + OptionSet). Dados fictícios de laboratório, sem nenhum dado real. Usado para provar que o ElementReference representa 'Selecionar São Paulo no campo Estado' como UMA etapa, com trajetória por iframe e âncora de contexto.",
+  "schema": "nekkora-pagemap",
+  "version": "0.2.0",
+  "privacyPolicy": "nekkora-privacy/1",
+  "captureId": "cap-lab-0001",
+  "element": {
+    "nodeId": "n-412",
+    "tag": "select",
+    "kind": "SELECT",
+    "sensitive": false,
+    "documentId": "doc:frame-cadastro",
+    "text": { "own": "", "accessibleName": "Estado", "accessibleNameSource": "LABEL_ELEMENT", "contextual": ["Endereço"] },
+    "attributes": { "id": "estado", "name": "uf" },
+    "locators": {
+      "nodeId": "n-412",
+      "primary": { "strategy": "ID", "semantic": "campo de seleção \"Estado\"", "css": "#estado", "matchCount": 1, "matchesTarget": true, "stability": "HEURISTIC_STABLE" },
+      "fallbacks": [
+        { "strategy": "LABEL", "semantic": "rótulo \"Estado\"", "css": null, "matchCount": 1, "matchesTarget": true, "stability": "HEURISTIC_STABLE" },
+        { "strategy": "POSITIONAL", "semantic": "terceiro select do formulário", "css": "form > select:nth-of-type(3)", "matchCount": 1, "matchesTarget": true, "stability": "HEURISTIC_UNSTABLE" }
+      ]
+    }
+  },
+  "accessPath": {
+    "targetNodeId": "n-412",
+    "steps": [
+      { "type": "MAIN_DOCUMENT", "label": "Documento principal", "documentId": "doc:main" },
+      { "type": "IFRAME", "label": "iframe#cadastro", "locator": "#cadastro", "enteredDocumentId": "doc:frame-cadastro" },
+      { "type": "ELEMENT", "label": "select#estado", "locator": "#estado", "nodeId": "n-412" }
+    ]
+  },
+  "context": [
+    { "type": "IN_FORM", "kind": "FORM", "name": "Endereço de entrega", "locator": "form#endereco" },
+    { "type": "IN_DIALOG", "kind": "MODAL", "name": "Novo cliente", "locator": "[role=dialog]" }
+  ],
+  "optionSet": {
+    "controlNodeId": "n-412",
+    "association": "NATIVE",
+    "options": [
+      { "nodeId": "n-413", "text": "Rio de Janeiro", "value": "RJ", "disabled": false },
+      { "nodeId": "n-414", "text": "São Paulo", "value": "SP", "disabled": false }
+    ]
+  },
+  "chosenOptionNodeId": "n-414",
+  "obstacles": [
+    { "type": "FRAME_CONTEXT", "severity": "LOW", "description": "O campo está dentro de um iframe do mesmo site." }
+  ]
+}
