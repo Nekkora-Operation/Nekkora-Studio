@@ -34,11 +34,16 @@ import javax.swing.JPanel;
  * }</pre>
  */
 public class NekkoraEmptyState extends JPanel {
+    /** Fator de {@code javax.swing.text.html.CSS} para "px" quando as unidades W3C estão desligadas (padrão). */
+    private static final float CSS_PX = 1.3f;
+
     private final JPanel column = new JPanel();
     private final Glyph glyph;
     private final NekkoraHeading title;
     private final NekkoraText description;
     private final JPanel actions = new JPanel(new FlowLayout(FlowLayout.CENTER, Scale.px(Spacing.SPACE_4), 0));
+    private String descriptionText;
+    private int descriptionWidth;
 
     public NekkoraEmptyState(IconName icon, String titleText, String descriptionText) {
         this(icon, Tone.ACCENT, titleText, descriptionText);
@@ -86,13 +91,46 @@ public class NekkoraEmptyState extends JPanel {
         title.setText(text);
     }
 
-    /** Descrição centralizada, com quebra de linha em ~340px. */
+    /**
+     * Descrição centralizada, com quebra de linha em ~340px — ou na largura disponível, quando o estado vazio
+     * está em um painel mais estreito (navegador lateral, área central em 1366×768).
+     */
     public void setDescription(String text) {
+        descriptionText = text;
         description.setVisible(text != null);
         if (text == null) return;
-        String esc = text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
-        description.setText("<html><div style='text-align:center;width:" + Scale.px(340) + "px'>" + esc + "</div></html>");
+        descriptionWidth = descriptionWidthFor(getWidth());
+        renderDescription();
         description.getAccessibleContext().setAccessibleName(text);
+    }
+
+    private void renderDescription() {
+        String esc = descriptionText.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
+        description.setText("<html><div style='text-align:center;width:" + descriptionWidth + "px'>" + esc + "</div></html>");
+    }
+
+    /**
+     * Largura de leitura (unidade "px" do CSS do Swing): até 340, limitada pela largura do próprio estado vazio
+     * com respiro lateral. O HTML do Swing desenha cada "px" de CSS como ~1,3px de tela, por isso a largura
+     * disponível é convertida antes de limitar.
+     */
+    private static int descriptionWidthFor(int available) {
+        int max = Scale.px(340);
+        if (available <= 0) return max;
+        int cssAvailable = Math.round((available - 2 * Scale.px(Spacing.SPACE_8)) / CSS_PX);
+        return Math.max(Scale.px(100), Math.min(max, cssAvailable));
+    }
+
+    @Override
+    public void doLayout() {
+        if (descriptionText != null) {
+            int w = descriptionWidthFor(getWidth());
+            if (w != descriptionWidth) {
+                descriptionWidth = w;
+                renderDescription();
+            }
+        }
+        super.doLayout();
     }
 
     /** Substitui o ícone do topo por outro componente (ex.: spinner). */
@@ -121,6 +159,11 @@ public class NekkoraEmptyState extends JPanel {
         @Override
         public Dimension getMaximumSize() {
             return getPreferredSize();
+        }
+
+        @Override
+        public Dimension getMinimumSize() {
+            return getPreferredSize(); // nunca colapsar o ícone quando o espaço aperta
         }
 
         @Override

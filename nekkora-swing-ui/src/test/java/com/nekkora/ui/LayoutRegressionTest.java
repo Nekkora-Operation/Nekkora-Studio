@@ -1,0 +1,112 @@
+package com.nekkora.ui;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import com.nekkora.tokens.NekkoraThemes;
+import com.nekkora.ui.core.Tone;
+import com.nekkora.ui.dialog.NekkoraDialogPanel;
+import com.nekkora.ui.icon.IconName;
+import com.nekkora.ui.state.NekkoraEmptyState;
+import com.nekkora.ui.theme.Scale;
+import com.nekkora.ui.typography.NekkoraHeading;
+import com.nekkora.ui.typography.NekkoraParagraph;
+import java.awt.Component;
+import java.awt.Container;
+import java.util.concurrent.atomic.AtomicInteger;
+import javax.swing.JPanel;
+import javax.swing.SwingUtilities;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+
+/**
+ * Regressões de layout encontradas ao montar o Nekkora Studio (STUDIO-001) em 1366×768: cada caso reproduz
+ * o defeito observado na aplicação real.
+ */
+class LayoutRegressionTest {
+
+    @Test
+    @DisplayName("NekkoraParagraph em área de largura zero não revalida para sempre (travava a EDT)")
+    void paragrafoEmLarguraZero() throws Exception {
+        TestSupport.theme(NekkoraThemes.SAKURA_DARK);
+        AtomicInteger revalidations = new AtomicInteger();
+        NekkoraParagraph p = TestSupport.onEdt(() -> new NekkoraParagraph("Texto que quebra em várias linhas quando a largura é pequena.") {
+            @Override
+            public void revalidate() {
+                revalidations.incrementAndGet();
+                super.revalidate();
+            }
+        });
+        JPanel host = TestSupport.onEdt(() -> {
+            JPanel h = new JPanel(null);
+            h.add(p);
+            return h;
+        });
+        for (int round = 0; round < 5; round++) {
+            TestSupport.onEdt(() -> {
+                p.getPreferredSize();      // o layout pede o tamanho preferido...
+                p.setBounds(0, 0, 0, 0);   // ...e a área disponível tem largura zero (ex.: grupo recolhido)
+            });
+            SwingUtilities.invokeAndWait(() -> { }); // processa o que tiver sido agendado
+        }
+        int afterWarmUp = revalidations.get();
+        TestSupport.onEdt(() -> {
+            p.getPreferredSize();
+            p.setBounds(0, 0, 0, 0);
+        });
+        SwingUtilities.invokeAndWait(() -> { });
+        assertEquals(afterWarmUp, revalidations.get(), "a estimativa de tamanho não pode agendar novas validações");
+        assertTrue(host.getComponentCount() == 1);
+    }
+
+    @Test
+    @DisplayName("NekkoraEmptyState em painel estreito mantém o ícone e quebra o texto na largura disponível")
+    void estadoVazioEstreito() {
+        TestSupport.theme(NekkoraThemes.SAKURA_DARK);
+        NekkoraEmptyState e = TestSupport.onEdt(() -> new NekkoraEmptyState(IconName.WORKFLOW, Tone.ACCENT, "Nenhuma automação",
+                "Crie a primeira automação para organizar sessões e etapas."));
+        int width = Scale.px(240);
+        TestSupport.render(e, width, Scale.px(400));
+        TestSupport.render(e, width, Scale.px(400)); // segunda passada: descrição já recalculada
+        TestSupport.onEdt(() -> {
+            Component glyph = find(e, c -> c.getClass().getSimpleName().equals("Glyph"));
+            assertEquals(Scale.px(64), glyph.getHeight(), "o ícone não pode colapsar");
+            Component description = find(e, c -> c instanceof com.nekkora.ui.typography.NekkoraText);
+            assertTrue(description.getWidth() <= width, "descrição maior que o painel: " + description.getWidth());
+            assertTrue(description.getX() >= 0, "descrição cortada à esquerda");
+        });
+    }
+
+    @Test
+    @DisplayName("Títulos em fonte de display têm folga para o texto desenhado (última letra não é cortada)")
+    void tituloDeDisplayComFolga() {
+        TestSupport.theme(NekkoraThemes.SAKURA_DARK);
+        NekkoraDialogPanel panel = TestSupport.onEdt(() -> {
+            NekkoraDialogPanel p = new NekkoraDialogPanel("Nova etapa");
+            p.setMarker(IconName.PLUS, Tone.ACCENT);
+            p.setDescription("Descrição do diálogo.");
+            return p;
+        });
+        TestSupport.render(panel, Scale.px(540), Scale.px(240));
+        TestSupport.onEdt(() -> {
+            NekkoraHeading title = (NekkoraHeading) find(panel, c -> c instanceof NekkoraHeading);
+            int measured = title.getFontMetrics(title.getFont()).stringWidth(title.getText());
+            // medido no Windows: o texto desenhado chega a ~4% além da métrica (92px → 96px em "Nova etapa")
+            assertTrue(title.getWidth() >= Math.ceil(measured * 1.045), "título sem folga: " + title.getWidth() + " para " + measured);
+            NekkoraHeading h3 = new NekkoraHeading("Resumo", NekkoraHeading.Level.H3);
+            assertEquals(h3.getFontMetrics(h3.getFont()).stringWidth("Resumo"), h3.getPreferredSize().width - h3.getInsets().left
+                    - h3.getInsets().right, "fonte de interface não muda");
+        });
+    }
+
+    private static Component find(Container root, java.util.function.Predicate<Component> p) {
+        for (Component c : root.getComponents()) {
+            if (p.test(c)) return c;
+            if (c instanceof Container ct) {
+                Component f = find(ct, p);
+                if (f != null) return f;
+            }
+        }
+        return null;
+    }
+}
