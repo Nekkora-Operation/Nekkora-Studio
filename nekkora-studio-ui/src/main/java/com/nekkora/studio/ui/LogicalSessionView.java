@@ -5,7 +5,6 @@ import com.nekkora.studio.domain.AutomationStep;
 import com.nekkora.studio.domain.LogicalSession;
 import com.nekkora.studio.domain.SessionId;
 import com.nekkora.studio.domain.StepId;
-import com.nekkora.studio.domain.StepPosition;
 import com.nekkora.tokens.ControlSize;
 import com.nekkora.tokens.Spacing;
 import com.nekkora.ui.button.NekkoraButton;
@@ -59,6 +58,8 @@ public final class LogicalSessionView extends NekkoraCard {
     private final NekkoraBadge selectedBadge = new NekkoraBadge("Selecionada", Tone.ACCENT).withIcon(IconName.CHECK)
             .withSize(NekkoraBadge.Size.SMALL);
     private Map<StepId, Integer> numbers = Map.of();
+    private int firstNumber = 1;
+    private int refreshes;
     private boolean adjusting;
     private boolean highlighted;
 
@@ -100,6 +101,20 @@ public final class LogicalSessionView extends NekkoraCard {
 
     /** Relê sessão e numeração do domínio. Preserva a etapa selecionada, se ainda existir. */
     public void refresh(Automation automation) {
+        int first = 1;
+        for (LogicalSession s : automation.sessions()) {
+            if (s.id().equals(sessionId)) break;
+            first += s.stepCount();
+        }
+        refresh(automation, first);
+    }
+
+    /**
+     * Relê a sessão sabendo o número global da sua primeira etapa (as etapas são numeradas em sequência na ordem das
+     * sessões): não percorre a automação inteira.
+     */
+    public void refresh(Automation automation, int firstNumber) {
+        refreshes++;
         LogicalSession session = automation.session(sessionId).orElseThrow();
         int number = automation.sessionNumber(sessionId);
         setTitle(session.name(), "Sessão " + number + " · " + StudioText.steps(session.stepCount()));
@@ -107,8 +122,10 @@ public final class LogicalSessionView extends NekkoraCard {
         description.setText(session.description());
         description.setVisible(!session.description().isBlank());
         Map<StepId, Integer> n = new HashMap<>();
-        for (StepPosition p : automation.sequence()) if (p.sessionId().equals(sessionId)) n.put(p.stepId(), p.number());
+        int k = firstNumber;
+        for (AutomationStep st : session.steps()) n.put(st.id(), k++);
         numbers = n;
+        this.firstNumber = firstNumber;
         AutomationStep selected = steps.getSelectedValue();
         adjusting = true;
         try {
@@ -121,6 +138,25 @@ public final class LogicalSessionView extends NekkoraCard {
         cards.show(body, session.isEmpty() ? EMPTY : LIST);
         revalidate();
         repaint();
+    }
+
+    /**
+     * Só a numeração mudou (uma sessão anterior ganhou etapas): recalcula os números e redesenha, sem recriar a lista
+     * nem mexer na seleção.
+     */
+    public void renumber(int newFirstNumber) {
+        if (newFirstNumber == firstNumber) return;
+        int delta = newFirstNumber - firstNumber;
+        Map<StepId, Integer> n = new HashMap<>();
+        for (Map.Entry<StepId, Integer> e : numbers.entrySet()) n.put(e.getKey(), e.getValue() + delta);
+        numbers = n;
+        firstNumber = newFirstNumber;
+        steps.repaint();
+    }
+
+    /** Quantas vezes a sessão foi relida do domínio (diagnóstico da atualização incremental). */
+    public int refreshCount() {
+        return refreshes;
     }
 
     /** Destaca a sessão (selecionada ou contendo a etapa selecionada) e seleciona a etapa, sem disparar eventos. */

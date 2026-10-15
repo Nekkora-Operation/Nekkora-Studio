@@ -1,6 +1,10 @@
 package com.nekkora.studio.app;
 
+import com.nekkora.studio.app.recorder.SwingRecorderPrompts;
+import com.nekkora.studio.app.recorder.SwingRecorderWindowHost;
 import com.nekkora.studio.app.ui.SwingStudioPrompts;
+import com.nekkora.studio.bridge.BridgeServer;
+import com.nekkora.studio.bridge.BrowserLink;
 import com.nekkora.tokens.NekkoraTheme;
 import com.nekkora.tokens.NekkoraThemes;
 import com.nekkora.ui.Nekkora;
@@ -23,9 +27,17 @@ public final class StudioApplication {
 
     private StudioApplication() {}
 
+    public static final String VERSION = "1.0.0-SNAPSHOT";
+
     public static void main(String[] args) {
         Optional<NekkoraTheme> theme = themeArg(args);
-        SwingUtilities.invokeLater(() -> launch(theme, () -> System.exit(0)));
+        // Bridge local publicado FORA da EDT, antes da janela (operações de arquivo e socket).
+        BridgeServer bridge = BridgeServer.start(BridgeServer.Options.defaults(VERSION));
+        Runtime.getRuntime().addShutdownHook(new Thread(bridge::close, "nekkora-bridge-close"));
+        SwingUtilities.invokeLater(() -> launch(theme, bridge, () -> {
+            bridge.close(); // apaga a descoberta e invalida a credencial antes de sair
+            System.exit(0);
+        }));
     }
 
     /**
@@ -34,15 +46,21 @@ public final class StudioApplication {
      * @param afterExit executado depois que a janela é fechada (a aplicação real encerra a JVM)
      */
     public static Window launch(Optional<NekkoraTheme> theme, Runnable afterExit) {
+        return launch(theme, BrowserLink.offline("DISABLED"), afterExit);
+    }
+
+    /** Monta o Studio com a ligação com o navegador ({@link BridgeServer} na aplicação real). */
+    public static Window launch(Optional<NekkoraTheme> theme, BrowserLink link, Runnable afterExit) {
         if (theme.isPresent()) Nekkora.install(theme.get());
         else Nekkora.install();
         NekkoraFrame frame = new NekkoraFrame(TITLE);
         AtomicReference<Studio> ref = new AtomicReference<>();
         Studio studio = Studio.create(Clock.systemDefaultZone(), new SwingStudioPrompts(frame::getRootPane), () -> {
-            ref.get().view().dispose();
+            ref.get().dispose();
             frame.dispose();
             afterExit.run();
-        });
+        }, link, new SwingRecorderPrompts(frame::getRootPane),
+                panel -> new SwingRecorderWindowHost(() -> frame, panel, () -> ref.get().recorderPresenter().closeRequest().run()));
         ref.set(studio);
         frame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
         frame.addWindowListener(new WindowAdapter() {

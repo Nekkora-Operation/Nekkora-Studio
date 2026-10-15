@@ -38,7 +38,7 @@ final class StudioFixture {
     }
 
     void dispose() {
-        Edt.run(() -> studio.view().dispose());
+        Edt.run(studio::dispose);
     }
 
     // ------------------------------------------------------------------ ações do usuário (pela interface)

@@ -28,6 +28,14 @@
     </dependency>
     <dependency>
       <groupId>com.nekkora</groupId>
+      <artifactId>nekkora-studio-recorder</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.nekkora</groupId>
+      <artifactId>nekkora-studio-bridge</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.nekkora</groupId>
       <artifactId>nekkora-swing-ui</artifactId>
     </dependency>
     <dependency>

@@ -30,6 +30,7 @@ public final class StudioController {
     private final WorkspaceService service;
     private final StudioPrompts prompts;
     private final Runnable exitAction;
+    private java.util.function.Consumer<Runnable> exitGuard = Runnable::run;
 
     public StudioController(WorkspaceService service, StudioPrompts prompts, Runnable exitAction) {
         this.service = Objects.requireNonNull(service);
@@ -115,10 +116,18 @@ public final class StudioController {
 
     // ------------------------------------------------------------------ encerramento
 
+    /**
+     * Guarda de saída (STUDIO-002): recebe a continuação do encerramento e decide quando executá-la — por exemplo,
+     * depois de finalizar ou cancelar uma gravação técnica em andamento. Padrão: encerra direto.
+     */
+    public void setExitGuard(java.util.function.Consumer<Runnable> guard) {
+        this.exitGuard = Objects.requireNonNull(guard);
+    }
+
     /** Fecha o Studio, avisando antes se houver alterações que só existem em memória. */
     public void requestExit() {
         if (!service.state().hasUnsavedChanges()) {
-            exitAction.run();
+            exitGuard.accept(exitAction);
             return;
         }
         if (!service.beginOperation(StudioOperation.EXIT)) return;
@@ -128,7 +137,7 @@ public final class StudioController {
         } finally {
             service.endOperation();
         }
-        if (discard) exitAction.run();
+        if (discard) exitGuard.accept(exitAction);
     }
 
     // ------------------------------------------------------------------ apoio
