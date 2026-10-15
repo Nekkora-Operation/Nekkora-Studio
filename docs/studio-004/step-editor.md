@@ -26,13 +26,17 @@ mostrada e o diálogo continua aberto.
 
 ## Tipo de ação × parâmetros
 
-Ao trocar o tipo para um que não aceita os parâmetros atuais (ex.: `SELECT_OPTION` → `CLICK`), o Studio **pergunta**:
+O parâmetro salvo é sempre o que o **tipo selecionado** aceita: um modo de valor antigo, escondido, não vence a opção
+digitada. Se o que está configurado não cabe no tipo novo (ex.: `FILL` com variável → `SELECT_OPTION`), o Studio
+**pergunta**, listando só o que será removido:
 
 ```
 Remover parâmetros incompatíveis?
-O tipo "Clicar" não aceita os parâmetros atuais (Opção São Paulo (SP)). Para salvar, eles serão removidos da etapa.
-[Cancelar] [Remover parâmetros e salvar]
+O tipo "Selecionar opção" não aceita: Variável cliente.estado. Para salvar, isso será removido da etapa.
+[Cancelar] [Remover e salvar]
 ```
+
+A opção digitada (ex.: "São Paulo"/"SP") é salva.
 
 Se o usuário recusar, nada muda e o campo mostra o motivo. Nada é descartado em silêncio. O domínio também recusa
 (`VALUE_NOT_ACCEPTED`/`OPTION_NOT_ACCEPTED`) qualquer edição que chegue com parâmetros incompatíveis.
