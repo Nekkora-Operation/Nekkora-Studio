@@ -14,14 +14,22 @@ public final class BridgeProtocol {
             "studio.recording.start", "studio.recording.pause", "studio.recording.resume", "studio.recording.mode",
             "studio.recording.finish", "studio.recording.cancel", "studio.recording.status", "studio.recording.renew",
             // STUDIO-003: entrega confiável das etapas gravadas e rota de sessão lógica
-            "studio.recording.steps.ack", "studio.recording.steps.sync", "studio.recording.route");
+            "studio.recording.steps.ack", "studio.recording.steps.sync", "studio.recording.route",
+            // STUDIO-005: entrega confiável das evidências observadas
+            "studio.recording.evidence.ack", "studio.recording.evidence.sync");
 
     public static final List<String> EVENTS = List.of("bridge.connected", "bridge.disconnected",
             "studio.recording.started", "studio.recording.paused", "studio.recording.resumed", "studio.recording.modeChanged",
             "studio.recording.finished", "studio.recording.cancelled", "studio.recording.degraded", "studio.recording.recovered",
             "studio.recording.failed", "studio.recording.expired",
             // STUDIO-003: etapa gravada
-            "studio.recording.step");
+            "studio.recording.step",
+            // STUDIO-005: evidência observada
+            "studio.recording.evidence");
+
+    /** Capacidades negociadas no início da gravação (acréscimos compatíveis do nekkora-bridge/1). */
+    public static final String CAPABILITY_STEPS = "steps/1";
+    public static final String CAPABILITY_EVIDENCE = "evidence/1";
 
     public static final List<String> RECORDING_STATES = List.of("RECORDING", "PAUSED", "DEGRADED", "COMPLETED", "CANCELLED", "EXPIRED", "FAILED");
 

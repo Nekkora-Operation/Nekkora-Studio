@@ -13,12 +13,21 @@ import java.util.List;
  * @param stepsAccepted etapas aceitas pelo domínio do Studio
  * @param stepsRejected etapas recusadas pelo domínio
  * @param stepsLost     interações declaradas perdidas
+ * @param evidence      evidências observadas (STUDIO-005; {@link EvidenceProgress#NONE} sem a capacidade)
  */
 public record RecordingSummary(RecorderState outcome, Duration duration, RecordingProgress progress, List<String> limitations,
-        boolean pageMapExported, String actionCapture, int stepsProduced, int stepsAccepted, int stepsRejected, int stepsLost) {
+        boolean pageMapExported, String actionCapture, int stepsProduced, int stepsAccepted, int stepsRejected, int stepsLost, EvidenceProgress evidence) {
     public RecordingSummary {
         limitations = List.copyOf(limitations);
         actionCapture = actionCapture == null ? "NOT_AVAILABLE" : actionCapture;
+        evidence = evidence == null ? EvidenceProgress.NONE : evidence;
+    }
+
+    /** Resumo da STUDIO-003 (sem evidências). */
+    public RecordingSummary(RecorderState outcome, Duration duration, RecordingProgress progress, List<String> limitations, boolean pageMapExported,
+            String actionCapture, int stepsProduced, int stepsAccepted, int stepsRejected, int stepsLost) {
+        this(outcome, duration, progress, limitations, pageMapExported, actionCapture, stepsProduced, stepsAccepted, stepsRejected, stepsLost,
+                EvidenceProgress.NONE);
     }
 
     /** Resumo da STUDIO-002 (gravação só técnica). */

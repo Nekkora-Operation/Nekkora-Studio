@@ -40,6 +40,9 @@ final class FakeBrowser implements BrowserLink {
     /** STUDIO-003: comporta-se como a extensão com gravação de ações (anuncia a entrega quando o início pede steps/1). */
     volatile boolean stepsAware;
     volatile boolean stepsEnabled;
+    /** STUDIO-005: comporta-se como a extensão com evidências observadas (anuncia a entrega quando o início pede evidence/1). */
+    volatile boolean evidenceAware;
+    volatile boolean evidenceEnabled;
 
     @Override
     public LinkStatus status() {
@@ -81,6 +84,7 @@ final class FakeBrowser implements BrowserLink {
         switch (c.type()) {
             case "studio.recording.start" -> {
                 stepsEnabled = stepsAware && c.payload().containsKey("capabilities");
+                evidenceEnabled = evidenceAware && c.payload().get("capabilities") instanceof List<?> caps && caps.contains("evidence/1");
                 recordingId = rid;
                 state = "RECORDING";
                 mode = Json.string(c.payload(), "mode");
@@ -136,6 +140,8 @@ final class FakeBrowser implements BrowserLink {
                 .put("lease", Json.obj().put("leaseMs", 30000).put("expiresInMs", 30000).build())
                 .put("startedAt", Instant.ofEpochMilli(0).toString()).put("updatedAt", Instant.ofEpochMilli(clock).toString())
                 .put("reason", null).put("steps", stepsEnabled ? Json.obj().put("enabled", true).put("lastSequence", 0).put("ackedSequence", 0)
+                        .put("pending", 0).put("lost", 0).build() : null)
+                .put("evidence", evidenceEnabled ? Json.obj().put("enabled", true).put("lastSequence", 0).put("ackedSequence", 0)
                         .put("pending", 0).put("lost", 0).build() : null).build();
     }
 
@@ -146,7 +152,9 @@ final class FakeBrowser implements BrowserLink {
                 .put("pageMapExported", false).put("actionCapture", stepsEnabled ? "AVAILABLE" : "NOT_AVAILABLE")
                 .put("limitations", stepsEnabled ? List.of() : List.of("ACTION_CAPTURE_NOT_AVAILABLE"))
                 .put("steps", stepsEnabled ? Json.obj().put("produced", 3).put("acknowledged", 3).put("rejected", 0).put("unacknowledged", 0).put("lost", 0)
-                        .put("discarded", Map.of()).build() : null).build();
+                        .put("discarded", Map.of()).build() : null)
+                .put("evidence", evidenceEnabled ? Json.obj().put("produced", 0).put("acknowledged", 0).put("rejected", 0).put("unacknowledged", 0)
+                        .put("lost", 0).put("unattributed", 0).put("incomplete", 0).build() : null).build();
     }
 
     void setStatus(LinkStatus s) {

@@ -14,6 +14,8 @@ import com.nekkora.studio.domain.ValidationProblem;
 import com.nekkora.studio.domain.action.ActionParameters;
 import com.nekkora.studio.domain.action.ActionType;
 import com.nekkora.studio.domain.element.ManualLocator;
+import com.nekkora.studio.domain.evidence.ObservedEvidence;
+import com.nekkora.studio.domain.port.EvidenceIntake;
 import com.nekkora.studio.domain.port.StepIntake;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -32,8 +34,12 @@ import javax.swing.SwingUtilities;
  * <p>STUDIO-004: as operações de edição (D-S004-04) entram no {@link EditHistory} (desfazer/refazer em memória) e são
  * recusadas, AQUI no caso de uso, para a automação que está recebendo uma gravação ({@link RecordingGuard},
  * D-S004-10). As etapas entregues pelo Recorder nunca entram no histórico.
+ *
+ * <p>STUDIO-005: implementa também {@link EvidenceIntake}. Registrar uma evidência observada NÃO é edição: é aceito
+ * durante a gravação, não entra no histórico, não conta revisão (o desfazer/refazer continua válido) e notifica só
+ * {@link StudioChange#EVIDENCE} da sessão afetada.
  */
-public final class WorkspaceService implements StepIntake {
+public final class WorkspaceService implements StepIntake, EvidenceIntake {
 
     /** Diz se uma automação está recebendo uma gravação (início, gravação, pausa, encerramento ou entrega pendente). */
     @FunctionalInterface
@@ -207,6 +213,25 @@ public final class WorkspaceService implements StepIntake {
         AutomationStep step = a.appendStep(sessionId, draft);
         changed(a, sessionId == null ? Set.of() : Set.of(sessionId), false);
         return step;
+    }
+
+    /**
+     * {@inheritDoc} Não altera a seleção nem o histórico; a etapa continua igual (identidade, ordem, original, tipo e
+     * parâmetros). Repetida: nada muda e nenhum evento é disparado.
+     */
+    @Override
+    public boolean attachEvidence(AutomationId automationId, ObservedEvidence evidence) {
+        requireEdt();
+        Automation a = state.catalog().require(automationId);
+        boolean added = a.attachEvidence(evidence);
+        if (added) {
+            Set<SessionId> sessions = evidence.attributed()
+                    ? a.recordedStep(evidence.recordingId(), evidence.eventId()).flatMap(st -> a.sessionOf(st.id())).map(s -> Set.of(s.id())).orElse(Set.of())
+                    : Set.of();
+            state.markUnsaved();
+            state.fireFor(a.id(), sessions, StudioChange.EVIDENCE, StudioChange.UNSAVED_CHANGES);
+        }
+        return added;
     }
 
     /**

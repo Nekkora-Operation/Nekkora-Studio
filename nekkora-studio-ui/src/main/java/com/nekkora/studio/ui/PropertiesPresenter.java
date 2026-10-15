@@ -33,6 +33,9 @@ import java.util.List;
  * <p>STUDIO-004: ações de edição (editar, mover, duplicar, excluir, restaurar o original) e os grupos Parâmetros,
  * Comentários e Origem e alterações. Com a automação em gravação, as ações de alterar ficam indisponíveis e o motivo é
  * dito em texto.
+ *
+ * <p>STUDIO-005: grupo "Evidências" da etapa gravada (resumo estruturado, linha do tempo com horário real e ordem
+ * técnica, resultado de negócio "Não validado") e, na automação, as evidências sem etapa definida. Somente leitura.
  */
 public final class PropertiesPresenter {
 
@@ -109,6 +112,11 @@ public final class PropertiesPresenter {
         NekkoraPropertiesGroup structure = inspector.addGroup("Estrutura");
         structure.addRow("Sessões", value(Integer.toString(a.sessions().size())));
         structure.addRow("Etapas", value(Integer.toString(a.stepCount())));
+        if (!a.unattributedEvidence().isEmpty()) {
+            NekkoraPropertiesGroup amb = inspector.addGroup("Evidências sem etapa definida");
+            amb.addFullRow(new NekkoraParagraph("Mudanças observadas depois de mais de uma ação candidata: nenhuma etapa foi escolhida.", TextTone.SECONDARY));
+            timeline(amb, a.unattributedEvidence());
+        }
         NekkoraPropertiesGroup record = inspector.addGroup("Registro");
         record.addRow("Criada em", value(StudioText.dateTime(a.createdAt())));
         record.addRow("Atualizada em", value(StudioText.dateTime(a.updatedAt())));
@@ -187,6 +195,9 @@ public final class PropertiesPresenter {
         if (!recorded.isEmpty()) {
             NekkoraPropertiesGroup rec = inspector.addGroup("Gravação");
             rows(rec, recorded);
+            NekkoraPropertiesGroup ev = inspector.addGroup("Evidências");
+            rows(ev, EvidencePresentation.summary(step));
+            timeline(ev, step.evidence());
         }
         NekkoraPropertiesGroup origin = inspector.addGroup("Origem e alterações");
         rows(origin, StepPresentation.revision(step));
@@ -230,6 +241,18 @@ public final class PropertiesPresenter {
         act.addFullRow(buttons(up, down, moveTo));
         act.addFullRow(buttons(duplicate, delete));
         lockedNote(act, editable);
+    }
+
+    /** Linhas da linha do tempo no painel (as mais recentes; a lista completa fica na aba Evidências dos detalhes). */
+    static final int PANEL_TIMELINE = 20;
+
+    private static void timeline(NekkoraPropertiesGroup g, List<com.nekkora.studio.domain.evidence.ObservedEvidence> evidence) {
+        List<EvidencePresentation.TimelineEntry> all = EvidencePresentation.timeline(evidence);
+        int from = Math.max(0, all.size() - PANEL_TIMELINE);
+        if (from > 0) g.addFullRow(new NekkoraParagraph(from + " evidência(s) anterior(es) na aba Evidências dos detalhes.", TextTone.MUTED));
+        for (EvidencePresentation.TimelineEntry t : all.subList(from, all.size())) {
+            g.addRow(t.time(), paragraph(t.title() + " — " + t.detail()));
+        }
     }
 
     private static void lockedNote(NekkoraPropertiesGroup g, boolean editable) {

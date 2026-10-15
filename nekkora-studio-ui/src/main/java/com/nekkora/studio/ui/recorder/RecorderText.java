@@ -127,6 +127,39 @@ public final class RecorderText {
         return out;
     }
 
+    private static final java.time.format.DateTimeFormatter CLOCK = java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss")
+            .withZone(java.time.ZoneId.systemDefault());
+
+    /** STUDIO-005: evidências observadas registradas pelo Studio (contagens; nunca "sucesso" ou "falha"). */
+    public static String evidence(com.nekkora.studio.recorder.EvidenceProgress p) {
+        if (!p.enabled()) {
+            return "Indisponível (a extensão conectada não observa consequências)";
+        }
+        List<String> parts = new ArrayList<>();
+        parts.add(p.accepted() + (p.accepted() == 1 ? " registrada" : " registradas"));
+        if (p.unattributed() > 0) {
+            parts.add(p.unattributed() + " sem etapa definida");
+        }
+        if (p.incomplete() > 0) {
+            parts.add(p.incomplete() + (p.incomplete() == 1 ? " observação incompleta" : " observações incompletas"));
+        }
+        if (p.pending() > 0) {
+            parts.add(p.pending() + " aguardando o Studio");
+        }
+        if (p.lost() > 0) {
+            parts.add(p.lost() + " perdidas (limite)");
+        }
+        if (p.waiting()) {
+            parts.add("reenvio solicitado");
+        }
+        return String.join(" · ", parts);
+    }
+
+    /** Horário da última evidência registrada. */
+    public static String lastObservation(com.nekkora.studio.recorder.EvidenceProgress p) {
+        return !p.enabled() || p.lastObservedAt() == null ? "—" : CLOCK.format(p.lastObservedAt());
+    }
+
     /** Aviso sobre a entrega das etapas (falhas nunca ficam em silêncio). */
     public static String stepsNotice(StepProgress p) {
         if (!p.enabled()) {
@@ -164,6 +197,16 @@ public final class RecorderText {
             }
         } else {
             out.add("Nenhuma etapa foi criada: a extensão conectada não registra ações.");
+        }
+        if (sum.evidence().enabled()) {
+            com.nekkora.studio.recorder.EvidenceProgress e = sum.evidence();
+            out.add("Evidências observadas: " + e.accepted() + (e.unattributed() > 0 ? " · sem etapa definida: " + e.unattributed() : "")
+                    + (e.incomplete() > 0 ? " · observações incompletas: " + e.incomplete() : "") + (e.lost() > 0 ? " · perdidas: " + e.lost() : "")
+                    + (e.rejected() > 0 ? " · não registradas: " + e.rejected() : ""));
+            if (sum.limitations().contains("EVIDENCE_UNCONFIRMED")) {
+                out.add("Algumas evidências não foram confirmadas a tempo.");
+            }
+            out.add("Resultado de negócio: não validado (evidência observada não é validação).");
         }
         out.add(sum.pageMapExported() ? "PageMap exportado." : "O PageMap não foi exportado (finalizar não é exportar).");
         return out;

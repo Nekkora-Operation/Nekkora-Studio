@@ -40,6 +40,10 @@ final class FakeBrowser implements BrowserLink {
     boolean stepsEnabled;
     /** Simula a extensão da STUDIO-002: recusa o início com a capacidade steps/1 (campo fora do contrato). */
     boolean legacy;
+    /** A extensão anuncia a entrega de evidências quando o início pediu evidence/1 (STUDIO-005). */
+    boolean evidenceEnabled;
+    /** Simula a extensão da STUDIO-003/004: conhece steps/1, mas recusa evidence/1 (capacidade desconhecida). */
+    boolean preEvidence;
     int otherConsumers = 0;
     /** Motivo do estado atual (ex.: SENSOR_NOT_CONFIRMED ao degradar). */
     String reason;
@@ -87,7 +91,13 @@ final class FakeBrowser implements BrowserLink {
                     c.future().completeExceptionally(new BridgeCommandException(BridgeError.BAD_REQUEST, "Comando fora do contrato nekkora-bridge/1.", null, false));
                     return null;
                 }
+                boolean evidence = c.payload().get("capabilities") instanceof List<?> caps && caps.contains("evidence/1");
+                if ((legacy || preEvidence) && evidence) {
+                    c.future().completeExceptionally(new BridgeCommandException(BridgeError.BAD_REQUEST, "capabilities inválidas", null, false));
+                    return null;
+                }
                 stepsEnabled = c.payload().containsKey("capabilities");
+                evidenceEnabled = evidence;
                 recordingId = rid;
                 state = "RECORDING";
                 mode = Json.string(c.payload(), "mode");
@@ -149,6 +159,9 @@ final class FakeBrowser implements BrowserLink {
     private Map<String, Object> withSteps(Map<String, Object> rec) {
         if (stepsEnabled) {
             rec.put("steps", Json.obj().put("enabled", true).put("lastSequence", 0).put("ackedSequence", 0).put("pending", 0).put("lost", 0).build());
+        }
+        if (evidenceEnabled) {
+            rec.put("evidence", Json.obj().put("enabled", true).put("lastSequence", 0).put("ackedSequence", 0).put("pending", 0).put("lost", 0).build());
         }
         return rec;
     }
