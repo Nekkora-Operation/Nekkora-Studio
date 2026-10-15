@@ -237,4 +237,12 @@ resposta como "Captura técnica não iniciada" e, numa retomada recusada, voltav
 Contrato sem mudança. `RecorderSnapshot` ganhou o componente `pendingSession` (construído só pelo
 `RecorderController`).
 
-Resultados depois da revisão: ver a seção "Testes depois da revisão" no PR #4.
+Resultados depois da revisão:
+
+| Verificação | Antes da revisão | Depois |
+|---|---|---|
+| Windows `./mvnw clean verify` | 243 | **251**, 0 falhas (recorder 37 → 44, app 44 → 45) |
+| Linux `tools/golden-linux.sh verify` (extensão `d0fa6db` ao lado) | 243 | **251**, 0 falhas, 0 ignorados |
+| Homologação real no Windows, repetida depois das correções | 29 / 0 | **29 verificações, 0 falhas** (`reports/studio-003/evidence/S003-homologacao-revisao-log.txt`) |
+
+Golden screenshots não regenerados. Nenhum teste removido ou afrouxado.
