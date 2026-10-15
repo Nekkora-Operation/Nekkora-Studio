@@ -41,6 +41,7 @@ public class NekkoraTextField extends JTextField {
         initialized = true;
         setPlaceholder(placeholder);
         applyStyle();
+        TextUndo.install(this);
     }
 
     public void setPlaceholder(String placeholder) {

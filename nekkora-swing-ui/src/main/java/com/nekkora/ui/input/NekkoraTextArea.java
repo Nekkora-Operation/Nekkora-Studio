@@ -24,6 +24,7 @@ public class NekkoraTextArea extends JTextArea {
         setWrapStyleWord(true);
         putClientProperty(FlatClientProperties.PLACEHOLDER_TEXT, placeholder);
         applyStyle();
+        TextUndo.install(this);
     }
 
     /** Envolve em um painel rolável com borda de campo (foco/erro aparecem na borda). */

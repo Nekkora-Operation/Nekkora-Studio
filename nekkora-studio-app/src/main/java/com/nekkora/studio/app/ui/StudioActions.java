@@ -22,6 +22,10 @@ public final class StudioActions {
     public static final String NEW_SESSION = "studio.session.new";
     public static final String NEW_STEP = "studio.step.new";
     public static final String RENAME_SESSION = "studio.session.rename";
+    /** STUDIO-004: editar o item selecionado (F2), desfazer (Ctrl+Z) e refazer (Ctrl+Y). */
+    public static final String EDIT = "studio.edit.selected";
+    public static final String UNDO = "studio.edit.undo";
+    public static final String REDO = "studio.edit.redo";
     public static final String NEXT_THEME = "studio.view.theme";
     public static final String RECORD = "studio.recorder.record";
     public static final String RUN = "studio.future.run";
@@ -43,7 +47,20 @@ public final class StudioActions {
         registry.register(NekkoraAction.of(NEW_STEP, "Nova etapa", () -> controller.newStep(null))
                 .icon(IconName.LIST).shortcut(NekkoraKeys.shortcut(KeyEvent.VK_E)).category("Automação"));
         registry.register(NekkoraAction.of(RENAME_SESSION, "Renomear sessão", controller::renameSelectedSession)
-                .icon(IconName.EDIT).shortcut(KeyStroke.getKeyStroke(KeyEvent.VK_F2, 0)).category("Automação"));
+                .icon(IconName.EDIT).category("Automação"));
+        registry.register(NekkoraAction.of(EDIT, "Editar", controller::editSelected).icon(IconName.EDIT)
+                .shortcut(KeyStroke.getKeyStroke(KeyEvent.VK_F2, 0)).category("Edição")
+                .description("Editar a automação, a sessão ou a etapa selecionada."));
+        // Atalhos da janela: dentro de um campo de texto, Ctrl+Z/Ctrl+Y desfazem a digitação do próprio campo (o campo
+        // trata o atalho antes) — e, por segurança, nunca disparam um desfazer estrutural com o foco num campo.
+        registry.register(NekkoraAction.of(UNDO, "Desfazer", () -> {
+            if (!typing()) controller.undo();
+        }).icon(IconName.ARROW_LEFT).shortcut(NekkoraKeys.shortcut(KeyEvent.VK_Z)).category("Edição")
+                .description("Desfazer a última edição desta automação (somente em memória)."));
+        registry.register(NekkoraAction.of(REDO, "Refazer", () -> {
+            if (!typing()) controller.redo();
+        }).icon(IconName.ARROW_RIGHT).shortcut(NekkoraKeys.shortcut(KeyEvent.VK_Y)).category("Edição")
+                .description("Refazer a última edição desfeita desta automação."));
         registry.register(NekkoraAction.of(NEXT_THEME, "Próximo tema", StudioActions::cycleTheme)
                 .icon(IconName.SUN).shortcut(NekkoraKeys.shortcut(KeyEvent.VK_T, InputEvent.SHIFT_DOWN_MASK)).category("Exibir"));
         registry.register(NekkoraAction.of(RECORD, RECORD_LABEL, () -> recordHandler.run()).icon(IconName.PLAY_CIRCLE)
@@ -51,7 +68,7 @@ public final class StudioActions {
                 .description("Iniciar uma gravação técnica numa aba autorizada do Chrome."));
         future(RUN, "Executar", IconName.PLAY, "A execução de automações chega em uma próxima versão do Studio.");
         future(SAVE, "Salvar", IconName.SAVE, "O salvamento ainda não está disponível: as automações ficam apenas na memória.");
-        for (String id : List.of(NEW_SESSION, NEW_STEP, RENAME_SESSION, RECORD)) get(id).setEnabled(false);
+        for (String id : List.of(NEW_SESSION, NEW_STEP, RENAME_SESSION, RECORD, EDIT, UNDO, REDO)) get(id).setEnabled(false);
     }
 
     /** Liga o botão Gravar ao Recorder (STUDIO-002). */
@@ -71,6 +88,11 @@ public final class StudioActions {
 
     public NekkoraAction get(String id) {
         return registry.find(id).orElseThrow();
+    }
+
+    /** O foco está num campo de texto (o atalho pertence ao campo). */
+    private static boolean typing() {
+        return java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner() instanceof javax.swing.text.JTextComponent;
     }
 
     /** Alterna para o próximo dos quatro temas, ao vivo. */

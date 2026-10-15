@@ -1,0 +1,64 @@
+Tela: java.awt.Rectangle[x=0,y=0,width=1920,height=1032] · java 21.0.12
+Native Host instalado pelo script oficial (install-host.ps1)
+Chrome for Testing: 155.0.8059.39
+OK    Conexão autenticada Studio ⇄ host ⇄ extensão
+Automação gravada: Autenticação [Preencher campo Usuário, Preencher campo Senha, Clicar no botão Entrar, Clicar no link Clientes] · Consulta [Selecionar São Paulo no campo Estado, Preencher campo Pesquisa, Clicar no botão Pesquisar]
+OK    Preparação: automação gravada pela STUDIO-003 (7 etapas RECORDED)
+captura S004-01-editar-automacao.png (540x343)
+OK    Cenário 1: nome e descrição alterados
+OK    Cenário 1: todas as sessões e etapas preservadas (mesmas identidades)
+OK    Cenário 1: aba e navegação mostram o novo nome
+captura S004-01-automacao-editada.png (1920x1000)
+OK    Cenário 2: ordem Consulta, Autenticação
+OK    Cenário 2: numeração recalculada (Consulta 01–03, Autenticação 04–07)
+captura S004-02-sessoes-reorganizadas.png (1920x1000)
+OK    Cenário 2: ordem original restaurada
+OK    Cenário 3: etapa gravada na Autenticação
+captura S004-03-mover-etapa.png (540x310)
+OK    Cenário 3: Clientes agora é a 1ª etapa da Consulta
+OK    Cenário 3: mesma identidade e procedência RECORDED
+OK    Cenário 3: numeração global 01–07 contínua
+captura S004-03-etapa-movida.png (1920x1000)
+captura S004-04-parametro-variavel.png (760x964)
+OK    Cenário 4: valor literal indisponível no campo de senha
+captura S004-04-parametro-credencial.png (760x964)
+OK    Cenário 4: Usuário → Variável cliente.usuario
+OK    Cenário 4: Senha → Credencial sistema.senha (só o apelido)
+OK    Cenário 4: nenhum valor secreto armazenado (senha e usuário digitados na gravação ausentes)
+captura S004-04-parametros-no-painel.png (1920x1000)
+Localizadores capturados: 5; preferencial original: 0; alternativa validada: 1
+OK    Cenário 5: candidatos visíveis no editor
+OK    Cenário 5: candidatos não validados não podem ser escolhidos
+captura S004-05-localizadores.png (760x964)
+OK    Cenário 5: localizador validado escolhido como preferencial
+OK    Cenário 5: ElementReference capturado preservado (mesmo objeto, preferencial original)
+captura S004-06-comentario.png (760x964)
+OK    Cenário 6: comentário editado com a data de criação preservada
+OK    Cenário 6: o comentário acompanha a etapa movida
+OK    Cenário 9: continua RECORDED e identificada como alterada
+OK    Cenário 9: original × atual na interface
+OK    Cenário 9: resultado de negócio continua não validado
+captura S004-09-origem-e-alteracoes.png (760x964)
+captura S004-09-procedencia-no-painel.png (1920x1000)
+captura S004-07-confirmar-exclusao.png (420x203)
+OK    Cenário 7: renomeada, movida e excluída
+OK    Cenário 7: Ctrl+Z ×3 volta ao estado anterior com a mesma etapa
+OK    Cenário 7: nenhuma entidade perdida ou duplicada
+captura S004-07-desfazer-refazer.png (1920x1000)
+OK    Cenário 8: automação bloqueada enquanto grava
+OK    Cenário 8: Delete não exclui e explica o motivo
+OK    Cenário 8: Alt+↓ não move
+OK    Cenário 8: aviso de bloqueio na automação
+captura S004-08-bloqueio-durante-gravacao.png (1920x1000)
+OK    Cenário 8: o Recorder continua registrando
+OK    Cenário 8: depois de finalizar, a edição volta a ficar disponível
+OK    S004-053 nenhum identificador interno na tela
+OK    S004-053 usuário e senha digitados na gravação ausentes do domínio e da tela
+captura S004-10-tema-sakura-dark.png (1920x1000)
+captura S004-10-tema-midnight-dark.png (1920x1000)
+captura S004-10-tema-porcelain-light.png (1920x1000)
+captura S004-10-tema-sage-light.png (1920x1000)
+Automação final:
+  Sessão Autenticação: [Preencher campo Usuário, Preencher campo Senha, Confirmar autenticação]
+  Sessão Consulta: [Clicar no link Clientes, Preencher campo Pesquisa, Selecionar Estado, Clicar no botão Pesquisar, Clicar no botão Pesquisar]
+RESULTADO: 36 verificações, 0 falha(s)

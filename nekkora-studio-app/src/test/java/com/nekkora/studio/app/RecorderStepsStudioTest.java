@@ -327,4 +327,88 @@ class RecorderStepsStudioTest {
         assertTrue(summary.contains("Gravação concluída") && summary.contains("Etapas registradas: 2"), summary);
         assertTrue(summary.contains("O PageMap não foi exportado"), summary);
     }
+
+    // ------------------------------------------------------------- STUDIO-004: edição × gravação ativa
+
+    @Test
+    @DisplayName("S004-047/048 automação em gravação: edição recusada no caso de uso e na tela; Recorder e StepIntake seguem; ao finalizar, volta")
+    void s004BloqueioDuranteGravacao() throws Exception {
+        Automation a = automation();
+        Automation outra = Edt.call(() -> studio.service().createAutomation("Outra automação", null));
+        Edt.run(() -> studio.controller().openAutomation(a.id()));
+        LogicalSession login = a.sessions().get(0);
+        AutomationStep manual = login.steps().get(0);
+        String rid = startRecording(login.id());
+        String r = route("studio.recording.start");
+        assertTrue(studio.service().isLocked(a.id()));
+        assertFalse(studio.service().isLocked(outra.id()), "outras automações continuam editáveis");
+        com.nekkora.studio.domain.DomainValidationException e = org.junit.jupiter.api.Assertions.assertThrows(
+                com.nekkora.studio.domain.DomainValidationException.class,
+                () -> Edt.call(() -> {
+                    studio.service().moveStep(a.id(), manual.id(), login.id(), 0);
+                    return null;
+                }));
+        assertEquals(com.nekkora.studio.domain.ValidationProblem.AUTOMATION_RECORDING, e.problem(), "bloqueio no caso de uso, não só no botão");
+        for (Runnable op : List.<Runnable>of(
+                () -> studio.service().removeStep(a.id(), manual.id()),
+                () -> studio.service().updateAutomation(a.id(), "Outro nome", ""),
+                () -> studio.service().editSession(a.id(), login.id(), "X", "", ""),
+                () -> studio.service().duplicateStep(a.id(), manual.id()),
+                () -> studio.service().addComment(a.id(), manual.id(), "comentário"),
+                () -> studio.service().undo(a.id()))) {
+            org.junit.jupiter.api.Assertions.assertThrows(com.nekkora.studio.domain.DomainValidationException.class, () -> Edt.call(() -> {
+                op.run();
+                return null;
+            }));
+        }
+        assertEquals("Abrir o sistema", manual.name(), "nada mudou");
+        Edt.run(() -> studio.service().updateAutomation(outra.id(), "Outra automação editada", ""));
+        assertEquals("Outra automação editada", outra.name(), "edição de outra automação durante a gravação");
+        Edt.run(() -> studio.controller().openAutomation(a.id()));
+        Edt.flush();
+        var overview = studio.view().overview(a.id()).orElseThrow();
+        assertTrue(Edt.call(() -> overview.lockBanner().isVisible()), "aviso visível");
+        assertFalse(Edt.call(overview::isEditable));
+        Edt.run(() -> studio.controller().selectStep(a.id(), login.id(), manual.id()));
+        String inspector = StudioFixture.texts(studio.view().inspector());
+        assertTrue(inspector.contains(com.nekkora.studio.ui.PropertiesPresenter.LOCKED_NOTE), inspector);
+        var list = overview.sessionView(login.id()).orElseThrow().stepList();
+        Edt.run(() -> {
+            Object key = list.getInputMap(JComponent.WHEN_FOCUSED).get(javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_DELETE, 0));
+            list.getActionMap().get(key).actionPerformed(new java.awt.event.ActionEvent(list, 0, "delete"));
+        }); // Delete na lista: o caso de uso recusa, explica e não pergunta nada
+        assertEquals("Edição indisponível durante a gravação", studio.state().lastNotice().orElseThrow().title());
+        assertEquals(1, names(login).size());
+
+        // o Recorder continua entregando etapas pelo StepIntake, fora do histórico de edição
+        int history = studio.service().history().undoSize(a.id());
+        step(rid, 1, r, "FILL", element("TEXT_INPUT", "Usuário", "input", "usuario", false), null);
+        await(() -> studio.recorder().snapshot().steps().accepted() == 1, "registrada");
+        assertEquals(List.of("Abrir o sistema", "Preencher campo Usuário"), names(login));
+        assertEquals(history, studio.service().history().undoSize(a.id()), "etapa do Recorder fora do histórico");
+
+        Edt.run(() -> studio.recorderPresenter().panel().finishButton().doClick());
+        await(() -> !studio.service().isLocked(a.id()), "desbloqueada ao finalizar");
+        Edt.flush();
+        assertTrue(Edt.call(overview::isEditable));
+        assertFalse(Edt.call(() -> overview.lockBanner().isVisible()));
+        AutomationStep usuario = login.steps().get(1);
+        Edt.run(() -> studio.service().moveStep(a.id(), usuario.id(), login.id(), 0));
+        assertEquals(List.of("Preencher campo Usuário", "Abrir o sistema"), names(login), "edição disponível depois da gravação");
+    }
+
+    @Test
+    @DisplayName("S004-054 cancelamento continua descartando só a gravação cancelada, também depois de edições anteriores")
+    void s004CancelamentoPreservado() throws Exception {
+        Automation a = automation();
+        LogicalSession login = a.sessions().get(0);
+        Edt.run(() -> studio.service().updateStepBasics(a.id(), login.steps().get(0).id(), "Abrir o sistema de clientes", "", ActionType.NAVIGATE));
+        String rid = startRecording(login.id());
+        String r = route("studio.recording.start");
+        step(rid, 1, r, "FILL", element("TEXT_INPUT", "Usuário", "input", "usuario", false), null);
+        await(() -> studio.recorder().snapshot().steps().accepted() == 1, "registrada");
+        Edt.run(() -> studio.recorderPresenter().panel().cancelButton().doClick());
+        await(() -> studio.recorder().snapshot().state() == RecorderState.CANCELLED && names(login).size() == 1, "descartada");
+        assertEquals(List.of("Abrir o sistema de clientes"), names(login), "a etapa manual editada continua");
+    }
 }

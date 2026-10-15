@@ -126,12 +126,17 @@ public final class StudioState {
     }
 
     void fire(AutomationId automation, StudioChange first, StudioChange... rest) {
-        fireFor(automation, null, first, rest);
+        fireFor(automation, java.util.Set.<com.nekkora.studio.domain.SessionId>of(), first, rest);
     }
 
     /** Notifica uma alteração restrita a uma sessão lógica (a tela atualiza só a parte afetada). */
     void fireFor(AutomationId automation, com.nekkora.studio.domain.SessionId session, StudioChange first, StudioChange... rest) {
-        StudioEvent e = new StudioEvent(EnumSet.of(first, rest), automation, session);
+        fireFor(automation, session == null ? java.util.Set.of() : java.util.Set.of(session), first, rest);
+    }
+
+    /** Notifica uma alteração restrita a algumas sessões (STUDIO-004: origem e destino de uma movimentação). */
+    void fireFor(AutomationId automation, java.util.Set<com.nekkora.studio.domain.SessionId> sessions, StudioChange first, StudioChange... rest) {
+        StudioEvent e = new StudioEvent(EnumSet.of(first, rest), automation, sessions);
         for (Consumer<StudioEvent> l : listeners) l.accept(e);
     }
 }

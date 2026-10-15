@@ -67,6 +67,44 @@ public final class ElementPresentation {
         return StudioText.technical(c.description()) + " · " + c.stability().label();
     }
 
+    private static final Map<String, String> STRATEGY_LABELS = Map.ofEntries(
+            Map.entry("TEST_ATTRIBUTE", "Atributo de teste"), Map.entry("ID", "ID"), Map.entry("NAME", "Name"), Map.entry("LABEL", "Rótulo"),
+            Map.entry("ROLE_NAME", "Papel e nome"), Map.entry("CONTEXTUAL", "Contexto"), Map.entry("ROW_CONTEXT", "Linha de tabela"),
+            Map.entry("ATTRIBUTE", "Atributo"), Map.entry("TEXT", "Texto"), Map.entry("XPATH_RELATIVE", "XPath relativo"),
+            Map.entry("POSITIONAL", "Posição"));
+
+    /** STUDIO-004: linha de um localizador capturado ("ID: id "btn-login" · Provavelmente estável"). */
+    public static String locatorLine(LocatorCandidate c) {
+        String technical = c.expression().isBlank() ? "" : " (" + StudioText.technical(c.expression()) + ")";
+        return STRATEGY_LABELS.getOrDefault(c.strategy().name(), c.strategy().name()) + ": " + StudioText.technical(c.description()) + technical
+                + " · " + c.stability().label();
+    }
+
+    /** STUDIO-004: situação de um localizador capturado, sem inventar validação. */
+    public static String locatorStatus(LocatorCandidate c) {
+        if (c.validated()) return "Validado na captura: encontrou exatamente o elemento";
+        if (!c.matchesTarget()) return "Não encontrou o elemento na captura";
+        return "Candidato alternativo, não validado: " + c.matchCount() + " correspondências na captura";
+    }
+
+    /**
+     * STUDIO-004: localizadores da referência efetiva, marcando o preferencial ("✓ preferencial", "○ candidato") e os
+     * propostos manualmente ("não verificado").
+     */
+    public static List<Row> locatorRows(ElementReference e, List<com.nekkora.studio.domain.element.ManualLocator> manual) {
+        List<Row> rows = new ArrayList<>();
+        for (int i = 0; i < e.locators().size(); i++) {
+            LocatorCandidate c = e.locators().get(i);
+            String mark = i == e.preferredLocatorIndex() ? "✓ Preferencial" : "○ Candidato";
+            rows.add(new Row(mark, locatorLine(c) + " — " + locatorStatus(c)));
+        }
+        for (com.nekkora.studio.domain.element.ManualLocator m : manual) {
+            rows.add(new Row("Proposto manualmente", m.syntax().label() + ": " + StudioText.technical(m.expression()) + " — "
+                    + m.verification().label()));
+        }
+        return rows;
+    }
+
     private static String path(List<AccessStep> steps) {
         return steps.stream().map(s -> s.type() == AccessStep.Type.MAIN_DOCUMENT && s.label().isBlank() ? "Documento principal"
                 : StudioText.technical(s.label())).collect(Collectors.joining(" → "));

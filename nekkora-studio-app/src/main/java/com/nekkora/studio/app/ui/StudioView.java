@@ -75,6 +75,8 @@ public final class StudioView {
     private final ThemeListener themeListener = (oldTheme, newTheme) -> updateTheme();
     private final java.util.function.Consumer<StudioEvent> stateListener = this::onEvent;
     private boolean syncingTabs;
+    private NekkoraToolbarButton undoButton;
+    private NekkoraToolbarButton redoButton;
     private boolean closingTab;
 
     public StudioView(StudioState state, StudioController controller) {
@@ -112,6 +114,51 @@ public final class StudioView {
             @Override
             public void openStep(StepId step) {
                 controller.openStepDetails(step);
+            }
+
+            @Override
+            public void editAutomation() {
+                controller.editAutomation();
+            }
+
+            @Override
+            public void editSession(SessionId session) {
+                controller.editSession(session);
+            }
+
+            @Override
+            public void moveSession(SessionId session, int delta) {
+                controller.moveSession(session, delta);
+            }
+
+            @Override
+            public void deleteSession(SessionId session) {
+                controller.deleteSession(session);
+            }
+
+            @Override
+            public void moveStep(StepId step, int delta) {
+                controller.moveStep(step, delta);
+            }
+
+            @Override
+            public void moveStepTo(StepId step) {
+                controller.moveStepTo(step);
+            }
+
+            @Override
+            public void duplicateStep(StepId step) {
+                controller.duplicateStep(step);
+            }
+
+            @Override
+            public void deleteStep(StepId step) {
+                controller.deleteStep(step);
+            }
+
+            @Override
+            public void restoreOriginal(StepId step, com.nekkora.studio.domain.StepField field) {
+                controller.restoreOriginal(step, field);
             }
         });
 
@@ -158,6 +205,11 @@ public final class StudioView {
         tb.add(new NekkoraToolbarButton(actions.get(StudioActions.NEW_AUTOMATION), true));
         tb.add(new NekkoraToolbarButton(actions.get(StudioActions.NEW_SESSION), true));
         tb.add(new NekkoraToolbarButton(actions.get(StudioActions.NEW_STEP), true));
+        tb.addSeparator();
+        undoButton = new NekkoraToolbarButton(actions.get(StudioActions.UNDO), true);
+        redoButton = new NekkoraToolbarButton(actions.get(StudioActions.REDO), true);
+        tb.add(undoButton);
+        tb.add(redoButton);
         tb.addSeparator();
         NekkoraToolbarButton record = new NekkoraToolbarButton(actions.get(StudioActions.RECORD), true);
         record.getAccessibleContext().setAccessibleDescription("Gravação técnica numa aba autorizada do Chrome; mostra o Recorder quando há gravação.");
@@ -209,14 +261,24 @@ public final class StudioView {
     // ------------------------------------------------------------------ estado → tela
 
     private void onEvent(StudioEvent e) {
-        if (e.has(StudioChange.CATALOG)) refreshNavigator();
+        if (e.has(StudioChange.CATALOG)) {
+            refreshNavigator();
+            refreshTabTitles();
+        }
         if (e.has(StudioChange.CONTENT) && e.automation() != null) {
             AutomationOverview o = overviews.get(e.automation());
             if (o != null) {
-                if (e.session() != null) o.refreshSession(e.session()); // só a sessão afetada (e a numeração seguinte)
+                // só as sessões afetadas (STUDIO-004: origem e destino de uma movimentação) e a numeração das demais
+                if (!e.sessions().isEmpty()) o.refreshSessions(e.sessions());
                 else o.refresh();
             }
         }
+        if (e.has(StudioChange.EDIT_LOCK)) {
+            refreshLocks();
+            refreshToolbar();
+            refreshSelection();
+        }
+        if (e.has(StudioChange.HISTORY)) refreshToolbar();
         if (e.has(StudioChange.OPEN_AUTOMATIONS) || e.has(StudioChange.ACTIVE_AUTOMATION)) syncTabs();
         if (e.has(StudioChange.ACTIVE_AUTOMATION)) {
             refreshNavigator();
@@ -253,6 +315,33 @@ public final class StudioView {
         actions.get(StudioActions.NEW_SESSION).setEnabled(a.isPresent());
         actions.get(StudioActions.NEW_STEP).setEnabled(a.map(x -> !x.sessions().isEmpty()).orElse(false));
         actions.get(StudioActions.RENAME_SESSION).setEnabled(a.map(x -> !x.sessions().isEmpty()).orElse(false));
+        actions.get(StudioActions.EDIT).setEnabled(a.isPresent());
+        boolean canUndo = a.map(x -> controller.service().canUndo(x.id())).orElse(false);
+        boolean canRedo = a.map(x -> controller.service().canRedo(x.id())).orElse(false);
+        actions.get(StudioActions.UNDO).setEnabled(canUndo);
+        actions.get(StudioActions.REDO).setEnabled(canRedo);
+        a.ifPresent(x -> {
+            String locked = controller.service().isLocked(x.id()) ? " — indisponível durante a gravação" : "";
+            undoButton.setToolTipText(controller.service().history().undoLabel(x.id()).map(l -> "Desfazer: " + l).orElse("Nada para desfazer") + locked
+                    + " (" + com.nekkora.ui.action.NekkoraKeys.format(actions.get(StudioActions.UNDO).shortcutKey()) + ")");
+            redoButton.setToolTipText(controller.service().history().redoLabel(x.id()).map(l -> "Refazer: " + l).orElse("Nada para refazer") + locked
+                    + " (" + com.nekkora.ui.action.NekkoraKeys.format(actions.get(StudioActions.REDO).shortcutKey()) + ")");
+        });
+    }
+
+    /** STUDIO-004: nome das abas acompanha a automação (renomear não cria outra automação). */
+    private void refreshTabTitles() {
+        for (Map.Entry<AutomationId, AutomationOverview> en : overviews.entrySet()) {
+            int i = workArea.getTabs().indexOfComponent(en.getValue());
+            if (i >= 0) workArea.getTabs().setTitleAt(i, en.getValue().automation().name());
+        }
+    }
+
+    /** STUDIO-004: automação recebendo gravação — navegação e consulta continuam, edição fica bloqueada. */
+    private void refreshLocks() {
+        for (Map.Entry<AutomationId, AutomationOverview> en : overviews.entrySet()) {
+            en.getValue().setEditable(!controller.service().isLocked(en.getKey()));
+        }
     }
 
     private void refreshStatus() {
@@ -272,19 +361,20 @@ public final class StudioView {
         }
         Automation a = active.get();
         AutomationOverview overview = overviews.get(a.id());
+        boolean editable = !controller.service().isLocked(a.id());
         Selection sel = state.selection();
         switch (sel) {
             case Selection.OfSession s -> {
                 if (overview != null) overview.showSelection(s.session(), null);
-                properties.showSession(a, s.session());
+                properties.showSession(a, s.session(), editable);
             }
             case Selection.OfStep s -> {
                 if (overview != null) overview.showSelection(s.session(), s.step());
-                properties.showStep(a, s.step());
+                properties.showStep(a, s.step(), editable);
             }
             default -> {
                 if (overview != null) overview.showSelection(null, null);
-                properties.showAutomation(a);
+                properties.showAutomation(a, editable);
             }
         }
     }
@@ -319,6 +409,12 @@ public final class StudioView {
     }
 
     private AutomationOverview createOverview(AutomationId id) {
+        AutomationOverview o = newOverview(id);
+        o.setEditable(!controller.service().isLocked(id));
+        return o;
+    }
+
+    private AutomationOverview newOverview(AutomationId id) {
         Automation a = state.catalog().require(id);
         return new AutomationOverview(a, new AutomationOverview.Listener() {
             @Override
@@ -360,6 +456,47 @@ public final class StudioView {
             @Override
             public void renameSessionRequested(SessionId session) {
                 controller.renameSession(session);
+            }
+
+            @Override
+            public void editStepRequested(SessionId session, StepId step) {
+                controller.selectStep(id, session, step);
+                controller.openStepDetails(step);
+            }
+
+            @Override
+            public void moveStepRequested(StepId step, int delta) {
+                controller.moveStep(step, delta);
+            }
+
+            @Override
+            public void moveStepToRequested(StepId step) {
+                controller.moveStepTo(step);
+            }
+
+            @Override
+            public void duplicateStepRequested(StepId step) {
+                controller.duplicateStep(step);
+            }
+
+            @Override
+            public void deleteStepRequested(StepId step) {
+                controller.deleteStep(step);
+            }
+
+            @Override
+            public void editSessionRequested(SessionId session) {
+                controller.editSession(session);
+            }
+
+            @Override
+            public void moveSessionRequested(SessionId session, int delta) {
+                controller.moveSession(session, delta);
+            }
+
+            @Override
+            public void deleteSessionRequested(SessionId session) {
+                controller.deleteSession(session);
             }
         });
     }

@@ -4,6 +4,7 @@ import com.nekkora.studio.domain.action.ActionParameters;
 import com.nekkora.studio.domain.action.ActionType;
 import com.nekkora.studio.domain.action.ValueSource;
 import com.nekkora.studio.domain.element.ElementReference;
+import com.nekkora.studio.domain.element.ManualLocator;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -138,6 +139,7 @@ public final class Automation {
     public void updateDetails(String newName, String newDescription) {
         String n = Texts.requireName(newName);
         String d = Texts.optionalDescription(newDescription);
+        if (n.equals(name) && d.equals(description)) return; // sem efeito: revisão igual
         this.name = n;
         this.description = d;
         touch();
@@ -159,6 +161,7 @@ public final class Automation {
         LogicalSession session = requireSession(sessionId);
         String n = Texts.requireName(newName);
         requireUniqueSessionName(n, sessionId);
+        if (n.equals(session.name())) return;
         session.rename(n);
         touch();
     }
@@ -168,6 +171,7 @@ public final class Automation {
         LogicalSession session = requireSession(sessionId);
         String d = Texts.optionalDescription(newDescription);
         String notes = Texts.optionalDescription(newNotes);
+        if (d.equals(session.description()) && notes.equals(session.notes())) return;
         session.describe(d);
         session.annotate(notes);
         touch();
@@ -216,23 +220,357 @@ public final class Automation {
         return count;
     }
 
-    /** Edição básica de uma etapa: nome, descrição e tipo de ação (a edição avançada é da STUDIO-004). */
+    /** Edição básica de uma etapa: nome, descrição e tipo de ação (atalho de {@link #editStep}). */
     public void updateStepBasics(StepId stepId, String newName, String newDescription, ActionType newType) {
-        AutomationStep step = step(stepId).orElseThrow(() -> new DomainValidationException(ValidationProblem.STEP_NOT_FOUND));
+        AutomationStep step = requireStep(stepId);
+        editStep(stepId, StepEdit.of(this, step).name(newName).description(newDescription).actionType(newType));
+    }
+
+    // ------------------------------------------------------------------ STUDIO-004: estrutura
+
+    /**
+     * Edita nome, descrição e observações de uma sessão numa única operação: tudo é validado antes (nome único, limites)
+     * e nada muda se algum campo for recusado. Sem diferença, sem revisão.
+     *
+     * @return {@code false} se nada mudou
+     */
+    public boolean editSession(SessionId sessionId, String newName, String newDescription, String newNotes) {
+        LogicalSession session = requireSession(sessionId);
         String n = Texts.requireName(newName);
         String d = Texts.optionalDescription(newDescription);
-        if (newType == null) throw new DomainValidationException(ValidationProblem.ACTION_TYPE_REQUIRED);
-        checkParameters(newType, step.parameters(), step.element().orElse(null));
-        step.rename(n);
-        step.describe(d);
-        step.changeActionType(newType);
+        String notes = Texts.optionalDescription(newNotes);
+        requireUniqueSessionName(n, sessionId);
+        if (n.equals(session.name()) && d.equals(session.description()) && notes.equals(session.notes())) return false;
+        session.rename(n);
+        session.describe(d);
+        session.annotate(notes);
         touch();
+        return true;
+    }
+
+    /**
+     * Muda a posição de uma sessão. {@code targetIndex} é a posição final (0..n-1) na lista de sessões. A identidade e as
+     * etapas da sessão não mudam; a numeração das etapas é recalculada (é derivada da ordem).
+     *
+     * @return {@code false} se a sessão já estava nessa posição (nada muda, revisão igual)
+     */
+    public boolean moveSession(SessionId sessionId, int targetIndex) {
+        LogicalSession session = requireSession(sessionId);
+        if (targetIndex < 0 || targetIndex >= sessions.size()) throw new DomainValidationException(ValidationProblem.SESSION_POSITION_INVALID);
+        int from = sessions.indexOf(session);
+        if (from == targetIndex) return false;
+        sessions.remove(from);
+        sessions.add(targetIndex, session);
+        touch();
+        return true;
+    }
+
+    /**
+     * Exclui a sessão e TODAS as etapas dela numa única operação (nenhuma etapa fica órfã). A automação pode ficar sem
+     * sessões.
+     *
+     * @return quantas etapas foram removidas junto
+     */
+    public int removeSession(SessionId sessionId) {
+        LogicalSession session = requireSession(sessionId);
+        int steps = session.stepCount();
+        sessions.remove(session);
+        touch();
+        return steps;
+    }
+
+    /**
+     * Move uma etapa para a posição {@code targetIndex} (0..n) da sessão {@code destination} — a mesma ou outra da MESMA
+     * automação. A posição é contada sem a própria etapa. Origem e destino são validados antes de qualquer alteração: a
+     * etapa nunca fica fora de uma sessão. Identidade, procedência, parâmetros, referência e comentários não mudam.
+     *
+     * @return {@code false} se a etapa já estava nessa posição
+     */
+    public boolean moveStep(StepId stepId, SessionId destination, int targetIndex) {
+        AutomationStep step = requireStep(stepId);
+        if (destination == null) throw new DomainValidationException(ValidationProblem.SESSION_REQUIRED);
+        LogicalSession to = requireSession(destination);
+        LogicalSession from = sessionOf(stepId).orElseThrow();
+        int sizeWithout = from == to ? to.stepCount() - 1 : to.stepCount();
+        if (targetIndex < 0 || targetIndex > sizeWithout) throw new DomainValidationException(ValidationProblem.STEP_POSITION_INVALID);
+        if (from == to && from.positionOf(stepId) - 1 == targetIndex) return false;
+        from.remove(step);
+        to.insert(targetIndex, step);
+        touch();
+        return true;
+    }
+
+    /**
+     * Duplica uma etapa logo depois dela, na mesma sessão. A cópia é uma etapa NOVA ({@link StepId} próprio) de origem
+     * {@code MANUAL}: não é uma segunda interação observada — não leva identidade de gravação nem de evento, nem a
+     * observação da gravação, nem o valor capturado. Copia nome, descrição, tipo, parâmetros, a referência efetiva do
+     * elemento, os localizadores propostos (ainda não verificados) e o contexto; não copia comentários. O vínculo com a
+     * etapa de origem fica em {@link AutomationStep#derivedFrom()}.
+     */
+    public AutomationStep duplicateStep(StepId stepId) {
+        AutomationStep source = requireStep(stepId);
+        LogicalSession session = sessionOf(stepId).orElseThrow();
+        // A referência do elemento vai sem as chaves da gravação e do evento da original: elas identificam a INTERAÇÃO
+        // observada, não o elemento. Ficam os dados para reconhecer o elemento (ex.: TARGET_ID). O vínculo é derivedFrom.
+        ElementReference element = source.element().map(e -> e.withCorrelation(e.correlation()
+                .without(com.nekkora.studio.domain.element.CorrelationKeys.Key.RECORDING_ID,
+                        com.nekkora.studio.domain.element.CorrelationKeys.Key.RECORDED_EVENT_ID))).orElse(null);
+        StepDraft draft = StepDraft.builder().name(source.name()).description(source.description()).actionType(source.actionType())
+                .parameters(source.parameters()).element(element).context(source.context().orElse(null)).build();
+        AutomationStep copy = new AutomationStep(StepId.newId(), source.name(), source.description(), draft, clock.instant(), source.id());
+        if (!source.manualLocators().isEmpty()) {
+            AutomationStep.State s = copy.state();
+            copy.apply(new AutomationStep.State(s.name(), s.description(), s.actionType(), s.parameters(), s.element(), source.manualLocators(),
+                    s.comments(), s.edits(), s.lastManualChange()));
+        }
+        session.insert(session.positionOf(stepId), copy);
+        touch();
+        return copy;
+    }
+
+    /** Exclui uma etapa; as demais ficam, na mesma ordem. */
+    public void removeStep(StepId stepId) {
+        AutomationStep step = requireStep(stepId);
+        sessionOf(stepId).orElseThrow().remove(step);
+        touch();
+    }
+
+    // ------------------------------------------------------------------ STUDIO-004: edição da etapa
+
+    /**
+     * Aplica a edição completa de uma etapa (nome, descrição, tipo, parâmetros, sessão, localizador preferencial,
+     * localizadores propostos e comentários). Tudo é validado ANTES de alterar; havendo qualquer problema, nada muda. Se a
+     * sessão de destino for outra, a etapa vai para o final dela (mesma identidade). Uma edição sem diferença não conta
+     * revisão. Parâmetros incompatíveis com o novo tipo são recusados — nunca descartados em silêncio.
+     *
+     * @return {@code false} se nada mudou
+     */
+    public boolean editStep(StepId stepId, StepEdit edit) {
+        Objects.requireNonNull(edit, "edit");
+        AutomationStep step = requireStep(stepId);
+        String n = Texts.requireName(edit.name());
+        String d = Texts.optionalDescription(edit.description());
+        if (edit.actionType() == null) throw new DomainValidationException(ValidationProblem.ACTION_TYPE_REQUIRED);
+        if (edit.session() == null) throw new DomainValidationException(ValidationProblem.SESSION_REQUIRED);
+        LogicalSession to = requireSession(edit.session());
+        ElementReference effective = withPreferred(step, edit.preferredLocator());
+        checkParameters(edit.actionType(), edit.parameters(), effective);
+        if (!edit.manualLocators().isEmpty() && step.capturedElement().isEmpty()) {
+            throw new DomainValidationException(ValidationProblem.STEP_HAS_NO_ELEMENT);
+        }
+        Instant now = clock.instant();
+        List<StepComment> comments = new ArrayList<>();
+        for (StepEdit.CommentEdit c : edit.comments()) {
+            String text = StepComment.requireText(c.text());
+            if (c.original() < 0) {
+                comments.add(new StepComment(text, now));
+            } else {
+                if (c.original() >= step.comments().size()) throw new DomainValidationException(ValidationProblem.COMMENT_NOT_FOUND);
+                StepComment old = step.comments().get(c.original());
+                comments.add(old.text().equals(text) ? old : new StepComment(text, old.createdAt(), now));
+            }
+        }
+        AutomationStep.State before = step.state();
+        AutomationStep.State next = new AutomationStep.State(n, d, edit.actionType(), edit.parameters(), effective, edit.manualLocators(), comments,
+                before.edits(), before.lastManualChange());
+        LogicalSession from = sessionOf(stepId).orElseThrow();
+        boolean moves = from != to;
+        if (!moves && before.equalsIgnoringHistory(next)) return false;
+        step.edit(next, now);
+        if (moves) {
+            from.remove(step);
+            to.insert(to.stepCount(), step);
+        }
+        touch();
+        return true;
+    }
+
+    /** Define os parâmetros da etapa (valor, variável, credencial ou opção), com as regras de {@link #editStep}. */
+    public boolean setStepParameters(StepId stepId, ActionParameters parameters) {
+        return editStep(stepId, StepEdit.of(this, requireStep(stepId)).parameters(parameters));
+    }
+
+    /**
+     * Escolhe o localizador preferencial entre os candidatos CAPTURADOS (índice na lista) — só um validado na captura
+     * pode ser escolhido ({@link com.nekkora.studio.domain.element.LocatorCandidate#validated()}). -1 remove a preferência.
+     */
+    public boolean choosePreferredLocator(StepId stepId, int index) {
+        return editStep(stepId, StepEdit.of(this, requireStep(stepId)).preferredLocator(index));
+    }
+
+    /** Propõe um localizador manual (sempre não verificado); o elemento capturado não muda. */
+    public boolean addManualLocator(StepId stepId, ManualLocator locator) {
+        AutomationStep step = requireStep(stepId);
+        List<ManualLocator> list = new ArrayList<>(step.manualLocators());
+        list.add(Objects.requireNonNull(locator, "locator"));
+        return editStep(stepId, StepEdit.of(this, step).manualLocators(list));
+    }
+
+    public boolean removeManualLocator(StepId stepId, int index) {
+        AutomationStep step = requireStep(stepId);
+        if (index < 0 || index >= step.manualLocators().size()) throw new DomainValidationException(ValidationProblem.LOCATOR_NOT_FOUND);
+        List<ManualLocator> list = new ArrayList<>(step.manualLocators());
+        list.remove(index);
+        return editStep(stepId, StepEdit.of(this, step).manualLocators(list));
+    }
+
+    /** Acrescenta um comentário ao final (data de criação = agora). */
+    public boolean addComment(StepId stepId, String text) {
+        AutomationStep step = requireStep(stepId);
+        StepEdit e = StepEdit.of(this, step);
+        List<StepEdit.CommentEdit> list = new ArrayList<>(e.comments());
+        list.add(StepEdit.CommentEdit.added(text));
+        return editStep(stepId, e.comments(list));
+    }
+
+    /** Altera o texto de um comentário, preservando a data de criação. */
+    public boolean editComment(StepId stepId, int index, String text) {
+        AutomationStep step = requireStep(stepId);
+        if (index < 0 || index >= step.comments().size()) throw new DomainValidationException(ValidationProblem.COMMENT_NOT_FOUND);
+        StepEdit e = StepEdit.of(this, step);
+        List<StepEdit.CommentEdit> list = new ArrayList<>(e.comments());
+        list.set(index, new StepEdit.CommentEdit(index, text));
+        return editStep(stepId, e.comments(list));
+    }
+
+    public boolean removeComment(StepId stepId, int index) {
+        AutomationStep step = requireStep(stepId);
+        if (index < 0 || index >= step.comments().size()) throw new DomainValidationException(ValidationProblem.COMMENT_NOT_FOUND);
+        StepEdit e = StepEdit.of(this, step);
+        List<StepEdit.CommentEdit> list = new ArrayList<>(e.comments());
+        list.remove(index);
+        return editStep(stepId, e.comments(list));
+    }
+
+    /**
+     * Volta um campo de uma etapa gravada ao valor capturado (sanitizado na origem — nenhum segredo existe para voltar). O
+     * resultado passa pelas mesmas validações: restaurar parâmetros num tipo que não os aceita, por exemplo, é recusado.
+     */
+    public boolean restoreOriginal(StepId stepId, StepField field) {
+        AutomationStep step = requireStep(stepId);
+        CapturedBaseline b = step.baseline().orElseThrow(() -> new DomainValidationException(ValidationProblem.NO_CAPTURED_ORIGINAL));
+        StepEdit e = StepEdit.of(this, step);
+        switch (Objects.requireNonNull(field, "field")) {
+            case NAME -> e.name(b.name());
+            case DESCRIPTION -> e.description(b.description());
+            case ACTION_TYPE -> e.actionType(b.actionType());
+            case PARAMETERS -> e.parameters(b.parameters());
+            case PREFERRED_LOCATOR -> e.preferredLocator(b.preferredLocator());
+        }
+        return editStep(stepId, e);
+    }
+
+    // ------------------------------------------------------------------ STUDIO-004: histórico em memória
+
+    /**
+     * Fotografia completa do estado editável (nome, descrição, sessões, ordem e estado efetivo de cada etapa) para o
+     * histórico de desfazer/refazer em memória. Guarda as PRÓPRIAS sessões e etapas: restaurar devolve as mesmas
+     * identidades, sem criar novas. Só contém estados que o domínio aceitou.
+     */
+    public Snapshot snapshot() {
+        List<LogicalSession.State> sessionStates = new ArrayList<>(sessions.size());
+        List<AutomationStep.State[]> stepStates = new ArrayList<>(sessions.size());
+        for (LogicalSession s : sessions) {
+            LogicalSession.State st = s.state();
+            sessionStates.add(st);
+            AutomationStep.State[] states = new AutomationStep.State[st.steps().size()];
+            for (int i = 0; i < states.length; i++) states[i] = st.steps().get(i).state(); // compartilhado enquanto a etapa não muda
+            stepStates.add(states);
+        }
+        return new Snapshot(this, revision, name, description, List.copyOf(sessions), sessionStates, stepStates);
+    }
+
+    /**
+     * Restaura uma fotografia DESTA automação (desfazer/refazer). Sessões e etapas excluídas voltam com as mesmas
+     * identidades. Conta uma revisão. A coerência com o estado atual (ex.: ninguém mais alterou a automação) é
+     * responsabilidade de quem mantém o histórico — ver {@link Snapshot#revision()}.
+     */
+    public void restore(Snapshot snapshot) {
+        Objects.requireNonNull(snapshot, "snapshot");
+        if (snapshot.owner != this) throw new IllegalArgumentException("fotografia de outra automação");
+        this.name = snapshot.name;
+        this.description = snapshot.description;
+        sessions.clear();
+        sessions.addAll(snapshot.sessions);
+        for (int i = 0; i < snapshot.sessions.size(); i++) {
+            LogicalSession.State st = snapshot.sessionStates.get(i);
+            snapshot.sessions.get(i).apply(st);
+            AutomationStep.State[] states = snapshot.stepStates.get(i);
+            for (int j = 0; j < states.length; j++) st.steps().get(j).apply(states[j]);
+        }
+        touch();
+    }
+
+    /** Fotografia opaca de uma automação (somente em memória). */
+    public static final class Snapshot {
+        private final Automation owner;
+        private final long revision;
+        private final String name;
+        private final String description;
+        private final List<LogicalSession> sessions;
+        private final List<LogicalSession.State> sessionStates;
+        private final List<AutomationStep.State[]> stepStates;
+
+        private Snapshot(Automation owner, long revision, String name, String description, List<LogicalSession> sessions,
+                List<LogicalSession.State> sessionStates, List<AutomationStep.State[]> stepStates) {
+            this.owner = owner;
+            this.revision = revision;
+            this.name = name;
+            this.description = description;
+            this.sessions = sessions;
+            this.sessionStates = sessionStates;
+            this.stepStates = stepStates;
+        }
+
+        /** Revisão da automação no instante da fotografia. */
+        public long revision() {
+            return revision;
+        }
+
+        /** Nome da automação na fotografia (o catálogo confere a unicidade antes de restaurar). */
+        public String name() {
+            return name;
+        }
+
+        /** A sessão existe nesta fotografia. */
+        public boolean hasSession(SessionId id) {
+            return sessions.stream().anyMatch(s -> s.id().equals(id));
+        }
+
+        /** A etapa existe nesta fotografia (em alguma sessão). */
+        public boolean hasStep(StepId id) {
+            return sessionStates.stream().anyMatch(s -> s.steps().stream().anyMatch(st -> st.id().equals(id)));
+        }
+
+        /** Sessão que contém a etapa nesta fotografia. */
+        public Optional<SessionId> sessionOf(StepId id) {
+            for (int i = 0; i < sessions.size(); i++) {
+                if (sessionStates.get(i).steps().stream().anyMatch(st -> st.id().equals(id))) return Optional.of(sessions.get(i).id());
+            }
+            return Optional.empty();
+        }
     }
 
     // ------------------------------------------------------------------ regras
 
     private LogicalSession requireSession(SessionId sessionId) {
         return session(sessionId).orElseThrow(() -> new DomainValidationException(ValidationProblem.SESSION_NOT_FOUND));
+    }
+
+    private AutomationStep requireStep(StepId stepId) {
+        return step(stepId).orElseThrow(() -> new DomainValidationException(ValidationProblem.STEP_NOT_FOUND));
+    }
+
+    /** Referência efetiva com o localizador preferencial pedido — validado como na captura. */
+    private static ElementReference withPreferred(AutomationStep step, int index) {
+        ElementReference captured = step.capturedElement().orElse(null);
+        if (captured == null) {
+            if (index != -1) throw new DomainValidationException(ValidationProblem.STEP_HAS_NO_ELEMENT);
+            return null;
+        }
+        if (index < -1 || index >= captured.locators().size()) throw new DomainValidationException(ValidationProblem.LOCATOR_NOT_FOUND);
+        if (index >= 0 && !captured.locators().get(index).validated()) throw new DomainValidationException(ValidationProblem.LOCATOR_NOT_VALIDATED);
+        return captured.withPreferredLocator(index);
     }
 
     private void requireUniqueSessionName(String candidate, SessionId except) {

@@ -176,11 +176,31 @@ public final class RecorderPresenter {
 
     // ------------------------------------------------------------------ estado → tela
 
+    /**
+     * STUDIO-004 (D-S004-10): a automação está "em gravação" para fins de edição enquanto a gravação existir (início,
+     * gravação, pausa, interrupção, encerramento ou reconciliação com resultado desconhecido) e enquanto houver etapas
+     * recebidas ainda não entregues ao domínio.
+     */
+    public static boolean locks(RecorderSnapshot s, com.nekkora.studio.domain.AutomationId automation) {
+        if (s == null || s.automation() == null || !s.automation().equals(automation)) {
+            return false;
+        }
+        return s.state().active() || s.steps().pending() > 0;
+    }
+
+    private com.nekkora.studio.domain.AutomationId lockedAutomation;
+
     private void render(RecorderSnapshot s) {
         if (disposed) {
             return;
         }
         current = s;
+        com.nekkora.studio.domain.AutomationId locked = s.automation() != null && locks(s, s.automation()) ? s.automation() : null;
+        if (!java.util.Objects.equals(locked, lockedAutomation)) {
+            com.nekkora.studio.domain.AutomationId before = lockedAutomation;
+            lockedAutomation = locked;
+            service.editLockChanged(locked != null ? locked : before); // a tela reavalia o que pode ser editado
+        }
         Automation a = s.automation() == null ? null : service.state().catalog().find(s.automation()).orElse(null);
         panel.render(s, a);
         host.contentChanged();
