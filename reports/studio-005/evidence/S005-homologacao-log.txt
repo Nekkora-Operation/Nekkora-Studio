@@ -14,7 +14,7 @@ captura S005-01-floating-evidencias.png (400x551)
 OK    S005-058 painel: grupo Evidências com a mensagem e 'Resultado de negócio: Não validado'
 captura S005-02-login-erro-painel.png (1920x1000)
 OK    Cenário 2: mensagem 1 s depois associada à etapa (status, não sucesso de negócio)
-  do início do gesto de clique até a mensagem tardia observada: 1930 ms (o clique em si acontece ~0,9 s depois do início)
+  do início do gesto de clique até a mensagem tardia observada: 1927 ms (o clique em si acontece ~0,9 s depois do início)
 OK    Cenário 2: observada depois do atraso de 1 s da página e dentro da janela de 3 s
 OK    S005-034/064 'sucesso' no texto não vira resultado de negócio
 OK    Cenário 3: um aviso com duas ações candidatas fica SEM etapa (nenhuma escolhida)

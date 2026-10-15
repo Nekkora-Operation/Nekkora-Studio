@@ -63,7 +63,7 @@ Os nomes dos testes começam pelo número da matriz (ex.: `test('S005-021 — �
 | S005-044 | Shadow DOM | N-E, IT cenário 7 (componente `caixa-confirmacao`) |
 | S005-045 | Mudança de documento durante a observação | N-E, IT cenário 6, HR cenário 6 |
 | S005-046 | Revogação de permissão | N-E (`PERMISSION_REVOKED`), além do IT de revogação da STUDIO-003 (sensores) |
-| S005-047 | Dados pessoais em mensagem | N-R, N-E, H, D, R, IT cenário 8, HR cenário 8 |
+| S005-047 | Dados pessoais em mensagem | N-R, N-E, H, D, R, IT cenário 8 e `s005SensitiveFieldGone` (campo limpo, removido, em Shadow DOM, dado de terceiro), HR cenário 8 |
 | S005-048 | Senha em mensagem | N-R, H, IT cenário 8 (código digitado), HR cenário 8 |
 | S005-049 | JWT e Bearer em mensagem | N-R, H, D, IT cenário 8 |
 | S005-050 | IDs técnicos fora da UI | A, HR |
@@ -71,7 +71,7 @@ Os nomes dos testes começam pelo número da matriz (ex.: `test('S005-021 — �
 | S005-052 | Nenhum PageMap por evento | fixture inválida, N-E, R |
 | S005-053 | Limite de evidências | N-E, D |
 | S005-054 | Backpressure e perda declarada | N-E |
-| S005-055 | Native Host preserva prioridade | parcial: `HostConcurrencyTest` (existente), ack/sync fora da fila de comandos no service worker, IT reconexão. Não há teste novo específico de prioridade entre evidências e comandos |
+| S005-055 | Native Host preserva prioridade | `HostConcurrencyTest.s005055RajadaDeEvidenciasNaoPrendeOControle` (revisão do PR #6): motor ocupado + rajada de 300 evidências; pausa e finalização repassadas antes do fim da rajada (1 ms / 0 ms), 300/300 entregues |
 | S005-056 | EDT não bloqueada | A (verificação de `RepaintManager`; concorrência) |
 | S005-057 | Floating Recorder atualiza contadores | A, HR |
 | S005-058 | Painel de evidências | A, HR |
@@ -79,7 +79,8 @@ Os nomes dos testes começam pelo número da matriz (ex.: `test('S005-021 — �
 | S005-060 | Quatro temas | A `s005AcessibilidadeETemas` |
 | S005-061 | Golden screenshots preservados | suíte do Studio (golden tests existentes, sem ajuste) |
 | S005-062 | Regressão STUDIO-001 a 004 | Studio 337/337 Windows e Linux; HR (bloqueio S004) |
-| S005-063 | Regressão da Chrome Extension | Java 235, Node 129, navegador 224 |
+| S005-063 | Regressão da Chrome Extension | Java 237, Node 133, navegador 226 |
+| REV-P1b | Reinício do service worker com janela aberta | N-E (2 testes) e IT `s005ServiceWorkerRestartDuringWindow` (reinício real) |
 | S005-064 | Nenhuma execução ou validação inventada | D, N-E, IT |
 
 ## Números
@@ -88,7 +89,7 @@ Os nomes dos testes começam pelo número da matriz (ex.: `test('S005-021 — �
 |---|---|---|
 | Studio (Windows) | 307 | **337** (+12 domínio, +12 Recorder, +6 aplicação) |
 | Studio (Linux, Docker Temurin 21) | 307 | **337** |
-| Extensão Java | 232 | **235** |
-| Extensão Node | 96 | **129** |
-| Extensão navegador (6 grupos) | 211 | **224** |
+| Extensão Java | 232 | **237** |
+| Extensão Node | 96 | **133** |
+| Extensão navegador (6 grupos) | 211 | **226** |
 | Homologação real Studio (Robot) | — | **50/0** |

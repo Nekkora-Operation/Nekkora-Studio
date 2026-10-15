@@ -20,9 +20,11 @@ validação de negócio, sem persistência definitiva e sem capturas de tela pel
 | `5d0aee8` | domínio (`evidence`), Bridge, Recorder, aplicação e UI |
 | `c76cbcd` | homologação real `Studio005Homologation` e correção das abas dos detalhes (sem rolagem) |
 | `a76eaec` | rótulos na matriz oficial S005-001..064; acessibilidade e quatro temas |
-| último | documentação `docs/studio-005`, este relatório, evidências da homologação e README do contrato |
+| `b1936c1` | documentação `docs/studio-005`, este relatório, evidências da homologação e README do contrato |
+| `d386d2f` | revisão do PR #6 da extensão: 4ª barreira com a regra fail-closed pela forma |
+| último | documentação da revisão e evidências da homologação depois das correções |
 
-Extensão (PR próprio): `1d6eab6`, `b5e81d3`, `d2e11a2`, `793fad3` e `4632c4b`.
+Extensão (PR próprio): `1d6eab6`, `b5e81d3`, `d2e11a2`, `793fad3`, `4632c4b`, `b9d4e06` (correções da revisão) e `17e62fe`.
 
 ## 3. Arquitetura
 
@@ -118,7 +120,8 @@ A máquina do Recorder (STUDIO-002/003) não mudou de estados. Mudou o que acont
 | `RecorderEvidenceStudioTest` | 6 | aplicação real (EDT, painel, aba, selo, Floating Recorder, IDs), bloqueio com recepção, histórico, concorrência, cancelamento, acessibilidade e quatro temas |
 | `BridgeContractFixturesTest` | (existente) | contrato e fixtures idênticos aos da extensão |
 
-O mapeamento completo da matriz S005-001..064 está em `docs/studio-005/test-plan.md`.
+O mapeamento completo da matriz S005-001..064 está em `docs/studio-005/test-plan.md`. Depois da revisão do PR #6, o
+S005-055 passou a estar coberto (teste novo no host).
 
 ## 14. Homologação real
 
@@ -179,7 +182,9 @@ e os golden tests passaram sem ajuste.
 Ver `docs/studio-005/known-limitations.md` (Studio) e `Nekkora-Extension-Chrome/docs/studio-005/known-limitations.md`.
 Principais: sem persistência definitiva; ambíguas só no painel da automação; aba aberta é uma fotografia; cobertura e
 título da aba no Floating Recorder só nas fotografias da gravação; janela fixa de 3 s; política conservadora (mensagens
-com 4 ou mais dígitos são omitidas); S005-055 coberto só parcialmente (não há teste novo específico de prioridade no host).
+com 4 ou mais dígitos ou com nome próprio no meio da frase são omitidas); dado pessoal de terceiro só em minúsculas e
+nunca digitado não é reconhecido pela forma; e o **achado de segurança da captura técnica antiga**, que faz com que o
+Recorder **não deva ser usado com dados reais** até a correção na origem.
 
 ## 20. Preparação para STUDIO-006
 
@@ -215,11 +220,33 @@ com 4 ou mais dígitos são omitidas); S005-055 coberto só parcialmente (não h
 | CA-020 contadores consistentes | atendido | Floating Recorder (testes e homologação) |
 | CA-021 evidências e linha do tempo | atendido | painel e aba |
 | CA-022 quatro temas | atendido | `s005AcessibilidadeETemas` |
-| CA-023 nada sensível pelo Bridge | atendido | cenário 8, IT, host |
+| CA-023 nada sensível pelo Bridge | atendido | cenário 8, IT, host; revisão P1-a: campo limpo, removido, em Shadow DOM e dado de terceiro |
 | CA-024 extensão independente | atendido | suíte 224/224; sem `evidence/1` nada muda |
 | CA-025 versões anteriores compatíveis | atendido | Studio antigo × extensão nova; extensão antiga × Studio novo |
 | CA-026 nenhum PageMap por evento | atendido | fixtures inválidas, leitura estrita |
-| CA-027 suítes existentes aprovadas | atendido | Studio 337 (Win/Linux); extensão 235/129/224 |
+| CA-027 suítes existentes aprovadas | atendido | Studio 337 (Win/Linux); extensão 237/133/226 |
 | CA-028 novos testes S005 aprovados | atendido | `test-plan.md` |
 | CA-029 homologação Windows | atendido | 50/0 |
 | CA-030 PRs sem merge | atendido | dois PRs abertos para revisão |
+
+## Anexo — revisão técnica dos PRs #6
+
+A revisão aprovou a arquitetura do Studio e pediu duas correções P1 e uma P2 na extensão, mais o registro explícito do
+achado de segurança. O procedimento seguiu a mesma ordem das revisões anteriores: **teste que reproduz → correção
+localizada → regressão completa**, nas branches atuais (sem PR novo).
+
+| Item | Reprodução (antes) | Correção | Prova (depois) |
+|---|---|---|---|
+| P1-a — valor digitado que some do campo | no Chrome real, "O código Kq7Segredo expirou." atravessou extensão → host → Studio com o texto disponível, porque a página tinha limpado o campo | impressões digitais salgadas dos valores (só hashes, na memória do documento) tiradas antes da reação da página; comparação também nos shadow roots; regra fail-closed pela forma nas 4 barreiras, inclusive no Studio (`Message.of`) | IT `s005SensitiveFieldGone` (campo limpo, removido, em Shadow DOM e dado de terceiro): tudo `SUPPRESSED`, nada no evento, no armazenamento, no host ou no Studio; testes Node, host e domínio |
+| P1-b — reinício do service worker | `OBSERVATION_COMPLETE` com `eventId: null` depois do reinício (teste Node) | vínculo mínimo exato persistido com a janela + marca "etapa emitida"; sem etapa → perda declarada; invariante: só a ambígua sai sem etapa | 2 testes Node e IT com reinício **real** do service worker: `eventId` exato, janela encerrada uma vez, fila reconciliada (`pending = 0`) |
+| P2 — prioridade no host (S005-055) | sem teste específico | teste novo `HostConcurrencyTest.s005055…` | motor ocupado e rajada de 300 evidências: pausa e finalização repassadas em 1 ms e 0 ms, antes do fim da rajada; 300/300 entregues |
+| Achado de segurança (captura técnica antiga) | — | mantido separado, como pedido | explícito nas limitações: **não usar com dados reais** até a correção na origem |
+
+### Regressão depois das correções
+
+| Suíte | Resultado |
+|---|---|
+| Studio Windows | 337/337 |
+| Studio Linux (Docker, extensão `b9d4e06`) | 337/337 |
+| Extensão Java / Node / navegador | 237/237 · 133/133 · 226/226 |
+| Homologação real `Studio005Homologation` | 50/0 (evidências atualizadas em `reports/studio-005/evidence/`) |

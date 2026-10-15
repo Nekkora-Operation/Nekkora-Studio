@@ -4,7 +4,7 @@
 
 | Medida | Resultado | Fonte |
 |---|---|---|
-| clique → etapa no Studio (Chrome real), p50 sem/com evidências | 811 / 810 ms | `S005-performance.json` (extensão) |
+| clique → etapa no Studio (Chrome real), p50 sem/com evidências | 814 / 811 ms | `S005-performance.json` (extensão, regressão depois da revisão do PR #6) |
 | emissão da evidência no service worker | 1–2 ms | idem |
 | 60 evidências em rajada (thread do Bridge) com desfazer/refazer simultâneos em outra automação | registradas em ordem, sem erro, EDT livre | `s005ConcorrenciaComHistorico…` |
 | homologação real: 49 evidências registradas numa gravação de 24 etapas | contadores atualizados ao vivo | captura `S005-08` |

@@ -14,6 +14,9 @@
 7. **Etapa recusada pelo domínio.** As evidências dela são recusadas e informadas à extensão (`rejected`); elas não ficam
    guardadas sem etapa.
 8. **Limites rígidos** (100 por etapa, 500 sem etapa). Acima deles a evidência é recusada e contada, nunca guardada pela metade.
-9. **Achado de privacidade fora do canal de evidências** (extensão): o texto visível que repete um valor digitado aparece
-   na captura técnica existente (log local e registro de alvos do motor). Não chega ao Studio por evidência; recomenda-se
-   uma missão própria.
+9. **Achado de segurança, prioridade alta, fora do canal de evidências** (extensão): o texto visível que repete um valor
+   digitado aparece na captura técnica existente (log local e registro de alvos do motor). Não chega ao Studio por
+   evidência. **Até a correção na origem da captura técnica, o Recorder não deve ser usado com dados reais de clientes.**
+   A correção é uma missão de segurança separada, anterior a qualquer uso com dados reais (revisão do PR #6).
+10. **Dado pessoal de terceiro só em minúsculas**, nunca digitado, não é reconhecido pela regra de forma em nenhuma das
+    quatro barreiras. A garantia total exigiria nunca enviar o texto da mensagem (decisão de produto).
