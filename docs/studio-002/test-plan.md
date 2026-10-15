@@ -24,7 +24,7 @@ reais; `Studio002Homologation`).
 | S002-015 | Cancelar libera o consumidor sem mexer nas etapas | U `RecorderStudioTest.s002029…` (cancela); X Node; B (cancelamentos) | ✅ |
 | S002-016 | Comandos repetidos não duplicam | X Node "início real… idempotência"; B `s002016Duplicidade` | ✅ |
 | S002-017 | Finalizar e cancelar simultâneos: um desfecho | X Node; B `s002016Duplicidade` | ✅ |
-| S002-018 | Perda do Studio: concessão expira e o consumidor é liberado | X Node "concessão"; B `s002018ConcessaoExpira` (5,09 s com concessão de 5 s; a inspeção ficou); H processo do Studio derrubado (10,15 s com concessão de 10 s; a inspeção ficou) | ✅ |
+| S002-018 | Perda do Studio: concessão expira e o consumidor é liberado | X Node "concessão" e "concessão vencida" (renovação atrasada ou concorrente com a expiração não reativa); U `RecorderControllerTest.renovacaoRecusada…`; B `s002018ConcessaoExpira` (5,09 s com concessão de 5 s; a inspeção ficou); H processo do Studio derrubado (10,15 s com concessão de 10 s; a inspeção ficou) | ✅ |
 | S002-019 | Perda do Chrome: Studio DEGRADED | X `StudioLinkTest.s002019…`; C (`CHROME_DISCONNECTED`); U `perdaDaLigacao…`; H "Chrome encerrado…" | ✅ |
 | S002-020 | Reinício do service worker reconciliado | X Node "reinício do service worker"; B `s002020ReinicioDoServiceWorker` (novo host reconectado, gravação RECORDING com o consumidor) | ✅ |
 | S002-021 | Fragmentação sem intercalação | X `HostConcurrencyTest.s002021…` (153 fragmentos e 361 mensagens de controle concorrentes; 0 intercalações) | ✅ |

@@ -589,7 +589,9 @@ public final class RecorderController implements AutoCloseable {
                 }
                 if (e != null) {
                     BridgeCommandException x = cause(e);
-                    if (x.code() == BridgeError.RECORDING_NOT_FOUND || x.code() == BridgeError.NOT_CONTROLLER) {
+                    // RECORDING_ENDED: concessão vencida recusada pela extensão (prazo absoluto); a verdade vem da consulta
+                    if (x.code() == BridgeError.RECORDING_NOT_FOUND || x.code() == BridgeError.NOT_CONTROLLER
+                            || x.code() == BridgeError.RECORDING_ENDED && pendingOp == null) {
                         recoverOrDegrade();
                     }
                     return;

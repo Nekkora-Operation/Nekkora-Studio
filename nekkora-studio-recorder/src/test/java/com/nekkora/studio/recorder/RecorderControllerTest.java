@@ -255,6 +255,24 @@ class RecorderControllerTest {
     }
 
     @Test
+    void renovacaoRecusadaPorConcessaoVencidaConsultaOEstadoReal() throws Exception {
+        startRecording();
+        // a extensão recusa a renovação atrasada (concessão vencida) e o evento de expiração não chega ao Studio
+        browser.auto = c -> {
+            if ("studio.recording.renew".equals(c.type())) {
+                browser.state = "EXPIRED";
+                c.future().completeExceptionally(new BridgeCommandException(BridgeError.RECORDING_ENDED,
+                        "A concessão expirou; a gravação está sendo encerrada.", "LEASE_EXPIRED", false));
+                return null;
+            }
+            return browser.extension(c);
+        };
+        RecorderSnapshot e = awaitState(RecorderState.ERROR);
+        assertEquals("Gravação expirada", e.problem().title(), "a verdade vem da consulta à extensão");
+        assertTrue(browser.count("studio.recording.status") >= 1, "estado consultado depois da recusa");
+    }
+
+    @Test
     void eventoAntigoNaoRegrideEstado() throws Exception {
         startRecording();
         Map<String, Object> old = browser.recording();

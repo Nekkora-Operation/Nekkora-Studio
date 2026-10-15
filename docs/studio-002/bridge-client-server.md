@@ -37,6 +37,17 @@ Desafio → `hello` (prova do host) → `welcome` (prova do Studio) → `CONNECT
 tem prazo de 5 s; um handshake parado é fechado por outra thread. Uma segunda conexão autenticada recebe `BRIDGE_BUSY`:
 um navegador controlador por vez. Batimentos a cada 5 s; sem sinal por 15 s, o canal fecha (`HEARTBEAT_LOST`).
 
+Exclusividade sob concorrência (correção da revisão):
+
+- **Reserva atômica**: depois da autenticação, o controlador é reservado com `compareAndSet` antes do `welcome`. Só
+  um handshake vence, e os demais recebem `BRIDGE_BUSY`, mesmo quando chegam juntos ao ponto de decisão.
+- Uma conexão já fechada (canal perdido, leitor ainda terminando) pode ser substituída.
+- **Mensagens só da conexão ativa**: respostas e eventos de uma conexão que deixou de ser a ativa são descartados.
+- **Pendentes vinculados**: cada comando pendente guarda a conexão que o recebeu, e só ela pode resolvê-lo. Ao cair,
+  ela falha apenas os próprios pendentes (`LINK_LOST`).
+- **Reserva liberada em qualquer falha** entre a reserva e o `welcome`. Comandos só são enviados depois do `welcome`.
+- Os batimentos de uma conexão seguem por ela mesma.
+
 ### Comandos e eventos
 
 `send(type, payload, timeout)` devolve um `CompletableFuture` e nunca bloqueia quem chama. A resposta completa o futuro.
@@ -60,6 +71,7 @@ loopback; pid vivo), autentica, aplica a lista explícita e valida pelo contrato
 
 | Teste | Cobre |
 |---|---|
+| `BridgeServerConcurrencyTest` (8) | dois handshakes sincronizados por barreira depois da autenticação (5 repetições): um autenticado, um `BRIDGE_BUSY`, nada do recusado aceito, resposta só do vencedor; resposta e evento em trânsito de uma conexão substituída descartados (o comando do novo controlador só é resolvido por ele); 8 handshakes simultâneos × 20 rodadas sem interceptação, sempre exatamente um; falha depois da reserva libera o Studio |
 | `BridgeServerTest` (9) | permissões restritas; segredo fora dos logs; conexão e eventos; credencial inválida, protocolo incompatível e repetição; instância única e `BRIDGE_BUSY`; sem navegador, tempo esgotado e canal perdido (`send` não bloqueia); batimentos; limpeza ao fechar e nova identidade; TCP só em loopback; ACL com outro principal |
 | `JsonTest` (2) | leitura e escrita sem perda; JSON estrito |
 | `BridgeContractFixturesTest` (3) | fixtures compreendidas; vocabulário igual ao contrato; cópia idêntica à da extensão |

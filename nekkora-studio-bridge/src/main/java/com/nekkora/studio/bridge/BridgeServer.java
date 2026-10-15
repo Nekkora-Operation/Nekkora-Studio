@@ -33,6 +33,7 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -47,7 +48,9 @@ import java.util.logging.Logger;
  *       Limite: não protege contra um processo malicioso do MESMO usuário, que pode ler o arquivo.</li>
  *   <li><b>Instância única</b>: trava de arquivo no diretório; a segunda instância do Studio fica sem Bridge
  *       (UNAVAILABLE/OTHER_INSTANCE) e continua editando automações normalmente.</li>
- *   <li><b>Um controlador</b>: uma conexão autenticada por vez (outra recebe BRIDGE_BUSY).</li>
+ *   <li><b>Um controlador</b>: uma conexão autenticada por vez (outra recebe BRIDGE_BUSY). A reserva é atômica
+ *       ({@code compareAndSet}) no handshake; respostas e eventos só valem vindos da conexão ativa, e cada comando
+ *       pendente só pode ser resolvido pela conexão que o recebeu.</li>
  *   <li><b>Vivo</b>: batimentos periódicos; sem sinal por 3 intervalos o canal é encerrado (DEGRADED no Recorder).</li>
  * </ul>
  * Nenhuma chamada bloqueia quem chama: comandos devolvem {@link CompletableFuture}.
@@ -79,7 +82,8 @@ public final class BridgeServer implements BrowserLink, AutoCloseable {
     private final byte[] secret = new byte[32];
     private final String instanceId;
     private volatile LinkStatus status = LinkStatus.of(LinkStatus.State.STARTING, null);
-    private volatile Connection active;
+    /** Controlador: reservado atomicamente no handshake, antes do welcome. */
+    private final AtomicReference<Connection> active = new AtomicReference<>();
     private volatile boolean closed;
     private ServerSocketChannel server;
     private FileChannel lockChannel;
@@ -89,7 +93,16 @@ public final class BridgeServer implements BrowserLink, AutoCloseable {
     private String transportUsed;
     private String address;
 
-    private record Pending(CompletableFuture<Map<String, Object>> future, String type, ScheduledFuture<?> timeout) {
+    // Pontos de interceptação só para os testes de concorrência (nulos em produção).
+    /** Chamado no handshake depois da autenticação e antes da reserva do controlador. */
+    volatile Runnable handshakeGate;
+    /** Chamado no handshake depois da reserva do controlador e antes do welcome. */
+    volatile Runnable reservedGate;
+    /** Chamado no leitor antes de despachar cada mensagem: recebe a mensagem e uma ação que fecha a conexão. */
+    volatile java.util.function.BiConsumer<Map<String, Object>, Runnable> dispatchGate;
+
+    /** Comando aguardando resposta; {@code owner} é a única conexão que pode resolvê-lo. */
+    private record Pending(CompletableFuture<Map<String, Object>> future, String type, ScheduledFuture<?> timeout, Connection owner) {
     }
 
     /** Conexão autenticada com um Native Host. */
@@ -99,6 +112,8 @@ public final class BridgeServer implements BrowserLink, AutoCloseable {
         final OutputStream out;
         final AtomicLong seq = new AtomicLong();
         final AtomicBoolean open = new AtomicBoolean(true);
+        /** Reservada e já com o welcome enviado: só então recebe comandos. */
+        volatile boolean ready;
         volatile long lastInbound = System.currentTimeMillis();
         volatile String disconnectReason;
         ScheduledFuture<?> heartbeat;
@@ -266,6 +281,7 @@ public final class BridgeServer implements BrowserLink, AutoCloseable {
     private void handshake(SocketChannel ch) {
         Connection c = new Connection(ch);
         AtomicBoolean done = new AtomicBoolean();
+        boolean reservedByMe = false;
         scheduler.schedule(() -> {
             if (!done.get()) {
                 c.close(); // handshake parado não ocupa o servidor
@@ -304,10 +320,18 @@ public final class BridgeServer implements BrowserLink, AutoCloseable {
                 reject(c, BridgeError.AUTH_FAILED, "Credencial do Bridge inválida.");
                 return;
             }
-            Connection current = active;
-            if (current != null && current.open.get()) {
+            Runnable gate = handshakeGate;
+            if (gate != null) {
+                gate.run();
+            }
+            if (!reserve(c)) {
                 reject(c, BridgeError.BRIDGE_BUSY, "Outro navegador já está conectado a este Studio.");
                 return;
+            }
+            reservedByMe = true;
+            Runnable reserved = reservedGate;
+            if (reserved != null) {
+                reserved.run();
             }
             c.write(Json.obj().put("protocol", PROTOCOL).put("kind", "handshake").put("type", "bridge.welcome")
                     .put("payload", Json.obj().put("proof", BridgeAuth.serverProof(secret, instanceId, serverNonce, clientNonce))
@@ -315,11 +339,31 @@ public final class BridgeServer implements BrowserLink, AutoCloseable {
             done.set(true);
             Map<String, Object> ext = Json.object(Json.object(p, "client"), "extension");
             attach(c, new LinkStatus.ExtensionInfo(Json.string(ext, "version"), Json.string(ext, "buildMode")));
+            reservedByMe = false; // a partir daqui o leitor libera a reserva ao terminar
         } catch (IOException | RuntimeException e) {
             LOG.fine("Bridge: handshake encerrado: " + e.getMessage());
             c.close();
         } finally {
+            if (reservedByMe) {
+                active.compareAndSet(c, null); // falhou depois da reserva: o Studio não fica ocupado
+            }
             done.set(true);
+        }
+    }
+
+    /**
+     * Reserva atômica do controlador: só um handshake vence. Uma conexão anterior já fechada (canal perdido, leitor
+     * ainda terminando) pode ser substituída; as mensagens dela passam a ser descartadas.
+     */
+    private boolean reserve(Connection c) {
+        while (true) {
+            Connection current = active.get();
+            if (closed || current != null && current.open.get()) {
+                return false;
+            }
+            if (active.compareAndSet(current, c)) {
+                return true;
+            }
         }
     }
 
@@ -334,7 +378,7 @@ public final class BridgeServer implements BrowserLink, AutoCloseable {
     }
 
     private void attach(Connection c, LinkStatus.ExtensionInfo ext) {
-        active = c;
+        c.ready = true;
         setStatus(new LinkStatus(LinkStatus.State.CONNECTED, null, ext));
         long hb = options.heartbeat().toMillis();
         c.heartbeat = scheduler.scheduleWithFixedDelay(() -> {
@@ -347,7 +391,7 @@ public final class BridgeServer implements BrowserLink, AutoCloseable {
                 c.close();
                 return;
             }
-            send("bridge.heartbeat", Map.of(), Duration.ofMillis(3 * hb)).exceptionally(e -> null);
+            send(c, "bridge.heartbeat", Map.of(), Duration.ofMillis(3 * hb)).exceptionally(e -> null);
         }, hb, hb, TimeUnit.MILLISECONDS);
         daemon(() -> readLoop(c), "nekkora-bridge-reader").start();
     }
@@ -360,7 +404,12 @@ public final class BridgeServer implements BrowserLink, AutoCloseable {
                     break;
                 }
                 c.lastInbound = System.currentTimeMillis();
-                onMessage(c, Json.parseObject(raw));
+                Map<String, Object> msg = Json.parseObject(raw);
+                java.util.function.BiConsumer<Map<String, Object>, Runnable> gate = dispatchGate;
+                if (gate != null) {
+                    gate.accept(msg, c::close);
+                }
+                onMessage(c, msg);
             }
         } catch (IOException | RuntimeException e) {
             LOG.fine("Bridge: leitura encerrada: " + e.getMessage());
@@ -369,15 +418,16 @@ public final class BridgeServer implements BrowserLink, AutoCloseable {
     }
 
     private void onMessage(Connection c, Map<String, Object> msg) {
-        if (!PROTOCOL.equals(Json.string(msg, "protocol"))) {
-            return;
+        if (!PROTOCOL.equals(Json.string(msg, "protocol")) || active.get() != c || !c.open.get()) {
+            return; // só a conexão ativa fala pelo navegador
         }
         String kind = Json.string(msg, "kind");
         String type = Json.string(msg, "type");
         if ("response".equals(kind)) {
-            Pending p = pending.remove(String.valueOf(Json.string(msg, "id")));
-            if (p == null) {
-                return;
+            String id = String.valueOf(Json.string(msg, "id"));
+            Pending p = pending.get(id);
+            if (p == null || p.owner() != c || !pending.remove(id, p)) {
+                return; // resposta de outra conexão não resolve este comando
             }
             p.timeout().cancel(false);
             if (Json.bool(msg, "ok", false)) {
@@ -421,16 +471,15 @@ public final class BridgeServer implements BrowserLink, AutoCloseable {
         if (c.heartbeat != null) {
             c.heartbeat.cancel(false);
         }
-        if (active != c) {
-            return;
-        }
-        active = null;
         for (Map.Entry<String, Pending> e : pending.entrySet()) {
-            if (pending.remove(e.getKey()) != null) {
+            if (e.getValue().owner() == c && pending.remove(e.getKey(), e.getValue())) {
                 e.getValue().timeout().cancel(false);
                 e.getValue().future().completeExceptionally(new BridgeCommandException(BridgeError.LINK_LOST,
                         "A conexão com o navegador foi perdida antes da confirmação.", c.disconnectReason, true));
             }
+        }
+        if (!active.compareAndSet(c, null)) {
+            return; // já substituída por outra conexão: o estado é dela
         }
         if (!closed) {
             setStatus(LinkStatus.of(LinkStatus.State.WAITING, c.disconnectReason != null ? c.disconnectReason : "LINK_LOST"));
@@ -456,9 +505,13 @@ public final class BridgeServer implements BrowserLink, AutoCloseable {
 
     @Override
     public CompletableFuture<Map<String, Object>> send(String type, Map<String, Object> payload, Duration timeout) {
+        return send(active.get(), type, payload, timeout);
+    }
+
+    /** Envia por uma conexão específica; a resposta só é aceita vinda dela. */
+    private CompletableFuture<Map<String, Object>> send(Connection c, String type, Map<String, Object> payload, Duration timeout) {
         CompletableFuture<Map<String, Object>> f = new CompletableFuture<>();
-        Connection c = active;
-        if (c == null || !c.open.get()) {
+        if (c == null || !c.ready || !c.open.get() || active.get() != c) {
             f.completeExceptionally(new BridgeCommandException(BridgeError.EXTENSION_UNAVAILABLE,
                     "O navegador não está conectado ao Studio.", null, true));
             return f;
@@ -471,7 +524,7 @@ public final class BridgeServer implements BrowserLink, AutoCloseable {
                         "O navegador não confirmou a operação a tempo.", null, true));
             }
         }, timeout.toMillis(), TimeUnit.MILLISECONDS);
-        pending.put(id, new Pending(f, type, t));
+        pending.put(id, new Pending(f, type, t, c));
         try {
             c.write(Json.obj().put("protocol", PROTOCOL).put("kind", "command").put("type", type).put("id", id)
                     .put("payload", payload == null ? Map.of() : payload).build());
@@ -520,7 +573,7 @@ public final class BridgeServer implements BrowserLink, AutoCloseable {
             return;
         }
         closed = true;
-        Connection c = active;
+        Connection c = active.get();
         if (c != null) {
             c.disconnectReason = "STUDIO_CLOSED";
             detach(c);
