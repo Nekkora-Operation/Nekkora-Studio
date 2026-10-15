@@ -158,14 +158,14 @@ class RecorderEvidenceTest {
     }
 
     @Test
-    void s005001InicioPedeStepsEEvidenceQuandoHaDestinoDeEvidencias() throws Exception {
+    void s005003InicioPedeStepsEEvidenceQuandoHaDestinoDeEvidencias() throws Exception {
         start();
         assertEquals(List.of("steps/1", "evidence/1"), browser.last("studio.recording.start").payload().get("capabilities"));
         assertTrue(rec.snapshot().evidence().enabled(), "estado de evidências anunciado pela extensão");
     }
 
     @Test
-    void s005002ExtensaoDaStudio003RecusaEvidenceERecuaParaSoEtapas() throws Exception {
+    void s005005ExtensaoDaStudio003RecusaEvidenceERecuaParaSoEtapas() throws Exception {
         browser.preEvidence = true;
         start();
         assertEquals(2, browser.count("studio.recording.start"));
@@ -176,7 +176,7 @@ class RecorderEvidenceTest {
     }
 
     @Test
-    void s005002bExtensaoDaStudio002RecuaAteAGravacaoTecnica() throws Exception {
+    void s005005bExtensaoDaStudio002RecuaAteAGravacaoTecnica() throws Exception {
         browser.legacy = true;
         start();
         assertEquals(3, browser.count("studio.recording.start"), "evidence+steps → steps → nenhuma");
@@ -186,7 +186,7 @@ class RecorderEvidenceTest {
     }
 
     @Test
-    void s005031EvidenciaQueChegaAntesDaEtapaEsperaEEntraDepoisDela() throws Exception {
+    void s005023EvidenciaQueChegaAntesDaEtapaEsperaEEntraDepoisDela() throws Exception {
         String rid = start();
         emitEvidence(rid, 1, 1L, "VISIBLE_ERROR_MESSAGE"); // a etapa 1 ainda não chegou
         Thread.sleep(150);
@@ -203,7 +203,7 @@ class RecorderEvidenceTest {
     }
 
     @Test
-    void s005035ForaDeOrdemEReemissaoNaoDuplicam() throws Exception {
+    void s005024E026ForaDeOrdemEReemissaoNaoDuplicam() throws Exception {
         String rid = start();
         emitStep(rid, 1, "Entrar");
         emitEvidence(rid, 2, 1L, "OBSERVATION_COMPLETE");
@@ -216,7 +216,7 @@ class RecorderEvidenceTest {
     }
 
     @Test
-    void s005036LacunaInformadaPelaRenovacaoPedeReemissaoDasEvidencias() throws Exception {
+    void s005025LacunaInformadaPelaRenovacaoPedeReemissaoDasEvidencias() throws Exception {
         String rid = start();
         emitStep(rid, 1, "Entrar");
         emitEvidence(rid, 1, 1L, "VISIBLE_ALERT");
@@ -235,7 +235,7 @@ class RecorderEvidenceTest {
     }
 
     @Test
-    void s005012AmbiguaEntraSemEtapaEContaComoNaoAtribuida() throws Exception {
+    void s005021AmbiguaEntraSemEtapaEContaComoNaoAtribuida() throws Exception {
         String rid = start();
         browser.emit("studio.recording.evidence", evidencePayload(rid, 1, null, null, "AVAILABLE", "Atualização concluída."));
         await(() -> evidence.size() == 1, "entregue");
@@ -244,7 +244,7 @@ class RecorderEvidenceTest {
     }
 
     @Test
-    void s005049EventoForaDoContratoNaoViraEvidencia() throws Exception {
+    void s005051E052EventoForaDoContratoNaoViraEvidencia() throws Exception {
         String rid = start();
         emitStep(rid, 1, "Entrar");
         Map<String, Object> html = evidencePayload(rid, 1, 1L, "VISIBLE_ALERT", "NONE", null);
@@ -262,7 +262,7 @@ class RecorderEvidenceTest {
     }
 
     @Test
-    void s005048QuartaBarreiraSuprimeMensagemSensivelQueEscapou() throws Exception {
+    void s005047QuartaBarreiraSuprimeMensagemSensivelQueEscapou() throws Exception {
         String rid = start();
         emitStep(rid, 1, "Entrar");
         browser.emit("studio.recording.evidence", evidencePayload(rid, 1, 1L, "VISIBLE_ERROR_MESSAGE", "AVAILABLE", "CPF 123.456.789-09 já cadastrado"));
@@ -274,7 +274,7 @@ class RecorderEvidenceTest {
     }
 
     @Test
-    void s005037RecusadaPeloDominioVaiNoAckComoRecusada() throws Exception {
+    void s005026RecusadaPeloDominioVaiNoAckComoRecusada() throws Exception {
         String rid = start();
         emitStep(rid, 1, "Entrar");
         rejectEvidence = true;
@@ -286,7 +286,7 @@ class RecorderEvidenceTest {
     }
 
     @Test
-    void s005056CanceladaNaoRecebeMaisEvidencias() throws Exception {
+    void s005040CanceladaNaoRecebeMaisEvidencias() throws Exception {
         String rid = start();
         emitStep(rid, 1, "Entrar");
         emitEvidence(rid, 1, 1L, "VISIBLE_ALERT");
@@ -300,7 +300,7 @@ class RecorderEvidenceTest {
     }
 
     @Test
-    void s005019ContaObservacoesIncompletas() throws Exception {
+    void s005037ContaObservacoesIncompletas() throws Exception {
         String rid = start();
         emitStep(rid, 1, "Entrar");
         emitEvidence(rid, 1, 1L, "OBSERVATION_INCOMPLETE");

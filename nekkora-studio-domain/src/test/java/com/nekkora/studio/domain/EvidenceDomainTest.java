@@ -61,7 +61,7 @@ class EvidenceDomainTest {
     }
 
     @Test
-    void s005031EvidenciaEnriqueceAEtapaSemAlterarIdentidadeOrdemOriginalNemRevisao() {
+    void s005027E033EvidenciaEnriqueceAEtapaSemAlterarIdentidadeOrdemOriginalNemRevisao() {
         Automation a = automation();
         AutomationStep entrar = a.recordedStep("rec-1", "ev-2").orElseThrow();
         StepId id = entrar.id();
@@ -83,7 +83,7 @@ class EvidenceDomainTest {
     }
 
     @Test
-    void s005032OrdemTecnicaPelaSequenciaMesmoComChegadaForaDeOrdem() {
+    void s005026OrdemTecnicaPelaSequenciaMesmoComChegadaForaDeOrdem() {
         Automation a = automation();
         a.attachEvidence(ev("evd-3", 3, "rec-1", "ev-2", EvidenceType.OBSERVATION_COMPLETE, Message.none()));
         a.attachEvidence(ev("evd-1", 1, "rec-1", "ev-2", EvidenceType.LOADING_INDICATOR, Message.none()));
@@ -92,7 +92,7 @@ class EvidenceDomainTest {
     }
 
     @Test
-    void s005033EtapaInexistenteOuDeOutraGravacaoERecusada() {
+    void s005028EtapaInexistenteOuDeOutraGravacaoERecusada() {
         Automation a = automation();
         DomainValidationException x = assertThrows(DomainValidationException.class,
                 () -> a.attachEvidence(ev("evd-1", 1, "rec-outra", "ev-2", EvidenceType.VISIBLE_ALERT, Message.none())));
@@ -101,7 +101,7 @@ class EvidenceDomainTest {
     }
 
     @Test
-    void s005058PropostaDeCaptureOnlyNaoRecebeEvidenciaDeConsequencia() {
+    void s005035PropostaDeCaptureOnlyNaoRecebeEvidenciaDeConsequencia() {
         Automation a = Automation.create("X", null, clock);
         LogicalSession s = a.addSession("S", null);
         a.appendStep(s.id(), recorded("Clicar em Entrar", ActionType.CLICK, "rec-1", "ev-1", false));
@@ -112,7 +112,7 @@ class EvidenceDomainTest {
     }
 
     @Test
-    void s005012AmbiguaFicaSemEtapaENaoEscolheNenhuma() {
+    void s005021AmbiguaFicaSemEtapaENaoEscolheNenhuma() {
         Automation a = automation();
         assertTrue(a.attachEvidence(ev("evd-9", 9, "rec-1", null, EvidenceType.AMBIGUOUS_FEEDBACK, Message.of("Atualização concluída."))));
         assertEquals(1, a.unattributedEvidence().size());
@@ -139,7 +139,7 @@ class EvidenceDomainTest {
     }
 
     @Test
-    void s005017ResumoDistingueAsAusencias() {
+    void s005034ResumoDistingueAsAusencias() {
         Automation a = automation();
         AutomationStep fill = a.recordedStep("rec-1", "ev-1").orElseThrow();
         AutomationStep click = a.recordedStep("rec-1", "ev-2").orElseThrow();
@@ -166,7 +166,7 @@ class EvidenceDomainTest {
     }
 
     @Test
-    void s005050DuplicarNaoCopiaEvidenciasEMoverPreserva() {
+    void s005029E030DuplicarNaoCopiaEvidenciasEMoverPreserva() {
         Automation a = automation();
         AutomationStep click = a.recordedStep("rec-1", "ev-2").orElseThrow();
         a.attachEvidence(ev("evd-1", 1, "rec-1", "ev-2", EvidenceType.VISIBLE_ALERT, Message.of("Atenção")));
@@ -180,7 +180,7 @@ class EvidenceDomainTest {
     }
 
     @Test
-    void s005051DesfazerERefazerNaoApagamNemReaplicamEvidencias() {
+    void s005031E032DesfazerERefazerNaoApagamNemReaplicamEvidencias() {
         Automation a = automation();
         AutomationStep click = a.recordedStep("rec-1", "ev-2").orElseThrow();
         Automation.Snapshot before = a.snapshot();
@@ -198,7 +198,7 @@ class EvidenceDomainTest {
     }
 
     @Test
-    void s005056CancelamentoDescartaEtapasEvidenciasENaoAtribuidasDaGravacao() {
+    void s005040CancelamentoDescartaEtapasEvidenciasENaoAtribuidasDaGravacao() {
         Automation a = automation();
         a.attachEvidence(ev("evd-1", 1, "rec-1", "ev-2", EvidenceType.VISIBLE_ALERT, Message.none()));
         a.attachEvidence(ev("evd-2", 2, "rec-1", null, EvidenceType.AMBIGUOUS_FEEDBACK, Message.none()));
@@ -208,7 +208,7 @@ class EvidenceDomainTest {
     }
 
     @Test
-    void s005052LimitePorEtapaERecusaDeclarada() {
+    void s005053LimitePorEtapaERecusaDeclarada() {
         Automation a = automation();
         for (int i = 1; i <= Automation.MAX_EVIDENCE_PER_STEP; i++) {
             a.attachEvidence(ev("evd-" + i, i, "rec-1", "ev-2", EvidenceType.CONTENT_CHANGED, Message.none()));
@@ -219,7 +219,7 @@ class EvidenceDomainTest {
     }
 
     @Test
-    void s005005TiposSaoFechadosEOsDoContrato() {
+    void s005064TiposSaoFechadosEOsDoContrato() {
         assertEquals(14, EvidenceType.values().length);
         for (EvidenceType t : EvidenceType.values()) {
             assertFalse(t.label().isBlank());

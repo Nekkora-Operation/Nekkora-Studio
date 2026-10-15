@@ -192,7 +192,7 @@ class RecorderEvidenceStudioTest {
     }
 
     @Test
-    @DisplayName("S005-010/031/034/040/062 — login com erro: evidências na etapa certa, na EDT, sem editar a etapa; painel, aba e Floating Recorder")
+    @DisplayName("S005-010/027/033/034/050/056/057/058 — login com erro: evidências na etapa certa, na EDT, sem editar a etapa; painel, aba e Floating Recorder")
     void s005LoginComErroNoStudio() throws Exception {
         Automation a = automation("Login com erro");
         LogicalSession login = a.sessions().get(0);
@@ -275,7 +275,7 @@ class RecorderEvidenceStudioTest {
     }
 
     @Test
-    @DisplayName("S005-053/054 — durante a gravação a edição fica bloqueada, mas a recepção de evidências continua (fora do histórico)")
+    @DisplayName("S005-031/056 — durante a gravação a edição fica bloqueada, mas a recepção de evidências continua (fora do histórico)")
     void s005BloqueioDeEdicaoComRecepcao() throws Exception {
         Automation a = automation("Bloqueio");
         LogicalSession login = a.sessions().get(0);
@@ -296,7 +296,7 @@ class RecorderEvidenceStudioTest {
     }
 
     @Test
-    @DisplayName("S005-050/051/052 — depois da gravação: desfazer/refazer não apagam nem reaplicam evidências; chegada tardia não invalida o histórico; duplicar não copia")
+    @DisplayName("S005-029/030/031/032 — depois da gravação: desfazer/refazer não apagam nem reaplicam evidências; chegada tardia não invalida o histórico; duplicar não copia")
     void s005HistoricoEDuplicacao() throws Exception {
         Automation a = automation("Histórico");
         LogicalSession login = a.sessions().get(0);
@@ -328,7 +328,7 @@ class RecorderEvidenceStudioTest {
     }
 
     @Test
-    @DisplayName("S005-055 (concorrência) — rajada de evidências da thread do Bridge enquanto o usuário desfaz/refaz OUTRA automação")
+    @DisplayName("S005-056 (concorrência) — rajada de evidências da thread do Bridge enquanto o usuário desfaz/refaz OUTRA automação")
     void s005ConcorrenciaComHistoricoDeOutraAutomacao() throws Exception {
         Automation outra = automation("Outra");
         LogicalSession os = outra.sessions().get(0);
@@ -364,7 +364,7 @@ class RecorderEvidenceStudioTest {
     }
 
     @Test
-    @DisplayName("S005-056 — cancelar descarta as etapas da gravação, as evidências delas e as não atribuídas")
+    @DisplayName("S005-040 — cancelar descarta as etapas da gravação, as evidências delas e as não atribuídas")
     void s005Cancelamento() throws Exception {
         Automation a = automation("Cancelada");
         LogicalSession login = a.sessions().get(0);
@@ -376,5 +376,47 @@ class RecorderEvidenceStudioTest {
         Edt.run(() -> studio.recorderPresenter().panel().cancelButton().doClick());
         await(() -> studio.recorder().snapshot().state() == RecorderState.CANCELLED && login.steps().size() == 1, "descartada");
         assertTrue(Edt.call(() -> a.unattributedEvidence().isEmpty()));
+    }
+
+    @Test
+    @DisplayName("S005-059/060 — acessibilidade (nomes acessíveis dos novos campos) e os quatro temas: aba Evidências e Floating Recorder legíveis")
+    void s005AcessibilidadeETemas() throws Exception {
+        Automation a = automation("Temas");
+        LogicalSession login = a.sessions().get(0);
+        String rid = startRecording(login.id());
+        step(rid, 1, "CLICK", "Entrar");
+        evidence(rid, 1, 1L, "VISIBLE_ERROR_MESSAGE", "AVAILABLE", "Usuário ou senha inválidos.");
+        evidence(rid, 2, 1L, "OBSERVATION_COMPLETE", "NONE", null);
+        await(() -> studio.recorder().snapshot().evidence().accepted() == 2, "evidências");
+        JComponent panel = studio.recorderPresenter().panel();
+        List<String> names = Edt.call(() -> accessibleNames(panel, new java.util.ArrayList<>()));
+        assertTrue(names.contains("Evidências observadas") && names.contains("Última observação"), "nomes acessíveis: " + names);
+        AutomationStep entrar = Edt.call(() -> login.steps().get(1));
+        try {
+            for (com.nekkora.tokens.NekkoraTheme t : NekkoraThemes.all()) {
+                Edt.theme(t);
+                StepDetailsForm form = Edt.call(() -> new StepDetailsForm(a, entrar));
+                Edt.run(() -> form.tabs().setSelectedIndex(StepDetailsForm.EVIDENCE_TAB));
+                Edt.render(form, com.nekkora.ui.theme.Scale.px(700), com.nekkora.ui.theme.Scale.px(640));
+                String tab = StudioFixture.texts(Edt.call(() -> (JComponent) form.tabs().getComponentAt(StepDetailsForm.EVIDENCE_TAB)));
+                assertTrue(tab.contains("Usuário ou senha inválidos.") && tab.contains("Não validado"), t.id() + ": " + tab);
+                Edt.render(panel, 400, 600);
+                assertTrue(StudioFixture.texts(panel).contains("2 registradas"), t.id() + ": " + StudioFixture.texts(panel));
+            }
+        } finally {
+            Edt.theme(NekkoraThemes.SAKURA_DARK);
+        }
+    }
+
+    private static List<String> accessibleNames(java.awt.Component c, List<String> out) {
+        if (c instanceof JComponent j && j.getAccessibleContext() != null && j.getAccessibleContext().getAccessibleName() != null) {
+            out.add(j.getAccessibleContext().getAccessibleName());
+        }
+        if (c instanceof java.awt.Container k) {
+            for (java.awt.Component x : k.getComponents()) {
+                accessibleNames(x, out);
+            }
+        }
+        return out;
     }
 }

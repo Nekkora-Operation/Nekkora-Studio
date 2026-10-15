@@ -158,7 +158,7 @@ public final class Studio005Homologation {
         startRecordingOn("Login com erro (STUDIO-005)", RecordingMode.CAPTURE_AND_INTERACT);
         FloatingRecorderPanel fp = edt(() -> window.studio().recorderPresenter().panel());
         moveFloatingAway();
-        check("S005-001 evidence/1 negociada com a extensão real", edt(() -> window.studio().recorder().snapshot().evidence().enabled()));
+        check("S005-003 evidence/1 negociada com a extensão real", edt(() -> window.studio().recorder().snapshot().evidence().enabled()));
         clickInPage("document.getElementById('usuario')");
         typeText(USER);
         clickInPage("document.getElementById('senha')");
@@ -172,19 +172,19 @@ public final class Studio005Homologation {
         waitEvidence("fim da observação do Entrar", entrar, EvidenceType.OBSERVATION_COMPLETE);
         check("Cenário 1: envio do formulário observado diretamente", has(entrar, EvidenceType.FORM_SUBMITTED));
         ObservationSummary s1 = edt(entrar::observation);
-        check("S005-040 resumo estruturado: mudanças observadas, indicador de erro, negócio NÃO validado",
+        check("S005-034 resumo estruturado: mudanças observadas, indicador de erro, negócio NÃO validado",
                 s1.status() == ObservationSummary.Status.OBSERVED && s1.error() && s1.businessOutcome() == RecordingObservation.BusinessOutcome.NOT_VALIDATED);
-        check("S005-031 a etapa não foi editada pela evidência (nome, tipo, original)", edt(() -> "Clicar no botão Entrar".equals(entrar.name())
+        check("S005-027/033 a etapa não foi editada pela evidência (nome, tipo, original)", edt(() -> "Clicar no botão Entrar".equals(entrar.name())
                 && entrar.manualRevision().isEmpty()));
-        check("S005-011 mensagem que já estava na tela não virou evidência", edt(() -> a.sessions().stream().flatMap(s -> s.steps().stream())
+        check("S005-020 mensagem que já estava na tela não virou evidência", edt(() -> a.sessions().stream().flatMap(s -> s.steps().stream())
                 .flatMap(st -> st.evidence().stream()).noneMatch(e -> e.message().text() != null && e.message().text().contains("manutenção"))));
-        check("S005-053 automação bloqueada para edição enquanto recebe evidências", edt(() -> window.studio().service().isLocked(a.id())));
+        check("S005-062 (bloqueio S004) automação bloqueada para edição enquanto recebe evidências", edt(() -> window.studio().service().isLocked(a.id())));
         waitFor("Floating Recorder com evidências", 10, () -> edt(() -> texts(fp)).contains("registradas") && edt(() -> texts(fp)).contains("Última observação"));
         check("S005-057 Floating Recorder mostra Evidências e Última observação", edt(() -> texts(fp)).matches("(?s).*Evidências.*\\d+ registradas.*"));
         captureWindow(floating(), "01-floating-evidencias");
         selectStep(a, auth, entrar);
         String insp1 = edt(() -> texts(window.studio().view().inspector()));
-        check("S005-062 painel: grupo Evidências com a mensagem e 'Resultado de negócio: Não validado'",
+        check("S005-058 painel: grupo Evidências com a mensagem e 'Resultado de negócio: Não validado'",
                 insp1.contains("Mensagem de erro exibida") && insp1.contains("Usuário ou senha inválidos.") && insp1.contains("Não validado"));
         captureStudio("02-login-erro-painel");
 
@@ -202,7 +202,7 @@ public final class Studio005Homologation {
         // medido do INÍCIO do gesto do Robot (foco, rolagem e mira tomam ~0,9 s antes do clique em si) até o observedAt real
         log("  do início do gesto de clique até a mensagem tardia observada: " + atraso + " ms (o clique em si acontece ~0,9 s depois do início)");
         check("Cenário 2: observada depois do atraso de 1 s da página e dentro da janela de 3 s", atraso >= 1000 && atraso < 3900);
-        check("S005-040 'sucesso' no texto não vira resultado de negócio",
+        check("S005-034/064 'sucesso' no texto não vira resultado de negócio",
                 edt(() -> enviar.observation().businessOutcome() == RecordingObservation.BusinessOutcome.NOT_VALIDATED));
 
         // ================================================================ Cenário 3 — Mensagem ambígua
@@ -358,7 +358,7 @@ public final class Studio005Homologation {
         click(edt(fp::finishButton));
         waitState(RecorderState.COMPLETED);
         sleep(800);
-        check("S005-057 resumo com evidências e negócio não validado", edt(() -> texts(fp)).contains("Evidências observadas")
+        check("S005-039/057 resumo com evidências e negócio não validado", edt(() -> texts(fp)).contains("Evidências observadas")
                 && edt(() -> texts(fp)).contains("Resultado de negócio: não validado"));
         captureWindow(floating(), "09-resumo-com-evidencias");
         clickButtonWithText(floating(), "Voltar ao Studio");
@@ -378,7 +378,7 @@ public final class Studio005Homologation {
             check("S005-047 '" + secret.substring(0, 3) + "…' ausente do domínio, da tela, do armazenamento da extensão e dos logs do host",
                     !domain.contains(secret) && !screen.contains(secret) && !storage.contains(secret) && !hostLogs.contains(secret));
         }
-        check("S005-036 nenhum identificador interno na tela", !screen.matches("(?s).*(rec-[0-9a-f]{8}|tgt-|ev-[0-9a-z]|evd-|route-|cap-[0-9a-z]|doc:).*"));
+        check("S005-050 nenhum identificador interno na tela", !screen.matches("(?s).*(rec-[0-9a-f]{8}|tgt-|ev-[0-9a-z]|evd-|route-|cap-[0-9a-z]|doc:).*"));
 
         // ================================================================ Cenário 9 — Editor
         int idx = edt(() -> auth.steps().indexOf(entrar));
@@ -386,7 +386,7 @@ public final class Studio005Homologation {
         press(KeyEvent.VK_F2);
         NekkoraDialog d9 = waitDialog("Clicar no botão Entrar");
         StepDetailsForm f9 = edt(() -> find(d9, StepDetailsForm.class, x -> true));
-        check("S005-063 aba Evidências é a última (abas anteriores nas mesmas posições)", edt(() -> f9.tabs().getTabCount() == 6
+        check("S005-058/062 aba Evidências é a última (abas anteriores nas mesmas posições)", edt(() -> f9.tabs().getTabCount() == 6
                 && "Origem e alterações".equals(f9.tabs().getTitleAt(4)) && "Evidências".equals(f9.tabs().getTitleAt(StepDetailsForm.EVIDENCE_TAB))));
         clickTab(f9, StepDetailsForm.EVIDENCE_TAB);
         String tab = edt(() -> texts((Container) f9.tabs().getComponentAt(StepDetailsForm.EVIDENCE_TAB)));
@@ -403,18 +403,18 @@ public final class Studio005Homologation {
         focusStudioWorkspace();
         press(KeyEvent.VK_CONTROL, KeyEvent.VK_Z);
         waitFor("desfeito", 10, () -> edt(() -> "Clicar no botão Entrar".equals(entrar.name())));
-        check("S005-051 desfazer não apagou evidências", edt(() -> entrar.evidence().size()) == n0);
+        check("S005-031 desfazer não apagou evidências", edt(() -> entrar.evidence().size()) == n0);
         press(KeyEvent.VK_CONTROL, KeyEvent.VK_Y);
         waitFor("refeito", 10, () -> edt(() -> "Entrar no sistema".equals(entrar.name())));
-        check("S005-051 refazer não reaplicou nem duplicou evidências", edt(() -> entrar.evidence().size()) == n0);
+        check("S005-032 refazer não reaplicou nem duplicou evidências", edt(() -> entrar.evidence().size()) == n0);
         AutomationStep copia = edt(() -> window.studio().service().duplicateStep(a.id(), entrar.id()));
-        check("S005-050 duplicada sem evidências (não é interação observada)", edt(() -> copia.evidence().isEmpty()
+        check("S005-030 duplicada sem evidências (não é interação observada)", edt(() -> copia.evidence().isEmpty()
                 && copia.observation().status() == ObservationSummary.Status.NOT_APPLICABLE));
         edt(() -> {
             window.studio().service().moveStep(a.id(), entrar.id(), consulta.id(), 0);
             return null;
         });
-        check("S005-050 mover preserva as evidências", edt(() -> entrar.evidence().size()) == n0 && edt(() -> consulta.steps().get(0) == entrar));
+        check("S005-029 mover preserva as evidências", edt(() -> entrar.evidence().size()) == n0 && edt(() -> consulta.steps().get(0) == entrar));
 
         // ================================================================ Cenário 10 — Falhas
         LogicalSession falhas = newSession("Falhas");
@@ -444,14 +444,14 @@ public final class Studio005Homologation {
         AutomationStep enviar2 = edt(() -> falhas.steps().get(1));
         sleep(4000);
         List<String> ids = edt(() -> enviar2.evidence().stream().map(ObservedEvidence::evidenceId).toList());
-        check("S005-035/036 após reconexão nenhuma evidência duplicada", ids.size() == new java.util.HashSet<>(ids).size());
+        check("S005-025 após reconexão nenhuma evidência duplicada", ids.size() == new java.util.HashSet<>(ids).size());
         log("  evidências da etapa depois da reconexão: " + edt(() -> enviar2.evidence().stream().map(e -> e.type().name()).toList()));
         captureStudio("11-falhas");
         int total = edt(a::stepCount);
         click(edt(fp::cancelButton));
         waitState(RecorderState.CANCELLED);
         waitFor("gravação cancelada descartada", 15, () -> edt(falhas::stepCount) == 0);
-        check("S005-056 cancelar descarta etapas e evidências desta gravação (as anteriores ficam)", edt(a::stepCount) == total - 2
+        check("S005-040 cancelar descarta etapas e evidências desta gravação (as anteriores ficam)", edt(a::stepCount) == total - 2
                 && edt(() -> entrar.evidence().size()) == n0);
         clickButtonWithText(floating(), "Voltar ao Studio");
         waitState(RecorderState.IDLE);
