@@ -46,6 +46,36 @@ public final class StepPresentation {
         return rows;
     }
 
+    private static final java.util.Map<String, String> EVIDENCE = java.util.Map.of(
+            "FORM_SUBMITTED", "envio de formulário", "NAVIGATION_FOLLOWED", "navegação em seguida", "DOUBLE_CLICK", "clique duplo",
+            "VIA_KEYBOARD", "pelo teclado", "VIA_LABEL", "pelo rótulo", "FOCUS_CLICK_ABSORBED", "clique de foco incorporado",
+            "CUSTOM_COMBOBOX", "lista personalizada", "LOCATORS_VERIFIED_LIVE", "localizador verificado na página real");
+    private static final java.util.Map<String, String> LIMITS = java.util.Map.ofEntries(
+            java.util.Map.entry("AMBIGUOUS_TARGET", "alvo ambíguo"), java.util.Map.entry("OPTION_NOT_IDENTIFIED", "opção não identificada"),
+            java.util.Map.entry("OPTION_NOT_CHOSEN", "opção não escolhida (proposta)"),
+            java.util.Map.entry("OPTION_WITHOUT_PROVEN_COMBOBOX", "opção sem lista comprovada"),
+            java.util.Map.entry("ELEMENT_UNRESOLVED", "elemento não correlacionado"), java.util.Map.entry("NO_UNIQUE_LOCATOR", "nenhum localizador único"),
+            java.util.Map.entry("INDISTINGUISHABLE_LOOKALIKES", "elementos idênticos na página"),
+            java.util.Map.entry("ACCESS_RESTRICTED", "acesso restrito na trajetória"),
+            java.util.Map.entry("LIVE_CHECK_UNAVAILABLE", "sem verificação na página real"),
+            java.util.Map.entry("CROSS_FRAME_ORDER_BY_RECEPTION", "ordem entre quadros pela recepção"),
+            java.util.Map.entry("RESENT", "reenviada"));
+
+    /** STUDIO-003: como a etapa gravada foi observada (vazio para etapas que não são gravadas). */
+    public static List<Row> recording(AutomationStep step) {
+        List<Row> rows = new ArrayList<>();
+        step.provenance().recordingObservation().ifPresent(o -> {
+            rows.add(new Row("Modo de captura", o.mode().label()));
+            rows.add(new Row("Interação", o.observation().label()));
+            rows.add(new Row("Resultado de negócio", o.businessOutcome().label()));
+            List<String> ev = o.evidence().stream().map(EVIDENCE::get).filter(java.util.Objects::nonNull).toList();
+            if (!ev.isEmpty()) rows.add(new Row("Evidências", String.join(", ", ev)));
+            List<String> lim = o.limitations().stream().map(LIMITS::get).filter(java.util.Objects::nonNull).distinct().toList();
+            rows.add(new Row("Limitações", lim.isEmpty() ? "Nenhuma identificada" : String.join(", ", lim)));
+        });
+        return rows;
+    }
+
     private static String value(ValueSource v) {
         return v instanceof ValueSource.LiteralValue ? StudioText.technical(v.display()) : v.display();
     }

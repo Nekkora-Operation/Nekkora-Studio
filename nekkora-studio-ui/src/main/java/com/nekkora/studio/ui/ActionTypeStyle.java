@@ -20,6 +20,7 @@ public final class ActionTypeStyle {
             case SELECT_OPTION -> IconName.LIST;
             case CHECK -> IconName.CHECK;
             case UNCHECK -> IconName.MINUS;
+            case PRESS_KEY -> IconName.COMMAND;
             case NAVIGATE -> IconName.EXTERNAL_LINK;
             case WAIT_FOR -> IconName.CLOCK;
             case OBSERVE -> IconName.EYE;

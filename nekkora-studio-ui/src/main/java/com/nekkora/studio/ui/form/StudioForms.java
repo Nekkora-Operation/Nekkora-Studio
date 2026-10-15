@@ -31,7 +31,7 @@ public final class StudioForms {
     }
 
     public static FormSpec<StepForm.Values> newStep(Automation automation, SessionId preselected) {
-        return new FormSpec<>("Nova etapa", "Etapa manual: descreva a instrução. A gravação de etapas chega em uma próxima versão.",
+        return new FormSpec<>("Nova etapa", "Etapa manual: descreva a instrução. Para registrar interações do Chrome, use Gravar.",
                 IconName.PLUS, StepForm.forCreation(automation, preselected), "Adicionar etapa", NekkoraDialog.Size.MEDIUM);
     }
 

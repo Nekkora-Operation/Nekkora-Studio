@@ -114,9 +114,11 @@ class StudioScopeTest {
     void semFuncionalidadesFicticias() throws IOException {
         Pattern fake = Pattern.compile("(?i)(execução concluída|alterações salvas|\"salvo\"|gravando|itens processados|login\\s*\\(|"
                 + "licen[cç]a ativ|trial|ollama|openai|anthropic|playwright|selenium|pdf|ana souza|etapas? gravadas?|cliques? capturados?)");
-        // Único uso legítimo de "Gravando": o rótulo do botão, devolvido SOMENTE para o estado RECORDING confirmado pela
-        // extensão (verificado em RecorderStudioTest).
+        // Usos legítimos de "Gravando": o rótulo do botão, devolvido SOMENTE para o estado RECORDING confirmado pela
+        // extensão (verificado em RecorderStudioTest), e — STUDIO-003 — o rótulo do Recorder quando, além disso, a captura
+        // de ações está ativa (verificado em RecorderStepsStudioTest).
         String confirmedLabel = "case RECORDING -> \"Gravando\";";
+        String confirmedStepsLabel = "private static final String CONFIRMED_RECORDING_LABEL = \"Gravando\";";
         List<String> v = new ArrayList<>();
         for (String module : List.of("nekkora-studio-domain", "nekkora-studio-ui", "nekkora-studio-app", "nekkora-studio-bridge", "nekkora-studio-recorder")) {
             try (Stream<Path> files = Files.walk(ROOT.resolve(module).resolve("src/main/java"))) {
@@ -129,7 +131,8 @@ class StudioScopeTest {
                     for (int i = 0; i < lines.size(); i++) {
                         String l = lines.get(i).strip();
                         if (l.startsWith("*") || l.startsWith("//") || l.startsWith("/**")) continue; // documentação pode citar o escopo futuro
-                        if (fake.matcher(l).find() && !(f.getFileName().toString().equals("RecorderPresenter.java") && l.equals(confirmedLabel))) {
+                        if (fake.matcher(l).find() && !(f.getFileName().toString().equals("RecorderPresenter.java") && l.equals(confirmedLabel))
+                                && !(f.getFileName().toString().equals("RecorderText.java") && l.equals(confirmedStepsLabel))) {
                             v.add(f.getFileName() + ":" + (i + 1) + "  " + l);
                         }
                     }

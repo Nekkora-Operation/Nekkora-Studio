@@ -104,7 +104,12 @@ public final class PropertiesPresenter {
         rows(general, StepPresentation.overview(a, step));
         NekkoraPropertiesGroup element = inspector.addGroup("Elemento");
         step.element().ifPresentOrElse(e -> rows(element, ElementPresentation.rows(e)),
-                () -> element.addFullRow(paragraph("Nenhum elemento vinculado. A gravação (próximas versões) poderá vincular o elemento da página.")));
+                () -> element.addFullRow(paragraph("Nenhum elemento vinculado.")));
+        List<Row> recorded = StepPresentation.recording(step);
+        if (!recorded.isEmpty()) {
+            NekkoraPropertiesGroup rec = inspector.addGroup("Gravação");
+            rows(rec, recorded);
+        }
         NekkoraPropertiesGroup technical = inspector.addGroup("Contexto");
         rows(technical, StepPresentation.technical(step));
         technical.setExpanded(false);

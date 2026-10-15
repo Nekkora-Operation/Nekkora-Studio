@@ -92,7 +92,7 @@ public final class RecordingSetupPanel extends JPanel {
         modes.addGlue();
         col.add(modes);
         col.add(note(RecorderText.MODE_NOTICE, TextTone.MUTED));
-        col.add(note(RecorderText.ACTION_CAPTURE_NOTICE, TextTone.SECONDARY));
+        col.add(note(RecorderText.SETUP_NOTICE, TextTone.SECONDARY));
         add(col, BorderLayout.CENTER);
         showLoading();
     }
