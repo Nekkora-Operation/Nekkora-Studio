@@ -82,3 +82,12 @@ Legenda:
 
 - Studio: `./mvnw clean verify` (Windows) e `tools/golden-linux.sh verify` (Linux, Temurin 21.0.12.1+1).
 - Extensão: não alterada. Os testes cruzados com o host real (`RealNativeHostBridgeTest`) rodam no Studio.
+
+## Revisão técnica do PR #5
+
+| Achado | Testes (falharam antes da correção, exceto os de controle) | Situação |
+|---|---|---|
+| P1 — `OptionChoice` com dado sensível | D `opcaoSensivelRecusada` (e-mail, CPF, JWT, trecho "eyJ", Bearer, UUID, ID de contrato, hash, controle, tamanho); A `opcaoSensivelPeloEditor` (etapa e histórico intactos); Recorder `revOpcaoDoRecorderContinuaAceita` (controle) | ✅ |
+| P1 — tipo × parâmetros anteriores | A `trocaDeTipoComParametroAnterior` (FILL + variável → SELECT_OPTION + São Paulo/SP); `trocaDeTipoSemParametroAntigo` (controle) | ✅ |
+| P2 — comentário como intervenção | D `comentarioEhIntervencaoManual`; A `comentarioComoIntervencaoNoPainel` | ✅ |
+| P2 — duplicação sem chaves do evento | D `duplicarSemChavesDoEventoNoElemento`; Recorder `revDuplicarEtapaProduzidaPeloRecorderNaoCarregaChavesDoEvento` | ✅ |

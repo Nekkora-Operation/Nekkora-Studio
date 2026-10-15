@@ -18,6 +18,10 @@ AutomationStep
   sanitizado na extensão: nenhuma gravação transmite valores digitados, então o baseline não contém segredos.
 - `ManualRevision` é **calculada** comparando o estado efetivo com o baseline. Restaurar um campo ao original faz ele
   deixar de constar.
+- Ela distingue os campos capturados alterados (`fields`) de outras intervenções manuais: localizadores propostos
+  (`manualLocators`) e **comentários acrescentados depois da gravação** (`comments`). Um comentário não altera campo
+  capturado, mas torna a etapa "Alterada manualmente: Sim"; o painel mostra "Campos capturados alterados: Nenhum" e
+  "Comentários acrescentados: N". Excluir o comentário, ou desfazer, volta ao estado capturado.
 - Etapas manuais (inclusive duplicadas) não têm baseline: "Alterada manualmente" não se aplica a elas.
 
 ## Regras

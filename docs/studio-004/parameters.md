@@ -28,11 +28,26 @@ conteúdo.
 
 - Rótulo ("São Paulo") e valor técnico ("SP") são campos distintos. A opção continua sendo parâmetro de **uma** etapa:
   nenhuma etapa extra representa o `<option>`.
+- Validação na fronteira de domínio (construtor de `OptionChoice`), venha a opção do editor, do Recorder ou de qualquer
+  produtor:
+  - até 120 caracteres em cada campo, sem caracteres de controle;
+  - nada com aparência de dado sensível (e-mail, CPF, CNPJ, cartão, JWT ou trecho "eyJ…", Bearer) nem de identificador
+    interno (UUID, IDs de contrato, hash): `OPTION_LOOKS_SENSITIVE`.
+
+  A recusa não altera a etapa nem entra no histórico.
 - O valor capturado continua no baseline e pode ser restaurado.
 
 ## Incompatibilidade com o tipo
 
-Trocar para um tipo que não aceita os parâmetros atuais exige uma decisão explícita ("Remover parâmetros incompatíveis?").
+O parâmetro **efetivo** é determinado pelo tipo de ação selecionado:
+
+- tipo que aceita valor: a origem do valor;
+- tipo que aceita opção: a opção digitada;
+- com os dois (`UNKNOWN`): o valor, quando houver.
+
+Um modo de valor antigo, que continua marcado mas escondido, nunca vence a opção digitada. Trocar para um tipo que não
+aceita o que está configurado exige uma decisão explícita ("Remover parâmetros incompatíveis?"), e a pergunta lista
+**só** o que será removido (ex.: "Variável cliente.estado"). O parâmetro novo válido (ex.: "São Paulo/SP") é salvo.
 O domínio recusa qualquer edição incompatível (`VALUE_NOT_ACCEPTED`, `OPTION_NOT_ACCEPTED`). Ver
 [step-editor.md](step-editor.md).
 

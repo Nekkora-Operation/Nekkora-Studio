@@ -30,6 +30,8 @@
   `RecordingObservation`, nem valor capturado, e não aumenta a contagem de etapas gravadas.
 - Copia nome, descrição, tipo, parâmetros, a referência **efetiva** do elemento, os localizadores propostos (continuam
   "não verificado") e o contexto. Não copia comentários.
+- A referência do elemento vai **sem** as chaves `RECORDING_ID` e `RECORDED_EVENT_ID`, que identificam a interação
+  observada e não o elemento (o Recorder as põe ali). Ficam `TARGET_ID` e os demais dados para reconhecer o elemento.
 - O vínculo com a original é `derivedFrom`, interno e nunca exibido como identificador. A interface mostra "Manual —
   duplicada de outra etapa".
 - Cancelar a gravação de origem não remove a cópia, porque ela não pertence à gravação.

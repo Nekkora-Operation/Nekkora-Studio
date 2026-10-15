@@ -170,14 +170,16 @@ S004).
 
 | Suíte | Antes | Depois |
 |---|---|---|
-| Windows `./mvnw clean verify` | 251 | **298**, 0 falhas |
-| Linux `tools/golden-linux.sh verify` (extensão `8b251c5` ao lado) | 251 | **298**, 0 falhas, **0 ignorados** |
+| Windows `./mvnw clean verify` | 251 | **307**, 0 falhas (298 na entrega + 9 da revisão técnica) |
+| Linux `tools/golden-linux.sh verify` (extensão `8b251c5` ao lado) | 251 | **307**, 0 falhas, **0 ignorados** |
 | Testes cruzados com o Native Host real (`RealNativeHostBridgeTest`, no Studio) | 3 | 3 (Windows e Linux) |
-| Extensão (`scripts/run-tests.ps1 -Suite all`, main `8b251c5`, não alterada) | 232 / 96 / 211 | **Java 232/232 e Node 96/96**; navegador **199 concluídos, 0 falhas** — a execução foi interrompida pelo sistema por falta de memória durante o `Studio003InteractionsIT` e **não** foi reiniciada |
+| Extensão (main `8b251c5`, não alterada) | 232 / 96 / 211 | **Java 232/232 · Node 96/96 · navegador 211/211**, 0 falhas |
 
-**Importante:** a regressão completa da extensão no navegador **não** terminou nesta missão. Como a extensão não foi
-alterada, o valor de referência continua o da STUDIO-003 (211/211). A homologação real desta missão usou a extensão de
-`main` com o Native Host instalado e gravou uma automação de verdade.
+Navegador da extensão: a primeira execução completa (`-Suite all`) foi interrompida pelo sistema por falta de memória
+depois de 199 testes sem falhas. Na revisão técnica, a suíte de navegador foi repetida com **os mesmos casos e
+critérios** (todas as classes `*IT` da suíte padrão, sem `*LiveWebIT`/`*ManualIT`), em **6 grupos isolados**
+executados um de cada vez (`run-tests.ps1 -Suite integration -Test …`). Resultado: **28 classes, 211 testes, 0 falhas**.
+Java (232) e Node (96) vieram da execução completa.
 
 Testes da STUDIO-001/002/003 com premissa ajustada: **nenhum foi alterado**. O `StepDetailsForm` manteve a API
 (`stepId()`, `basics()`, `overviewRows()`), e F2 continua editando a sessão selecionada, agora com observações.
@@ -266,8 +268,7 @@ As capturas foram recortadas às janelas do Studio e do Chrome. Os dados são fi
 
 ## 23. Pendências
 
-Nenhuma bloqueante para a revisão. A recomendação é reexecutar a suíte completa da extensão no navegador num momento
-com memória livre, para fechar o registro de regressão (a extensão não foi alterada).
+Nenhuma. A regressão de navegador da extensão foi completada na revisão técnica (211/211, ver §17).
 
 ## 24. Preparação para a STUDIO-005
 
@@ -279,3 +280,22 @@ com memória livre, para fechar o registro de regressão (a extensão não foi a
   execução.
 - O histórico e as fotografias do agregado mostram como restaurar estados com as mesmas identidades, uma base para a
   persistência da STUDIO-006.
+
+## Anexo — revisão técnica do PR #5 (P1 × 2 e P2 × 2)
+
+Primeiro vieram os testes que reproduzem cada apontamento, rodados no código anterior: **7 falharam** (domínio 3,
+Recorder 1, aplicação 3). Os 2 de controle (opção sem parâmetro anterior; opção sanitizada do Recorder) passavam e
+continuam passando. Commit `6b2ab6d`.
+
+| Achado | Defeito comprovado (antes) | Correção | Regressão |
+|---|---|---|---|
+| 🔴 P1 — `OptionChoice` aceitava dado sensível | "usuario@empresa.com", CPF, JWT (inclusive o trecho "eyJ…" isolado), Bearer, UUID, ID de contrato e hash eram aceitos no rótulo e no valor técnico, e iriam para a etapa e para o histórico | validação na fronteira de domínio (construtor de `OptionChoice`): `DisplaySafety.isSafeToDisplay`, até 120 caracteres, sem controle. `DisplaySafety` passou a reconhecer o trecho de JWT isolado. As opções do Recorder já passavam pela mesma barreira e continuam aceitas | `AutomationEditingTest.opcaoSensivelRecusada`; `EditorStudioTest.opcaoSensivelPeloEditor` (etapa, revisão e histórico intactos); `RecordedStepsTest.revOpcaoDoRecorderContinuaAceita` |
+| 🔴 P1 — trocar o tipo descartava a opção digitada | FILL + Variável `cliente.estado` → SELECT_OPTION + São Paulo/SP: o modo "Variável" escondido vencia, a confirmação removia "o parâmetro" e a etapa ficava sem opção | o parâmetro efetivo é determinado pelo tipo selecionado. A confirmação lista **só** o que o tipo não aceita (a variável antiga) e nunca descarta o parâmetro novo válido | `EditorStudioTest.trocaDeTipoComParametroAnterior` (formulário → controlador → domínio) e `trocaDeTipoSemParametroAntigo` |
+| 🟡 P2 — comentário não era intervenção manual | etapa gravada com comentário continuava "Alterada manualmente: Não" | `ManualRevision.comments`; o painel mostra "Comentários acrescentados" e "Campos capturados alterados: Nenhum". Excluir o comentário, ou desfazer, volta ao estado capturado | `AutomationEditingTest.comentarioEhIntervencaoManual`; `EditorStudioTest.comentarioComoIntervencaoNoPainel` |
+| 🟡 P2 — duplicação levava chaves do evento | a cópia carregava `RECORDING_ID`/`RECORDED_EVENT_ID` na referência do elemento (chaves que o Recorder real põe ali) | `duplicateStep` copia a referência **sem** essas chaves (`CorrelationKeys.without`, `ElementReference.withCorrelation`). `TARGET_ID` e os demais dados do elemento ficam; o vínculo é `derivedFrom`; a original fica intacta | `AutomationEditingTest.duplicarSemChavesDoEventoNoElemento`; `RecordedStepsTest.revDuplicarEtapaProduzidaPeloRecorderNaoCarregaChavesDoEvento` (rascunho produzido pelo Recorder) |
+
+Depois da revisão:
+
+- Studio: **307/307** no Windows e no Linux (0 ignorados). Golden screenshots intactos e nenhum teste anterior alterado.
+- Homologação real repetida: **36 verificações, 0 falhas** (`reports/studio-004/evidence/S004-homologacao-revisao-log.txt`).
+- Extensão: **211/211** no navegador, em grupos isolados, e sem modificações.
