@@ -128,7 +128,9 @@ public final class StepPresentation {
                         rows.add(new Row(f.label() + " atual", currentValue(step, f)));
                     }
                 }
+                if (rev.fields().isEmpty()) rows.add(new Row("Campos capturados alterados", "Nenhum"));
                 if (rev.manualLocators()) rows.add(new Row("Localizadores propostos", Integer.toString(step.manualLocators().size()) + " (não verificados)"));
+                if (rev.comments()) rows.add(new Row("Comentários acrescentados", Integer.toString(step.comments().size())));
                 rows.add(new Row("Última alteração", StudioText.dateTime(rev.lastChangedAt())));
             });
         }

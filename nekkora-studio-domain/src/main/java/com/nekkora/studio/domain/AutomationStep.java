@@ -155,15 +155,16 @@ public final class AutomationStep {
     }
 
     /**
-     * Revisão manual de uma etapa gravada: campos diferentes do capturado e/ou localizadores propostos. Vazio quando a
-     * etapa não tem valor capturado ou continua igual ao que foi gravado.
+     * Revisão manual de uma etapa gravada: campos diferentes do capturado, localizadores propostos e/ou comentários
+     * acrescentados depois da gravação. Vazio quando a etapa não tem valor capturado ou continua como foi gravada.
      */
     public Optional<ManualRevision> manualRevision() {
         if (baseline == null) return Optional.empty();
         Set<StepField> fields = EnumSet.noneOf(StepField.class);
         for (StepField f : StepField.values()) if (modified(f)) fields.add(f);
-        if (fields.isEmpty() && manualLocators.isEmpty()) return Optional.empty();
-        return Optional.of(new ManualRevision(fields, !manualLocators.isEmpty(), lastManualChange == null ? createdAt : lastManualChange));
+        if (fields.isEmpty() && manualLocators.isEmpty() && comments.isEmpty()) return Optional.empty();
+        return Optional.of(new ManualRevision(fields, !manualLocators.isEmpty(), !comments.isEmpty(),
+                lastManualChange == null ? createdAt : lastManualChange));
     }
 
     /** Quando o campo foi alterado manualmente pela última vez, se foi. */

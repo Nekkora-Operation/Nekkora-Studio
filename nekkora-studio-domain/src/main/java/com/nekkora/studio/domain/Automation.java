@@ -310,8 +310,13 @@ public final class Automation {
     public AutomationStep duplicateStep(StepId stepId) {
         AutomationStep source = requireStep(stepId);
         LogicalSession session = sessionOf(stepId).orElseThrow();
+        // A referência do elemento vai sem as chaves da gravação e do evento da original: elas identificam a INTERAÇÃO
+        // observada, não o elemento. Ficam os dados para reconhecer o elemento (ex.: TARGET_ID). O vínculo é derivedFrom.
+        ElementReference element = source.element().map(e -> e.withCorrelation(e.correlation()
+                .without(com.nekkora.studio.domain.element.CorrelationKeys.Key.RECORDING_ID,
+                        com.nekkora.studio.domain.element.CorrelationKeys.Key.RECORDED_EVENT_ID))).orElse(null);
         StepDraft draft = StepDraft.builder().name(source.name()).description(source.description()).actionType(source.actionType())
-                .parameters(source.parameters()).element(source.element().orElse(null)).context(source.context().orElse(null)).build();
+                .parameters(source.parameters()).element(element).context(source.context().orElse(null)).build();
         AutomationStep copy = new AutomationStep(StepId.newId(), source.name(), source.description(), draft, clock.instant(), source.id());
         if (!source.manualLocators().isEmpty()) {
             AutomationStep.State s = copy.state();

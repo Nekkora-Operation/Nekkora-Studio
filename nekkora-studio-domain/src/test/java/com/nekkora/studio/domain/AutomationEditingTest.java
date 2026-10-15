@@ -508,4 +508,73 @@ class AutomationEditingTest {
         assertEquals(auth.id(), before.sessionOf(clientes.id()).orElseThrow());
         assertThrows(IllegalArgumentException.class, () -> catalog.create("Z", null).restore(before), "fotografia de outra automação");
     }
+
+    // ------------------------------------------------------------------ revisão técnica (P1/P2)
+
+    static final List<String> UNSAFE_OPTION_TEXTS = List.of(
+            "usuario@empresa.com",                                            // e-mail
+            "123.456.789-09",                                                 // CPF
+            "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.c2lnbmF0dXJh",    // JWT completo
+            "eyJhbGciOiJIUzI1NiJ9",                                           // cabeçalho de JWT isolado
+            "Bearer abcdefghijklmnop123",                                     // token Bearer
+            "3f2a9c1e-7b44-4d1a-9a55-0c2e8f6d1b77",                           // UUID (identificador interno)
+            "tgt-9f8e7d6c5b4a",                                               // identificador do contrato
+            "a1b2c3d4e5f6a7b8c9d0");                                          // hash/hex longo
+
+    @Test
+    @DisplayName("REV-P1 OptionChoice recusa dado sensível ou identificador interno no rótulo e no valor técnico")
+    void opcaoSensivelRecusada() {
+        AutomationStep estado = a.appendStep(consulta.id(), recorded("Selecionar São Paulo no campo Estado", ActionType.SELECT_OPTION,
+                element("SELECT", "Estado", false), ActionParameters.withOption(new OptionChoice("São Paulo", "SP")), "ev-5"));
+        long rev = a.revision();
+        for (String bad : UNSAFE_OPTION_TEXTS) {
+            assertThrows(DomainValidationException.class, () -> new OptionChoice(bad, "SP"), "rótulo: " + bad);
+            assertThrows(DomainValidationException.class, () -> new OptionChoice("São Paulo", bad), "valor: " + bad);
+        }
+        assertThrows(DomainValidationException.class, () -> new OptionChoice("linha\u0007", "SP"), "caractere de controle");
+        assertThrows(DomainValidationException.class, () -> new OptionChoice("x".repeat(121), "SP"), "longo demais");
+        assertEquals(new OptionChoice("São Paulo", "SP"), estado.parameters().option().orElseThrow(), "nada mudou");
+        assertEquals(rev, a.revision());
+        assertEquals("", new OptionChoice("Rio de Janeiro", null).value(), "valor técnico continua opcional");
+    }
+
+    @Test
+    @DisplayName("REV-P2 comentário numa etapa gravada é intervenção manual (sem alterar campos capturados); excluir volta ao original")
+    void comentarioEhIntervencaoManual() {
+        assertTrue(entrar.manualRevision().isEmpty());
+        a.addComment(entrar.id(), "Verificar se a mensagem de autenticação aparece.");
+        ManualRevision r = entrar.manualRevision().orElseThrow();
+        assertTrue(r.comments(), "comentário reconhecido como intervenção posterior à gravação");
+        assertTrue(r.fields().isEmpty(), "nenhum campo capturado foi alterado");
+        assertFalse(entrar.modified(StepField.NAME));
+        a.removeComment(entrar.id(), 0);
+        assertTrue(entrar.manualRevision().isEmpty(), "sem comentário e sem alteração: de volta ao capturado");
+        Automation.Snapshot s = a.snapshot();
+        a.addComment(entrar.id(), "Outro comentário");
+        a.restore(s);
+        assertTrue(entrar.manualRevision().isEmpty(), "desfazer o comentário também volta");
+    }
+
+    @Test
+    @DisplayName("REV-P2 duplicar não reutiliza as chaves de gravação e de evento na referência do elemento")
+    void duplicarSemChavesDoEventoNoElemento() {
+        ElementReference withEventKeys = ElementReference.builder().semanticKind("BUTTON").accessibleName("Entrar").tag("button")
+                .privacyPolicy("nekkora-privacy/1")
+                .addLocator(new LocatorCandidate(LocatorStrategy.ID, "id \"entrar\"", "#entrar", LocatorStability.HEURISTIC_STABLE, 1, true))
+                .preferLastLocator()
+                .correlation(CorrelationKeys.of(Map.of(CorrelationKeys.Key.TARGET_ID, "tgt-1", CorrelationKeys.Key.NODE_ID, "n7",
+                        CorrelationKeys.Key.RECORDING_ID, "rec-1", CorrelationKeys.Key.RECORDED_EVENT_ID, "ev-9")))
+                .build();
+        AutomationStep original = a.appendStep(auth.id(), recorded("Clicar no botão Entrar", ActionType.CLICK, withEventKeys, null, "ev-9"));
+        AutomationStep copy = a.duplicateStep(original.id());
+        CorrelationKeys keys = copy.element().orElseThrow().correlation();
+        assertTrue(keys.get(CorrelationKeys.Key.RECORDING_ID).isEmpty(), "sem a gravação da original");
+        assertTrue(keys.get(CorrelationKeys.Key.RECORDED_EVENT_ID).isEmpty(), "sem o evento da original");
+        assertEquals("tgt-1", keys.get(CorrelationKeys.Key.TARGET_ID).orElseThrow(), "dados para reconhecer o elemento ficam");
+        assertEquals("n7", keys.get(CorrelationKeys.Key.NODE_ID).orElseThrow());
+        assertEquals(1, copy.element().orElseThrow().locators().size());
+        assertEquals(original.id(), copy.derivedFrom().orElseThrow(), "o vínculo legítimo é derivedFrom");
+        assertEquals("ev-9", original.element().orElseThrow().correlation().get(CorrelationKeys.Key.RECORDED_EVENT_ID).orElseThrow(),
+                "a original continua intacta");
+    }
 }

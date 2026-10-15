@@ -790,4 +790,82 @@ class EditorStudioTest {
         assertTrue(tooltip.contains("somente em memória"));
         assertTrue(fx.studio.state().lastNotice().isEmpty() || !fx.studio.state().lastNotice().get().title().toLowerCase().contains("salv"));
     }
+
+    // ------------------------------------------------------------------ revisão técnica (P1)
+
+    @Test
+    @DisplayName("REV-P1 FILL com variável → SELECT_OPTION com São Paulo/SP: salva a opção digitada, descarta só a variável antiga")
+    void trocaDeTipoComParametroAnterior() {
+        Automation a = recordedExample();
+        AutomationStep pesquisa = step("Preencher Pesquisa");
+        Edt.run(() -> fx.studio.service().setStepParameters(a.id(), pesquisa.id(),
+                ActionParameters.withValue(new ValueSource.VariableReference("cliente.estado"))));
+        fx.prompts.then(f -> {
+            StepDetailsForm d = (StepDetailsForm) f;
+            d.basics().typeInput().setSelectedItem(ActionType.SELECT_OPTION);
+            assertTrue(d.modeInput(StepDetailsForm.ValueMode.VARIABLE).isSelected(), "o modo antigo continua marcado, escondido");
+            d.optionLabelInput().setText("São Paulo");
+            d.optionValueInput().setText("SP");
+        }).thenConfirm(true);
+        Edt.run(() -> fx.studio.controller().openStepDetails(pesquisa.id()));
+        assertEquals(ActionType.SELECT_OPTION, pesquisa.actionType());
+        assertEquals(new OptionChoice("São Paulo", "SP"), pesquisa.parameters().option().orElseThrow(), "a opção informada foi salva");
+        assertTrue(pesquisa.parameters().value().isEmpty());
+        assertEquals(1, fx.prompts.confirmations.size(), "o descarte da variável antiga foi perguntado");
+        assertTrue(fx.prompts.confirmations.get(0).message().contains("Variável cliente.estado"));
+        assertFalse(fx.prompts.confirmations.get(0).message().contains("São Paulo"), "a opção nova não está entre o que será removido");
+    }
+
+    @Test
+    @DisplayName("REV-P1 trocar para um tipo que aceita o parâmetro novo sem ter um antigo não pergunta nada")
+    void trocaDeTipoSemParametroAntigo() {
+        Automation a = recordedExample();
+        AutomationStep clientes = step("Clicar no link Clientes");
+        fx.prompts.then(f -> {
+            StepDetailsForm d = (StepDetailsForm) f;
+            d.basics().typeInput().setSelectedItem(ActionType.SELECT_OPTION);
+            d.optionLabelInput().setText("Clientes ativos");
+        });
+        Edt.run(() -> fx.studio.controller().openStepDetails(clientes.id()));
+        assertEquals(new OptionChoice("Clientes ativos", ""), clientes.parameters().option().orElseThrow());
+        assertTrue(fx.prompts.confirmations.isEmpty());
+        assertEquals(a.stepCount(), 5);
+    }
+
+    @Test
+    @DisplayName("REV-P1 opção com dado sensível pelo editor: recusada no campo, etapa e histórico intactos")
+    void opcaoSensivelPeloEditor() {
+        Automation a = recordedExample();
+        AutomationStep estado = recorded(a.sessions().get(1), "Selecionar São Paulo no campo Estado", ActionType.SELECT_OPTION,
+                element("SELECT", "Estado", false), ActionParameters.withOption(new OptionChoice("São Paulo", "SP")), "ev-5");
+        for (String[] bad : List.of(new String[] {"usuario@empresa.com", "SP"}, new String[] {"São Paulo", "eyJhbGciOiJIUzI1NiJ9"},
+                new String[] {"São Paulo", "3f2a9c1e-7b44-4d1a-9a55-0c2e8f6d1b77"}, new String[] {"123.456.789-09", ""})) {
+            long revision = a.revision();
+            int history = fx.studio.service().history().undoSize(a.id());
+            fx.prompts.then(f -> {
+                StepDetailsForm d = (StepDetailsForm) f;
+                d.optionLabelInput().setText(bad[0]);
+                d.optionValueInput().setText(bad[1]);
+            });
+            Edt.run(() -> fx.studio.controller().openStepDetails(estado.id()));
+            assertFalse(fx.prompts.results.get(fx.prompts.results.size() - 1), "recusado: " + bad[0] + " / " + bad[1]);
+            assertTrue(fx.prompts.last().form().visibleErrors().contains("dado sensível"), fx.prompts.last().form().visibleErrors());
+            assertEquals(new OptionChoice("São Paulo", "SP"), estado.parameters().option().orElseThrow(), "etapa intacta");
+            assertEquals(revision, a.revision());
+            assertEquals(history, fx.studio.service().history().undoSize(a.id()), "nada no histórico");
+        }
+    }
+
+    @Test
+    @DisplayName("REV-P2 comentário numa etapa gravada aparece como intervenção manual no painel")
+    void comentarioComoIntervencaoNoPainel() {
+        Automation a = recordedExample();
+        AutomationStep entrar = step("Clicar no botão Entrar");
+        Edt.run(() -> fx.studio.service().addComment(a.id(), entrar.id(), "Verificar se a mensagem de autenticação aparece."));
+        select(entrar);
+        String text = fx.inspectorText();
+        assertTrue(text.contains("Alterada manualmente\nSim"), text);
+        assertTrue(text.contains("Comentários acrescentados"), text);
+        assertTrue(entrar.manualRevision().orElseThrow().fields().isEmpty());
+    }
 }

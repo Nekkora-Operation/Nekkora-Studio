@@ -11,9 +11,10 @@ import java.util.Set;
  *
  * @param fields          campos cujo valor atual difere do capturado
  * @param manualLocators  há localizadores propostos manualmente (não verificados)
+ * @param comments        há comentários acrescentados depois da gravação (intervenção que não altera campos capturados)
  * @param lastChangedAt   instante da última alteração manual registrada
  */
-public record ManualRevision(Set<StepField> fields, boolean manualLocators, Instant lastChangedAt) {
+public record ManualRevision(Set<StepField> fields, boolean manualLocators, boolean comments, Instant lastChangedAt) {
     public ManualRevision {
         fields = Set.copyOf(fields);
         Objects.requireNonNull(lastChangedAt, "lastChangedAt");

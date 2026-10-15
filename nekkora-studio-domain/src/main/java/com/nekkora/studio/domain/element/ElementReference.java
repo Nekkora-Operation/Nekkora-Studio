@@ -59,6 +59,10 @@ public final class ElementReference {
     }
 
     private ElementReference(ElementReference source, int preferredLocator) {
+        this(source, preferredLocator, source.correlation);
+    }
+
+    private ElementReference(ElementReference source, int preferredLocator, CorrelationKeys correlation) {
         this.accessibleName = source.accessibleName;
         this.semanticKind = source.semanticKind;
         this.tag = source.tag;
@@ -73,7 +77,12 @@ public final class ElementReference {
         this.sensitive = source.sensitive;
         this.privacyPolicy = source.privacyPolicy;
         this.sourceContract = source.sourceContract;
-        this.correlation = source.correlation;
+        this.correlation = correlation;
+    }
+
+    /** Cópia com outras chaves de correlação (ex.: sem as de gravação e evento numa etapa duplicada). */
+    public ElementReference withCorrelation(CorrelationKeys keys) {
+        return new ElementReference(this, preferredLocator, keys == null ? CorrelationKeys.none() : keys);
     }
 
     public static Builder builder() {

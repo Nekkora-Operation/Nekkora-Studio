@@ -214,4 +214,30 @@ class RecordedStepsTest {
         assertFalse(in.missing(2));
         assertEquals(1, in.duplicates());
     }
+
+    @org.junit.jupiter.api.Test
+    void revDuplicarEtapaProduzidaPeloRecorderNaoCarregaChavesDoEvento() {
+        StepDraft d = RecordedStepDrafts.draft(parse(step("rec-77", 3, "route-1", "CLICK", element("BUTTON", "Entrar", "button", "entrar", false),
+                "CAPTURE_AND_INTERACT")));
+        com.nekkora.studio.domain.Automation a = com.nekkora.studio.domain.Automation.create("A", null, java.time.Clock.systemUTC());
+        com.nekkora.studio.domain.LogicalSession s = a.addSession("S", null);
+        com.nekkora.studio.domain.AutomationStep original = a.appendStep(s.id(), d);
+        com.nekkora.studio.domain.AutomationStep copy = a.duplicateStep(original.id());
+        CorrelationKeys keys = copy.element().orElseThrow().correlation();
+        assertTrue(keys.get(CorrelationKeys.Key.RECORDING_ID).isEmpty(), "gravação da original não vai para a cópia");
+        assertTrue(keys.get(CorrelationKeys.Key.RECORDED_EVENT_ID).isEmpty(), "evento da original não vai para a cópia");
+        assertEquals("tgt-a1b2c3", keys.get(CorrelationKeys.Key.TARGET_ID).orElseThrow(), "identidade lógica do elemento fica");
+        assertTrue(copy.provenance().correlation().isEmpty());
+        assertTrue(original.element().orElseThrow().correlation().get(CorrelationKeys.Key.RECORDED_EVENT_ID).isPresent(), "original intacta");
+    }
+
+    @org.junit.jupiter.api.Test
+    void revOpcaoDoRecorderContinuaAceita() {
+        Map<String, Object> p = step("rec-1", 4, "route-1", "SELECT_OPTION", element("SELECT", "Estado", "select", "estado", false), "CAPTURE_AND_INTERACT");
+        p.put("parameters", Json.obj().put("valueCaptured", false).put("option", Json.obj().put("label", "São Paulo").put("value", "SP").build())
+                .put("key", null).build());
+        StepDraft d = RecordedStepDrafts.draft(parse(p));
+        assertEquals("São Paulo", d.parameters().option().orElseThrow().label(), "compatível com as opções sanitizadas da STUDIO-003");
+        assertEquals("SP", d.parameters().option().orElseThrow().value());
+    }
 }

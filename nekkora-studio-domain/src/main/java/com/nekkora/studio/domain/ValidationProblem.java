@@ -24,6 +24,9 @@ public enum ValidationProblem {
             "O valor parece conter um dado sensível. Use uma variável ou uma referência de credencial."),
     VALUE_TOO_LONG(Field.VALUE, "O valor é longo demais."),
     REFERENCE_NAME_INVALID(Field.VALUE, "Use letras, números, ponto, hífen ou sublinhado no nome da referência."),
+    OPTION_INVALID(Field.VALUE, "Use até 120 caracteres no rótulo e no valor técnico da opção, sem quebras de linha."),
+    OPTION_LOOKS_SENSITIVE(Field.VALUE,
+            "A opção parece conter um dado sensível ou um identificador interno. Use o texto visível e o valor técnico da lista, sem dados pessoais nem tokens."),
     // ---- STUDIO-004: edição avançada
     SESSION_POSITION_INVALID(Field.NONE, "A posição escolhida para a sessão não existe."),
     STEP_POSITION_INVALID(Field.SESSION, "A posição escolhida para a etapa não existe nesta sessão."),

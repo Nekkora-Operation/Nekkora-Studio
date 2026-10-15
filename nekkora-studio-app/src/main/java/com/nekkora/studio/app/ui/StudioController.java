@@ -9,6 +9,7 @@ import com.nekkora.studio.domain.AutomationStep;
 import com.nekkora.studio.domain.DomainValidationException;
 import com.nekkora.studio.domain.LogicalSession;
 import com.nekkora.studio.domain.SessionId;
+import com.nekkora.studio.domain.StepEdit;
 import com.nekkora.studio.domain.StepId;
 import com.nekkora.studio.domain.ValidationProblem;
 import com.nekkora.studio.ui.form.FormSpec;
@@ -94,17 +95,14 @@ public final class StudioController {
         service.select(new Selection.OfStep(a.id(), session, stepId));
         runForm(StudioOperation.STEP_DETAILS, StudioForms.stepDetails(a, step), v -> {
             try {
-                boolean drop = false;
-                if (v.parametersIncompatible()) {
-                    if (!prompts.confirm(new StudioPrompts.Confirmation("Remover parâmetros incompatíveis?",
-                            "O tipo \"" + v.actionType().label() + "\" não aceita os parâmetros atuais ("
-                                    + com.nekkora.studio.ui.StepPresentation.parameters(v.parameters())
-                                    + "). Para salvar, eles serão removidos da etapa.", "Remover parâmetros e salvar", true))) {
-                        return Optional.of(v.parameters().value().isPresent() ? ValidationProblem.VALUE_NOT_ACCEPTED : ValidationProblem.OPTION_NOT_ACCEPTED);
-                    }
-                    drop = true;
+                StepEdit edit = v.toEdit(a, step, service.state().catalog().clock().instant()); // valida antes de perguntar
+                java.util.List<String> lost = v.discarded();
+                if (!lost.isEmpty() && !prompts.confirm(new StudioPrompts.Confirmation("Remover parâmetros incompatíveis?",
+                        "O tipo \"" + v.actionType().label() + "\" não aceita: " + String.join("; ", lost)
+                                + ". Para salvar, isso será removido da etapa.", "Remover e salvar", true))) {
+                    return Optional.of(v.discardsValue() ? ValidationProblem.VALUE_NOT_ACCEPTED : ValidationProblem.OPTION_NOT_ACCEPTED);
                 }
-                service.editStep(a.id(), stepId, v.toEdit(a, step, service.state().catalog().clock().instant(), drop));
+                service.editStep(a.id(), stepId, edit);
                 return Optional.empty();
             } catch (DomainValidationException e) {
                 return Optional.of(e.problem());

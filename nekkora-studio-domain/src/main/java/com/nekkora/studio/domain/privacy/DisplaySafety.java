@@ -25,6 +25,8 @@ public final class DisplaySafety {
     private static final Pattern CNPJ = Pattern.compile("\\b\\d{2}\\.?\\d{3}\\.?\\d{3}/?\\d{4}-?\\d{2}\\b");
     private static final Pattern JWT = Pattern.compile("\\b[A-Za-z0-9_-]{6,}\\.[A-Za-z0-9_-]{6,}\\.[A-Za-z0-9_-]{6,}\\b");
     private static final Pattern BEARER = Pattern.compile("(?i)\\bbearer\\s+[A-Za-z0-9._~+/=-]{8,}");
+    /** Trecho de JWT isolado (cabeçalho/carga em base64url começam por "eyJ", que é "{\"" codificado). */
+    private static final Pattern JWT_PART = Pattern.compile("\\beyJ[A-Za-z0-9_-]{10,}");
     private static final Pattern CARD = Pattern.compile("\\b(?:\\d[ -]?){13,19}\\b");
 
     private DisplaySafety() {}
@@ -45,7 +47,7 @@ public final class DisplaySafety {
     public static boolean looksSensitive(String text) {
         if (text == null || text.isEmpty()) return false;
         if (EMAIL.matcher(text).find() || CPF.matcher(text).find() || CNPJ.matcher(text).find()
-                || JWT.matcher(text).find() || BEARER.matcher(text).find()) {
+                || JWT.matcher(text).find() || JWT_PART.matcher(text).find() || BEARER.matcher(text).find()) {
             return true;
         }
         Matcher m = CARD.matcher(text);

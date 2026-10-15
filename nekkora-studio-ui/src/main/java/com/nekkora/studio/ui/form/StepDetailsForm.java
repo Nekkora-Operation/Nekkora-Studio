@@ -85,35 +85,70 @@ public final class StepDetailsForm extends StudioForm<StepDetailsForm.Values> {
                          String optionLabel, String optionValue, int preferredLocator, List<ManualLocatorItem> manualLocators,
                          List<CommentItem> comments) {
 
-        /** Parâmetros pedidos no formulário, independentemente do tipo (o domínio confere a compatibilidade). */
+        /**
+         * Parâmetros EFETIVOS, determinados pelo tipo de ação selecionado (revisão da STUDIO-004): um tipo que aceita valor
+         * usa a origem do valor; um que aceita opção usa a opção digitada; o que o tipo não aceita nunca entra (mesmo que um
+         * modo antigo continue marcado, escondido). Com os dois ({@code UNKNOWN}), o valor tem precedência quando houver.
+         */
         public ActionParameters parameters() {
-            switch (valueMode) {
-                case LITERAL -> {
-                    return ActionParameters.withValue(new ValueSource.LiteralValue(valueText == null ? "" : valueText));
-                }
-                case VARIABLE -> {
-                    return ActionParameters.withValue(new ValueSource.VariableReference(valueText == null ? "" : valueText.strip()));
-                }
-                case CREDENTIAL -> {
-                    return ActionParameters.withValue(new ValueSource.CredentialReference(valueText == null ? "" : valueText.strip()));
-                }
-                default -> {
-                    String label = optionLabel == null ? "" : optionLabel.strip();
-                    return label.isEmpty() ? ActionParameters.none() : ActionParameters.withOption(new OptionChoice(label, optionValue == null ? "" : optionValue.strip()));
-                }
+            if (actionType != null && actionType.acceptsValue() && valueMode != ValueMode.NONE) return ActionParameters.withValue(valueSource());
+            if (actionType != null && actionType.acceptsOption() && hasOption()) {
+                return ActionParameters.withOption(new OptionChoice(optionLabel.strip(), optionValue == null ? "" : optionValue.strip()));
             }
+            return ActionParameters.none();
         }
 
-        /** Os parâmetros pedidos não cabem no tipo escolhido (o usuário precisa decidir removê-los). */
-        public boolean parametersIncompatible() {
-            ActionParameters p = parameters();
-            return p.value().isPresent() && !actionType.acceptsValue() || p.option().isPresent() && !actionType.acceptsOption();
+        private ValueSource valueSource() {
+            String t = valueText == null ? "" : valueText;
+            return switch (valueMode) {
+                case LITERAL -> new ValueSource.LiteralValue(t);
+                case VARIABLE -> new ValueSource.VariableReference(t.strip());
+                default -> new ValueSource.CredentialReference(t.strip());
+            };
         }
 
-        /** Edição de domínio correspondente; {@code dropIncompatible} remove os parâmetros que o tipo não aceita. */
-        public StepEdit toEdit(Automation automation, AutomationStep step, Instant now, boolean dropIncompatible) {
+        private boolean hasOption() {
+            return optionLabel != null && !optionLabel.isBlank();
+        }
+
+        private boolean hasValue() {
+            return valueMode != ValueMode.NONE && valueText != null && !valueText.isBlank();
+        }
+
+        /** O valor configurado (antigo ou digitado) não cabe no tipo escolhido e seria removido ao salvar. */
+        public boolean discardsValue() {
+            return hasValue() && (actionType == null || !actionType.acceptsValue());
+        }
+
+        /** A opção configurada não cabe no tipo escolhido (ou perde para o valor, em UNKNOWN) e seria removida ao salvar. */
+        public boolean discardsOption() {
+            return hasOption() && (actionType == null || !actionType.acceptsOption() || actionType.acceptsValue() && valueMode != ValueMode.NONE);
+        }
+
+        /**
+         * Descrição do que SERÁ REMOVIDO ao salvar (para a confirmação explícita) — só o que o tipo escolhido não aceita;
+         * os parâmetros válidos para o tipo nunca aparecem aqui nem são descartados.
+         */
+        public java.util.List<String> discarded() {
+            java.util.List<String> out = new ArrayList<>();
+            if (discardsValue()) {
+                String t = valueText.strip();
+                out.add(switch (valueMode) {
+                    case LITERAL -> "Valor literal \"" + StudioText.technical(t) + "\"";
+                    case VARIABLE -> "Variável " + StudioText.technical(t);
+                    default -> "Credencial " + StudioText.technical(t);
+                });
+            }
+            if (discardsOption()) {
+                String v = optionValue == null || optionValue.isBlank() ? "" : " (" + StudioText.technical(optionValue.strip()) + ")";
+                out.add("Opção " + StudioText.technical(optionLabel.strip()) + v);
+            }
+            return out;
+        }
+
+        /** Edição de domínio correspondente (os parâmetros já são os do tipo escolhido). */
+        public StepEdit toEdit(Automation automation, AutomationStep step, Instant now) {
             ActionParameters p = parameters();
-            if (dropIncompatible && parametersIncompatible()) p = ActionParameters.none();
             List<ManualLocator> locators = new ArrayList<>();
             for (ManualLocatorItem m : manualLocators) {
                 locators.add(m.existing() != null ? m.existing() : new ManualLocator(m.syntax(), m.expression(), m.note(), now));

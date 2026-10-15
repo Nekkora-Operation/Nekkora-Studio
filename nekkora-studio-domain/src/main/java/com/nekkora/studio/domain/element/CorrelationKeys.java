@@ -43,6 +43,13 @@ public final class CorrelationKeys {
         return new CorrelationKeys(copy);
     }
 
+    /** Cópia sem as chaves indicadas. */
+    public CorrelationKeys without(Key... keys) {
+        EnumMap<Key, String> copy = values.isEmpty() ? new EnumMap<>(Key.class) : new EnumMap<>(values);
+        for (Key k : keys) copy.remove(k);
+        return copy.isEmpty() ? NONE : new CorrelationKeys(copy);
+    }
+
     public Optional<String> get(Key key) {
         return Optional.ofNullable(values.get(key));
     }
