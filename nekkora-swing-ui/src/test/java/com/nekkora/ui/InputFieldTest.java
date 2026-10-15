@@ -46,6 +46,27 @@ class InputFieldTest {
     }
 
     @Test
+    void campoDeTextoDesfazERefazADigitacaoNoProprioCampo() {
+        onEdt(() -> {
+            com.nekkora.ui.input.NekkoraTextField f = new com.nekkora.ui.input.NekkoraTextField("x");
+            f.replaceSelection("abc");
+            f.replaceSelection("d");
+            assertTrue(Keys.press(f, com.nekkora.ui.input.TextUndo.undoKey()), "Ctrl+Z é tratado pelo próprio campo (WHEN_FOCUSED)");
+            assertEquals("abc", f.getText());
+            assertTrue(Keys.press(f, "ctrl Y"));
+            assertEquals("abcd", f.getText());
+            com.nekkora.ui.input.NekkoraTextArea area = new com.nekkora.ui.input.NekkoraTextArea("y", 3);
+            area.replaceSelection("linha");
+            assertTrue(Keys.press(area, com.nekkora.ui.input.TextUndo.undoKey()));
+            assertEquals("", area.getText(), "área de texto também desfaz a digitação");
+            area.setDocument(new javax.swing.text.PlainDocument());
+            area.replaceSelection("novo");
+            assertTrue(Keys.press(area, com.nekkora.ui.input.TextUndo.undoKey()));
+            assertEquals("", area.getText(), "acompanha a troca de documento");
+        });
+    }
+
+    @Test
     void decimalUsaVirgulaEmPtBr() {
         onEdt(() -> {
             NekkoraDecimalField f = new NekkoraDecimalField(null, Locale.forLanguageTag("pt-BR"));

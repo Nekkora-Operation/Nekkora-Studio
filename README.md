@@ -45,6 +45,20 @@ validado, trajetória por iframe e Shadow DOM) e procedência "Gravada". Valores
 As etapas só contam depois que o Studio as registra. Cancelar descarta só as etapas daquela gravação. Veja
 [docs/studio-003](docs/studio-003/architecture.md) e o [relatório](reports/studio-003-final-report.md).
 
+**STUDIO-004 — editor de automações, sessões e etapas.** O processo gravado pode ser organizado e complementado sem
+perder o que foi observado.
+
+- **Editar:** automação (F2), sessão (nome, descrição, observações) e etapa, num editor com abas: Geral, Parâmetros,
+  Elemento, Comentários e Origem e alterações.
+- **Reorganizar:** Alt+↑/↓, "Mover para…" entre sessões, Ctrl+D duplica e Delete exclui, sempre com confirmação.
+- **Parâmetros:** variável ou credencial (só o apelido) e opção com rótulo e valor técnico.
+- **Localizadores:** o preferencial pode ser outro validado na captura; os propostos à mão ficam "Não verificado".
+- **Ctrl+Z / Ctrl+Y** desfazem e refazem em memória.
+
+A etapa gravada continua "Gravada", com o valor original ao lado do atual. Durante uma gravação, a automação gravada
+fica protegida contra edições. Veja [docs/studio-004](docs/studio-004/architecture.md) e o
+[relatório](reports/studio-004-final-report.md).
+
 Camadas: **Tokens → Temas → Primitivas → Componentes → Padrões → Studio**. Detalhes em
 [docs/ARQUITETURA.md](docs/ARQUITETURA.md).
 
