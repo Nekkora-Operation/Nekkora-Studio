@@ -1,0 +1,72 @@
+Tela: java.awt.Rectangle[x=0,y=0,width=1920,height=1032] · java 21.0.12
+Native Host instalado pelo script oficial (install-host.ps1)
+Extensão: dceigcmhbihcigneokmpmbocdclkhcaj
+Bridge: LinkStatus[state=WAITING, detail=null, extension=null] transporte=unix
+OK    D-004 Bridge publicado por Unix Domain Socket no Windows
+OK    S002-001 Studio abre sem Chrome e sem login
+OK    S002-001 estado 'Aguardando conexão com a extensão'
+captura S002-01-studio-sem-chrome.png (1920x1032)
+Chrome for Testing: 155.0.8059.39
+OK    S002-003 conexão autenticada Studio ⇄ host ⇄ extensão
+painel: Conectada ao Nekkora Studio
+OK    Painel da extensão mostra 'Conectada ao Nekkora Studio'
+captura S002-02b-painel-extensao-conectado.png (painel da extensão)
+captura S002-02-conectado.png (1920x1032)
+OK    Automação com 2 sessões e 1 etapa manual criada pelo teclado
+captura S002-03-dialogo-iniciar-gravacao.png (1920x1032)
+OK    S002-006 lista de abas sem URL completa
+OK    Gravar → Gravando somente após confirmação
+OK    Floating Recorder visível
+OK    Floating Recorder não roubou o foco
+OK    S002-008 consumidor próprio na CaptureSession
+captura S002-04-floating-gravando.png (1920x1032)
+OK    S002-011 pausa confirmada: consumidor liberado
+captura S002-05-pausado.png (1920x1032)
+OK    S002-012 retomada confirmada com captura restabelecida
+OK    S002-013 modo 'Capturar' confirmado pela extensão
+OK    Associação a outra sessão sem nova captura
+captura S002-06-modo-e-sessao.png (1920x1032)
+OK    S002-024 janela movida pelo cabeçalho
+OK    S002-024 recolher esconde o Recorder (gravação continua)
+OK    S002-024 restaurada pelo botão Gravando do Studio
+OK    Always on top ligado por padrão
+captura S002-07-tema-sakura-dark.png (400x482)
+captura S002-07-tema-midnight-dark.png (400x482)
+captura S002-07-tema-porcelain-light.png (400x482)
+captura S002-07-tema-sage-light.png (400x482)
+OK    S002-025 quatro temas aplicados ao Floating Recorder
+captura S002-08-resumo-finalizado.png (1920x1032)
+OK    S002-014 consumidor liberado após finalizar
+OK    S002-014 nenhum PageMap exportado
+OK    S002-029 nenhuma etapa artificial
+OK    Volta ao Studio (Recorder oculto)
+OK    S002-009 Recorder e inspeção coexistem
+OK    S002-009 pausa do Recorder preserva a inspeção
+captura S002-09-coexistencia-pausado.png (1920x1032)
+OK    S002-010 inspeção continua ativa após finalizar o Recorder
+Acesso ao site http://site-a.nekkora.test/* → revogado pelo controle do Chrome
+OK    S002-007 site sem autorização listado como 'Não autorizada' e desabilitado
+OK    Orientação para autorizar pela extensão
+captura S002-10-site-nao-autorizado.png (1920x1032)
+Acesso ao site http://site-a.nekkora.test/* → concedido pelo controle do Chrome
+OK    S002-008 gravação em site autorizado pelo usuário
+Acesso ao site http://site-a.nekkora.test/* → revogado pelo controle do Chrome
+OK    S002-027 revogação: Recorder interrompido (PERMISSION_REVOKED)
+captura S002-11-permissao-revogada.png (1920x1032)
+OK    Finalização registra a interrupção
+OK    S002-019 Chrome encerrado: Recorder DEGRADED, nada dado como finalizado
+OK    S002-019 Studio volta a aguardar a extensão
+captura S002-12-chrome-encerrado.png (1920x1032)
+OK    Opção 'Encerrar no Studio' oferecida
+Chrome for Testing: 155.0.8059.39
+OK    Reconexão automática após reabrir o Chrome
+captura S002-13-sair-com-gravacao.png (1920x1032)
+OK    18.1 encerramento normal: gravação finalizada no navegador
+OK    18.1 consumidor liberado
+OK    18.1 credencial invalidada (arquivo de descoberta removido)
+OK    Studio (processo separado) gravando com a inspeção ativa
+concessão expirada 10143 ms após a queda (concessão de 10000 ms)
+OK    S002-018 sem gravação órfã: consumidor do Recorder liberado
+OK    S002-018 demais consumidores preservados (inspeção)
+captura S002-14-studio-derrubado-concessao-expirada.png (1920x1032)
+RESULTADO: 42 verificações, 0 falha(s)
