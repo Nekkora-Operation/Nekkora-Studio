@@ -74,6 +74,8 @@ public final class FloatingRecorderPanel extends JPanel {
     private final NekkoraText captureText = new NekkoraText("—");
     private final NekkoraText coverageText = new NekkoraText("—");
     private final NekkoraText stepsText = new NekkoraText("—");
+    private final NekkoraText evidenceText = new NekkoraText("—");
+    private final NekkoraText lastObservationText = new NekkoraText("—");
     private final NekkoraParagraph sessionNote = note("", TextTone.SECONDARY);
     private final NekkoraParagraph stepsNotice = note(RecorderText.ACTION_CAPTURE_NOTICE, TextTone.SECONDARY);
     private final NekkoraRadioButton captureOnly = new NekkoraRadioButton(RecordingMode.CAPTURE_ONLY.label());
@@ -122,6 +124,10 @@ public final class FloatingRecorderPanel extends JPanel {
         kv.add("Cobertura", coverageText);
         kv.add("Etapas", stepsText);
         stepsText.getAccessibleContext().setAccessibleName("Etapas registradas");
+        kv.add("Evidências", evidenceText); // STUDIO-005: observadas na página — não são validação de negócio
+        evidenceText.getAccessibleContext().setAccessibleName("Evidências observadas");
+        kv.add("Última observação", lastObservationText);
+        lastObservationText.getAccessibleContext().setAccessibleName("Última observação");
         live.add(kv);
         sessionNote.setVisible(false);
         live.add(sessionNote); // troca de sessão pedida e ainda não confirmada pela extensão
@@ -255,6 +261,8 @@ public final class FloatingRecorderPanel extends JPanel {
             captureText.setText(RecorderText.capture(s));
             coverageText.setText(RecorderText.coverage(s.progress()));
             stepsText.setText(RecorderText.steps(s.steps()));
+            evidenceText.setText(RecorderText.evidence(s.evidence()));
+            lastObservationText.setText(RecorderText.lastObservation(s.evidence()));
             stepsNotice.setText(RecorderText.stepsNotice(s.steps()));
             RecordingMode shown = s.pendingMode() != null ? s.pendingMode() : s.mode();
             captureOnly.setSelected(shown == RecordingMode.CAPTURE_ONLY);

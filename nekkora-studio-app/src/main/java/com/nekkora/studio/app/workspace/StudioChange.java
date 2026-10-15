@@ -21,5 +21,7 @@ public enum StudioChange {
     /** Histórico de edição (desfazer/refazer) de uma automação (STUDIO-004). */
     HISTORY,
     /** Uma automação passou a estar (ou deixou de estar) bloqueada para edição por uma gravação (STUDIO-004). */
-    EDIT_LOCK
+    EDIT_LOCK,
+    /** Evidências observadas chegaram para etapas de uma automação (STUDIO-005) — não é edição nem conteúdo editável. */
+    EVIDENCE
 }

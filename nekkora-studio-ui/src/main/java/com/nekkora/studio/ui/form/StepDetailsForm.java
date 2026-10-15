@@ -269,9 +269,37 @@ public final class StepDetailsForm extends StudioForm<StepDetailsForm.Values> {
 
         // ------------------------------------------------ Origem e alterações
         tabs.addTab("Origem e alterações", IconName.HISTORY, originBody);
+
+        // ------------------------------------------------ Evidências (STUDIO-005): somente leitura e ÚLTIMA aba — as
+        // posições das abas anteriores não mudam
+        tabs.addTab("Evidências", IconName.EYE, evidenceTab(step));
+        // seis abas cabem na largura do diálogo sem rolagem (nenhuma aba fica escondida atrás das setas): só o espaçamento
+        // horizontal de cada aba diminui — títulos, ícones e ordem continuam os mesmos
+        tabs.putClientProperty("JTabbedPane.tabInsets", new java.awt.Insets(4, 8, 4, 8));
         add(tabs);
 
         load(step);
+    }
+
+    /** Índice da aba Evidências (a última). */
+    public static final int EVIDENCE_TAB = 5;
+
+    /** Resumo estruturado e linha do tempo das evidências observadas — nada aqui é editável. */
+    private static NekkoraStack evidenceTab(AutomationStep step) {
+        NekkoraStack tab = NekkoraStack.vertical(Spacing.SPACE_6);
+        NekkoraKeyValueView summary = new NekkoraKeyValueView();
+        for (ElementPresentation.Row r : com.nekkora.studio.ui.EvidencePresentation.summary(step)) summary.add(r.label(), r.value());
+        tab.add(new NekkoraSection("Resumo da observação").setContent(summary));
+        if (!step.evidence().isEmpty()) {
+            NekkoraKeyValueView line = new NekkoraKeyValueView();
+            for (com.nekkora.studio.ui.EvidencePresentation.TimelineEntry t : com.nekkora.studio.ui.EvidencePresentation.timeline(step.evidence())) {
+                line.add(t.time(), t.title() + " — " + t.detail());
+            }
+            tab.add(new NekkoraSection("Linha do tempo (ordem técnica, horário real)").setContent(line));
+        }
+        tab.add(new NekkoraParagraph("Evidências são acontecimentos observados na página depois da ação. Não são validação de negócio e "
+                + "não podem ser editadas.", TextTone.SECONDARY));
+        return tab;
     }
 
     private void load(AutomationStep s) {

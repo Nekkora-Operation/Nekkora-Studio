@@ -50,6 +50,13 @@ public final class AutomationStep {
     private Instant lastManualChange;
     /** Estado efetivo imutável atual, compartilhado pelas fotografias do histórico enquanto a etapa não muda. */
     private State cached;
+    /**
+     * STUDIO-005: evidências observadas depois da ação — só acrescentadas (nunca editadas nem removidas), em ordem de
+     * sequência técnica. Ficam FORA do estado efetivo ({@link State}): o histórico de desfazer/refazer não as apaga nem as
+     * reaplica, e a chegada delas não conta revisão.
+     */
+    private final List<com.nekkora.studio.domain.evidence.ObservedEvidence> evidence = new java.util.ArrayList<>();
+    private final List<com.nekkora.studio.domain.evidence.ObservedEvidence> evidenceView = java.util.Collections.unmodifiableList(evidence);
 
     AutomationStep(StepId id, String name, String description, StepDraft draft, Instant createdAt) {
         this(id, name, description, draft, createdAt, null);
@@ -170,6 +177,27 @@ public final class AutomationStep {
     /** Quando o campo foi alterado manualmente pela última vez, se foi. */
     public Optional<Instant> editedAt(StepField field) {
         return Optional.ofNullable(edits.get(field));
+    }
+
+    /** Evidências observadas desta etapa (somente leitura, em ordem de sequência) — STUDIO-005. */
+    public List<com.nekkora.studio.domain.evidence.ObservedEvidence> evidence() {
+        return evidenceView;
+    }
+
+    /** Resumo estruturado do que foi observado depois da ação (derivado das evidências). */
+    public com.nekkora.studio.domain.evidence.ObservationSummary observation() {
+        return com.nekkora.studio.domain.evidence.ObservationSummary.of(this);
+    }
+
+    /** Acrescenta uma evidência (restrito ao pacote: só por {@link Automation#attachEvidence}). {@code false} se repetida. */
+    boolean addEvidence(com.nekkora.studio.domain.evidence.ObservedEvidence e) {
+        for (com.nekkora.studio.domain.evidence.ObservedEvidence x : evidence) {
+            if (x.evidenceId().equals(e.evidenceId())) return false;
+        }
+        int at = evidence.size();
+        while (at > 0 && evidence.get(at - 1).sequence() > e.sequence()) at--; // ordem técnica, mesmo com chegada fora de ordem
+        evidence.add(at, e);
+        return true;
     }
 
     // ------------------------------------------------------------------ estado (restrito ao pacote)

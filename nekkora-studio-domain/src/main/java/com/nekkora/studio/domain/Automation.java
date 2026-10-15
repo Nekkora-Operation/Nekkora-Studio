@@ -35,6 +35,14 @@ public final class Automation {
     private final String modelVersion = ModelVersion.CURRENT;
     private final Clock clock;
     private long revision;
+    /** STUDIO-005: evidências observadas que não puderam ser atribuídas a uma etapa (ambíguas), por ordem de chegada. */
+    private final List<com.nekkora.studio.domain.evidence.ObservedEvidence> unattributed = new ArrayList<>();
+    private final List<com.nekkora.studio.domain.evidence.ObservedEvidence> unattributedView = Collections.unmodifiableList(unattributed);
+
+    /** Evidências por etapa (limite de proteção; o excesso é recusado, nunca descartado em silêncio). */
+    public static final int MAX_EVIDENCE_PER_STEP = 100;
+    /** Evidências não atribuídas guardadas por automação. */
+    public static final int MAX_UNATTRIBUTED = 500;
 
     private Automation(AutomationId id, String name, String description, Clock clock) {
         this.id = id;
@@ -214,8 +222,9 @@ public final class Automation {
             if (!mine.isEmpty()) plan.put(s, mine);
         }
         int count = plan.values().stream().mapToInt(List::size).sum();
+        unattributed.removeIf(e -> e.recordingId().equals(recordingId)); // STUDIO-005: nada da gravação cancelada sobrevive
         if (count == 0) return 0;
-        plan.forEach(LogicalSession::removeAll);
+        plan.forEach(LogicalSession::removeAll); // as evidências das etapas saem com elas
         touch();
         return count;
     }
@@ -224,6 +233,57 @@ public final class Automation {
     public void updateStepBasics(StepId stepId, String newName, String newDescription, ActionType newType) {
         AutomationStep step = requireStep(stepId);
         editStep(stepId, StepEdit.of(this, step).name(newName).description(newDescription).actionType(newType));
+    }
+
+    // ------------------------------------------------------------------ STUDIO-005: evidências observadas
+
+    /**
+     * Registra uma evidência observada (STUDIO-005). Não é edição: não conta revisão, não muda o estado efetivo de nenhuma
+     * etapa e não entra no histórico de desfazer/refazer — por isso é permitida durante a gravação.
+     *
+     * <p>Com etapa ({@link com.nekkora.studio.domain.evidence.ObservedEvidence#attributed()}): vai para a etapa GRAVADA desta
+     * gravação com o mesmo evento ({@code RECORDING_ID} + {@code RECORDED_EVENT_ID}); a etapa precisa ter sido EXECUTADA
+     * (uma proposta de CAPTURE_ONLY não tem consequência). Sem etapa (ambígua): fica na lista de não atribuídas. Repetida
+     * (mesmo evidenceId) não muda nada. A etapa nunca é recriada nem alterada (identidade, ordem, original, tipo e
+     * parâmetros ficam como estão).
+     *
+     * @return {@code false} se a evidência já estava registrada
+     */
+    public boolean attachEvidence(com.nekkora.studio.domain.evidence.ObservedEvidence e) {
+        Objects.requireNonNull(e, "evidence");
+        if (!e.attributed()) {
+            for (com.nekkora.studio.domain.evidence.ObservedEvidence x : unattributed) {
+                if (x.evidenceId().equals(e.evidenceId())) return false;
+            }
+            if (unattributed.size() >= MAX_UNATTRIBUTED) throw new DomainValidationException(ValidationProblem.EVIDENCE_LIMIT_REACHED);
+            unattributed.add(e);
+            return true;
+        }
+        AutomationStep step = recordedStep(e.recordingId(), e.eventId())
+                .orElseThrow(() -> new DomainValidationException(ValidationProblem.EVIDENCE_STEP_NOT_FOUND));
+        boolean executed = step.provenance().recordingObservation()
+                .map(o -> o.observation() == com.nekkora.studio.domain.origin.RecordingObservation.Observation.INTERACTION_OBSERVED).orElse(false);
+        if (!executed) throw new DomainValidationException(ValidationProblem.EVIDENCE_NOT_APPLICABLE);
+        if (step.evidence().stream().anyMatch(x -> x.evidenceId().equals(e.evidenceId()))) return false;
+        if (step.evidence().size() >= MAX_EVIDENCE_PER_STEP) throw new DomainValidationException(ValidationProblem.EVIDENCE_LIMIT_REACHED);
+        return step.addEvidence(e);
+    }
+
+    /** Evidências observadas sem etapa definida (ambíguas), somente leitura. */
+    public List<com.nekkora.studio.domain.evidence.ObservedEvidence> unattributedEvidence() {
+        return unattributedView;
+    }
+
+    /** Etapa GRAVADA desta gravação com o evento informado. */
+    public Optional<AutomationStep> recordedStep(String recordingId, String eventId) {
+        if (recordingId == null || eventId == null) return Optional.empty();
+        return sessions.stream().flatMap(s -> s.steps().stream())
+                .filter(st -> st.provenance().origin() == com.nekkora.studio.domain.origin.StepOrigin.RECORDED)
+                .filter(st -> st.provenance().correlation().get(com.nekkora.studio.domain.element.CorrelationKeys.Key.RECORDING_ID)
+                        .map(recordingId::equals).orElse(false))
+                .filter(st -> st.provenance().correlation().get(com.nekkora.studio.domain.element.CorrelationKeys.Key.RECORDED_EVENT_ID)
+                        .map(eventId::equals).orElse(false))
+                .findFirst();
     }
 
     // ------------------------------------------------------------------ STUDIO-004: estrutura

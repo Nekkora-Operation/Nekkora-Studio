@@ -332,9 +332,14 @@ public final class LogicalSessionView extends NekkoraCard {
         return StudioText.number(numbers.getOrDefault(step.id(), 0)) + "   " + step.name();
     }
 
-    /** Linha secundária exibida na lista: tipo · origem · estado (texto, não só cor). */
+    /**
+     * Linha secundária exibida na lista: tipo · origem · estado (texto, não só cor) e, com evidências observadas
+     * (STUDIO-005), o resumo curto da observação — "mudanças observadas", nunca "sucesso" ou "falha".
+     */
     public static String detailOf(AutomationStep step) {
-        return step.actionType().label() + " · " + step.provenance().origin().label() + " · " + StudioText.stepState(step);
+        String base = step.actionType().label() + " · " + step.provenance().origin().label() + " · " + StudioText.stepState(step);
+        String observed = step.evidence().isEmpty() ? "" : EvidencePresentation.badge(step);
+        return observed.isEmpty() ? base : base + " · " + observed;
     }
 
     public NekkoraList<AutomationStep> stepList() {

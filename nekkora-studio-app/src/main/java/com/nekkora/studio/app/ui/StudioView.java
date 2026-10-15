@@ -273,6 +273,15 @@ public final class StudioView {
                 else o.refresh();
             }
         }
+        if (e.has(StudioChange.EVIDENCE) && e.automation() != null && !e.has(StudioChange.CONTENT)) {
+            // STUDIO-005: só a apresentação das evidências das sessões afetadas (as etapas em si não mudaram)
+            AutomationOverview o = overviews.get(e.automation());
+            if (o != null) {
+                if (!e.sessions().isEmpty()) o.refreshSessions(e.sessions());
+                else o.refresh();
+            }
+            refreshSelection();
+        }
         if (e.has(StudioChange.EDIT_LOCK)) {
             refreshLocks();
             refreshToolbar();

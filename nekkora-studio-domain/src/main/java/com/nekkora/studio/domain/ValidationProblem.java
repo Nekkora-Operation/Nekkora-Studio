@@ -46,6 +46,10 @@ public enum ValidationProblem {
             "Esta automação está sendo gravada. Finalize ou cancele a gravação para editar ou reorganizar com segurança."),
     NOTHING_TO_UNDO(Field.NONE, "Não há alteração para desfazer nesta automação."),
     NOTHING_TO_REDO(Field.NONE, "Não há alteração para refazer nesta automação."),
+    // ---- STUDIO-005: evidências observadas
+    EVIDENCE_STEP_NOT_FOUND(Field.NONE, "A etapa desta evidência não existe nesta automação."),
+    EVIDENCE_NOT_APPLICABLE(Field.NONE, "Esta etapa foi apenas proposta (a ação não foi executada): não há consequência para observar."),
+    EVIDENCE_LIMIT_REACHED(Field.NONE, "Limite de evidências atingido para esta etapa."),
     HISTORY_CONFLICT(Field.NONE,
             "A automação mudou por outro caminho depois desta alteração (por exemplo, recebeu etapas do Recorder). O histórico de edição foi descartado para não aplicar uma alteração sobre um estado diferente.");
 

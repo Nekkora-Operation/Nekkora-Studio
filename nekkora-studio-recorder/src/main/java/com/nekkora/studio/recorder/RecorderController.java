@@ -44,6 +44,11 @@ import java.util.logging.Logger;
  *       vigente quando foi consolidado, entregue ao domínio em ordem e só então CONFIRMADO à extensão (ACK cumulativo,
  *       com as recusadas à parte). Lacunas (renovação/consulta mostram etapas emitidas que não chegaram) pedem
  *       reemissão; o cancelamento confirmado descarta as etapas da gravação numa única operação de domínio.</li>
+ *   <li><b>Evidências (STUDIO-005)</b>: com um {@link EvidenceSink}, o início pede também {@code evidence/1} (extensão
+ *       anterior: recusa ⇒ nova tentativa só com {@code steps/1}, depois sem capacidades). Cada
+ *       {@code studio.recording.evidence} é lido de forma estrita ({@link RecordedEvidence}), ordenado pela sequência
+ *       própria ({@link EvidenceInbox}), espera a etapa dele chegar (fila limitada), é registrado no domínio DEPOIS da
+ *       etapa e só então confirmado (ACK cumulativo contíguo). Lacunas pedem reemissão. Nada disso é edição.</li>
  * </ul>
  */
 public final class RecorderController implements AutoCloseable {
@@ -61,6 +66,7 @@ public final class RecorderController implements AutoCloseable {
     private final Clock clock;
     private final Options options;
     private final StepSink sink;
+    private final EvidenceSink evidenceSink;
     private final ScheduledExecutorService exec = Executors.newSingleThreadScheduledExecutor(r -> {
         Thread t = new Thread(r, "nekkora-recorder");
         t.setDaemon(true);
@@ -113,16 +119,47 @@ public final class RecorderController implements AutoCloseable {
     private SessionId queuedSession;
     private CompletableFuture<Void> chain = CompletableFuture.completedFuture(null);
 
+    // ---- evidências observadas (STUDIO-005; somente na thread do Recorder)
+    /** Evidências esperando a etapa delas (que chega por outro canal). */
+    static final int MAX_HELD_EVIDENCE = 500;
+    private boolean evidenceEnabled;
+    private EvidenceInbox evInbox = new EvidenceInbox();
+    private final java.util.Set<String> knownEvents = new java.util.HashSet<>();
+    private final java.util.Map<String, List<com.nekkora.studio.domain.evidence.ObservedEvidence>> heldForStep = new java.util.HashMap<>();
+    private int heldCount;
+    private int evProduced;
+    private int evAccepted;
+    private int evUnattributed;
+    private int evIncomplete;
+    private int evRejected;
+    private int evLost;
+    private int evInFlight;
+    private Instant evLast;
+    private final List<Long> evRejectedSinceAck = new ArrayList<>();
+    private boolean evAckInFlight;
+    private boolean evAckDirty;
+    private boolean evSyncing;
+    private boolean evWaiting;
+
     public RecorderController(BrowserLink link, Clock clock, Options options) {
         this(link, clock, options, StepSink.NONE);
     }
 
     /** @param sink destino das etapas gravadas; {@link StepSink#NONE} = gravação só técnica (STUDIO-002) */
     public RecorderController(BrowserLink link, Clock clock, Options options, StepSink sink) {
+        this(link, clock, options, sink, EvidenceSink.NONE);
+    }
+
+    /**
+     * @param sink         destino das etapas gravadas
+     * @param evidenceSink destino das evidências observadas; {@link EvidenceSink#NONE} = sem a capacidade evidence/1
+     */
+    public RecorderController(BrowserLink link, Clock clock, Options options, StepSink sink, EvidenceSink evidenceSink) {
         this.link = Objects.requireNonNull(link);
         this.clock = Objects.requireNonNull(clock);
         this.options = Objects.requireNonNull(options);
         this.sink = Objects.requireNonNull(sink);
+        this.evidenceSink = Objects.requireNonNull(evidenceSink);
         this.linkStatus = link.status();
         this.snapshot = build();
         this.linkListener = new BrowserLink.Listener() {
@@ -338,7 +375,9 @@ public final class RecorderController implements AutoCloseable {
         if (sink != StepSink.NONE) {
             String route = "route-" + (++routeCounter);
             routes.put(route, target.session());
-            start.put("capabilities", List.of("steps/1")).put("routeRef", route);
+            start.put("capabilities", evidenceSink != EvidenceSink.NONE
+                    ? List.of(com.nekkora.studio.bridge.BridgeProtocol.CAPABILITY_STEPS, com.nekkora.studio.bridge.BridgeProtocol.CAPABILITY_EVIDENCE)
+                    : List.of(com.nekkora.studio.bridge.BridgeProtocol.CAPABILITY_STEPS)).put("routeRef", route);
         }
         Map<String, Object> payload = start.build();
         link.send("studio.recording.start", payload, options.startTimeout()).whenComplete((p, e) -> run(() -> {
@@ -361,6 +400,16 @@ public final class RecorderController implements AutoCloseable {
                 recoverOrDegrade();
                 return;
             }
+            if (x.code() == BridgeError.BAD_REQUEST && evidenceRequested(payload)) {
+                // Extensão da STUDIO-003/004 (contrato sem evidence/1): etapas sem evidências, como antes.
+                LOG.info("Extensão sem evidências observadas: gravação com etapas");
+                payload.put("capabilities", List.of(com.nekkora.studio.bridge.BridgeProtocol.CAPABILITY_STEPS));
+                pendingOp = newOp();
+                payload.put("operationId", pendingOp);
+                String retry = pendingOp;
+                link.send("studio.recording.start", payload, options.startTimeout()).whenComplete((p2, e2) -> run(() -> onStepsOnlyStart(retry, payload, p2, e2)));
+                return;
+            }
             if (x.code() == BridgeError.BAD_REQUEST && payload.containsKey("capabilities")) {
                 // Extensão da STUDIO-002 (contrato sem steps/1): grava só a parte técnica, como antes.
                 LOG.info("Extensão sem gravação de etapas: gravação técnica");
@@ -379,6 +428,26 @@ public final class RecorderController implements AutoCloseable {
             clearRecordingKeepProblem();
             publish();
         }));
+    }
+
+    private static boolean evidenceRequested(Map<String, Object> payload) {
+        return payload.get("capabilities") instanceof List<?> l && l.contains(com.nekkora.studio.bridge.BridgeProtocol.CAPABILITY_EVIDENCE);
+    }
+
+    /** Resposta do início só com steps/1 (extensão anterior à STUDIO-005); recusa ⇒ última tentativa, só técnica. */
+    private void onStepsOnlyStart(String op, Map<String, Object> payload, Map<String, Object> p, Throwable e) {
+        if (e != null && op.equals(pendingOp) && cause(e).code() == BridgeError.BAD_REQUEST) {
+            LOG.info("Extensão sem gravação de etapas: gravação técnica");
+            payload.remove("capabilities");
+            payload.remove("routeRef");
+            routes.clear();
+            pendingOp = newOp();
+            payload.put("operationId", pendingOp);
+            String retry = pendingOp;
+            link.send("studio.recording.start", payload, options.startTimeout()).whenComplete((p2, e2) -> run(() -> onStartResult(retry, p2, e2)));
+            return;
+        }
+        onStartResult(op, p, e);
     }
 
     /** Resposta do início sem a capacidade de etapas (extensão anterior à STUDIO-003). */
@@ -591,6 +660,10 @@ public final class RecorderController implements AutoCloseable {
             onStep(event.payload());
             return;
         }
+        if ("studio.recording.evidence".equals(event.type())) {
+            onEvidence(event.payload());
+            return;
+        }
         String op = Json.string(event.payload(), "operationId");
         if (op != null && op.equals(pendingOp)) {
             return; // a resposta do comando é quem conclui a operação
@@ -662,6 +735,10 @@ public final class RecorderController implements AutoCloseable {
         if (st != null) {
             stepsState(st);
         }
+        Map<String, Object> evs = Json.object(rec, "evidence");
+        if (evs != null) {
+            evidenceState(evs);
+        }
         move(target);
         if (target.terminal()) {
             clearPendingRoute(); // encerrada: nenhuma troca pendente sobrevive
@@ -702,9 +779,13 @@ public final class RecorderController implements AutoCloseable {
             lim.add(String.valueOf(o));
         }
         Map<String, Object> st = Json.object(sum, "steps");
+        Map<String, Object> ev = Json.object(sum, "evidence");
+        EvidenceProgress evidence = ev == null ? EvidenceProgress.NONE
+                : new EvidenceProgress(true, (int) Json.number(ev, "produced", 0), evAccepted, evUnattributed, evIncomplete,
+                        evInbox.buffered() + heldCount + evInFlight, evRejected, (int) Json.number(ev, "lost", 0), evWaiting, evLast);
         return new RecordingSummary(outcome, Duration.ofMillis(Json.number(sum, "durationMs", 0)), progressOf(wrapper), lim,
                 Json.bool(sum, "pageMapExported", false), Json.string(sum, "actionCapture"), (int) Json.number(st, "produced", 0), accepted, rejected,
-                (int) Json.number(st, "lost", 0));
+                (int) Json.number(st, "lost", 0), evidence);
     }
 
     // ================================================================================= etapas (STUDIO-003)
@@ -729,6 +810,24 @@ public final class RecorderController implements AutoCloseable {
         clearPendingRoute();
         queuedSession = null;
         chain = CompletableFuture.completedFuture(null);
+        evidenceEnabled = false;
+        evInbox = new EvidenceInbox();
+        knownEvents.clear();
+        heldForStep.clear();
+        heldCount = 0;
+        evProduced = 0;
+        evAccepted = 0;
+        evUnattributed = 0;
+        evIncomplete = 0;
+        evRejected = 0;
+        evLost = 0;
+        evInFlight = 0;
+        evLast = null;
+        evRejectedSinceAck.clear();
+        evAckInFlight = false;
+        evAckDirty = false;
+        evSyncing = false;
+        evWaiting = false;
     }
 
     /** Estado da entrega informado pela extensão (gravação, renovação, consulta): perdas declaradas e lacunas. */
@@ -790,6 +889,13 @@ public final class RecorderController implements AutoCloseable {
                 : sink.deliver(automation, session, d).exceptionally(e -> false))
                 .thenAccept(ok -> run(() -> delivered(rid, seq, Boolean.TRUE.equals(ok))))
                 .exceptionally(e -> null);
+        // STUDIO-005: as evidências que esperavam esta etapa entram no domínio DEPOIS dela (mesma fila)
+        knownEvents.add(step.eventId());
+        List<com.nekkora.studio.domain.evidence.ObservedEvidence> held = heldForStep.remove(step.eventId());
+        if (held != null) {
+            heldCount -= held.size();
+            held.forEach(this::enqueueEvidence);
+        }
     }
 
     private void delivered(String rid, long seq, boolean ok) {
@@ -947,6 +1053,143 @@ public final class RecorderController implements AutoCloseable {
         })).exceptionally(e -> null);
     }
 
+    // ================================================================================= evidências (STUDIO-005)
+
+    /** Estado das evidências informado pela extensão (gravação, renovação, confirmação): perdas e lacunas. */
+    private void evidenceState(Map<String, Object> st) {
+        if (!Json.bool(st, "enabled", false) || evidenceSink == EvidenceSink.NONE) {
+            return;
+        }
+        evidenceEnabled = true;
+        evLost = (int) Json.number(st, "lost", evLost);
+        long last = Json.number(st, "lastSequence", 0);
+        evProduced = (int) Math.max(evProduced, last);
+        if (evInbox.missing(last) && evInbox.highestSeen() < last && !halted) {
+            evWaiting = true;
+            requestEvidenceSync(); // emitidas que não chegaram aqui: reemissão em ordem
+        } else if (!evInbox.missing(last)) {
+            evWaiting = false;
+        }
+    }
+
+    private void onEvidence(Map<String, Object> payload) {
+        if (halted || evidenceSink == EvidenceSink.NONE || !state.active() && state != RecorderState.COMPLETED) {
+            return; // cancelada, expirada ou sem destino: a evidência não entra no domínio
+        }
+        evidenceEnabled = true;
+        com.nekkora.studio.domain.evidence.ObservedEvidence e = RecordedEvidence.parse(payload).orElse(null);
+        if (e == null || !e.recordingId().equals(recording.recordingId())) {
+            LOG.warning("Evidência fora do contrato ignorada");
+            return;
+        }
+        evProduced = (int) Math.max(evProduced, e.sequence());
+        EvidenceInbox.Accepted a = evInbox.accept(e);
+        for (com.nekkora.studio.domain.evidence.ObservedEvidence ready : a.ready()) {
+            routeEvidence(ready);
+        }
+        if (a.gap()) {
+            evWaiting = true;
+            requestEvidenceSync();
+        } else if (!a.duplicate() && evInbox.buffered() == 0) {
+            evWaiting = false;
+        }
+        publish();
+    }
+
+    /** A evidência de uma etapa ainda não recebida espera por ela (fila limitada); a ambígua segue direto. */
+    private void routeEvidence(com.nekkora.studio.domain.evidence.ObservedEvidence e) {
+        if (e.attributed() && !knownEvents.contains(e.eventId())) {
+            if (heldCount >= MAX_HELD_EVIDENCE) {
+                evidenceDone(recording.recordingId(), e, false); // limite: recusada e declarada (nunca uma etapa fictícia)
+                return;
+            }
+            heldForStep.computeIfAbsent(e.eventId(), k -> new ArrayList<>()).add(e);
+            heldCount++;
+            return;
+        }
+        enqueueEvidence(e);
+    }
+
+    private void enqueueEvidence(com.nekkora.studio.domain.evidence.ObservedEvidence e) {
+        String rid = recording.recordingId();
+        com.nekkora.studio.domain.AutomationId automation = recording.automation();
+        evInFlight++;
+        chain = chain.thenCompose(v -> evidenceSink.deliver(automation, e).exceptionally(x -> false))
+                .thenAccept(ok -> run(() -> {
+                    evInFlight = Math.max(0, evInFlight - 1);
+                    evidenceDone(rid, e, Boolean.TRUE.equals(ok));
+                }))
+                .exceptionally(x -> null);
+    }
+
+    private void evidenceDone(String rid, com.nekkora.studio.domain.evidence.ObservedEvidence e, boolean ok) {
+        if (recording == null || !rid.equals(recording.recordingId())) {
+            return;
+        }
+        if (ok) {
+            evAccepted++;
+            if (!e.attributed()) {
+                evUnattributed++;
+            }
+            if (e.type() == com.nekkora.studio.domain.evidence.EvidenceType.OBSERVATION_INCOMPLETE) {
+                evIncomplete++;
+            }
+            evLast = evLast == null || e.observedAt().isAfter(evLast) ? e.observedAt() : evLast;
+        } else {
+            evRejected++;
+            evRejectedSinceAck.add(e.sequence());
+        }
+        evInbox.concluded(e.sequence());
+        ackEvidence();
+        publish();
+    }
+
+    /** ACK cumulativo das evidências: tudo até a maior sequência CONTÍGUA concluída no domínio (aceita ou recusada). */
+    private void ackEvidence() {
+        if (recording == null || !link.status().connected()) {
+            return;
+        }
+        if (evAckInFlight) {
+            evAckDirty = true;
+            return;
+        }
+        evAckInFlight = true;
+        evAckDirty = false;
+        String rid = recording.recordingId();
+        long upTo = evInbox.acked();
+        List<Long> rej = evRejectedSinceAck.stream().filter(s -> s <= upTo).limit(100).toList();
+        Json.Builder p = Json.obj().put("recordingId", rid).put("upToSequence", upTo);
+        if (!rej.isEmpty()) {
+            p.put("rejected", rej);
+        }
+        link.send("studio.recording.evidence.ack", p.build(), options.commandTimeout()).whenComplete((r, x) -> run(() -> {
+            evAckInFlight = false;
+            if (recording == null || !rid.equals(recording.recordingId())) {
+                return;
+            }
+            if (x == null) {
+                evRejectedSinceAck.removeAll(rej);
+                Map<String, Object> st = Json.object(r, "evidence");
+                if (st != null) {
+                    evidenceState(st);
+                }
+            }
+            if (evAckDirty || (x == null && evRejectedSinceAck.stream().anyMatch(s -> s <= evInbox.acked()))) {
+                ackEvidence();
+            }
+        }));
+    }
+
+    private void requestEvidenceSync() {
+        if (evSyncing || recording == null || !link.status().connected()) {
+            return;
+        }
+        evSyncing = true;
+        String rid = recording.recordingId();
+        link.send("studio.recording.evidence.sync", Map.of("recordingId", rid, "afterSequence", evInbox.released()), options.commandTimeout())
+                .whenComplete((r, e) -> run(() -> evSyncing = false));
+    }
+
     /** Aguarda as entregas em andamento (usado em testes e na saída do Studio). */
     CompletableFuture<Void> deliveries() {
         CompletableFuture<Void> out = new CompletableFuture<>();
@@ -980,6 +1223,11 @@ public final class RecorderController implements AutoCloseable {
                 Map<String, Object> steps = Json.object(p, "steps");
                 if (steps != null) {
                     stepsState(steps);
+                    publish();
+                }
+                Map<String, Object> evs = Json.object(p, "evidence");
+                if (evs != null) {
+                    evidenceState(evs);
                     publish();
                 }
                 sendRoute(); // troca pendente com resultado desconhecido: reconcilia enquanto a extensão responde
@@ -1095,7 +1343,9 @@ public final class RecorderController implements AutoCloseable {
         return new RecorderSnapshot(state, mode, pendingMode, recording == null ? null : recording.automation(),
                 recording == null ? null : recording.session(), tabTitle, tabHost, progress, reason, problem, summary, linkStatus,
                 stepsEnabled ? new StepProgress(true, accepted, inbox.buffered() + inFlight, rejected, lost, waiting) : StepProgress.NONE,
-                pendingSession);
+                pendingSession,
+                evidenceEnabled ? new EvidenceProgress(true, evProduced, evAccepted, evUnattributed, evIncomplete, evInbox.buffered() + heldCount + evInFlight,
+                        evRejected, evLost, evWaiting, evLast) : EvidenceProgress.NONE);
     }
 
     private void publish() {
