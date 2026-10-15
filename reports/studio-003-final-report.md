@@ -204,3 +204,37 @@ Nenhuma pendência bloqueante.
   transacionais.
 - Os dados para a STUDIO-005 (contexto e resultado) já existem: evidências (`FORM_SUBMITTED`,
   `NAVIGATION_FOLLOWED`), contexto posterior e `observedOutcome`.
+
+## Anexo — revisão técnica dos PRs (P1 × 3 e P2)
+
+A revisão apontou três P1 e um P2. Este repositório tem um dos P1; os outros dois e o P2 estão na extensão (PR #5,
+anexo do relatório `studio-003-interactions-final-report.md`). Os testes que reproduzem cada defeito vieram primeiro
+e foram rodados no código anterior à correção.
+
+**P1 — o Studio alterava a sessão antes da confirmação da extensão.** O `associate()` registrava a sessão nova antes
+de `studio.recording.route` responder, e uma falha só ia para o log. Agora a troca fica pendente
+(`RecorderSnapshot.pendingSession`), e a associação muda só com a confirmação:
+
+- a recusa explícita mantém a sessão anterior e informa "Sessão não alterada";
+- o tempo esgotado e a ligação perdida são reconciliados refazendo o **mesmo** pedido (a operação é idempotente na
+  extensão);
+- os mapeamentos das rotas antigas ficam preservados para eventos em trânsito.
+
+Antes da correção, `RecorderStepsTest` tinha **4 falhas em 11** (as 4 novas). Depois, 11 de 11, mais o teste de tela
+`RecorderStepsStudioTest.revTrocaDeSessaoPendenteNaTela`.
+
+**Complemento (encontrado ao integrar a correção do P1 da extensão).** A extensão agora responde `CAPTURE_FAILED`
+com o motivo `SENSOR_NOT_CONFIRMED` quando o sensor da página não confirma uma operação. O Studio tratava essa
+resposta como "Captura técnica não iniciada" e, numa retomada recusada, voltava à pausa mesmo com a extensão já em
+`DEGRADED`. Agora:
+
+- o modo fica como estava, com o aviso "Modo não alterado";
+- o estado real é consultado na extensão, sem supor a pausa nem a gravação;
+- a interrupção aparece como "Captura interrompida", com a explicação dos sensores de interação.
+
+`RecorderStepsTest` ganhou 3 testes, que falharam antes da correção (3 de 14).
+
+Contrato sem mudança. `RecorderSnapshot` ganhou o componente `pendingSession` (construído só pelo
+`RecorderController`).
+
+Resultados depois da revisão: ver a seção "Testes depois da revisão" no PR #4.

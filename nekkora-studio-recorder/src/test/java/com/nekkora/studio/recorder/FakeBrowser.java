@@ -41,6 +41,8 @@ final class FakeBrowser implements BrowserLink {
     /** Simula a extensão da STUDIO-002: recusa o início com a capacidade steps/1 (campo fora do contrato). */
     boolean legacy;
     int otherConsumers = 0;
+    /** Motivo do estado atual (ex.: SENSOR_NOT_CONFIRMED ao degradar). */
+    String reason;
 
     @Override
     public LinkStatus status() {
@@ -140,7 +142,7 @@ final class FakeBrowser implements BrowserLink {
                 .put("counters", Json.obj().put("segments", 1).put("technicalCaptures", 1).put("synchronizations", 3).put("recoveries", 0).build())
                 .put("lease", Json.obj().put("leaseMs", 30000).put("expiresInMs", 30000).build())
                 .put("startedAt", Instant.ofEpochMilli(0).toString()).put("updatedAt", Instant.ofEpochMilli(clock).toString())
-                .put("reason", null).build());
+                .put("reason", reason).build());
     }
 
     /** Fotografia da gravação; com steps/1 negociado, inclui o estado da entrega (como a extensão real). */

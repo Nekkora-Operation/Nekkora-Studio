@@ -251,6 +251,38 @@ class RecorderStepsStudioTest {
     }
 
     @Test
+    @DisplayName("Revisão — troca de sessão aguardando a extensão: a tela mostra a sessão confirmada e avisa; recusa mantém a anterior")
+    void revTrocaDeSessaoPendenteNaTela() throws Exception {
+        Automation a = automation();
+        LogicalSession login = a.sessions().get(0);
+        LogicalSession consulta = a.sessions().get(1);
+        String rid = startRecording(login.id());
+        String r1 = route("studio.recording.start");
+        browser.auto = c -> c.type().equals("studio.recording.route") ? null : browser.extension(c); // a extensão ainda não respondeu
+        Edt.run(() -> studio.recorderPresenter().panel().sessionCombo().setSelectedItem(consulta));
+        await(() -> browser.count("studio.recording.route") == 1 && studio.recorder().snapshot().pendingSession() != null, "troca pendente");
+        Edt.flush();
+        var panel = studio.recorderPresenter().panel();
+        assertEquals(login, Edt.call(() -> panel.sessionCombo().getSelectedValue()), "a tela mostra a sessão confirmada");
+        assertFalse(Edt.call(() -> panel.sessionCombo().isEnabled()), "nada de outra troca enquanto esta não é confirmada");
+        assertTrue(Edt.call(() -> panel.sessionNote().isVisible()));
+        assertEquals("Aguardando a confirmação da extensão para trocar para a sessão “Consulta”. Até lá, as etapas continuam na sessão atual.",
+                Edt.call(() -> panel.sessionNote().getText()));
+        step(rid, 1, r1, "FILL", element("PASSWORD_INPUT", "Senha", "input", "senha", true), null);
+        await(() -> studio.recorder().snapshot().steps().accepted() == 1, "1 registrada");
+        assertEquals(List.of("Abrir o sistema", "Preencher campo Senha"), names(login));
+        browser.last("studio.recording.route").future().completeExceptionally(new com.nekkora.studio.bridge.BridgeCommandException(
+                com.nekkora.studio.bridge.BridgeError.CAPTURE_FAILED, "A página não confirmou a troca de sessão.", "SENSOR_NOT_CONFIRMED", false));
+        await(() -> studio.recorder().snapshot().pendingSession() == null && studio.recorder().snapshot().problem() != null, "recusa aplicada");
+        Edt.flush();
+        assertEquals(login, Edt.call(() -> panel.sessionCombo().getSelectedValue()), "recusa: continua a sessão anterior");
+        assertFalse(Edt.call(() -> panel.sessionNote().isVisible()));
+        assertTrue(Edt.call(() -> panel.problemAlert().isVisible()), "o usuário é informado da recusa");
+        assertEquals("Sessão não alterada", studio.recorder().snapshot().problem().title());
+        assertTrue(Edt.call(() -> panel.sessionCombo().isEnabled()));
+    }
+
+    @Test
     @DisplayName("S003-038 — cancelar descarta só as etapas desta gravação (as manuais ficam)")
     void s003Cancelamento() throws Exception {
         Automation a = automation();

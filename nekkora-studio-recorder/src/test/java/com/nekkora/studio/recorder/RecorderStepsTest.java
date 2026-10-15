@@ -4,6 +4,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.nekkora.studio.bridge.BridgeCommandException;
+import com.nekkora.studio.bridge.BridgeError;
+import com.nekkora.studio.bridge.LinkStatus;
 import com.nekkora.studio.bridge.json.Json;
 import com.nekkora.studio.domain.Automation;
 import com.nekkora.studio.domain.AutomationId;
@@ -215,5 +218,163 @@ class RecorderStepsTest {
         Map<String, Object> p = browser.last("studio.recording.start").payload();
         assertFalse(p.containsKey("capabilities"), "gravação só técnica (comportamento STUDIO-002)");
         assertFalse(rec.snapshot().steps().enabled());
+    }
+
+    // ------------------------------------------------------------- revisão técnica: troca de sessão confirmada
+
+    /** A extensão segura a resposta de studio.recording.route (o teste decide o desfecho). */
+    private void holdRoutes() {
+        browser.auto = c -> c.type().equals("studio.recording.route") ? null : browser.extension(c);
+    }
+
+    private List<FakeBrowser.Call> routeCalls() {
+        return browser.calls.stream().filter(c -> c.type().equals("studio.recording.route")).toList();
+    }
+
+    @Test
+    void revTrocaDeSessaoSoValeDepoisDaConfirmacaoDaExtensao() throws Exception {
+        String rid = startRecording();
+        String r1 = route(browser.last("studio.recording.start"));
+        holdRoutes();
+        rec.associate(consulta.id());
+        await(() -> routeCalls().size() == 1, "rota pedida à extensão");
+        Thread.sleep(100);
+        assertEquals(login.id(), rec.snapshot().session(), "sem confirmação, a sessão apresentada continua a anterior");
+        assertEquals(1, rec.recording().orElseThrow().associations().size(), "nenhuma associação registrada antes da confirmação");
+        assertEquals(consulta.id(), rec.snapshot().pendingSession(), "a interface sabe que a troca aguarda confirmação");
+        emitStep(rid, 1, r1, "FILL", "Senha"); // da sessão anterior, chegando durante a troca
+        await(() -> delivered.size() == 1, "entregue");
+        assertEquals(login.id(), delivered.get(0).session());
+        FakeBrowser.Call call = routeCalls().get(0);
+        call.future().complete(browser.result());
+        await(() -> consulta.id().equals(rec.snapshot().session()), "confirmada: sessão nova");
+        assertEquals(null, rec.snapshot().pendingSession());
+        assertEquals(2, rec.recording().orElseThrow().associations().size());
+        String r2 = route(call);
+        emitStep(rid, 2, r2, "CLICK", "Clientes");
+        emitStep(rid, 3, r1, "CLICK", "Entrar"); // atrasada da rota anterior, depois da confirmação
+        await(() -> delivered.size() == 3, "entregues");
+        assertEquals(consulta.id(), delivered.get(1).session());
+        assertEquals(login.id(), delivered.get(2).session(), "evento atrasado da sessão anterior fica na anterior");
+    }
+
+    @Test
+    void revTrocaDeSessaoRecusadaMantemAAnteriorEInformaOUsuario() throws Exception {
+        String rid = startRecording();
+        String r1 = route(browser.last("studio.recording.start"));
+        holdRoutes();
+        rec.associate(consulta.id());
+        await(() -> routeCalls().size() == 1, "rota pedida");
+        routeCalls().get(0).future().completeExceptionally(new BridgeCommandException(BridgeError.CAPTURE_FAILED,
+                "A página não confirmou a troca de sessão. As etapas continuam na sessão anterior.", "SENSOR_NOT_CONFIRMED", false));
+        await(() -> rec.snapshot().problem() != null, "usuário informado");
+        await(() -> rec.snapshot().state() == RecorderState.RECORDING, "estado real consultado na extensão");
+        assertEquals(login.id(), rec.snapshot().session(), "recusa explícita: a associação anterior continua");
+        assertEquals(1, rec.recording().orElseThrow().associations().size());
+        assertEquals(null, rec.snapshot().pendingSession(), "nada pendente depois da recusa");
+        assertEquals("Sessão não alterada", rec.snapshot().problem().title());
+        assertEquals(RecorderState.RECORDING, rec.snapshot().state());
+        Thread.sleep(150);
+        assertEquals(1, routeCalls().size(), "recusa explícita não é repetida");
+        emitStep(rid, 1, r1, "CLICK", "Entrar");
+        await(() -> delivered.size() == 1, "entregue");
+        assertEquals(login.id(), delivered.get(0).session());
+    }
+
+    @Test
+    void revTrocaDeSessaoComTimeoutReconciliaComAMesmaOperacao() throws Exception {
+        startRecording();
+        holdRoutes();
+        rec.associate(consulta.id());
+        await(() -> routeCalls().size() == 1, "rota pedida");
+        FakeBrowser.Call first = routeCalls().get(0);
+        first.future().completeExceptionally(new BridgeCommandException(BridgeError.TIMEOUT, "sem resposta", null, true));
+        Thread.sleep(50);
+        assertEquals(login.id(), rec.snapshot().session(), "resultado desconhecido não é sucesso");
+        assertEquals(consulta.id(), rec.snapshot().pendingSession(), "nem falha: continua pendente");
+        await(() -> routeCalls().size() >= 2, "reconciliação: o mesmo pedido é refeito");
+        FakeBrowser.Call second = routeCalls().get(1);
+        assertEquals(first.op(), second.op(), "mesma operação (idempotente na extensão)");
+        assertEquals(route(first), route(second));
+        assertEquals(login.id(), rec.snapshot().session());
+        second.future().complete(browser.result());
+        await(() -> consulta.id().equals(rec.snapshot().session()), "confirmada na reconciliação");
+    }
+
+    @Test
+    void revTrocaDeSessaoDuranteDesconexaoReconciliaAoVoltar() throws Exception {
+        startRecording();
+        holdRoutes();
+        rec.associate(consulta.id());
+        await(() -> routeCalls().size() == 1, "rota pedida");
+        String op = routeCalls().get(0).op();
+        browser.setStatus(LinkStatus.of(LinkStatus.State.WAITING, "CHROME_DISCONNECTED"));
+        await(() -> rec.snapshot().linkLost(), "ligação perdida");
+        assertEquals(login.id(), rec.snapshot().session(), "sem confirmação: sessão anterior");
+        assertEquals(consulta.id(), rec.snapshot().pendingSession());
+        browser.auto = browser::extension; // a extensão volta e responde
+        browser.setStatus(new LinkStatus(LinkStatus.State.CONNECTED, null, new LinkStatus.ExtensionInfo("0.4.0", "DEV")));
+        await(() -> consulta.id().equals(rec.snapshot().session()), "reconciliada ao voltar");
+        assertTrue(routeCalls().stream().skip(1).allMatch(c -> c.op().equals(op)), "o mesmo pedido, sem nova operação");
+    }
+
+    // ------------------------------------------------- revisão técnica: sensor sem confirmação (modo, retomada)
+
+    private static BridgeCommandException sensorNotConfirmed(String message) {
+        return new BridgeCommandException(BridgeError.CAPTURE_FAILED, message, "SENSOR_NOT_CONFIRMED", false);
+    }
+
+    /** A extensão degradou (sensor sem confirmação) e avisa por evento, antes da resposta do comando. */
+    private void extensionDegraded(String rid) {
+        browser.state = "DEGRADED";
+        browser.reason = "SENSOR_NOT_CONFIRMED";
+        browser.emit("studio.recording.degraded", Json.obj().put("recordingId", rid).put("operationId", null).put("recording", browser.recording()).build());
+    }
+
+    @Test
+    void revModoSemConfirmacaoDoSensorMantemOModoAnteriorEExplica() throws Exception {
+        startRecording();
+        browser.auto = c -> c.type().equals("studio.recording.mode") ? null : browser.extension(c);
+        rec.setMode(RecordingMode.CAPTURE_ONLY);
+        await(() -> browser.count("studio.recording.mode") == 1, "modo pedido");
+        browser.last("studio.recording.mode").future().completeExceptionally(
+                sensorNotConfirmed("A página não confirmou a troca de modo. A gravação continua no modo anterior."));
+        await(() -> rec.snapshot().pendingMode() == null && rec.snapshot().problem() != null, "recusa aplicada");
+        await(() -> rec.snapshot().state() == RecorderState.RECORDING, "estado confirmado pela extensão");
+        assertEquals(RecordingMode.CAPTURE_AND_INTERACT, rec.snapshot().mode(), "o modo apresentado é o ativo na página");
+        assertEquals("Modo não alterado", rec.snapshot().problem().title());
+    }
+
+    @Test
+    void revModoSemConfirmacaoNemRestauracaoFicaInterrompido() throws Exception {
+        String rid = startRecording();
+        browser.auto = c -> c.type().equals("studio.recording.mode") ? null : browser.extension(c);
+        rec.setMode(RecordingMode.CAPTURE_ONLY);
+        await(() -> browser.count("studio.recording.mode") == 1, "modo pedido");
+        extensionDegraded(rid);
+        browser.last("studio.recording.mode").future().completeExceptionally(
+                sensorNotConfirmed("A página não confirmou a troca de modo nem o modo anterior. A captura de ações foi interrompida."));
+        await(() -> rec.snapshot().state() == RecorderState.DEGRADED && rec.snapshot().pendingMode() == null, "interrupção declarada");
+        Thread.sleep(150);
+        assertEquals(RecorderState.DEGRADED, rec.snapshot().state(), "nunca volta a parecer gravando");
+        assertEquals(RecordingMode.CAPTURE_AND_INTERACT, rec.snapshot().mode());
+        assertEquals("Captura interrompida", rec.snapshot().problem().title());
+        assertTrue(rec.snapshot().problem().message().contains("sensores de interação"), rec.snapshot().problem().message());
+    }
+
+    @Test
+    void revRetomadaSemConfirmacaoDoSensorNaoVoltaAPausaFalsa() throws Exception {
+        String rid = startRecording();
+        rec.pause();
+        await(() -> rec.snapshot().state() == RecorderState.PAUSED, "PAUSED");
+        browser.auto = c -> c.type().equals("studio.recording.resume") ? null : browser.extension(c);
+        rec.resume();
+        await(() -> browser.count("studio.recording.resume") == 1, "retomada pedida");
+        extensionDegraded(rid);
+        browser.last("studio.recording.resume").future().completeExceptionally(
+                sensorNotConfirmed("Os sensores de interação não confirmaram a retomada na página. A captura de ações continua interrompida."));
+        await(() -> rec.snapshot().state() == RecorderState.DEGRADED, "estado real: interrompida");
+        Thread.sleep(150);
+        assertEquals(RecorderState.DEGRADED, rec.snapshot().state(), "a recusa não devolve a uma pausa que a extensão não tem");
     }
 }

@@ -21,10 +21,11 @@ import com.nekkora.studio.domain.SessionId;
  * @param summary     resumo do desfecho (COMPLETED/CANCELLED), ou null
  * @param link        estado da ligação com o navegador
  * @param steps       entrega das etapas gravadas (STUDIO-003)
+ * @param pendingSession sessão pedida e ainda não confirmada pela extensão (ou null); {@code session} é a confirmada
  */
 public record RecorderSnapshot(RecorderState state, RecordingMode mode, RecordingMode pendingMode, AutomationId automation, SessionId session,
         String tabTitle, String tabHost, RecordingProgress progress, String reason, UserProblem problem, RecordingSummary summary, LinkStatus link,
-        StepProgress steps) {
+        StepProgress steps, SessionId pendingSession) {
 
     public RecorderSnapshot {
         steps = steps == null ? StepProgress.NONE : steps;

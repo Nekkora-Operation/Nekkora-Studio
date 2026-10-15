@@ -74,6 +74,7 @@ public final class FloatingRecorderPanel extends JPanel {
     private final NekkoraText captureText = new NekkoraText("—");
     private final NekkoraText coverageText = new NekkoraText("—");
     private final NekkoraText stepsText = new NekkoraText("—");
+    private final NekkoraParagraph sessionNote = note("", TextTone.SECONDARY);
     private final NekkoraParagraph stepsNotice = note(RecorderText.ACTION_CAPTURE_NOTICE, TextTone.SECONDARY);
     private final NekkoraRadioButton captureOnly = new NekkoraRadioButton(RecordingMode.CAPTURE_ONLY.label());
     private final NekkoraRadioButton captureAndInteract = new NekkoraRadioButton(RecordingMode.CAPTURE_AND_INTERACT.label());
@@ -122,6 +123,8 @@ public final class FloatingRecorderPanel extends JPanel {
         kv.add("Etapas", stepsText);
         stepsText.getAccessibleContext().setAccessibleName("Etapas registradas");
         live.add(kv);
+        sessionNote.setVisible(false);
+        live.add(sessionNote); // troca de sessão pedida e ainda não confirmada pela extensão
 
         NekkoraRadioButton.group(captureOnly, captureAndInteract);
         captureOnly.addActionListener(e -> {
@@ -237,9 +240,17 @@ public final class FloatingRecorderPanel extends JPanel {
                     current = ls;
                 }
             }
-            sessions.setSelectedItem(current);
+            sessions.setSelectedItem(current); // sempre a sessão CONFIRMADA
             boolean stable = st == RecorderState.RECORDING || st == RecorderState.PAUSED || st == RecorderState.DEGRADED;
-            sessions.setEnabled(stable && !s.linkLost());
+            sessions.setEnabled(stable && !s.linkLost() && s.pendingSession() == null);
+            String pendingName = null;
+            for (LogicalSession ls : list) {
+                if (ls.id().equals(s.pendingSession())) {
+                    pendingName = ls.name();
+                }
+            }
+            sessionNote.setText(s.pendingSession() == null ? "" : RecorderText.sessionPending(pendingName));
+            sessionNote.setVisible(s.pendingSession() != null);
             tab.setText(s.tabTitle() == null ? "—" : s.tabTitle() + (s.tabHost() != null && !s.tabHost().equals(s.tabTitle()) ? " · " + s.tabHost() : ""));
             captureText.setText(RecorderText.capture(s));
             coverageText.setText(RecorderText.coverage(s.progress()));
@@ -309,6 +320,11 @@ public final class FloatingRecorderPanel extends JPanel {
 
     public NekkoraButton newSessionButton() {
         return newSession;
+    }
+
+    /** Aviso de troca de sessão aguardando a confirmação da extensão (oculto quando não há troca pendente). */
+    public NekkoraParagraph sessionNote() {
+        return sessionNote;
     }
 
     public NekkoraComboBox<LogicalSession> sessionCombo() {

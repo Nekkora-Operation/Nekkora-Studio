@@ -83,6 +83,12 @@ public final class RecorderText {
         };
     }
 
+    /** Troca de sessão pedida e ainda não confirmada: as etapas continuam indo para a sessão atual até a confirmação. */
+    public static String sessionPending(String name) {
+        return "Aguardando a confirmação da extensão para trocar para a sessão " + (name == null ? "escolhida" : "“" + name + "”")
+                + ". Até lá, as etapas continuam na sessão atual.";
+    }
+
     public static String coverage(RecordingProgress p) {
         return switch (String.valueOf(p.coverage())) {
             case "COMPLETE" -> "Página acompanhada por completo";

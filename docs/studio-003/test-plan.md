@@ -79,3 +79,13 @@ Níveis de evidência:
 |---|---|---|
 | `RecorderStudioTest.gravarSoComConfirmacao…` | o painel dizia "Captura de ações: próxima versão" e "Configuração para a próxima etapa" | o navegador simulado é da STUDIO-002 (sem `steps/1`): o painel diz "Captura de ações indisponível nesta gravação" e explica o que cada modo faz |
 | `StudioScopeTest.semFuncionalidadesFicticias` | uma exceção exata para "Gravando" (botão) | + uma exceção exata (`RecorderText`) para o rótulo do Recorder com RECORDING confirmado **e** captura de ações ativa. "etapas gravadas" e "cliques capturados" continuam proibidos |
+
+## Revisão técnica (PRs #4 e #5)
+
+| Achado | Testes (todos falharam antes da correção, exceto o controle) | Situação |
+|---|---|---|
+| P1 extensão — modo confirmado sem estar ativo | N `REV-P1a` × 7 (modo recusado, `{active:false}`, sem restauração, início recusado e inativo, iframe; mais 1 controle) | ✅ |
+| P1 extensão — evento atrasado na sessão errada | N `REV-P1b` × 2 (espera de 1,5 s esgotada; várias trocas) | ✅ |
+| P1 Studio — sessão alterada antes da confirmação | U `RecorderStepsTest.revTrocaDeSessao…` × 4 (confirmada com atrasado, recusada, tempo esgotado, desconexão); app `revTrocaDeSessaoPendenteNaTela` | ✅ |
+| Complemento no Studio — resposta `SENSOR_NOT_CONFIRMED` | U `RecorderStepsTest.revModoSemConfirmacao…` × 2, `revRetomadaSemConfirmacaoDoSensorNaoVoltaAPausaFalsa` (3 falharam antes) | ✅ |
+| P2 extensão — limite de 100 não rígido | N `REV-P2` (130 interações seguidas: 100 admitidas, 30 recusadas como perda declarada) | ✅ |
