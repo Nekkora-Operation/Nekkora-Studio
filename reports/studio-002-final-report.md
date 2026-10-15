@@ -68,17 +68,17 @@ fechar; queda e Chrome fechado são tratados; o reinício do service worker é r
 | swing-ui (inclui 4 golden) | 45 | 45 | 0 |
 | showcase | 5 | 5 | 0 |
 | studio-domain | 47 | 47 | 0 |
-| **studio-bridge** (novo) | — | 14 | 0 |
-| **studio-recorder** (novo) | — | 21 (inclui 2 cruzados com o Native Host REAL) | 0 |
+| **studio-bridge** (novo) | — | 22 (14 + 8 de concorrência da revisão) | 0 |
+| **studio-recorder** (novo) | — | 22 (inclui 2 cruzados com o Native Host REAL; +1 da revisão) | 0 |
 | studio-ui | 12 | 14 | 0 |
 | studio-app (inclui `Scale150Test` em JVM própria) | 29 | 39 | 0 |
-| **Total Windows** (`./mvnw clean verify`) | **162** | **209** | **0** |
-| **Total Linux** (`tools/golden-linux.sh verify`) | 162 | **209** (0 ignorados) | **0** |
+| **Total Windows** (`./mvnw clean verify`) | **162** | **218** (209 antes da revisão) | **0** |
+| **Total Linux** (`tools/golden-linux.sh verify`) | 162 | **218** (0 ignorados) | **0** |
 
 #### 12.1 Linux
 
 `tools/golden-linux.sh verify` (Temurin 21.0.12.1+1, imagem fixada por digest), com a extensão do PR ao lado: o
-script compila o Native Host dela dentro do contêiner. Resultado: **209 testes, 0 falhas, 0 ignorados**. Isso inclui
+script compila o Native Host dela dentro do contêiner. Resultado: **218 testes, 0 falhas, 0 ignorados** (209 antes das correções da revisão). Isso inclui
 os testes cruzados com o Native Host real (`RealNativeHostBridgeTest`) pelo Unix Domain Socket no Linux e os 4 golden
 Linux sem regravação.
 
@@ -166,8 +166,8 @@ Host instalado pelo `install-host.ps1`, teclado e mouse reais). O log completo e
 
 | Verificação | Resultado |
 |---|---|
-| Windows `./mvnw clean verify` | **209** testes, 0 falhas, 0 ignorados (baseline 162) |
-| Linux `tools/golden-linux.sh verify` | **209** testes, 0 falhas, 0 ignorados |
+| Windows `./mvnw clean verify` | **218** testes, 0 falhas, 0 ignorados (baseline 162; 209 antes da revisão) |
+| Linux `tools/golden-linux.sh verify` | **218** testes, 0 falhas, 0 ignorados (extensão `7e1b8b5` ao lado, host compilado) |
 | Homologação real no Windows | **42** verificações, 0 falhas; 18 capturas |
 | Golden screenshots | inalterados (não regenerados) |
 | Matriz S002-001..030 | todos ✅ (`docs/studio-002/test-plan.md`) |
@@ -175,3 +175,43 @@ Host instalado pelo `install-host.ps1`, teclado e mouse reais). O log completo e
 
 As capturas de tela inteira foram recortadas para mostrar só as janelas do Studio e do Chrome de teste. O conteúdo
 das telas não foi alterado.
+
+## Correções da revisão técnica (P1)
+
+A revisão dos PRs #3 e #4 apontou dois problemas de concorrência que bloqueavam o merge. Os dois foram corrigidos nas
+branches atuais. Cada regressão foi escrita primeiro e **falhou contra o código anterior**; depois passou com a correção.
+
+### P1 — handshakes concorrentes no `BridgeServer` (este repositório)
+
+| Antes | Depois |
+|---|---|
+| O handshake lia `active` e só registrava a conexão no `attach`: dois handshakes podiam ver `null` e ser autorizados | reserva **atômica** (`compareAndSet`) depois da autenticação e antes do `welcome`; só um vence, os demais recebem `BRIDGE_BUSY` |
+| Uma conexão fechada pelo Studio (sem batimentos) continuava em `active` até o leitor terminar; uma mensagem em trânsito dela podia resolver o comando do novo controlador | respostas e eventos só são aceitos da conexão **ativa e aberta**; cada pendente guarda a **conexão dona** e só ela o resolve; ao cair, ela falha apenas os próprios pendentes |
+| — | reserva liberada em qualquer falha antes do `welcome`; comandos só depois do `welcome`; batimentos pela própria conexão |
+
+`BridgeServerConcurrencyTest` (8):
+
+| Teste | Antes da correção | Depois |
+|---|---|---|
+| Dois handshakes sincronizados por barreira depois da autenticação (5 repetições) | **2 clientes autenticados** nas 5 | 1 autenticado, 1 `BRIDGE_BUSY`; nada do recusado aceito; resposta só do vencedor |
+| Mensagem em trânsito de conexão substituída (resposta e evento) | **a resposta de A resolveu o comando de B** | descartadas; o comando de B só é resolvido por B |
+| 8 handshakes simultâneos × 20 rodadas, sem interceptação | — | sempre exatamente 1 controlador e 7 `BRIDGE_BUSY` (3 execuções seguidas) |
+| Falha depois da reserva | — | o Studio não fica ocupado: o próximo navegador conecta |
+
+Os pontos de interceptação (`handshakeGate`, `reservedGate`, `dispatchGate`) são campos visíveis só no pacote, nulos em
+produção.
+
+### P1 — renovação de concessão vencida (repositório da extensão)
+
+A correção está na extensão (`studio-recording.js`, prazo absoluto; ver o relatório de lá). O lado do Studio também
+mudou: se a renovação for recusada com `RECORDING_ENDED`, o `RecorderController` consulta o estado real em vez de
+ignorar a recusa. Teste: `RecorderControllerTest.renovacaoRecusadaPorConcessaoVencidaConsultaOEstadoReal`, que falhava
+antes (o Studio continuava em `RECORDING`).
+
+### Resultados depois das correções
+
+- Windows: **218/218**.
+- Linux: **218/218**, 0 ignorados.
+- Golden screenshots inalterados.
+- As evidências da homologação real (42/0) foram preservadas: as correções não mudam a interface nem o fluxo
+  homologado.
