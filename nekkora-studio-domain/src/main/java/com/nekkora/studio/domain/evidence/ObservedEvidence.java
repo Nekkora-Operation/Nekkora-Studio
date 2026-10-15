@@ -23,8 +23,10 @@ import java.util.regex.Pattern;
  * a <b>evidência</b> é este acontecimento; o <b>resultado de negócio</b> não existe aqui — continua
  * {@link com.nekkora.studio.domain.origin.RecordingObservation.BusinessOutcome#NOT_VALIDATED}.
  *
- * <p>Invariantes (4ª barreira, no domínio): texto de mensagem só com {@link Message.Availability#AVAILABLE}, até 160
- * caracteres e seguro para exibir; região, campo e título sem dado sensível; evidência sem etapa só quando AMBÍGUA.
+ * <p>Invariantes (4ª barreira, no domínio — modo estrito, revisão final dos PRs #6): nenhuma mensagem com texto livre da
+ * página ({@link Message} só NONE ou SUPPRESSED); região e campo só com descrições CONTROLADAS
+ * ({@link EvidenceVocabulary#REGION_LABELS}, {@link EvidenceVocabulary#FIELD_LABELS}), senão {@code null}; título do
+ * documento sempre {@code null}; evidência sem etapa só quando AMBÍGUA.
  *
  * @param evidenceId      identidade estável (deduplicação)
  * @param sequence        sequência das evidências da gravação (ordem técnica)
@@ -56,10 +58,10 @@ public record ObservedEvidence(String evidenceId, long sequence, String recordin
     public static final int LABEL_MAX = 120;
     private static final Pattern ID = Pattern.compile("[A-Za-z0-9._:-]{1,80}");
 
-    /** Documento onde a evidência foi observada. */
+    /** Documento onde a evidência foi observada (identificado por frame, Shadow DOM e URL; o título é texto da página). */
     public record DocumentContext(boolean frame, boolean inShadow, String title, String url) {
         public DocumentContext {
-            title = label(title);
+            title = null; // modo estrito: o título da página nunca entra no domínio
             url = url == null || url.length() > 2000 || !DisplaySafety.isSafeToDisplay(url) ? null : url;
         }
 
@@ -87,12 +89,12 @@ public record ObservedEvidence(String evidenceId, long sequence, String recordin
 
         public Message {
             Objects.requireNonNull(availability, "availability");
-            if (availability != Availability.AVAILABLE) {
-                if (text != null) {
-                    throw new IllegalArgumentException("texto só com AVAILABLE");
-                }
-            } else if (text == null || text.isBlank() || text.length() > MESSAGE_MAX || !DisplaySafety.isSafeToDisplay(text)) {
-                throw new IllegalArgumentException("trecho de mensagem fora da política");
+            if (availability == Availability.AVAILABLE) {
+                // modo estrito (revisão final dos PRs #6): nenhum caminho do domínio cria mensagem com texto livre da página
+                throw new IllegalArgumentException("modo estrito: mensagem com texto livre não é aceita");
+            }
+            if (text != null) {
+                throw new IllegalArgumentException("mensagem sem texto: NONE ou SUPPRESSED");
             }
         }
 
@@ -149,8 +151,8 @@ public record ObservedEvidence(String evidenceId, long sequence, String recordin
         Objects.requireNonNull(confidence, "confidence");
         document = document == null ? DocumentContext.main() : document;
         message = message == null ? Message.none() : message;
-        region = label(region);
-        field = label(field);
+        region = region != null && EvidenceVocabulary.REGION_LABELS.contains(region) ? region : null;
+        field = field != null && EvidenceVocabulary.FIELD_LABELS.contains(field) ? field : null;
         signals = List.copyOf(signals == null ? List.of() : signals);
         limitations = List.copyOf(limitations == null ? List.of() : limitations);
         if (signals.size() > 8 || limitations.size() > 8 || candidates < 0 || candidates > 20 || signalsObserved < 0 || signalsObserved > 50) {
@@ -180,19 +182,5 @@ public record ObservedEvidence(String evidenceId, long sequence, String recordin
     /** É um sinal observado (não o fim da janela de observação). */
     public boolean signal() {
         return !type.windowEnd();
-    }
-
-    private static String label(String s) {
-        if (s == null) {
-            return null;
-        }
-        String t = s.strip();
-        if (t.isEmpty()) {
-            return null;
-        }
-        if (t.length() > LABEL_MAX) {
-            t = t.substring(0, LABEL_MAX);
-        }
-        return DisplaySafety.isSafeToDisplay(t) ? t : null;
     }
 }

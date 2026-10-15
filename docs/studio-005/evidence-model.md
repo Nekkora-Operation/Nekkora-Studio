@@ -14,9 +14,9 @@ Pacote `com.nekkora.studio.domain.evidence`. Todos os tipos são **imutáveis** 
 | `type` | `EvidenceType` (14) | obrigatório |
 | `source` / `relation` / `confidence` | fonte, AT/AFTER_ACTION, confiança sem percentual | ambígua ⇒ `AMBIGUOUS` |
 | `classification` | erro/status/validação/sem classificação, ou null | — |
-| `document` | `DocumentContext(frame, inShadow, title, url)` | título e URL sem dado sensível (senão `null`) |
-| `region`, `field` | rótulos curtos | até 120, seguros para exibir (senão `null`) |
-| `message` | `Message(availability, text)` | pelo modo estrito, na prática sempre `NONE` ou `SUPPRESSED` sem texto; o construtor só aceita texto com `AVAILABLE`, até 160, seguro |
+| `document` | `DocumentContext(frame, inShadow, title, url)` | título **sempre `null`** (texto da página, revisão 3); URL segura ou `null` |
+| `region`, `field` | descrições **controladas** | só valores de `EvidenceVocabulary.REGION_LABELS` / `FIELD_LABELS` (senão `null`); nunca `aria-label`, rótulo ou nome acessível |
+| `message` | `Message(availability, text)` | pelo modo estrito, na prática sempre `NONE` ou `SUPPRESSED` sem texto; o construtor público **recusa `AVAILABLE`** (P2 da revisão 3) e recusa texto em `NONE`/`SUPPRESSED` |
 | `state` | `StateChange(attribute, from, to)` | obrigatório em `ELEMENT_STATE_CHANGED` |
 | `navigation` | `Navigation(newDocument, url)` | URL segura ou `null` |
 | `signals`, `limitations` | vocabulários fechados | até 8 cada |

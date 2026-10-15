@@ -244,9 +244,9 @@ public final class Studio005Homologation {
         AutomationStep cadastrar = edt(() -> consulta.steps().get(1));
         ObservedEvidence vcep = waitEvidence("validação do CEP", cep, EvidenceType.VALIDATION_FEEDBACK);
         ObservedEvidence vmail = waitEvidence("validação nativa do e-mail", cadastrar, EvidenceType.VALIDATION_FEEDBACK);
-        check("Cenário 4: CEP inválido ao sair do campo (aria-invalid, observado diretamente)", "CEP".equals(vcep.field())
+        check("Cenário 4: CEP inválido ao sair do campo (aria-invalid, observado diretamente)", "campo de texto".equals(vcep.field())
                 && vcep.confidence() == EvidenceVocabulary.Confidence.DIRECTLY_OBSERVED && vcep.message().text() == null);
-        check("Cenário 4: e-mail obrigatório pela validação nativa (sem reportValidity)", "E-mail".equals(vmail.field())
+        check("Cenário 4: e-mail obrigatório pela validação nativa (sem reportValidity)", "campo de e-mail".equals(vmail.field())
                 && vmail.signals().contains(EvidenceVocabulary.Signal.NATIVE_INVALID));
         check("Cenário 4: formulário não enviado", "".equals(page.eval("document.getElementById('resultado').textContent")));
         selectStep(a, consulta, cep);

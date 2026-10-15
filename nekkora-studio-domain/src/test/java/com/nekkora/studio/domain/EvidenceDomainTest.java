@@ -138,6 +138,23 @@ class EvidenceDomainTest {
         assertEquals(Message.Availability.NONE, Message.of("   ").availability());
         assertThrows(IllegalArgumentException.class, () -> new Message(Message.Availability.AVAILABLE, "token eyJhbGciOiJIUzI1NiJ9abcdef.eyJzdWIiOiIxMjM0.abcdefghij"));
         assertThrows(IllegalArgumentException.class, () -> new Message(Message.Availability.SUPPRESSED, "texto"), "suprimida não tem texto");
+        // P2 da revisão final: nem mensagem "segura" pode ser criada com texto livre pelo construtor público
+        assertThrows(IllegalArgumentException.class, () -> new Message(Message.Availability.AVAILABLE, "Atenção"));
+        assertThrows(IllegalArgumentException.class, () -> new Message(Message.Availability.AVAILABLE, "o cliente joão já existe"));
+        // metadados: só descrições controladas; título nunca
+        ObservedEvidence meta = new ObservedEvidence("evd-9", 9, "rec-1", "ev-1", T, EvidenceType.VISIBLE_ERROR_MESSAGE, Source.FEEDBACK_OBSERVER,
+                Relation.AFTER_ACTION, Confidence.TEMPORALLY_ASSOCIATED, Classification.ERROR_INDICATOR,
+                new ObservedEvidence.DocumentContext(false, false, "o cliente joão já existe", null), "mensagem de erro o cliente joão já existe",
+                Message.suppressed(), "telefone do cliente joão", null, null, List.of(Signal.ROLE_ALERT), 0, 0, List.of());
+        assertNull(meta.region());
+        assertNull(meta.field());
+        assertNull(meta.document().title());
+        assertFalse(meta.toString().contains("joão"));
+        ObservedEvidence ok = new ObservedEvidence("evd-10", 10, "rec-1", "ev-1", T, EvidenceType.VALIDATION_FEEDBACK, Source.FORM_OBSERVER,
+                Relation.AFTER_ACTION, Confidence.DIRECTLY_OBSERVED, Classification.VALIDATION_INDICATOR, null, "região de validação", Message.none(),
+                "campo de telefone", null, null, List.of(Signal.ARIA_INVALID), 0, 0, List.of());
+        assertEquals("região de validação", ok.region());
+        assertEquals("campo de telefone", ok.field());
         ObservedEvidence e = new ObservedEvidence("evd-1", 1, "rec-1", "ev-1", T, EvidenceType.VALIDATION_FEEDBACK, Source.FORM_OBSERVER, Relation.AFTER_ACTION,
                 Confidence.DIRECTLY_OBSERVED, Classification.VALIDATION_INDICATOR,
                 new ObservedEvidence.DocumentContext(false, false, "Pedido de ana.souza@exemplo.com", null), "região 123.456.789-09", Message.none(),

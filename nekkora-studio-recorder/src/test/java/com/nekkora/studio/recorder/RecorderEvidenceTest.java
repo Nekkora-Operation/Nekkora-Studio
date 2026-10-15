@@ -282,6 +282,34 @@ class RecorderEvidenceTest {
     }
 
     @Test
+    void revFinalMetadadosComTextoDaPaginaNaoEntramNoStudio() throws Exception {
+        String rid = start();
+        emitStep(rid, 1, "Entrar");
+        Map<String, Object> p = evidencePayload(rid, 1, 1L, "VISIBLE_ERROR_MESSAGE", "SUPPRESSED", null);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> det = (Map<String, Object>) p.get("details");
+        det.put("region", "mensagem de erro o cliente joão já existe");
+        det.put("field", "telefone do cliente joão");
+        p.put("document", Json.obj().put("frame", "MAIN").put("inShadow", false).put("title", "o cliente joão já existe")
+                .put("url", "http://127.0.0.1:18765/lab/studio005/metadados.html").build());
+        browser.emit("studio.recording.evidence", p);
+        Map<String, Object> q = evidencePayload(rid, 2, 1L, "VALIDATION_FEEDBACK", "NONE", null);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> det2 = (Map<String, Object>) q.get("details");
+        det2.put("region", "região de validação");
+        det2.put("field", "campo de telefone");
+        browser.emit("studio.recording.evidence", q);
+        await(() -> evidence.size() == 2, "entregues");
+        ObservedEvidence e = evidence.get(0);
+        assertFalse(e.toString().contains("joão") || e.toString().contains("cliente"), e.toString());
+        assertNull(e.document().title());
+        assertNull(e.region(), "rótulo fora das descrições controladas não entra");
+        assertNull(e.field());
+        assertEquals("região de validação", evidence.get(1).region());
+        assertEquals("campo de telefone", evidence.get(1).field());
+    }
+
+    @Test
     void s005026RecusadaPeloDominioVaiNoAckComoRecusada() throws Exception {
         String rid = start();
         emitStep(rid, 1, "Entrar");

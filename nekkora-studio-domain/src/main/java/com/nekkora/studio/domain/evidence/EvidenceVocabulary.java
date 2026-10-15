@@ -9,6 +9,18 @@ public final class EvidenceVocabulary {
     private EvidenceVocabulary() {
     }
 
+    /**
+     * Descrições CONTROLADAS de região (revisão final do PR #6 da extensão): o metadado da evidência nunca carrega texto da
+     * página (aria-label, aria-labelledby, rótulos, nomes de formulário). As mesmas da extensão e do Native Host.
+     */
+    public static final java.util.Set<String> REGION_LABELS = java.util.Set.of("mensagem de erro", "mensagem de status", "alerta",
+            "região de validação", "indicador de carregamento", "região de conteúdo", "elemento acionado", "formulário");
+
+    /** Descrições controladas do TIPO de campo validado (nunca o rótulo do campo). */
+    public static final java.util.Set<String> FIELD_LABELS = java.util.Set.of("campo de texto", "campo de e-mail", "campo de senha",
+            "campo de telefone", "campo numérico", "campo de pesquisa", "campo de endereço", "campo de data e hora", "caixa de seleção",
+            "opção de escolha", "lista de seleção", "área de texto", "campo editável", "campo");
+
     /** Quem produziu a evidência. */
     public enum Source {
         INTERACTION_NORMALIZER("Sensor de interações"),

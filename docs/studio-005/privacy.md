@@ -14,13 +14,18 @@ As três primeiras barreiras estão na extensão: o content script, o service wo
   permite), vira `SUPPRESSED` + `MESSAGE_SUPPRESSED` em `Message.of`. O Studio **não recebe nem guarda texto livre de
   mensagens da página**, nem os inofensivos ("Usuário ou senha inválidos."), nem dado de terceiro em minúsculas
   ("o cliente joão já existe"). Testes: `RecorderEvidenceTest.s005047QuartaBarreira…` e `EvidenceDomainTest.s005047…`.
-- A evidência continua completa no que importa: tipo, classificação, sinais, região segura, documento, horário,
+- A evidência continua completa no que importa: tipo, classificação, sinais, região (descrição controlada), documento, horário,
   confiança e etapa. A tela mostra "Texto omitido por privacidade".
 
 ## No domínio
 
-- O construtor de `Message` recusa texto fora da política.
-- Região, campo, título e URLs inseguros viram `null` (rótulos seguros ou nada).
+- O construtor público de `Message` recusa `AVAILABLE` (P2 da revisão 3): nenhum caminho do domínio cria mensagem com
+  texto livre, e `NONE`/`SUPPRESSED` não aceitam texto.
+- **Metadados controlados (revisão 3):** região e campo só aceitam as descrições do vocabulário
+  (`EvidenceVocabulary.REGION_LABELS`, `FIELD_LABELS` — as mesmas da extensão e do Native Host); qualquer outro valor,
+  como `"mensagem de erro o cliente joão já existe"` ou `"telefone do cliente joão"`, vira `null`. O título do documento
+  é sempre `null`. URLs inseguras viram `null`. Testes: `RecorderEvidenceTest.revFinalMetadadosComTextoDaPaginaNaoEntramNoStudio`
+  e `EvidenceDomainTest`.
 - Nenhum identificador interno é exibido: `recordingId`, `eventId` e `evidenceId` ficam no domínio. O teste de interface e
   a homologação procuram `rec-…`, `ev-…`, `evd-…`, `route-…`, `tgt-…`, `cap-…` e `doc:` na tela e não encontram.
 
