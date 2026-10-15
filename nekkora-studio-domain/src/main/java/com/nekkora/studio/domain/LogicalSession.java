@@ -83,6 +83,10 @@ public final class LogicalSession {
         steps.add(step);
     }
 
+    void removeAll(java.util.Collection<AutomationStep> toRemove) {
+        steps.removeAll(toRemove);
+    }
+
     @Override
     public String toString() {
         return "LogicalSession[\"" + name + "\", " + steps.size() + " etapa(s)]";

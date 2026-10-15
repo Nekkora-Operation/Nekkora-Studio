@@ -14,7 +14,9 @@ import java.util.Optional;
 public final class CorrelationKeys {
     /** Chaves conhecidas — nomes alinhados aos campos dos contratos da Chrome Extension. */
     public enum Key {
-        RECORDING_ID, CAPTURE_SESSION_ID, CAPTURE_ID, PAGE_SESSION_ID, TARGET_ID, NODE_ID, DOCUMENT_ID, FRAME_ID
+        RECORDING_ID, CAPTURE_SESSION_ID, CAPTURE_ID, PAGE_SESSION_ID, TARGET_ID, NODE_ID, DOCUMENT_ID, FRAME_ID,
+        /** STUDIO-003: identidade do evento da etapa gravada (deduplicação e rastreio da origem). */
+        RECORDED_EVENT_ID
     }
 
     private static final CorrelationKeys NONE = new CorrelationKeys(new EnumMap<>(Key.class));

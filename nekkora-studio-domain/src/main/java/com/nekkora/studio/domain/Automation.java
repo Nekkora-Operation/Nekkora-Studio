@@ -191,6 +191,31 @@ public final class Automation {
         return step;
     }
 
+    /**
+     * Descarta, numa única operação, TODAS as etapas {@link com.nekkora.studio.domain.origin.StepOrigin#RECORDED} de uma
+     * gravação técnica (cancelamento — STUDIO-003). Etapas manuais e de outras gravações nunca são tocadas; não há
+     * exclusão parcial: as etapas são primeiro identificadas em todas as sessões e só então removidas.
+     *
+     * @return quantas etapas foram descartadas (0 = nada mudou; a revisão não é incrementada)
+     */
+    public int discardRecording(String recordingId) {
+        Objects.requireNonNull(recordingId, "recordingId");
+        java.util.Map<LogicalSession, List<AutomationStep>> plan = new java.util.LinkedHashMap<>();
+        for (LogicalSession s : sessions) {
+            List<AutomationStep> mine = s.steps().stream()
+                    .filter(st -> st.provenance().origin() == com.nekkora.studio.domain.origin.StepOrigin.RECORDED)
+                    .filter(st -> st.provenance().correlation().get(com.nekkora.studio.domain.element.CorrelationKeys.Key.RECORDING_ID)
+                            .map(recordingId::equals).orElse(false))
+                    .toList();
+            if (!mine.isEmpty()) plan.put(s, mine);
+        }
+        int count = plan.values().stream().mapToInt(List::size).sum();
+        if (count == 0) return 0;
+        plan.forEach(LogicalSession::removeAll);
+        touch();
+        return count;
+    }
+
     /** Edição básica de uma etapa: nome, descrição e tipo de ação (a edição avançada é da STUDIO-004). */
     public void updateStepBasics(StepId stepId, String newName, String newDescription, ActionType newType) {
         AutomationStep step = step(stepId).orElseThrow(() -> new DomainValidationException(ValidationProblem.STEP_NOT_FOUND));
