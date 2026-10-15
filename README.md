@@ -31,9 +31,19 @@ O Nekkora Studio funcional nasceu na missão STUDIO-001 — veja [docs/studio-00
 **STUDIO-002 — gravação técnica controlada pelo Studio.** Com o Chrome aberto e "Conectar ao Nekkora Studio" ligado no
 painel da [Nekkora Extension](https://github.com/Nekkora-Operation/Nekkora-Extension-Chrome), o botão **Gravar** inicia
 uma captura técnica real numa aba autorizada e abre o **Floating Recorder** (pausar, continuar, modo, nova sessão,
-finalizar, cancelar). Nesta versão a gravação acompanha a página, mas ainda **não cria etapas** (STUDIO-003) e
-finalizar **não exporta** PageMap. Veja [docs/studio-002](docs/studio-002/architecture.md) e o
-[relatório](reports/studio-002-final-report.md).
+finalizar, cancelar). Finalizar **não exporta** PageMap. Veja [docs/studio-002](docs/studio-002/architecture.md) e
+o [relatório](reports/studio-002-final-report.md).
+
+**STUDIO-003 — interações reais viram etapas.** Durante a gravação, cada interação no Chrome vira uma instrução na
+sessão escolhida: "Preencher campo Usuário", "Clicar no botão Entrar", "Selecionar São Paulo no campo Estado" e
+assim por diante. As regras são determinísticas, sem IA. Cada etapa tem a referência técnica do elemento (localizador
+validado, trajetória por iframe e Shadow DOM) e procedência "Gravada". Valores digitados **não** são guardados.
+
+- **Capturar e interagir**: a página funciona normalmente.
+- **Capturar**: registra o elemento sem executar a ação.
+
+As etapas só contam depois que o Studio as registra. Cancelar descarta só as etapas daquela gravação. Veja
+[docs/studio-003](docs/studio-003/architecture.md) e o [relatório](reports/studio-003-final-report.md).
 
 Camadas: **Tokens → Temas → Primitivas → Componentes → Padrões → Studio**. Detalhes em
 [docs/ARQUITETURA.md](docs/ARQUITETURA.md).
