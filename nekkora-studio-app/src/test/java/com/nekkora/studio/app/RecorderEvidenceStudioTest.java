@@ -242,7 +242,7 @@ class RecorderEvidenceStudioTest {
         Edt.run(() -> studio.service().select(new Selection.OfStep(a.id(), login.id(), entrar.id())));
         Edt.flush();
         String props = StudioFixture.texts(studio.view().inspector());
-        for (String expected : List.of("Evidências", "Mudanças observadas", "Mensagem de erro exibida", "“Usuário ou senha inválidos.”", "Indicador de erro",
+        for (String expected : List.of("Evidências", "Mudanças observadas", "Mensagem de erro exibida", "Texto omitido por privacidade", "Indicador de erro",
                 "Resultado de negócio", "Não validado", "Observação concluída")) {
             assertTrue(props.contains(expected), "'" + expected + "' ausente em: " + props);
         }
@@ -271,7 +271,8 @@ class RecorderEvidenceStudioTest {
         }
         Edt.run(() -> form.tabs().setSelectedIndex(StepDetailsForm.EVIDENCE_TAB));
         String tab = StudioFixture.texts(Edt.call(() -> (JComponent) form.tabs().getComponentAt(StepDetailsForm.EVIDENCE_TAB)));
-        assertTrue(tab.contains("Linha do tempo") && tab.contains("Usuário ou senha inválidos.") && tab.contains("Não validado"), tab);
+        assertTrue(tab.contains("Linha do tempo") && tab.contains("Texto omitido por privacidade") && tab.contains("Não validado"), tab);
+        assertFalse(tab.contains("inválidos") || props.contains("inválidos"), "modo estrito: o texto da página não aparece no Studio");
     }
 
     @Test
@@ -399,7 +400,8 @@ class RecorderEvidenceStudioTest {
                 Edt.run(() -> form.tabs().setSelectedIndex(StepDetailsForm.EVIDENCE_TAB));
                 Edt.render(form, com.nekkora.ui.theme.Scale.px(700), com.nekkora.ui.theme.Scale.px(640));
                 String tab = StudioFixture.texts(Edt.call(() -> (JComponent) form.tabs().getComponentAt(StepDetailsForm.EVIDENCE_TAB)));
-                assertTrue(tab.contains("Usuário ou senha inválidos.") && tab.contains("Não validado"), t.id() + ": " + tab);
+                assertTrue(tab.contains("Mensagem de erro exibida") && tab.contains("Texto omitido por privacidade") && tab.contains("Não validado"),
+                        t.id() + ": " + tab);
                 Edt.render(panel, 400, 600);
                 assertTrue(StudioFixture.texts(panel).contains("2 registradas"), t.id() + ": " + StudioFixture.texts(panel));
             }

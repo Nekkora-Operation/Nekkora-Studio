@@ -271,6 +271,14 @@ class RecorderEvidenceTest {
         assertEquals(ObservedEvidence.Message.Availability.SUPPRESSED, e.message().availability());
         assertNull(e.message().text());
         assertTrue(e.limitations().contains(Limitation.MESSAGE_SUPPRESSED));
+        // modo estrito: mesmo texto comum, ou dado de terceiro em minúsculas, que uma extensão mande como AVAILABLE não entra
+        browser.emit("studio.recording.evidence", evidencePayload(rid, 2, 1L, "VISIBLE_ERROR_MESSAGE", "AVAILABLE", "Usuário ou senha inválidos."));
+        browser.emit("studio.recording.evidence", evidencePayload(rid, 3, 1L, "VISIBLE_STATUS_MESSAGE", "AVAILABLE", "o cliente joão já existe"));
+        await(() -> evidence.size() == 3, "entregues");
+        for (ObservedEvidence x : evidence) {
+            assertEquals(ObservedEvidence.Message.Availability.SUPPRESSED, x.message().availability());
+            assertNull(x.message().text());
+        }
     }
 
     @Test

@@ -63,7 +63,7 @@ Os nomes dos testes começam pelo número da matriz (ex.: `test('S005-021 — �
 | S005-044 | Shadow DOM | N-E, IT cenário 7 (componente `caixa-confirmacao`) |
 | S005-045 | Mudança de documento durante a observação | N-E, IT cenário 6, HR cenário 6 |
 | S005-046 | Revogação de permissão | N-E (`PERMISSION_REVOKED`), além do IT de revogação da STUDIO-003 (sensores) |
-| S005-047 | Dados pessoais em mensagem | N-R, N-E, H, D, R, IT cenário 8 e `s005SensitiveFieldGone` (campo limpo, removido, em Shadow DOM, dado de terceiro), HR cenário 8 |
+| S005-047 | Dados pessoais em mensagem (modo estrito: nenhum texto sai; inclui `o cliente joão já existe`) | N-R, N-E, H, D, R, IT cenário 8 e `s005SensitiveFieldGone` (campo limpo, removido, em Shadow DOM, dado de terceiro), HR cenário 8 |
 | S005-048 | Senha em mensagem | N-R, H, IT cenário 8 (código digitado), HR cenário 8 |
 | S005-049 | JWT e Bearer em mensagem | N-R, H, D, IT cenário 8 |
 | S005-050 | IDs técnicos fora da UI | A, HR |

@@ -104,34 +104,12 @@ public record ObservedEvidence(String evidenceId, long sequence, String recordin
             return new Message(Availability.SUPPRESSED, null);
         }
 
-        /** Texto liberado, ou SUPPRESSED quando não passa na política (em caso de dúvida, omite). */
-        public static Message of(String text) {
-            if (text == null || text.isBlank()) {
-                return none();
-            }
-            String t = text.strip();
-            return t.length() <= MESSAGE_MAX && DisplaySafety.isSafeToDisplay(t) && !t.matches("(?s).*\\d{4,}.*") && !looksIdentifying(t)
-                    ? new Message(Availability.AVAILABLE, t) : suppressed();
-        }
-
         /**
-         * Fail-closed pela forma (revisão do PR #6 da extensão), a mesma regra das outras barreiras: palavra com letras e
-         * dígitos, palavra com maiúscula interna ou nome próprio fora do início da frase.
+         * Mensagem observada pela página, pela política ESTRITA (revisão final do PR #6 da extensão): o texto livre nunca
+         * entra no Studio — havendo texto, SUPPRESSED; sem texto, NONE. Nenhuma heurística decide o que é dado pessoal.
          */
-        static boolean looksIdentifying(String text) {
-            for (String sentence : text.split("[.!?…]+\\s*")) {
-                int i = 0;
-                for (String w : sentence.strip().split("[\\s,;:()\"“”'’«»/–—-]+")) {
-                    if (w.isEmpty()) {
-                        continue;
-                    }
-                    if (w.matches("(?=.*\\d)(?=.*\\p{L}).*") || w.matches(".*\\p{Ll}\\p{Lu}.*") || (i > 0 && w.matches("\\p{Lu}\\p{Ll}+.*"))) {
-                        return true;
-                    }
-                    i++;
-                }
-            }
-            return false;
+        public static Message of(String text) {
+            return text == null || text.isBlank() ? none() : suppressed();
         }
     }
 

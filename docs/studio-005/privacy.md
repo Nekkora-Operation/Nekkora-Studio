@@ -10,14 +10,12 @@ As três primeiras barreiras estão na extensão: o content script, o service wo
 - Vocabulários fechados (tipo, fonte, relação, confiança, classificação, sinais, limitações, atributos de estado): o
   valor desconhecido descarta o evento.
 - `SUPPRESSED`/`NONE` com texto descarta o evento (inconsistente).
-- `AVAILABLE`: `Message.of(text)` exige até 160 caracteres, `DisplaySafety.isSafeToDisplay` (e-mail, CPF, CNPJ, cartão,
-  JWT, Bearer e identificadores internos), nenhuma sequência de 4 ou mais dígitos e, desde a revisão do PR #6 da
-  extensão, a regra **fail-closed pela forma**: palavra com letras e dígitos ("Kq7Segredo"), maiúscula interna
-  ("JoanaPrado") ou nome próprio fora do início da frase ("Cliente Maria Souza"). É a mesma regra das outras três
-  barreiras. Se falhar, vira `SUPPRESSED` com a limitação `MESSAGE_SUPPRESSED` (teste `s005047QuartaBarreira…` com um
-  CPF que "escapou"; `EvidenceDomainTest.s005047…` com os casos da revisão).
-- O Studio não conhece os valores digitados. A proteção contra o valor que a página repete depois de limpar ou remover
-  o campo está na extensão (impressões digitais salgadas, ver o `privacy.md` da extensão).
+- **Modo estrito** (decisão da revisão final dos PRs #6): `AVAILABLE` com texto, se algum dia chegar (o contrato ainda o
+  permite), vira `SUPPRESSED` + `MESSAGE_SUPPRESSED` em `Message.of`. O Studio **não recebe nem guarda texto livre de
+  mensagens da página**, nem os inofensivos ("Usuário ou senha inválidos."), nem dado de terceiro em minúsculas
+  ("o cliente joão já existe"). Testes: `RecorderEvidenceTest.s005047QuartaBarreira…` e `EvidenceDomainTest.s005047…`.
+- A evidência continua completa no que importa: tipo, classificação, sinais, região segura, documento, horário,
+  confiança e etapa. A tela mostra "Texto omitido por privacidade".
 
 ## No domínio
 

@@ -131,7 +131,11 @@ class EvidenceDomainTest {
         assertEquals(Message.Availability.SUPPRESSED, Message.of("O código Kq7Segredo expirou.").availability());
         assertEquals(Message.Availability.SUPPRESSED, Message.of("Olá, JoanaPrado!").availability());
         assertEquals(Message.Availability.SUPPRESSED, Message.of("Cliente Maria Souza já possui cadastro.").availability());
-        assertEquals(Message.Availability.AVAILABLE, Message.of("Informe o CEP.").availability());
+        // modo estrito: nem mensagem comum nem dado de terceiro só em minúsculas (nunca digitado) entram com texto
+        assertEquals(Message.Availability.SUPPRESSED, Message.of("Informe o CEP.").availability());
+        assertEquals(Message.Availability.SUPPRESSED, Message.of("Usuário ou senha inválidos.").availability());
+        assertEquals(Message.Availability.SUPPRESSED, Message.of("o cliente joão já existe").availability());
+        assertEquals(Message.Availability.NONE, Message.of("   ").availability());
         assertThrows(IllegalArgumentException.class, () -> new Message(Message.Availability.AVAILABLE, "token eyJhbGciOiJIUzI1NiJ9abcdef.eyJzdWIiOiIxMjM0.abcdefghij"));
         assertThrows(IllegalArgumentException.class, () -> new Message(Message.Availability.SUPPRESSED, "texto"), "suprimida não tem texto");
         ObservedEvidence e = new ObservedEvidence("evd-1", 1, "rec-1", "ev-1", T, EvidenceType.VALIDATION_FEEDBACK, Source.FORM_OBSERVER, Relation.AFTER_ACTION,

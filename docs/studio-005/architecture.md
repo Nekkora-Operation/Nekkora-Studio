@@ -32,7 +32,8 @@ UI: lista (selo), painel (grupo Evidências), detalhes (aba Evidências), Floati
 ## Fluxo de uma mensagem de erro (cenário 1 da homologação)
 
 1. O usuário clica em "Entrar". A extensão emite a etapa 3 e, depois, as evidências `FORM_SUBMITTED`,
-   `VISIBLE_ERROR_MESSAGE` ("Usuário ou senha inválidos.") e `OBSERVATION_COMPLETE`.
+   `VISIBLE_ERROR_MESSAGE` (texto omitido pelo modo estrito: a página mostrou "Usuário ou senha inválidos.", o Studio
+   só sabe que houve mensagem com indicador de erro) e `OBSERVATION_COMPLETE`.
 2. O Recorder valida, ordena e espera a etapa 3 entrar no domínio (mesma fila).
 3. Na EDT, `attachEvidence` encontra a etapa por `RECORDING_ID` + `RECORDED_EVENT_ID` e acrescenta a evidência. A revisão não muda.
 4. O ACK sobe até a maior sequência contígua concluída.

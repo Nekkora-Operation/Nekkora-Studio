@@ -16,14 +16,14 @@ Pacote `com.nekkora.studio.domain.evidence`. Todos os tipos são **imutáveis** 
 | `classification` | erro/status/validação/sem classificação, ou null | — |
 | `document` | `DocumentContext(frame, inShadow, title, url)` | título e URL sem dado sensível (senão `null`) |
 | `region`, `field` | rótulos curtos | até 120, seguros para exibir (senão `null`) |
-| `message` | `Message(availability, text)` | texto **só** com `AVAILABLE`, até 160, seguro |
+| `message` | `Message(availability, text)` | pelo modo estrito, na prática sempre `NONE` ou `SUPPRESSED` sem texto; o construtor só aceita texto com `AVAILABLE`, até 160, seguro |
 | `state` | `StateChange(attribute, from, to)` | obrigatório em `ELEMENT_STATE_CHANGED` |
 | `navigation` | `Navigation(newDocument, url)` | URL segura ou `null` |
 | `signals`, `limitations` | vocabulários fechados | até 8 cada |
 | `candidates`, `signalsObserved` | candidatas (ambígua) e sinais na janela (fim de observação) | 0–20 e 0–50 |
 
-`Message.of(text)` aplica a política do Studio: texto até 160 caracteres, seguro (`DisplaySafety`) e sem 4 ou mais
-dígitos seguidos. Senão, `SUPPRESSED`.
+`Message.of(text)` aplica o **modo estrito**: havendo texto, `SUPPRESSED`; sem texto, `NONE`. O texto livre da página não
+entra no domínio.
 
 ## Tipos (`EvidenceType`) e categorias
 

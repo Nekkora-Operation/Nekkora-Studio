@@ -19,7 +19,7 @@
 ## Linha de cada evidência
 
 `horário · título — detalhes`. O título é o rótulo do tipo, mais a classificação quando houver. Os detalhes trazem:
-trecho entre aspas ou "Texto omitido por privacidade", campo, região, mudança de estado (`aria-expanded: não → sim`),
+"Texto omitido por privacidade" (modo estrito: o texto da página nunca chega ao Studio), campo, região, mudança de estado (`aria-expanded: não → sim`),
 navegação (mesmo ou novo documento + URL sanitizada), sinais na janela, candidatas (ambígua), confiança, "em iframe",
 "em Shadow DOM" e limitações.
 
@@ -27,6 +27,6 @@ Exemplo real da homologação (cenário 1):
 
 ```
 14:39:57,770  Formulário enviado — observada diretamente
-14:39:57,880  Mensagem de erro exibida · Indicador de erro — "Usuário ou senha inválidos." · mensagem de erro do formulário login · associada pelo tempo
+14:39:57,880  Mensagem de erro exibida · Indicador de erro — Texto omitido por privacidade · mensagem de erro do formulário login · associada pelo tempo
 14:40:00,785  Observação concluída — 1 sinal(is) na janela · observada diretamente
 ```

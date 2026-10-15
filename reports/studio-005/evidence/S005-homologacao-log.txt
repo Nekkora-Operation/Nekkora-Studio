@@ -3,7 +3,7 @@ Native Host instalado pelo script oficial (install-host.ps1)
 Chrome for Testing: 155.0.8059.39
 OK    Conexão autenticada Studio ⇄ host ⇄ extensão
 OK    S005-003 evidence/1 negociada com a extensão real
-OK    Cenário 1: mensagem de erro associada ao clique em Entrar (indicador de erro, texto liberado)
+OK    Cenário 1: mensagem de erro associada ao clique em Entrar (indicador de erro; modo estrito: texto não atravessou o Bridge)
 OK    Cenário 1: envio do formulário observado diretamente
 OK    S005-034 resumo estruturado: mudanças observadas, indicador de erro, negócio NÃO validado
 OK    S005-027/033 a etapa não foi editada pela evidência (nome, tipo, original)
@@ -14,7 +14,7 @@ captura S005-01-floating-evidencias.png (400x551)
 OK    S005-058 painel: grupo Evidências com a mensagem e 'Resultado de negócio: Não validado'
 captura S005-02-login-erro-painel.png (1920x1000)
 OK    Cenário 2: mensagem 1 s depois associada à etapa (status, não sucesso de negócio)
-  do início do gesto de clique até a mensagem tardia observada: 1927 ms (o clique em si acontece ~0,9 s depois do início)
+  do início do gesto de clique até a mensagem tardia observada: 1898 ms (o clique em si acontece ~0,9 s depois do início)
 OK    Cenário 2: observada depois do atraso de 1 s da página e dentro da janela de 3 s
 OK    S005-034/064 'sucesso' no texto não vira resultado de negócio
 OK    Cenário 3: um aviso com duas ações candidatas fica SEM etapa (nenhuma escolhida)
@@ -37,8 +37,8 @@ OK    Cenário 7: clique no iframe sem permissão não gerou etapa nem evidênci
 OK    Cenário 7: aviso escrito no iframe pelo principal NÃO foi atribuído à ação do principal
 OK    Cenário 7: iframe sem permissão → cobertura parcial declarada
 captura S005-07-iframe.png (1920x1000)
-OK    Cenário 8: 7 mensagens observadas; só 'Senha incorreta.' (sem a marcação HTML) teve o texto liberado
-OK    Cenário 8: as outras 6 com o texto omitido por privacidade
+OK    Cenário 8: 7 mensagens observadas; modo estrito: nenhum texto liberado (nem 'Senha incorreta.')
+OK    Cenário 8: todas as 7 com o texto omitido por privacidade
 captura S005-08-sensivel-omitido.png (1920x1000)
 OK    S005-039/057 resumo com evidências e negócio não validado
 captura S005-09-resumo-com-evidencias.png (400x551)

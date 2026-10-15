@@ -167,8 +167,9 @@ public final class Studio005Homologation {
         waitFor("3 etapas na Autenticação", 30, () -> edt(auth::stepCount) == 3);
         AutomationStep entrar = edt(() -> auth.steps().get(2));
         ObservedEvidence erro = waitEvidence("alerta de erro do Entrar", entrar, EvidenceType.VISIBLE_ERROR_MESSAGE);
-        check("Cenário 1: mensagem de erro associada ao clique em Entrar (indicador de erro, texto liberado)",
-                erro.classification() == EvidenceVocabulary.Classification.ERROR_INDICATOR && "Usuário ou senha inválidos.".equals(erro.message().text()));
+        check("Cenário 1: mensagem de erro associada ao clique em Entrar (indicador de erro; modo estrito: texto não atravessou o Bridge)",
+                erro.classification() == EvidenceVocabulary.Classification.ERROR_INDICATOR && erro.message().text() == null
+                && erro.message().availability() == ObservedEvidence.Message.Availability.SUPPRESSED);
         waitEvidence("fim da observação do Entrar", entrar, EvidenceType.OBSERVATION_COMPLETE);
         check("Cenário 1: envio do formulário observado diretamente", has(entrar, EvidenceType.FORM_SUBMITTED));
         ObservationSummary s1 = edt(entrar::observation);
@@ -185,7 +186,8 @@ public final class Studio005Homologation {
         selectStep(a, auth, entrar);
         String insp1 = edt(() -> texts(window.studio().view().inspector()));
         check("S005-058 painel: grupo Evidências com a mensagem e 'Resultado de negócio: Não validado'",
-                insp1.contains("Mensagem de erro exibida") && insp1.contains("Usuário ou senha inválidos.") && insp1.contains("Não validado"));
+                insp1.contains("Mensagem de erro exibida") && insp1.contains("Texto omitido por privacidade") && insp1.contains("Não validado")
+                && !insp1.contains("inválidos"));
         captureStudio("02-login-erro-painel");
 
         // ================================================================ Cenário 2 — Mensagem tardia (1 s)
@@ -197,7 +199,7 @@ public final class Studio005Homologation {
         AutomationStep enviar = edt(() -> auth.steps().get(c2));
         ObservedEvidence tardia = waitEvidence("confirmação tardia", enviar, EvidenceType.VISIBLE_STATUS_MESSAGE);
         long atraso = tardia.observedAt().toEpochMilli() - clicked; // relógio da mesma máquina (o clique é feito pelo Robot)
-        check("Cenário 2: mensagem 1 s depois associada à etapa (status, não sucesso de negócio)", "Pedido registrado com sucesso.".equals(tardia.message().text())
+        check("Cenário 2: mensagem 1 s depois associada à etapa (status, não sucesso de negócio)", tardia.message().text() == null
                 && tardia.classification() == EvidenceVocabulary.Classification.STATUS_INDICATOR);
         // medido do INÍCIO do gesto do Robot (foco, rolagem e mira tomam ~0,9 s antes do clique em si) até o observedAt real
         log("  do início do gesto de clique até a mensagem tardia observada: " + atraso + " ms (o clique em si acontece ~0,9 s depois do início)");
@@ -243,7 +245,7 @@ public final class Studio005Homologation {
         ObservedEvidence vcep = waitEvidence("validação do CEP", cep, EvidenceType.VALIDATION_FEEDBACK);
         ObservedEvidence vmail = waitEvidence("validação nativa do e-mail", cadastrar, EvidenceType.VALIDATION_FEEDBACK);
         check("Cenário 4: CEP inválido ao sair do campo (aria-invalid, observado diretamente)", "CEP".equals(vcep.field())
-                && vcep.confidence() == EvidenceVocabulary.Confidence.DIRECTLY_OBSERVED && "CEP inválido.".equals(vcep.message().text()));
+                && vcep.confidence() == EvidenceVocabulary.Confidence.DIRECTLY_OBSERVED && vcep.message().text() == null);
         check("Cenário 4: e-mail obrigatório pela validação nativa (sem reportValidity)", "E-mail".equals(vmail.field())
                 && vmail.signals().contains(EvidenceVocabulary.Signal.NATIVE_INVALID));
         check("Cenário 4: formulário não enviado", "".equals(page.eval("document.getElementById('resultado').textContent")));
@@ -263,7 +265,7 @@ public final class Studio005Homologation {
         waitEvidence("conteúdo atualizado", pesquisar, EvidenceType.CONTENT_CHANGED);
         ObservedEvidence contagem = waitEvidence("contagem", pesquisar, EvidenceType.VISIBLE_STATUS_MESSAGE);
         waitEvidence("fim da observação", pesquisar, EvidenceType.OBSERVATION_COMPLETE);
-        check("Cenário 5: carregamento → fim → conteúdo → contagem, sem concluir sucesso", "3 resultados encontrados.".equals(contagem.message().text())
+        check("Cenário 5: carregamento → fim → conteúdo → contagem, sem concluir sucesso", contagem.message().text() == null
                 && edt(() -> pesquisar.observation().status() == ObservationSummary.Status.OBSERVED && !pesquisar.observation().error()));
         check("Cenário 5: conteúdo da lista não saiu da página", edt(() -> pesquisar.evidence().stream().noneMatch(e -> String.valueOf(e).contains("Contrato Alfa"))));
         selectStep(a, consulta, pesquisar);
@@ -309,7 +311,7 @@ public final class Studio005Homologation {
         AutomationStep salvar = edt(() -> quadros.steps().get(0));
         ObservedEvidence noQuadro = waitEvidence("erro no iframe", salvar, EvidenceType.VISIBLE_ERROR_MESSAGE);
         check("Cenário 7: mensagem do iframe autorizado é da ação no iframe (documento FRAME)", noQuadro.document().frame()
-                && "Erro ao salvar o rascunho.".equals(noQuadro.message().text()));
+                && noQuadro.message().text() == null);
         clickInPage("document.getElementById('externo')"); // origem SEM permissão: o Chrome não injeta o content script
         sleep(QUIET_MS);
         check("Cenário 7: clique no iframe sem permissão não gerou etapa nem evidência", edt(quadros::stepCount) == 1);
@@ -346,10 +348,10 @@ public final class Studio005Homologation {
         List<ObservedEvidence> msgs = edt(() -> quadros.steps().subList(c8, quadros.stepCount()).stream().flatMap(st -> st.evidence().stream())
                 .filter(e -> e.type() == EvidenceType.VISIBLE_ERROR_MESSAGE).toList());
         List<String> liberadas = msgs.stream().filter(e -> e.message().text() != null).map(e -> e.message().text()).toList();
-        check("Cenário 8: 7 mensagens observadas; só 'Senha incorreta.' (sem a marcação HTML) teve o texto liberado",
-                msgs.size() == buttons.size() && liberadas.equals(List.of("Senha incorreta.")));
-        check("Cenário 8: as outras 6 com o texto omitido por privacidade", msgs.stream()
-                .filter(e -> e.limitations().contains(EvidenceVocabulary.Limitation.MESSAGE_SUPPRESSED)).count() == buttons.size() - 1);
+        check("Cenário 8: 7 mensagens observadas; modo estrito: nenhum texto liberado (nem 'Senha incorreta.')",
+                msgs.size() == buttons.size() && liberadas.isEmpty());
+        check("Cenário 8: todas as 7 com o texto omitido por privacidade", msgs.stream()
+                .filter(e -> e.limitations().contains(EvidenceVocabulary.Limitation.MESSAGE_SUPPRESSED)).count() == buttons.size());
         AutomationStep cpfStep = edt(() -> quadros.steps().get(c8 + 2));
         selectStep(a, quadros, cpfStep);
         captureStudio("08-sensivel-omitido");
@@ -390,7 +392,7 @@ public final class Studio005Homologation {
                 && "Origem e alterações".equals(f9.tabs().getTitleAt(4)) && "Evidências".equals(f9.tabs().getTitleAt(StepDetailsForm.EVIDENCE_TAB))));
         clickTab(f9, StepDetailsForm.EVIDENCE_TAB);
         String tab = edt(() -> texts((Container) f9.tabs().getComponentAt(StepDetailsForm.EVIDENCE_TAB)));
-        check("Cenário 9: linha do tempo com horário real, mensagem e negócio não validado", tab.contains("Linha do tempo") && tab.contains("Usuário ou senha inválidos.")
+        check("Cenário 9: linha do tempo com horário real, mensagem e negócio não validado", tab.contains("Linha do tempo") && tab.contains("Texto omitido por privacidade")
                 && tab.contains("Não validado") && tab.matches("(?s).*\\d{2}:\\d{2}:\\d{2},\\d{3}.*"));
         captureWindow(d9, "10-aba-evidencias");
         press(KeyEvent.VK_ESCAPE);

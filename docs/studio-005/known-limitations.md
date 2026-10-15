@@ -18,5 +18,6 @@
    digitado aparece na captura técnica existente (log local e registro de alvos do motor). Não chega ao Studio por
    evidência. **Até a correção na origem da captura técnica, o Recorder não deve ser usado com dados reais de clientes.**
    A correção é uma missão de segurança separada, anterior a qualquer uso com dados reais (revisão do PR #6).
-10. **Dado pessoal de terceiro só em minúsculas**, nunca digitado, não é reconhecido pela regra de forma em nenhuma das
-    quatro barreiras. A garantia total exigiria nunca enviar o texto da mensagem (decisão de produto).
+10. **Modo estrito: o Studio não mostra o texto de nenhuma mensagem da página**, nem das inofensivas. Ele mostra que
+    houve mensagem (tipo, indicador, região, horário). Mensagens úteis padronizadas dependem do catálogo controlado de
+    mensagens seguras, uma evolução futura e não autorizada nesta missão. A missão CHROME-SECURITY-001 vem antes da STUDIO-006.

@@ -74,7 +74,7 @@ a evidência que chega antes da etapa espera (fila limitada) e entra depois dela
 ## 8. Políticas de privacidade
 
 Ver `docs/studio-005/privacy.md`. O Studio é a 4ª barreira: leitura estrita (campos extras descartam o evento),
-`Message.of` (até 160 caracteres, `DisplaySafety` e sem 4 ou mais dígitos seguidos), rótulos inseguros viram `null`, e
+`Message.of` no **modo estrito** (nenhum texto livre de mensagem entra), rótulos inseguros viram `null`, e
 nenhum identificador interno aparece na tela. A homologação comprovou que nenhum valor digitado ou dado sensível de
 mensagem chega ao domínio, à tela, ao armazenamento da extensão ou aos logs do host.
 
@@ -131,8 +131,8 @@ oficial, laboratório fictício, mouse e teclado reais pelo Robot): **50 verific
 
 | Cenário | Resultado |
 |---|---|
-| 1 Erro de autenticação | alerta associado ao "Entrar" (indicador de erro, texto liberado), envio observado, resumo "mudanças observadas", negócio não validado, etapa não editada, mensagem pré-existente ignorada, automação bloqueada para edição enquanto recebe evidências |
-| 2 Mensagem tardia | "Pedido registrado com sucesso." associada à etapa (status), dentro da janela; o "sucesso" do texto não vira resultado de negócio |
+| 1 Erro de autenticação | alerta associado ao "Entrar" (indicador de erro; texto omitido pelo modo estrito), envio observado, resumo "mudanças observadas", negócio não validado, etapa não editada, mensagem pré-existente ignorada, automação bloqueada para edição enquanto recebe evidências |
+| 2 Mensagem tardia | a confirmação ("Pedido registrado com sucesso." na página) associada à etapa como status, dentro da janela; texto omitido; nada vira resultado de negócio |
 | 3 Ambígua | um aviso com duas ações candidatas fica sem etapa; nenhuma das duas recebe o aviso; painel da automação lista "Evidências sem etapa definida" |
 | 4 Validação | CEP inválido (aria-invalid, observado diretamente) e e-mail obrigatório (validação nativa, sem `reportValidity`); formulário não enviado |
 | 5 Pesquisa | carregamento → fim → conteúdo → "3 resultados encontrados."; conteúdo da lista não sai da página |
@@ -181,9 +181,9 @@ e os golden tests passaram sem ajuste.
 
 Ver `docs/studio-005/known-limitations.md` (Studio) e `Nekkora-Extension-Chrome/docs/studio-005/known-limitations.md`.
 Principais: sem persistência definitiva; ambíguas só no painel da automação; aba aberta é uma fotografia; cobertura e
-título da aba no Floating Recorder só nas fotografias da gravação; janela fixa de 3 s; política conservadora (mensagens
-com 4 ou mais dígitos ou com nome próprio no meio da frase são omitidas); dado pessoal de terceiro só em minúsculas e
-nunca digitado não é reconhecido pela forma; e o **achado de segurança da captura técnica antiga**, que faz com que o
+título da aba no Floating Recorder só nas fotografias da gravação; janela fixa de 3 s; **modo estrito** (o texto das
+mensagens da página nunca é mostrado; o catálogo de mensagens seguras é uma evolução futura); e o **achado de segurança
+da captura técnica antiga**, que faz com que o
 Recorder **não deva ser usado com dados reais** até a correção na origem.
 
 ## 20. Preparação para STUDIO-006
@@ -250,3 +250,29 @@ localizada → regressão completa**, nas branches atuais (sem PR novo).
 | Studio Linux (Docker, extensão `b9d4e06`) | 337/337 |
 | Extensão Java / Node / navegador | 237/237 · 133/133 · 226/226 |
 | Homologação real `Studio005Homologation` | 50/0 (evidências atualizadas em `reports/studio-005/evidence/`) |
+
+## Anexo 2 — revisão final: modo estrito de privacidade
+
+A revisão final aprovou a arquitetura e as correções (P1-b e P2 encerrados) e decidiu que **o texto livre das mensagens
+da página não atravessa o Bridge**, como comportamento padrão do Nekkora Recorder.
+
+| Repositório | Commit | O que mudou |
+|---|---|---|
+| Extensão | `281d249` | origem (content script), service worker e Native Host: qualquer texto → `SUPPRESSED` + `MESSAGE_SUPPRESSED`; sem texto → `NONE`; o observador não lê mais valores de campos |
+| Extensão | `52b39d6` | documentação e anexo |
+| Studio | este PR | `Message.of` (4ª barreira) estrito; testes do domínio, do Recorder, da aplicação e da homologação atualizados; documentação |
+
+- As evidências estruturadas foram preservadas: erro, status, validação, carregamento, navegação, estado e correlação
+  continuam verificados, e só o texto passou a ser "Texto omitido por privacidade".
+- Há teste explícito do dado de terceiro só em minúsculas, nunca digitado (`o cliente joão já existe`), no laboratório,
+  no IT da extensão, em Node, no host, no Recorder e no domínio do Studio.
+- Os testes de reprodução dos P1 continuam na suíte.
+- Não houve nova configuração, IA ou mudança de correlação. O contrato não foi alterado.
+
+**Regressão:** Studio 337/337 (Windows) e 337/337 (Linux, contra a extensão `281d249`); extensão 237/133/226;
+**homologação real 50/0** (log e capturas atualizados). Nos arquivos de evidência da execução real da extensão há 38
+mensagens e nenhuma com texto.
+
+**Próximos passos combinados:** encerrar a STUDIO-005 (merge depois da conferência final), depois CHROME-SECURITY-001
+(exposição de valores na captura técnica antiga, avaliando todos os canais da extensão) e só então a STUDIO-006
+(persistência).
