@@ -58,8 +58,41 @@ public final class ElementReference {
         this.correlation = b.correlation == null ? CorrelationKeys.none() : b.correlation;
     }
 
+    private ElementReference(ElementReference source, int preferredLocator) {
+        this.accessibleName = source.accessibleName;
+        this.semanticKind = source.semanticKind;
+        this.tag = source.tag;
+        this.htmlId = source.htmlId;
+        this.htmlName = source.htmlName;
+        this.locators = source.locators;
+        this.preferredLocator = preferredLocator;
+        this.accessPath = source.accessPath;
+        this.context = source.context;
+        this.stabilityNotes = source.stabilityNotes;
+        this.obstacles = source.obstacles;
+        this.sensitive = source.sensitive;
+        this.privacyPolicy = source.privacyPolicy;
+        this.sourceContract = source.sourceContract;
+        this.correlation = source.correlation;
+    }
+
     public static Builder builder() {
         return new Builder();
+    }
+
+    /** Índice do localizador preferencial, ou -1 (sem preferencial validado). */
+    public int preferredLocatorIndex() {
+        return preferredLocator;
+    }
+
+    /**
+     * Cópia com outro localizador preferencial (STUDIO-004). Mesma regra da captura: só um candidato validado pode ser o
+     * preferencial; -1 remove a preferência. Nada mais muda — o original continua intacto.
+     */
+    public ElementReference withPreferredLocator(int index) {
+        if (index < -1 || index >= locators.size()) throw new IllegalArgumentException("localizador fora da lista");
+        if (index >= 0 && !locators.get(index).validated()) throw new IllegalArgumentException("o localizador preferencial precisa estar validado");
+        return index == preferredLocator ? this : new ElementReference(this, index);
     }
 
     /** Nome acessível (ex.: "Usuário"). */

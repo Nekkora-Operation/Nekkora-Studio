@@ -87,6 +87,29 @@ public final class LogicalSession {
         steps.removeAll(toRemove);
     }
 
+    void insert(int index, AutomationStep step) {
+        steps.add(index, step);
+    }
+
+    void remove(AutomationStep step) {
+        steps.remove(step);
+    }
+
+    /** Fotografia dos campos e da ordem (histórico de edição em memória). */
+    State state() {
+        return new State(name, description, notes, List.copyOf(steps));
+    }
+
+    void apply(State s) {
+        name = s.name();
+        description = s.description();
+        notes = s.notes();
+        steps.clear();
+        steps.addAll(s.steps());
+    }
+
+    record State(String name, String description, String notes, List<AutomationStep> steps) {}
+
     @Override
     public String toString() {
         return "LogicalSession[\"" + name + "\", " + steps.size() + " etapa(s)]";

@@ -23,10 +23,31 @@ public enum ValidationProblem {
     LITERAL_LOOKS_SENSITIVE(Field.VALUE,
             "O valor parece conter um dado sensível. Use uma variável ou uma referência de credencial."),
     VALUE_TOO_LONG(Field.VALUE, "O valor é longo demais."),
-    REFERENCE_NAME_INVALID(Field.VALUE, "Use letras, números, ponto, hífen ou sublinhado no nome da referência.");
+    REFERENCE_NAME_INVALID(Field.VALUE, "Use letras, números, ponto, hífen ou sublinhado no nome da referência."),
+    // ---- STUDIO-004: edição avançada
+    SESSION_POSITION_INVALID(Field.NONE, "A posição escolhida para a sessão não existe."),
+    STEP_POSITION_INVALID(Field.SESSION, "A posição escolhida para a etapa não existe nesta sessão."),
+    STEP_HAS_NO_ELEMENT(Field.LOCATOR, "Esta etapa não tem elemento vinculado."),
+    LOCATOR_NOT_FOUND(Field.LOCATOR, "O localizador escolhido não existe nesta etapa."),
+    LOCATOR_NOT_VALIDATED(Field.LOCATOR, "Só um localizador validado na captura pode ser o preferencial."),
+    MANUAL_LOCATOR_INVALID(Field.LOCATOR,
+            "Informe uma expressão de até " + 500 + " caracteres, sem quebras de linha (observação de até 200)."),
+    MANUAL_LOCATOR_LOOKS_SENSITIVE(Field.LOCATOR, "A expressão parece conter um dado sensível. Use um atributo que não identifique pessoas."),
+    COMMENT_REQUIRED(Field.COMMENT, "Escreva o comentário."),
+    COMMENT_TOO_LONG(Field.COMMENT, "Use no máximo " + 1000 + " caracteres no comentário."),
+    COMMENT_INVALID_CHARACTERS(Field.COMMENT, "O comentário contém caracteres de controle não permitidos."),
+    COMMENT_LOOKS_SENSITIVE(Field.COMMENT, "O comentário parece conter um dado sensível (e-mail, documento, cartão ou token). Comentários não guardam segredos."),
+    COMMENT_NOT_FOUND(Field.COMMENT, "O comentário não existe mais nesta etapa."),
+    NO_CAPTURED_ORIGINAL(Field.NONE, "Esta etapa não tem valores originais de gravação."),
+    AUTOMATION_RECORDING(Field.NONE,
+            "Esta automação está sendo gravada. Finalize ou cancele a gravação para editar ou reorganizar com segurança."),
+    NOTHING_TO_UNDO(Field.NONE, "Não há alteração para desfazer nesta automação."),
+    NOTHING_TO_REDO(Field.NONE, "Não há alteração para refazer nesta automação."),
+    HISTORY_CONFLICT(Field.NONE,
+            "A automação mudou por outro caminho depois desta alteração (por exemplo, recebeu etapas gravadas). O histórico de edição foi descartado para não aplicar uma alteração sobre um estado diferente.");
 
     /** Campo do formulário ao qual o problema se refere (para posicionar a mensagem). */
-    public enum Field { NONE, NAME, DESCRIPTION, SESSION, ACTION_TYPE, VALUE }
+    public enum Field { NONE, NAME, DESCRIPTION, SESSION, ACTION_TYPE, VALUE, LOCATOR, COMMENT }
 
     private final Field field;
     private final String message;
