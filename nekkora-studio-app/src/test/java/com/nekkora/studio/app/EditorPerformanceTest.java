@@ -121,13 +121,11 @@ class EditorPerformanceTest {
         Edt.run(() -> Edt.layout(StudioForms.stepDetails(a, middle).form()));
         r.put("editorOpenMs", ms(t0));
 
-        System.gc();
-        long used0 = usedHeap();
+        long used0 = settledHeap();
         Edt.run(() -> {
             for (int i = 0; i < 100; i++) fx.studio.service().moveStep(a.id(), middle.id(), a.sessionOf(middle.id()).orElseThrow().id(), i % 2);
         });
-        System.gc();
-        r.put("history100OpsKb", Math.max(0, (usedHeap() - used0) / 1024));
+        r.put("history100OpsKb", Math.max(0, (settledHeap() - used0) / 1024));
         r.put("historyEntries", fx.studio.service().history().undoSize(a.id()));
         r.put("heapUsedMb", usedHeap() / (1024 * 1024));
         for (String k : List.of("openMs", "reorderStepMs", "moveBetweenSessionsMs", "moveSessionMs", "undoMs", "redoMs", "editorOpenMs")) {
@@ -139,6 +137,21 @@ class EditorPerformanceTest {
 
     private static double ms(long t0) {
         return Math.round((System.nanoTime() - t0) / 10_000.0) / 100.0;
+    }
+
+    /** Heap ocupado depois de várias coletas (medição aproximada: o coletor não é determinístico). */
+    private static long settledHeap() {
+        long best = Long.MAX_VALUE;
+        for (int i = 0; i < 5; i++) {
+            System.gc();
+            try {
+                Thread.sleep(40);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+            best = Math.min(best, usedHeap());
+        }
+        return best;
     }
 
     private static long usedHeap() {

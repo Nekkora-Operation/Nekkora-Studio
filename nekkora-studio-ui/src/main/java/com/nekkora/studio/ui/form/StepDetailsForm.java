@@ -349,6 +349,7 @@ public final class StepDetailsForm extends StudioForm<StepDetailsForm.Values> {
         for (int i = 0; i < e.locators().size(); i++) {
             LocatorCandidate c = e.locators().get(i);
             NekkoraRadioButton r = new NekkoraRadioButton(ElementPresentation.locatorLine(c));
+            r.setToolTipText(ElementPresentation.locatorLine(c)); // linhas longas: texto completo na dica
             r.setEnabled(c.validated());
             r.getAccessibleContext().setAccessibleDescription(ElementPresentation.locatorStatus(c));
             group.add(r);
@@ -359,7 +360,7 @@ public final class StepDetailsForm extends StudioForm<StepDetailsForm.Values> {
             list.add(row);
         }
         list.add(noPreferred);
-        locatorField = new NekkoraFormField("Localizadores capturados", list).optional()
+        locatorField = new NekkoraFormField("Localizadores capturados", list)
                 .helper("Só um localizador validado na captura pode ser o preferencial. Nada é recalculado pelo Studio.");
         tab.add(locatorField);
         NekkoraSection manual = new NekkoraSection("Localizadores propostos manualmente",
@@ -367,11 +368,14 @@ public final class StepDetailsForm extends StudioForm<StepDetailsForm.Values> {
         NekkoraStack manualBody = NekkoraStack.vertical(Spacing.SPACE_4);
         manualBody.add(manualList);
         manualSyntax.setLabelProvider(ManualLocator.Syntax::label);
-        NekkoraStack add = NekkoraStack.horizontal(Spacing.SPACE_3).align(NekkoraStack.Align.CENTER);
-        add.add(manualSyntax);
-        add.add(manualExpression);
-        manualBody.add(add);
-        manualBody.add(manualNote);
+        manualSyntax.getAccessibleContext().setAccessibleName("Linguagem da expressão");
+        NekkoraStack syntaxRow = NekkoraStack.horizontal(Spacing.SPACE_3).align(NekkoraStack.Align.CENTER);
+        syntaxRow.add(new NekkoraText("Linguagem:"));
+        syntaxRow.add(manualSyntax);
+        syntaxRow.addGlue();
+        manualBody.add(syntaxRow);
+        manualBody.add(new NekkoraFormField("Expressão", manualExpression).helper("CSS ou XPath, sem quebras de linha (até 500 caracteres)."));
+        manualBody.add(new NekkoraFormField("Observação", manualNote).optional());
         NekkoraStack addRow = NekkoraStack.horizontal(Spacing.SPACE_3);
         addRow.add(NekkoraButton.secondary("Adicionar proposta").withIcon(IconName.PLUS).withSize(ControlSize.SMALL).onClick(ev -> addManualLocator()));
         addRow.addGlue();
@@ -507,8 +511,8 @@ public final class StepDetailsForm extends StudioForm<StepDetailsForm.Values> {
         NekkoraStack row = NekkoraStack.horizontal(Spacing.SPACE_4).align(NekkoraStack.Align.CENTER);
         NekkoraStack texts = NekkoraStack.vertical(Spacing.SPACE_1);
         texts.add(new NekkoraText(f.label() + (modified ? " — modificado manualmente" : " — igual ao capturado"), TextTone.PRIMARY));
-        texts.add(new NekkoraText("Original: " + original, TextTone.SECONDARY));
-        if (modified) texts.add(new NekkoraText("Atual: " + now, TextTone.SECONDARY));
+        texts.add(new NekkoraParagraph("Original: " + original, TextTone.SECONDARY)); // valores longos quebram a linha
+        if (modified) texts.add(new NekkoraParagraph("Atual: " + now, TextTone.SECONDARY));
         row.add(new NekkoraBadge(modified ? "Alterado" : "Capturado", modified ? Tone.WARNING : Tone.NEUTRAL).withSize(NekkoraBadge.Size.SMALL));
         row.add(texts);
         row.addGlue();

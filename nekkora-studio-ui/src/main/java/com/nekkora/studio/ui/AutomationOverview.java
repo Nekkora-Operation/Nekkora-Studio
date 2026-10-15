@@ -60,7 +60,7 @@ public final class AutomationOverview extends NekkoraPanel {
     private final JPanel body = new JPanel(cards);
     private final Map<SessionId, LogicalSessionView> views = new LinkedHashMap<>();
     private final com.nekkora.ui.feedback.NekkoraBanner lockBanner = new com.nekkora.ui.feedback.NekkoraBanner(com.nekkora.ui.core.Severity.INFO,
-            "Esta automação está sendo gravada", "Finalize ou cancele a gravação para reorganizar, mover, excluir ou editar as etapas com segurança. "
+            "Gravação em andamento", "Esta automação está sendo gravada. Finalize ou cancele a gravação para reorganizar, mover, excluir ou editar as etapas com segurança. "
                     + "Você pode continuar navegando e consultando as propriedades.");
     private boolean editable = true;
 
@@ -118,16 +118,23 @@ public final class AutomationOverview extends NekkoraPanel {
         refreshHeader();
         List<SessionId> order = new ArrayList<>();
         for (LogicalSession s : automation.sessions()) order.add(s.id());
-        views.keySet().retainAll(order);
-        boolean reordered = !new ArrayList<>(views.keySet()).equals(order.subList(0, Math.min(order.size(), views.size())));
-        for (SessionId id : order) views.computeIfAbsent(id, k -> {
-            LogicalSessionView v = new LogicalSessionView(k, listener);
-            v.setEditable(editable);
-            return v;
-        });
-        if (reordered || sessionStack.getComponentCount() != order.size()) {
+        // Mantém as MESMAS visões (sem recriar), agora na ordem do domínio; o mapa acompanha a ordem (STUDIO-004: a
+        // reconciliação comparava a ordem de inserção do mapa, e subir e descer a mesma sessão deixava os cartões trocados).
+        Map<SessionId, LogicalSessionView> ordered = new LinkedHashMap<>();
+        for (SessionId id : order) {
+            LogicalSessionView v = views.get(id);
+            if (v == null) {
+                v = new LogicalSessionView(id, listener);
+                v.setEditable(editable);
+            }
+            ordered.put(id, v);
+        }
+        views.clear();
+        views.putAll(ordered);
+        List<LogicalSessionView> shown = sessionViews();
+        if (!shown.equals(new ArrayList<>(views.values()))) {
             sessionStack.removeAll();
-            for (SessionId id : order) sessionStack.add(views.get(id));
+            for (LogicalSessionView v : views.values()) sessionStack.add(v);
         }
         int first = 1;
         for (LogicalSession s : automation.sessions()) {

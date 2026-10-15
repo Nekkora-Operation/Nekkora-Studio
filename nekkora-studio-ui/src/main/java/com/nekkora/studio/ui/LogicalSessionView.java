@@ -181,7 +181,7 @@ public final class LogicalSessionView extends NekkoraCard {
             @Override
             public void actionPerformed(java.awt.event.ActionEvent e) {
                 AutomationStep s = steps.getSelectedValue();
-                if (s != null && editable) action.accept(s);
+                if (s != null) action.accept(s); // bloqueada (gravação): o caso de uso recusa e explica o motivo
             }
         });
     }

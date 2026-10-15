@@ -1,0 +1,11 @@
+{
+  "generatedBy": "EditorPerformanceTest",
+  "java": "21.0.12",
+  "os": "Windows 11",
+  "results": [
+    {"volume": "10 sessões × 10 etapas (100)", "sessions": 10, "steps": 100, "openMs": 94.31, "reorderStepMs": 21.07, "moveBetweenSessionsMs": 7.42, "sessionViewsReread": 3, "moveSessionMs": 10.83, "undoMs": 8.07, "redoMs": 6.65, "editorOpenMs": 31.63, "history100OpsKb": 404, "historyEntries": 100, "heapUsedMb": 9},
+    {"volume": "50 sessões × 10 etapas (500)", "sessions": 50, "steps": 500, "openMs": 45.72, "reorderStepMs": 3.75, "moveBetweenSessionsMs": 3.08, "sessionViewsReread": 3, "moveSessionMs": 6.86, "undoMs": 6.6, "redoMs": 11.79, "editorOpenMs": 11.2, "history100OpsKb": 1944, "historyEntries": 100, "heapUsedMb": 13},
+    {"volume": "10 sessões × 100 etapas (1.000)", "sessions": 10, "steps": 1000, "openMs": 25.77, "reorderStepMs": 3.76, "moveBetweenSessionsMs": 3.5, "sessionViewsReread": 3, "moveSessionMs": 4.77, "undoMs": 10.85, "redoMs": 10.33, "editorOpenMs": 13.35, "history100OpsKb": 1750, "historyEntries": 100, "heapUsedMb": 15},
+    {"volume": "50 sessões × 20 etapas (1.000)", "sessions": 50, "steps": 1000, "openMs": 35.33, "reorderStepMs": 2.58, "moveBetweenSessionsMs": 2.0, "sessionViewsReread": 3, "moveSessionMs": 5.81, "undoMs": 6.37, "redoMs": 3.85, "editorOpenMs": 6.8, "history100OpsKb": 2670, "historyEntries": 100, "heapUsedMb": 19}
+  ]
+}

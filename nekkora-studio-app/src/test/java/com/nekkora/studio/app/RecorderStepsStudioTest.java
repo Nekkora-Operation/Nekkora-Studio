@@ -372,7 +372,11 @@ class RecorderStepsStudioTest {
         Edt.run(() -> studio.controller().selectStep(a.id(), login.id(), manual.id()));
         String inspector = StudioFixture.texts(studio.view().inspector());
         assertTrue(inspector.contains(com.nekkora.studio.ui.PropertiesPresenter.LOCKED_NOTE), inspector);
-        Edt.run(() -> studio.controller().deleteStep(manual.id())); // pela interface: explica e não pergunta nada
+        var list = overview.sessionView(login.id()).orElseThrow().stepList();
+        Edt.run(() -> {
+            Object key = list.getInputMap(JComponent.WHEN_FOCUSED).get(javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_DELETE, 0));
+            list.getActionMap().get(key).actionPerformed(new java.awt.event.ActionEvent(list, 0, "delete"));
+        }); // Delete na lista: o caso de uso recusa, explica e não pergunta nada
         assertEquals("Edição indisponível durante a gravação", studio.state().lastNotice().orElseThrow().title());
         assertEquals(1, names(login).size());
 

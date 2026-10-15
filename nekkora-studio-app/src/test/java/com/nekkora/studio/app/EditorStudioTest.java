@@ -228,6 +228,23 @@ class EditorStudioTest {
     }
 
     @Test
+    @DisplayName("regressão (homologação real): subir e descer a mesma sessão devolve a ordem original também na tela")
+    void subirEDescerSessao() {
+        Automation a = recordedExample();
+        LogicalSession auth = a.sessions().get(0);
+        LogicalSession consulta = a.sessions().get(1);
+        Edt.run(() -> fx.studio.controller().moveSession(consulta.id(), -1));
+        assertEquals(List.of(consulta.id(), auth.id()), fx.sessionViews().stream().map(LogicalSessionView::sessionId).toList());
+        Edt.run(() -> fx.studio.controller().moveSession(consulta.id(), 1));
+        assertEquals(List.of(auth.id(), consulta.id()), fx.sessionViews().stream().map(LogicalSessionView::sessionId).toList(),
+                "cartões na ordem do domínio");
+        assertEquals("01   Preencher campo Usuário", fx.stepLines().get(0));
+        Edt.run(() -> fx.studio.controller().moveSession(consulta.id(), -1));
+        Edt.run(() -> fx.studio.controller().undo());
+        assertEquals(List.of(auth.id(), consulta.id()), fx.sessionViews().stream().map(LogicalSessionView::sessionId).toList(), "também no desfazer");
+    }
+
+    @Test
     @DisplayName("S004-009/010/011 excluir sessão vazia, com etapas (confirmação explícita) e cancelar")
     void excluirSessao() {
         Automation a = recordedExample();
