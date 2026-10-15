@@ -73,8 +73,9 @@ class BridgeServerTest {
     private static void assertOwnerOnly(Path p) throws Exception {
         AclFileAttributeView acl = Files.getFileAttributeView(p, AclFileAttributeView.class);
         if (acl == null) {
-            assertEquals("rw-------".substring(0, 3), java.nio.file.attribute.PosixFilePermissions.toString(Files.getPosixFilePermissions(p)).substring(0, 3));
-            assertFalse(java.nio.file.attribute.PosixFilePermissions.toString(Files.getPosixFilePermissions(p)).substring(3).contains("r"));
+            String perms = java.nio.file.attribute.PosixFilePermissions.toString(Files.getPosixFilePermissions(p));
+            assertTrue(perms.startsWith("rw"), p.getFileName() + ": o dono lê e escreve (" + perms + ")");
+            assertEquals("------", perms.substring(3), p.getFileName() + ": nada para grupo e outros (" + perms + ")");
             return;
         }
         for (AclEntry e : acl.getAcl()) {
