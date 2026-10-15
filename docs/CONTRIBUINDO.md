@@ -40,10 +40,18 @@ componentes de tipografia e os tokens. Copie o `DesignLintTest` para o módulo d
 - Mudança visual intencional ⇒ `./mvnw test -Dnekkora.golden.update=true` e revise as imagens em
   `nekkora-swing-ui/src/test/resources/golden/<sistema>/`. (Na primeira execução em Windows/macOS as
   imagens de referência daquele sistema são gravadas.)
-- Golden screenshots dependem da versão do JDK, não só do sistema: o golden Linux versionado corresponde ao
-  Temurin 21.0.10 ou anterior. A partir do 21.0.11, a métrica dos títulos em Sora mudou e o teste falha no Linux
-  sem nenhuma mudança de código. O golden Windows corresponde ao Microsoft OpenJDK 21.0.12. Diferença inesperada ⇒
-  compare primeiro o JDK com o do baseline, sem regenerar (ver `reports/studio-001-golden-baselines-report.md`).
+- Golden screenshots dependem da versão do JDK, não só do sistema operacional.
+  - **Linux**: o baseline é gerado e conferido no ambiente de referência fixado por digest, com
+    `tools/golden-linux.sh`, hoje Temurin 21.0.12.1+1 em `linux/amd64`.
+    - `golden` roda só o `GoldenScreenshotTest`.
+    - `verify` roda o `clean verify` completo, com o repositório da extensão ao lado, se existir.
+    - `update` regrava os 4 golden Linux.
+  - **Windows**: o baseline corresponde ao Microsoft OpenJDK 21.0.12.
+  - O ambiente fixado vale só para a homologação visual. Para desenvolver, qualquer JDK 21 serve, mas fora do ambiente
+    de referência uma diferença de golden pode vir do JDK.
+  - Diante de uma diferença inesperada, compare o JDK com o do baseline antes de regenerar.
+  - Trocar o ambiente de referência é uma homologação: atualize `TAG`/`IMAGE` no script, rode `update`, revise as
+    imagens e registre o motivo. Exemplo em `reports/studio-001-golden-baselines-report.md`.
 - Ícones: edite `tools/extra-icons.txt` (grade 24×24, `D` duo, `S` traço, `F` sólido) e rode
   `node tools/extract-icons.mjs <icons.tsx> tools/extra-icons.txt > .../nekkora-icons.txt` +
   `node tools/gen-icon-enum.mjs ... > .../IconName.java`.

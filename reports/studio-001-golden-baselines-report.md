@@ -4,6 +4,15 @@ Data: 2026-10-14. Branch `chore/studio-001-golden-baselines`, criada a partir da
 Esta entrega fecha as observações 1 e 2 da revisão da STUDIO-001. Ela não altera nenhum código de produção nem
 de teste.
 
+> **Situação final (após a revisão do PR #2):**
+>
+> - Aprovada a opção 1. Os 4 golden Linux foram regravados no ambiente de referência fixado por digest (Temurin
+>   21.0.12.1+1, `linux/amd64`, `sha256:442a743d…061d`).
+> - Os golden Windows ficaram inalterados.
+> - Linux no ambiente fixado: **162/162, 0 ignorados**. Windows: **162/162**.
+>
+> Detalhes na seção 4. As seções 1 a 3 registram a investigação feita com o golden anterior (JDK 21.0.10).
+
 ## Resumo
 
 | Pergunta | Resposta |
@@ -14,8 +23,8 @@ de teste.
 | As correções de tipografia e layout funcionam no Linux? | **Sim.** `LayoutRegressionTest` passa nos dois JDKs. Medição da tinta desenhada: 44 títulos em Sora, nenhum cortado com a folga de 6% (sem ela, 4 ou 5 seriam cortados). |
 | O visual é consistente com o Windows? | **Sim**, e ficou mais próximo com o JDK novo. A geometria é a mesma; as diferenças estão só nas bordas suavizadas do texto. Windows × Linux: 0,59% de pixels com o JDK 21.0.12 e 0,90% com o 21.0.10. |
 | O golden Windows foi preservado? | **Sim.** As 4 imagens originais (2026-09-26) foram versionadas sem regeneração. A renderização atual no Windows é idêntica a elas pixel a pixel. |
-| Os golden Linux foram regenerados? | **Não**, conforme a instrução. A decisão fica para a revisão (ver "Recomendação"). |
-| `./mvnw clean verify` | Windows: **162 testes, 0 falhas, 0 ignorados, BUILD SUCCESS**. |
+| Os golden Linux foram regenerados? | Não durante a investigação, conforme a instrução. **Depois da aprovação da revisão, sim**: Temurin 21.0.12 fixado por digest (seção 4). |
+| `./mvnw clean verify` | Windows: **162 testes, 0 falhas, 0 ignorados**. Linux no ambiente fixado, após a atualização: **162, 0 falhas, 0 ignorados**. |
 
 ## 1. Golden screenshots no Linux (Docker)
 
@@ -136,7 +145,7 @@ do Studio (ausente no contêiner). No Windows ele roda e passa.
 
 São os mesmos 162 testes da STUDIO-001, todos aprovados, BUILD SUCCESS.
 
-## Recomendação (decisão da revisão)
+## Recomendação apresentada à revisão (histórico)
 
 O golden Linux versionado corresponde ao JDK 21.0.10 ou anterior. Com qualquer JDK 21 atual, ele falha por causa do
 próprio JDK, não do código. Opções:
@@ -152,7 +161,64 @@ próprio JDK, não do código. Opções:
 Nos dois casos, vale registrar a versão do JDK junto do golden. O baseline do Windows tem o mesmo risco: ele
 corresponde ao Microsoft OpenJDK 21.0.12 e pode mudar numa atualização futura do JDK.
 
+## 4. Atualização do baseline Linux (aprovada na revisão do PR #2)
+
+Decisão: opção 1. O golden Linux passa a corresponder ao Temurin 21.0.12, e o ambiente de referência fica fixado
+por digest. Não se mantém um JDK antigo só para preservar imagens.
+
+### Ambiente de referência
+
+| Item | Valor |
+|---|---|
+| Tag (só referência; a homologação não usa a tag móvel `21-jdk`) | `eclipse-temurin:21.0.12.1_1-jdk-resolute` |
+| JDK | Temurin 21.0.12.1+1 (build 21.0.12.1+1-LTS) |
+| Base | Ubuntu 26.04 (`ubuntu:26.04`) |
+| Arquitetura | `linux/amd64` |
+| Digest do manifesto `linux/amd64` (usado na execução) | `sha256:442a743d9272be15c9872915eab0f7a1b6bb45b7c16c613acf172e2d7483061d` |
+| Digest do índice multiarquitetura | `sha256:f9bf7e9fe2f9bc4657537c1a7e20c768f0c3bafca41598263be4714783dd62eb` |
+| Script | `tools/golden-linux.sh` (`golden`, `verify` ou `update`) |
+
+O ambiente fixado vale só para a homologação visual. O projeto continua em Java 21, e qualquer JDK 21 serve para
+desenvolver.
+
+### O que mudou
+
+- Só os 4 golden Linux: `sakura-dark`, `midnight-dark`, `porcelain-light` e `sage-light`. Foram regravados com
+  `tools/golden-linux.sh update` sobre uma cópia do commit, num commit próprio.
+- As imagens novas são idênticas byte a byte às renderizações analisadas na seção 1 (JDK 21.0.12).
+- Contra o golden anterior, em todos os temas, os pixels diferentes ficam só no título (x 21–332, y 22–40).
+- Tolerância (0,4%) e critério por canal (> 40) inalterados. Nenhum código de teste ou de produção mudou.
+
+| Arquivo Linux | SHA-256 anterior (JDK 21.0.10) | SHA-256 atual (JDK 21.0.12) |
+|---|---|---|
+| `midnight-dark.png` | `044b51f0ee9aa6e81cbb3b0c23dcd857e5254bd99e57146ca7fd833515a021a8` | `768e4c49b87359bc824fd3299ef69452922dc18c423cef3e9ada83b04979ce54` |
+| `porcelain-light.png` | `8645bd77dea1b8bdaaa9aacec1b580e27cb2d515ddd1bce87fea5d16b26b3b3a` | `15ff9c7ad82f7b586bca967cab5632ab93d16ed09754b420d72bbe3712a6a89e` |
+| `sage-light.png` | `e0f962a22ad231e65918ae5e648555e8dce7ba4c0cf045c3b21fa345b4a59709` | `de81b6cc78adc7426251a1528ba331f7699c0d3f86e2247cf10cb43704b9127f` |
+| `sakura-dark.png` | `10504f55d28a65b2fd947c4df3ee4fd7a2a99639153703af4e6d815808b851e0` | `8ab98d19265a0ef2b0cd990792ce70b0cdb31da573316595132f4a7c0c92d16c` |
+
+Os golden Windows mantêm os hashes da seção 2, conferidos depois da atualização.
+
+### Homologação após a atualização
+
+| Verificação | Resultado |
+|---|---|
+| Golden Linux, os 4 temas (`tools/golden-linux.sh golden`) | ✅ 4/4 |
+| Golden Windows, os 4 temas | ✅ 4/4, hashes inalterados |
+| `LayoutRegressionTest` (Linux e Windows) | ✅ 3/3 |
+| Suíte completa Linux no ambiente fixado (`tools/golden-linux.sh verify`) | ✅ **162 testes, 0 falhas, 0 ignorados** |
+| Suíte completa Windows (`./mvnw clean verify`) | ✅ **162 testes, 0 falhas, 0 ignorados** |
+| Mudanças de produção | Nenhuma |
+
+- Contrato com a extensão: o `tools/golden-linux.sh` coloca uma cópia do `HEAD` do `Nekkora-Extension-Chrome`
+  (`3c25a77`) ao lado do Studio dentro do contêiner, na mesma posição relativa do Windows.
+- Com isso, `PageMapContractTest.fixtureNaoDivergiuDoContrato` (CA-019) roda e passa também no Linux, sem mudar o
+  teste.
+
 ## Reprodução
+
+O caminho recomendado é o ambiente de referência: `tools/golden-linux.sh golden | verify | update`, na raiz do
+repositório. Os utilitários da investigação, descritos a seguir, comparam versões do JDK.
+
 
 Os scripts e utilitários estão em `reports/studio-001/golden-baselines/tools/`. Eles esperam um diretório montado em
 `/in` com `src.tar` (gerado por `git archive HEAD`) e, para o probe, `probe/SoraProbe.java`. Exemplo:
