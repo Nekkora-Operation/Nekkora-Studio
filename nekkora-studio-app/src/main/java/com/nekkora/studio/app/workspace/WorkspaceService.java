@@ -102,6 +102,24 @@ public final class WorkspaceService implements StepIntake {
         return step;
     }
 
+    /**
+     * Cancelamento confirmado de uma gravação (STUDIO-003): descarta as etapas RECORDED dela numa única operação de
+     * domínio; etapas manuais e de outras gravações ficam. Se a etapa selecionada sumiu, a seleção volta à sessão.
+     */
+    public int discardRecording(AutomationId automationId, String recordingId) {
+        requireEdt();
+        Automation a = state.catalog().find(automationId).orElse(null);
+        if (a == null) return 0;
+        int removed = a.discardRecording(recordingId);
+        if (removed == 0) return 0;
+        boolean selectionGone = state.selection() instanceof Selection.OfStep s && s.automation().equals(automationId) && a.step(s.step()).isEmpty();
+        if (selectionGone && state.selection() instanceof Selection.OfStep s) {
+            state.select(automationId, new Selection.OfSession(automationId, s.session()));
+        }
+        changed(a, null, selectionGone);
+        return removed;
+    }
+
     public void updateStepBasics(AutomationId automationId, StepId stepId, String name, String description, ActionType type) {
         requireEdt();
         Automation a = state.catalog().require(automationId);

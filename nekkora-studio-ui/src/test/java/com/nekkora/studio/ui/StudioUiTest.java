@@ -215,6 +215,12 @@ class StudioUiTest {
         assertEquals("Painel da conta", StudioText.technical("Painel da conta"));
         assertEquals("Linha de tabela", ElementPresentation.kindLabel("TABLE_ROW"));
         assertEquals("Custom dropdown", ElementPresentation.kindLabel("CUSTOM_DROPDOWN"), "categoria nova continua legível");
+        // STUDIO-003: âncora sem nome próprio não repete a palavra ("no formulário formulário")
+        ElementReference inForm = ElementReference.builder().accessibleName("Senha").semanticKind("PASSWORD_INPUT").tag("input")
+                .addContext(new com.nekkora.studio.domain.element.ContextAnchor("IN_FORM", "FORM", "formulário", ""))
+                .addContext(new com.nekkora.studio.domain.element.ContextAnchor("IN_ROW", "TABLE_ROW", "Cliente 101", "")).build();
+        String ctx = ElementPresentation.rows(inForm).stream().filter(r -> r.label().equals("Contexto")).findFirst().orElseThrow().value();
+        assertEquals("no formulário, na linha Cliente 101", ctx);
     }
 
     @Test

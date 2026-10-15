@@ -5,6 +5,7 @@ import com.nekkora.studio.recorder.RecorderSnapshot;
 import com.nekkora.studio.recorder.RecorderState;
 import com.nekkora.studio.recorder.RecordingProgress;
 import com.nekkora.studio.recorder.RecordingSummary;
+import com.nekkora.studio.recorder.StepProgress;
 import com.nekkora.ui.core.Status;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -13,10 +14,12 @@ import java.util.List;
 /** Textos do Recorder para o usuário (sem identificadores técnicos; estados sempre também em texto). */
 public final class RecorderText {
 
-    /** Aviso permanente desta versão: a gravação técnica não cria etapas. */
-    public static final String ACTION_CAPTURE_NOTICE = "Captura de ações: próxima versão. Esta gravação acompanha a página, mas ainda não cria etapas.";
-    /** Os modos ainda não mudam o comportamento da captura. */
-    public static final String MODE_NOTICE = "Configuração para a próxima etapa: os sensores de interação chegam na STUDIO-003.";
+    /** Gravação apenas técnica (extensão sem a gravação de ações): a página é acompanhada, nenhuma etapa é criada. */
+    public static final String ACTION_CAPTURE_NOTICE = "Captura de ações indisponível nesta gravação: a extensão conectada não registra ações. A página é acompanhada, mas nenhuma etapa é criada.";
+    /** O que cada modo faz (STUDIO-003). */
+    public static final String MODE_NOTICE = "Capturar: registra o elemento sem executar a ação. Capturar e interagir: registra e deixa a página funcionar normalmente.";
+    /** Antes do início: o que a gravação faz. */
+    public static final String SETUP_NOTICE = "Cada interação no Chrome vira uma etapa na sessão escolhida, depois que o Studio a registra. Valores digitados não são guardados.";
     public static final String WAITING_LINK = "Aguardando conexão com a extensão";
 
     private RecorderText() {
@@ -80,6 +83,12 @@ public final class RecorderText {
         };
     }
 
+    /** Troca de sessão pedida e ainda não confirmada: as etapas continuam indo para a sessão atual até a confirmação. */
+    public static String sessionPending(String name) {
+        return "Aguardando a confirmação da extensão para trocar para a sessão " + (name == null ? "escolhida" : "“" + name + "”")
+                + ". Até lá, as etapas continuam na sessão atual.";
+    }
+
     public static String coverage(RecordingProgress p) {
         return switch (String.valueOf(p.coverage())) {
             case "COMPLETE" -> "Página acompanhada por completo";
@@ -99,7 +108,44 @@ public final class RecorderText {
         };
     }
 
-    /** Linhas do resumo técnico (nunca afirma que etapas foram gravadas). */
+    /** Rótulo do estado no Recorder: "Gravando" somente com o estado RECORDING confirmado e a captura de ações ativa. */
+    public static String stateLabel(RecorderSnapshot s) {
+        return s.state() == RecorderState.RECORDING && s.steps().enabled() ? CONFIRMED_RECORDING_LABEL : s.state().label();
+    }
+
+    private static final String CONFIRMED_RECORDING_LABEL = "Gravando";
+
+    /** Etapas registradas (aceitas pelo domínio do Studio). */
+    public static String steps(StepProgress p) {
+        if (!p.enabled()) {
+            return "Nenhuma (gravação técnica)";
+        }
+        String out = p.accepted() + (p.accepted() == 1 ? " registrada" : " registradas");
+        if (p.pending() > 0) {
+            out += " · " + p.pending() + " aguardando o Studio";
+        }
+        return out;
+    }
+
+    /** Aviso sobre a entrega das etapas (falhas nunca ficam em silêncio). */
+    public static String stepsNotice(StepProgress p) {
+        if (!p.enabled()) {
+            return ACTION_CAPTURE_NOTICE;
+        }
+        List<String> parts = new ArrayList<>();
+        if (p.rejected() > 0) {
+            parts.add(p.rejected() + (p.rejected() == 1 ? " etapa não pôde ser registrada pelo Studio." : " etapas não puderam ser registradas pelo Studio."));
+        }
+        if (p.lost() > 0) {
+            parts.add(p.lost() + (p.lost() == 1 ? " interação foi perdida" : " interações foram perdidas") + " porque a página mudou antes de serem concluídas.");
+        }
+        if (p.waiting()) {
+            parts.add("Há etapas emitidas pelo navegador que ainda não chegaram: reenvio solicitado.");
+        }
+        return parts.isEmpty() ? "Cada interação vira uma etapa depois que o Studio a registra. Valores digitados não são guardados." : String.join(" ", parts);
+    }
+
+    /** Linhas do resumo (as etapas só são citadas quando foram de fato registradas pelo Studio). */
     public static List<String> summary(RecordingSummary sum) {
         List<String> out = new ArrayList<>();
         RecordingProgress p = sum.progress();
@@ -109,7 +155,16 @@ public final class RecorderText {
         if (sum.limitations().contains("INTERRUPTED")) {
             out.add("A captura foi interrompida durante a gravação.");
         }
-        out.add("Nenhuma etapa foi criada: a captura de ações chega na próxima versão.");
+        if (sum.actionsCaptured()) {
+            out.add("Etapas registradas: " + sum.stepsAccepted() + (sum.stepsRejected() > 0 ? " · não registradas: " + sum.stepsRejected() : "")
+                    + (sum.stepsLost() > 0 ? " · interações perdidas: " + sum.stepsLost() : ""));
+            out.add("PARTIAL".equals(sum.actionCapture()) ? "Captura de ações parcial: veja as limitações acima." : "Captura de ações completa.");
+            if (sum.limitations().contains("STEPS_UNCONFIRMED")) {
+                out.add("Algumas etapas não foram confirmadas a tempo.");
+            }
+        } else {
+            out.add("Nenhuma etapa foi criada: a extensão conectada não registra ações.");
+        }
         out.add(sum.pageMapExported() ? "PageMap exportado." : "O PageMap não foi exportado (finalizar não é exportar).");
         return out;
     }

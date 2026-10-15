@@ -37,7 +37,8 @@ public final class Studio {
         controller = new StudioController(service, prompts, exitAction);
         view = new StudioView(state, controller);
         this.link = link;
-        recorder = new RecorderController(link, clock, RecorderController.Options.defaults());
+        // STUDIO-003: as etapas gravadas entram pelo StepIntake do WorkspaceService (na EDT).
+        recorder = new RecorderController(link, clock, RecorderController.Options.defaults(), new com.nekkora.studio.app.recorder.WorkspaceStepSink(service));
         recorderPresenter = new RecorderPresenter(service, controller, recorder, view, recorderPrompts, hostFactory);
     }
 

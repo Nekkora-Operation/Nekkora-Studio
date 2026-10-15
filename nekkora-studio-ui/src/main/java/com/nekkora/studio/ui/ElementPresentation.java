@@ -73,9 +73,12 @@ public final class ElementPresentation {
     }
 
     private static String context(List<ContextAnchor> anchors) {
-        return anchors.stream().map(a -> RELATION_LABELS.getOrDefault(a.relation(), "em") + " "
-                + (a.name().isBlank() ? kindLabel(a.kind()).toLowerCase(java.util.Locale.ROOT) : StudioText.technical(a.name())))
-                .collect(Collectors.joining(", "));
+        return anchors.stream().map(a -> {
+            String rel = RELATION_LABELS.getOrDefault(a.relation(), "em");
+            String name = a.name().isBlank() ? kindLabel(a.kind()).toLowerCase(java.util.Locale.ROOT) : StudioText.technical(a.name());
+            // "no formulário" + nome genérico "formulário" não se repete ("no formulário formulário")
+            return rel.toLowerCase(java.util.Locale.ROOT).endsWith(" " + name.toLowerCase(java.util.Locale.ROOT)) ? rel : rel + " " + name;
+        }).collect(Collectors.joining(", "));
     }
 
     private static String safeJoin(List<String> items, String sep) {

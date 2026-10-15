@@ -43,6 +43,12 @@ public final class StepDetailsForm extends StudioForm<StepForm.Values> {
         } else {
             details.add(new NekkoraSection("Elemento").setContent(new NekkoraText("Nenhum elemento vinculado.", TextTone.MUTED)));
         }
+        List<Row> recorded = StepPresentation.recording(step);
+        if (!recorded.isEmpty()) {
+            NekkoraKeyValueView rec = new NekkoraKeyValueView();
+            fill(rec, recorded);
+            details.add(new NekkoraSection("Gravação").setContent(rec));
+        }
         fill(technical, StepPresentation.technical(step));
         details.add(new NekkoraSection("Contexto").setContent(technical));
         add(details);

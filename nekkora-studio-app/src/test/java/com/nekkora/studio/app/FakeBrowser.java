@@ -37,6 +37,9 @@ final class FakeBrowser implements BrowserLink {
     String recordingId;
     long clock = 0;
     int otherConsumers = 0;
+    /** STUDIO-003: comporta-se como a extensão com gravação de ações (anuncia a entrega quando o início pede steps/1). */
+    volatile boolean stepsAware;
+    volatile boolean stepsEnabled;
 
     @Override
     public LinkStatus status() {
@@ -77,6 +80,7 @@ final class FakeBrowser implements BrowserLink {
         String rid = Json.string(c.payload(), "recordingId");
         switch (c.type()) {
             case "studio.recording.start" -> {
+                stepsEnabled = stepsAware && c.payload().containsKey("capabilities");
                 recordingId = rid;
                 state = "RECORDING";
                 mode = Json.string(c.payload(), "mode");
@@ -131,14 +135,18 @@ final class FakeBrowser implements BrowserLink {
                 .put("counters", Json.obj().put("segments", 1).put("technicalCaptures", 1).put("synchronizations", 3).put("recoveries", 0).build())
                 .put("lease", Json.obj().put("leaseMs", 30000).put("expiresInMs", 30000).build())
                 .put("startedAt", Instant.ofEpochMilli(0).toString()).put("updatedAt", Instant.ofEpochMilli(clock).toString())
-                .put("reason", null).build();
+                .put("reason", null).put("steps", stepsEnabled ? Json.obj().put("enabled", true).put("lastSequence", 0).put("ackedSequence", 0)
+                        .put("pending", 0).put("lost", 0).build() : null).build();
     }
 
     Map<String, Object> summary(String outcome) {
         return Json.obj().put("state", outcome).put("durationMs", 4200)
                 .put("counters", Json.obj().put("segments", 2).put("technicalCaptures", 2).put("synchronizations", 9).put("recoveries", 0).build())
                 .put("coverage", Json.obj().put("state", "COMPLETE").put("framesAttached", 0).put("framesUnavailable", 0).build())
-                .put("pageMapExported", false).put("actionCapture", "NOT_AVAILABLE").put("limitations", List.of("ACTION_CAPTURE_NOT_AVAILABLE")).build();
+                .put("pageMapExported", false).put("actionCapture", stepsEnabled ? "AVAILABLE" : "NOT_AVAILABLE")
+                .put("limitations", stepsEnabled ? List.of() : List.of("ACTION_CAPTURE_NOT_AVAILABLE"))
+                .put("steps", stepsEnabled ? Json.obj().put("produced", 3).put("acknowledged", 3).put("rejected", 0).put("unacknowledged", 0).put("lost", 0)
+                        .put("discarded", Map.of()).build() : null).build();
     }
 
     void setStatus(LinkStatus s) {

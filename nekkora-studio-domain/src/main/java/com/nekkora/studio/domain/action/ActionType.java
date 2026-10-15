@@ -17,6 +17,12 @@ public enum ActionType {
     SELECT_OPTION("Selecionar opção", "Escolher uma opção em uma lista de seleção.", TargetRequirement.EXPECTED, false, true),
     CHECK("Marcar", "Marcar uma caixa de seleção ou controle equivalente.", TargetRequirement.EXPECTED, false, false),
     UNCHECK("Desmarcar", "Desmarcar uma caixa de seleção ou controle equivalente.", TargetRequirement.EXPECTED, false, false),
+    /**
+     * STUDIO-003: tecla com efeito próprio num elemento (ex.: Enter num campo, que envia o formulário). A tecla é o valor
+     * da ação ({@link ValueSource.LiteralValue}). Acrescentado para registrar o que foi efetivamente observado em vez de
+     * inventar um clique — um envio por Enter não é um clique em "Entrar".
+     */
+    PRESS_KEY("Pressionar tecla", "Pressionar uma tecla num elemento (ex.: Enter num campo).", TargetRequirement.EXPECTED, true, false),
     NAVIGATE("Navegar", "Abrir uma página, tela ou endereço.", TargetRequirement.NONE, true, false),
     WAIT_FOR("Aguardar", "Aguardar até que uma condição seja atendida.", TargetRequirement.OPTIONAL, false, false),
     OBSERVE("Observar", "Registrar uma observação sobre o processo.", TargetRequirement.OPTIONAL, false, false),

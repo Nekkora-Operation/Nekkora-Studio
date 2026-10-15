@@ -39,7 +39,11 @@ import java.util.logging.Logger;
  *   <li><b>Concessão</b>: renovada periodicamente enquanto há gravação; sem renovação a extensão libera a captura.</li>
  *   <li><b>Recuperação</b>: ligação perdida ⇒ DEGRADED; ao voltar, RECOVERING consulta o estado real e reconcilia.
  *       Resultado desconhecido (tempo esgotado, canal perdido) nunca é tratado como sucesso.</li>
- *   <li><b>Domínio intacto</b>: o Recorder NÃO cria etapas — a {@code StepIntake} fica para a STUDIO-003.</li>
+ *   <li><b>Etapas (STUDIO-003)</b>: com um {@link StepSink}, o início negocia a capacidade {@code steps/1}; cada
+ *       {@code studio.recording.step} é ordenado pela sequência ({@link StepInbox}), roteado à sessão lógica pela rota
+ *       vigente quando foi consolidado, entregue ao domínio em ordem e só então CONFIRMADO à extensão (ACK cumulativo,
+ *       com as recusadas à parte). Lacunas (renovação/consulta mostram etapas emitidas que não chegaram) pedem
+ *       reemissão; o cancelamento confirmado descarta as etapas da gravação numa única operação de domínio.</li>
  * </ul>
  */
 public final class RecorderController implements AutoCloseable {
@@ -56,6 +60,7 @@ public final class RecorderController implements AutoCloseable {
     private final BrowserLink link;
     private final Clock clock;
     private final Options options;
+    private final StepSink sink;
     private final ScheduledExecutorService exec = Executors.newSingleThreadScheduledExecutor(r -> {
         Thread t = new Thread(r, "nekkora-recorder");
         t.setDaemon(true);
@@ -83,10 +88,41 @@ public final class RecorderController implements AutoCloseable {
     private ScheduledFuture<?> renewTask;
     private volatile RecorderSnapshot snapshot;
 
+    // ---- etapas gravadas (STUDIO-003; somente na thread do Recorder)
+    private boolean stepsEnabled;
+    private StepInbox inbox = new StepInbox();
+    private final java.util.Map<String, SessionId> routes = new java.util.HashMap<>();
+    private int routeCounter;
+    private int accepted;
+    private int rejected;
+    private int lost;
+    private int inFlight;
+    private long delivered;
+    private final List<Long> rejectedSinceAck = new ArrayList<>();
+    private boolean ackInFlight;
+    private boolean ackDirty;
+    private boolean syncing;
+    private boolean waiting;
+    private boolean halted;
+    private boolean discarded;
+    /** Troca de sessão pedida e ainda não confirmada pela extensão (a associação só muda com a confirmação). */
+    private SessionId pendingSession;
+    private String pendingRouteRef;
+    private String pendingRouteOp;
+    private boolean routeInFlight;
+    private SessionId queuedSession;
+    private CompletableFuture<Void> chain = CompletableFuture.completedFuture(null);
+
     public RecorderController(BrowserLink link, Clock clock, Options options) {
+        this(link, clock, options, StepSink.NONE);
+    }
+
+    /** @param sink destino das etapas gravadas; {@link StepSink#NONE} = gravação só técnica (STUDIO-002) */
+    public RecorderController(BrowserLink link, Clock clock, Options options, StepSink sink) {
         this.link = Objects.requireNonNull(link);
         this.clock = Objects.requireNonNull(clock);
         this.options = Objects.requireNonNull(options);
+        this.sink = Objects.requireNonNull(sink);
         this.linkStatus = link.status();
         this.snapshot = build();
         this.linkListener = new BrowserLink.Listener() {
@@ -169,13 +205,32 @@ public final class RecorderController implements AutoCloseable {
         run(() -> doMode(requested));
     }
 
-    /** Associa a gravação a outra sessão lógica da MESMA automação (sem nova captura). */
+    /**
+     * Associa a gravação a outra sessão lógica da MESMA automação (sem nova captura). Com etapas gravadas, a troca fica
+     * PENDENTE até a extensão confirmar a rota nova; recusa explícita mantém a sessão anterior, resultado desconhecido
+     * (tempo esgotado, ligação perdida) é reconciliado refazendo o mesmo pedido (idempotente pela operação).
+     */
     public void associate(SessionId session) {
         Objects.requireNonNull(session);
         run(() -> {
-            if (recording != null && state.active() && recording.associate(session, clock.instant())) {
-                publish();
+            if (recording == null || !state.active()) {
+                return;
             }
+            if (!routing()) {
+                if (recording.associate(session, clock.instant())) {
+                    publish();
+                }
+                return;
+            }
+            if (pendingSession != null) {
+                queuedSession = session.equals(pendingSession) ? null : session; // vale a última escolha, depois da atual
+                return;
+            }
+            if (recording.session().equals(session) || !(state == RecorderState.RECORDING || state == RecorderState.PAUSED
+                    || state == RecorderState.DEGRADED)) {
+                return;
+            }
+            requestRoute(session);
         });
     }
 
@@ -277,8 +332,15 @@ public final class RecorderController implements AutoCloseable {
         publish();
         String op = newOp();
         pendingOp = op;
-        Map<String, Object> payload = Json.obj().put("recordingId", recording.recordingId()).put("operationId", op).put("tabRef", tab.tabRef())
-                .put("mode", requested.wire()).put("leaseMs", options.lease().toMillis()).build();
+        Json.Builder start = Json.obj().put("recordingId", recording.recordingId()).put("operationId", op).put("tabRef", tab.tabRef())
+                .put("mode", requested.wire()).put("leaseMs", options.lease().toMillis());
+        resetSteps();
+        if (sink != StepSink.NONE) {
+            String route = "route-" + (++routeCounter);
+            routes.put(route, target.session());
+            start.put("capabilities", List.of("steps/1")).put("routeRef", route);
+        }
+        Map<String, Object> payload = start.build();
         link.send("studio.recording.start", payload, options.startTimeout()).whenComplete((p, e) -> run(() -> {
             if (!op.equals(pendingOp)) {
                 if (e == null) {
@@ -299,12 +361,52 @@ public final class RecorderController implements AutoCloseable {
                 recoverOrDegrade();
                 return;
             }
+            if (x.code() == BridgeError.BAD_REQUEST && payload.containsKey("capabilities")) {
+                // Extensão da STUDIO-002 (contrato sem steps/1): grava só a parte técnica, como antes.
+                LOG.info("Extensão sem gravação de etapas: gravação técnica");
+                payload.remove("capabilities");
+                payload.remove("routeRef");
+                routes.clear();
+                pendingOp = newOp();
+                payload.put("operationId", pendingOp);
+                String retry = pendingOp;
+                link.send("studio.recording.start", payload, options.startTimeout()).whenComplete((p2, e2) -> run(() -> onStartResult(retry, p2, e2)));
+                return;
+            }
             pendingMode = null;
             problem = problemFor(x);
             move(RecorderState.IDLE);
             clearRecordingKeepProblem();
             publish();
         }));
+    }
+
+    /** Resposta do início sem a capacidade de etapas (extensão anterior à STUDIO-003). */
+    private void onStartResult(String op, Map<String, Object> p, Throwable e) {
+        if (!op.equals(pendingOp)) {
+            if (e == null) {
+                applyResult(p);
+            }
+            return;
+        }
+        pendingOp = null;
+        if (e == null) {
+            confirmedStart = true;
+            applyResult(p);
+            startRenew();
+            publish();
+            return;
+        }
+        BridgeCommandException x = cause(e);
+        if (unknownOutcome(x)) {
+            recoverOrDegrade();
+            return;
+        }
+        pendingMode = null;
+        problem = problemFor(x);
+        move(RecorderState.IDLE);
+        clearRecordingKeepProblem();
+        publish();
     }
 
     /** pause / resume: estado estável → pendente → confirmado. */
@@ -359,6 +461,12 @@ public final class RecorderController implements AutoCloseable {
                         pendingMode = null;
                         BridgeCommandException x = cause(e);
                         problem = problemFor(x);
+                        if (sensorNotConfirmed(x)) {
+                            // a página não confirmou o modo novo: a extensão manteve o anterior ou interrompeu a captura
+                            problem = new UserProblem(x.code(), "Modo não alterado", safeMessage(x.getMessage()));
+                            recoverOrDegrade();
+                            return;
+                        }
                         if (unknownOutcome(x)) {
                             recoverOrDegrade();
                             return;
@@ -383,6 +491,12 @@ public final class RecorderController implements AutoCloseable {
             return;
         }
         BridgeCommandException x = cause(error);
+        if (sensorNotConfirmed(x)) {
+            // ex.: retomada sem o sensor da página: a extensão pode ter interrompido a captura; nada de voltar a um estado suposto
+            problem = new UserProblem(x.code(), "Captura interrompida", safeMessage(x.getMessage()));
+            recoverOrDegrade();
+            return;
+        }
         if (unknownOutcome(x) || x.code() == BridgeError.RECORDING_ENDED || x.code() == BridgeError.RECORDING_NOT_FOUND
                 || x.code() == BridgeError.INVALID_STATE) {
             problem = x.code() == BridgeError.RECORDING_ENDED ? problemFor(x) : null;
@@ -422,6 +536,7 @@ public final class RecorderController implements AutoCloseable {
                     if (state.active() && renewTask == null) {
                         startRenew();
                     }
+                    sendRoute(); // troca de sessão sem desfecho conhecido: o mesmo pedido de novo
                 }
                 publish();
                 return;
@@ -461,6 +576,7 @@ public final class RecorderController implements AutoCloseable {
             linkDown = false;
         } else if (recording != null && state.active()) {
             pendingOp = null; // comandos em voo falham com LINK_LOST; o resultado é desconhecido
+            routeInFlight = false; // a troca de sessão continua pendente até a reconciliação
             degradeForLink();
             return;
         }
@@ -469,6 +585,10 @@ public final class RecorderController implements AutoCloseable {
 
     private void onEvent(BridgeEvent event) {
         if (recording == null || !recording.recordingId().equals(Json.string(event.payload(), "recordingId"))) {
+            return; // gravação antiga, de outro controlador ou já encerrada no Studio: nada é aceito
+        }
+        if ("studio.recording.step".equals(event.type())) {
+            onStep(event.payload());
             return;
         }
         String op = Json.string(event.payload(), "operationId");
@@ -538,7 +658,18 @@ public final class RecorderController implements AutoCloseable {
         if (sum != null) {
             summary = summaryOf(target, sum);
         }
+        Map<String, Object> st = Json.object(rec, "steps");
+        if (st != null) {
+            stepsState(st);
+        }
         move(target);
+        if (target.terminal()) {
+            clearPendingRoute(); // encerrada: nenhuma troca pendente sobrevive
+            queuedSession = null;
+        }
+        if (target == RecorderState.CANCELLED) {
+            discardSteps();
+        }
     }
 
     private static UserProblem degradedProblem(String reason) {
@@ -547,6 +678,7 @@ public final class RecorderController implements AutoCloseable {
             case "PERMISSION_REVOKED" -> "A autorização do site foi revogada na extensão. A captura foi encerrada.";
             case "ORIGIN_NOT_ALLOWED" -> "A aba saiu para uma página que não está autorizada.";
             case "CAPTURE_ERROR" -> "A captura técnica da página entrou em erro.";
+            case "SENSOR_NOT_CONFIRMED" -> "A página não confirmou os sensores de interação. A captura de ações foi interrompida; use “Tentar retomar”.";
             default -> "A captura técnica da página foi encerrada pelo navegador.";
         };
         return new UserProblem(BridgeError.CAPTURE_FAILED, "Captura interrompida", why);
@@ -569,8 +701,257 @@ public final class RecorderController implements AutoCloseable {
         for (Object o : Json.array(sum, "limitations")) {
             lim.add(String.valueOf(o));
         }
+        Map<String, Object> st = Json.object(sum, "steps");
         return new RecordingSummary(outcome, Duration.ofMillis(Json.number(sum, "durationMs", 0)), progressOf(wrapper), lim,
-                Json.bool(sum, "pageMapExported", false));
+                Json.bool(sum, "pageMapExported", false), Json.string(sum, "actionCapture"), (int) Json.number(st, "produced", 0), accepted, rejected,
+                (int) Json.number(st, "lost", 0));
+    }
+
+    // ================================================================================= etapas (STUDIO-003)
+
+    private void resetSteps() {
+        stepsEnabled = false;
+        inbox = new StepInbox();
+        routes.clear();
+        routeCounter = 0;
+        accepted = 0;
+        rejected = 0;
+        lost = 0;
+        inFlight = 0;
+        delivered = 0;
+        rejectedSinceAck.clear();
+        ackInFlight = false;
+        ackDirty = false;
+        syncing = false;
+        waiting = false;
+        halted = false;
+        discarded = false;
+        clearPendingRoute();
+        queuedSession = null;
+        chain = CompletableFuture.completedFuture(null);
+    }
+
+    /** Estado da entrega informado pela extensão (gravação, renovação, consulta): perdas declaradas e lacunas. */
+    private void stepsState(Map<String, Object> st) {
+        if (!Json.bool(st, "enabled", false) || sink == StepSink.NONE) {
+            return;
+        }
+        stepsEnabled = true;
+        lost = (int) Json.number(st, "lost", lost);
+        long last = Json.number(st, "lastSequence", 0);
+        if (inbox.missing(last) && inbox.highestSeen() < last && !halted) {
+            waiting = true;
+            requestSync(); // a extensão emitiu etapas que não chegaram aqui (ex.: canal caiu): reemissão em ordem
+        } else if (!inbox.missing(last)) {
+            waiting = false;
+        }
+    }
+
+    private void onStep(Map<String, Object> payload) {
+        if (halted || sink == StepSink.NONE || !state.active() && state != RecorderState.COMPLETED) {
+            return; // cancelada, expirada ou sem destino: a etapa não entra no domínio
+        }
+        stepsEnabled = true;
+        RecordedStep step = RecordedStep.parse(payload).orElse(null);
+        if (step == null) {
+            LOG.warning("Etapa fora do contrato ignorada");
+            return;
+        }
+        StepInbox.Accepted a = inbox.accept(step);
+        for (RecordedStep ready : a.ready()) {
+            deliver(ready);
+        }
+        if (a.gap()) {
+            waiting = true;
+            requestSync();
+        } else if (!a.duplicate() && inbox.buffered() == 0) {
+            waiting = false;
+        }
+        publish();
+    }
+
+    /** Entrega ao domínio EM ORDEM (uma de cada vez) e só então confirma. */
+    private void deliver(RecordedStep step) {
+        String rid = recording.recordingId();
+        com.nekkora.studio.domain.AutomationId automation = recording.automation();
+        SessionId session = routes.get(step.routeRef());
+        com.nekkora.studio.domain.StepDraft draft = null;
+        if (session != null) {
+            try {
+                draft = RecordedStepDrafts.draft(step);
+            } catch (RuntimeException e) {
+                LOG.log(Level.WARNING, "Etapa da gravação não pôde ser montada", e);
+            }
+        }
+        inFlight++;
+        long seq = step.sequence();
+        com.nekkora.studio.domain.StepDraft d = draft;
+        chain = chain.thenCompose(v -> d == null ? CompletableFuture.completedFuture(false)
+                : sink.deliver(automation, session, d).exceptionally(e -> false))
+                .thenAccept(ok -> run(() -> delivered(rid, seq, Boolean.TRUE.equals(ok))))
+                .exceptionally(e -> null);
+    }
+
+    private void delivered(String rid, long seq, boolean ok) {
+        if (recording == null || !rid.equals(recording.recordingId())) {
+            return;
+        }
+        inFlight = Math.max(0, inFlight - 1);
+        delivered = Math.max(delivered, seq);
+        if (ok) {
+            accepted++;
+        } else {
+            rejected++;
+            rejectedSinceAck.add(seq);
+        }
+        ack();
+        publish();
+    }
+
+    /** ACK cumulativo: tudo até {@code delivered} foi processado pelo domínio (aceito ou recusado). */
+    private void ack() {
+        if (recording == null || !link.status().connected()) {
+            return;
+        }
+        if (ackInFlight) {
+            ackDirty = true;
+            return;
+        }
+        ackInFlight = true;
+        ackDirty = false;
+        String rid = recording.recordingId();
+        Json.Builder p = Json.obj().put("recordingId", rid).put("upToSequence", delivered);
+        if (!rejectedSinceAck.isEmpty()) {
+            p.put("rejected", List.copyOf(rejectedSinceAck.subList(0, Math.min(100, rejectedSinceAck.size()))));
+        }
+        int sent = Math.min(100, rejectedSinceAck.size());
+        link.send("studio.recording.steps.ack", p.build(), options.commandTimeout()).whenComplete((r, e) -> run(() -> {
+            ackInFlight = false;
+            if (recording == null || !rid.equals(recording.recordingId())) {
+                return;
+            }
+            if (e == null) {
+                rejectedSinceAck.subList(0, Math.min(sent, rejectedSinceAck.size())).clear();
+                Map<String, Object> st = Json.object(r, "steps");
+                if (st != null) {
+                    stepsState(st);
+                }
+            }
+            if (ackDirty || (e == null && !rejectedSinceAck.isEmpty())) {
+                ack();
+            }
+        }));
+    }
+
+    private void requestSync() {
+        if (syncing || recording == null || !link.status().connected()) {
+            return;
+        }
+        syncing = true;
+        String rid = recording.recordingId();
+        link.send("studio.recording.steps.sync", Map.of("recordingId", rid, "afterSequence", inbox.processed()), options.commandTimeout())
+                .whenComplete((r, e) -> run(() -> syncing = false));
+    }
+
+    /** As etapas desta gravação são roteadas por sessão (steps/1 pedido): trocar de sessão exige a extensão. */
+    private boolean routing() {
+        return sink != StepSink.NONE && !routes.isEmpty();
+    }
+
+    /**
+     * Troca de sessão lógica: rota nova, PENDENTE. O mapeamento rota → sessão é registrado já (eventos da rota nova só
+     * existem se a extensão a aplicou) e os das rotas antigas são preservados (eventos em trânsito).
+     */
+    private void requestRoute(SessionId session) {
+        pendingSession = session;
+        pendingRouteRef = "route-" + (++routeCounter);
+        pendingRouteOp = newOp();
+        routes.put(pendingRouteRef, session);
+        problem = null;
+        publish();
+        sendRoute();
+    }
+
+    private void sendRoute() {
+        if (pendingRouteOp == null || routeInFlight || recording == null || !link.status().connected()) {
+            return; // sem ligação: a reconciliação refaz o pedido quando ela voltar
+        }
+        routeInFlight = true;
+        String rid = recording.recordingId();
+        String op = pendingRouteOp;
+        link.send("studio.recording.route", Map.of("recordingId", rid, "operationId", op, "routeRef", pendingRouteRef), options.commandTimeout())
+                .whenComplete((p, e) -> run(() -> onRouteResult(rid, op, p, e)));
+    }
+
+    private void onRouteResult(String rid, String op, Map<String, Object> payload, Throwable error) {
+        if (recording == null || !rid.equals(recording.recordingId()) || !op.equals(pendingRouteOp)) {
+            return;
+        }
+        routeInFlight = false;
+        if (error == null) {
+            recording.associate(pendingSession, clock.instant()); // confirmada: só agora a associação muda
+            clearPendingRoute();
+            applyResult(payload);
+            publish();
+            nextQueuedRoute();
+            return;
+        }
+        BridgeCommandException x = cause(error);
+        if (unknownOutcome(x)) {
+            // Resultado desconhecido: nem sucesso nem falha. O mesmo pedido é refeito (renovação ou religação).
+            LOG.info("Troca de sessão sem resposta da extensão: reconciliando");
+            publish();
+            return;
+        }
+        clearPendingRoute();
+        queuedSession = null;
+        problem = new UserProblem(x.code(), "Sessão não alterada",
+                "O navegador não confirmou a troca de sessão. As próximas etapas continuam na sessão anterior.");
+        if (x.code() == BridgeError.RECORDING_ENDED || x.code() == BridgeError.RECORDING_NOT_FOUND || x.code() == BridgeError.INVALID_STATE
+                || sensorNotConfirmed(x)) {
+            recoverOrDegrade(); // a verdade vem da extensão (sem o sensor confirmado ela pode ter interrompido a captura)
+            return;
+        }
+        publish();
+    }
+
+    private void nextQueuedRoute() {
+        SessionId next = queuedSession;
+        queuedSession = null;
+        if (next != null && recording != null && state.active() && !recording.session().equals(next)) {
+            requestRoute(next);
+        }
+    }
+
+    private void clearPendingRoute() {
+        pendingSession = null;
+        pendingRouteRef = null;
+        pendingRouteOp = null;
+        routeInFlight = false;
+    }
+
+    /** Cancelamento CONFIRMADO: as etapas desta gravação saem do domínio numa única operação (depois das entregas). */
+    private void discardSteps() {
+        if (discarded || recording == null || sink == StepSink.NONE || !stepsEnabled && accepted == 0) {
+            return;
+        }
+        discarded = true;
+        halted = true;
+        com.nekkora.studio.domain.AutomationId automation = recording.automation();
+        String rid = recording.recordingId();
+        chain = chain.thenCompose(v -> sink.discardRecording(automation, rid).exceptionally(e -> 0)).thenAccept(n -> run(() -> {
+            if (recording != null && rid.equals(recording.recordingId())) {
+                accepted = 0;
+                publish();
+            }
+        })).exceptionally(e -> null);
+    }
+
+    /** Aguarda as entregas em andamento (usado em testes e na saída do Studio). */
+    CompletableFuture<Void> deliveries() {
+        CompletableFuture<Void> out = new CompletableFuture<>();
+        run(() -> chain.whenComplete((v, e) -> out.complete(null)));
+        return out;
     }
 
     // ================================================================================= concessão
@@ -596,6 +977,12 @@ public final class RecorderController implements AutoCloseable {
                     }
                     return;
                 }
+                Map<String, Object> steps = Json.object(p, "steps");
+                if (steps != null) {
+                    stepsState(steps);
+                    publish();
+                }
+                sendRoute(); // troca pendente com resultado desconhecido: reconcilia enquanto a extensão responde
                 String st = Json.string(p, "state");
                 if (st != null && !st.equals("RECORDING") && !st.equals("PAUSED") && !st.equals("DEGRADED") && state.active() && pendingOp == null) {
                     recoverOrDegrade(); // terminou do lado do navegador (ex.: expirou): a verdade vem da consulta
@@ -633,6 +1020,7 @@ public final class RecorderController implements AutoCloseable {
 
     private void clearRecordingKeepProblem() {
         stopRenew();
+        resetSteps();
         recording = null;
         mode = null;
         pendingMode = null;
@@ -646,6 +1034,11 @@ public final class RecorderController implements AutoCloseable {
         if (state == RecorderState.IDLE) {
             summary = null;
         }
+    }
+
+    /** A extensão não obteve a confirmação {active, epoch, mode} do sensor da página (nada foi dado como feito). */
+    private static boolean sensorNotConfirmed(BridgeCommandException x) {
+        return x.code() == BridgeError.CAPTURE_FAILED && "SENSOR_NOT_CONFIRMED".equals(x.reason());
     }
 
     private static boolean unknownOutcome(BridgeCommandException x) {
@@ -700,7 +1093,9 @@ public final class RecorderController implements AutoCloseable {
 
     private RecorderSnapshot build() {
         return new RecorderSnapshot(state, mode, pendingMode, recording == null ? null : recording.automation(),
-                recording == null ? null : recording.session(), tabTitle, tabHost, progress, reason, problem, summary, linkStatus);
+                recording == null ? null : recording.session(), tabTitle, tabHost, progress, reason, problem, summary, linkStatus,
+                stepsEnabled ? new StepProgress(true, accepted, inbox.buffered() + inFlight, rejected, lost, waiting) : StepProgress.NONE,
+                pendingSession);
     }
 
     private void publish() {

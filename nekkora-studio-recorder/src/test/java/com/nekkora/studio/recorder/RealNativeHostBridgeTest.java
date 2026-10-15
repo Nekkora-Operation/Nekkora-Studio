@@ -182,6 +182,10 @@ class RealNativeHostBridgeTest {
     void cadeiaReal() throws Exception {
         await(s -> s.link() != null && s.link().connected(), "host conectado e autenticado");
         assertEquals("0.4.0", server.status().extension().version());
+        long notified = System.currentTimeMillis() + 5000; // o aviso à extensão e o handshake correm por canais diferentes
+        while (fromHost.stream().noneMatch(m -> "studio.link".equals(m.get("type")) && "CONNECTED".equals(m.get("state"))) && System.currentTimeMillis() < notified) {
+            Thread.sleep(20);
+        }
         assertTrue(fromHost.stream().anyMatch(m -> "studio.link".equals(m.get("type")) && "CONNECTED".equals(m.get("state"))), "a extensão foi avisada");
         List<BrowserTab> tabs = recorder.listTabs().get(10, TimeUnit.SECONDS);
         assertEquals(1, tabs.size());
@@ -217,6 +221,69 @@ class RealNativeHostBridgeTest {
         assertEquals(LinkStatus.State.WAITING, server.status().state());
         assertEquals("CHROME_DISCONNECTED", server.status().detail());
         assertFalse(host.isAlive(), "o host termina quando o Chrome fecha a porta");
+    }
+
+    @Test
+    @DisplayName("STUDIO-003: etapa gravada atravessa o host real (privacidade reaplicada, contrato estrito) e o ACK volta à extensão")
+    void etapasPeloHostReal() throws Exception {
+        recorder.close();
+        List<com.nekkora.studio.domain.StepDraft> drafts = new CopyOnWriteArrayList<>();
+        StepSink sink = new StepSink() {
+            @Override
+            public java.util.concurrent.CompletableFuture<Boolean> deliver(com.nekkora.studio.domain.AutomationId a, com.nekkora.studio.domain.SessionId s,
+                    com.nekkora.studio.domain.StepDraft d) {
+                drafts.add(d);
+                return java.util.concurrent.CompletableFuture.completedFuture(true);
+            }
+
+            @Override
+            public java.util.concurrent.CompletableFuture<Integer> discardRecording(com.nekkora.studio.domain.AutomationId a, String rid) {
+                return java.util.concurrent.CompletableFuture.completedFuture(0);
+            }
+        };
+        recorder = new RecorderController(server, Clock.systemUTC(), new RecorderController.Options(Duration.ofSeconds(30), Duration.ofMillis(500),
+                Duration.ofSeconds(10), Duration.ofSeconds(20)), sink);
+        await(x -> x.link() != null && x.link().connected(), "host conectado");
+        List<BrowserTab> tabs = recorder.listTabs().get(10, TimeUnit.SECONDS);
+        Automation a = Automation.create("Consulta de clientes", "", Clock.systemUTC());
+        LogicalSession s = a.addSession("Autenticação", "");
+        recorder.start(new RecordingTarget(a.id(), s.id()), tabs.get(0), RecordingMode.CAPTURE_AND_INTERACT);
+        await(x -> x.state() == RecorderState.RECORDING, "RECORDING");
+        Map<String, Object> start = fromHost.stream().filter(m -> "studio.recording.start".equals(m.get("command"))).findFirst().orElseThrow();
+        assertEquals(List.of("steps/1"), Json.object(start, "payload").get("capabilities"), "capacidade passou pelo contrato do host");
+        String route = Json.string(Json.object(start, "payload"), "routeRef");
+        Map<String, Object> el = RecordedStepsTest.element("BUTTON", "Enviar para ana.souza@exemplo.com", "button", "enviar", false);
+        Map<String, Object> step = RecordedStepsTest.step(recordingId, 1, route, "CLICK", el, "CAPTURE_AND_INTERACT");
+        step.put("context", Json.obj().put("url", "http://127.0.0.1:18765/lab/x.html?token=abc123def456ghi789jkl").put("title", "Pedido").put("frame", "MAIN").build());
+        Map<String, Object> bad = RecordedStepsTest.step(recordingId, 2, route, "FILL", RecordedStepsTest.element("TEXT_INPUT", "Senha", "input", "s", true),
+                "CAPTURE_AND_INTERACT");
+        bad.put("parameters", Json.obj().put("valueCaptured", false).put("option", null).put("key", null).put("value", "s3nh@").build());
+        for (Map<String, Object> payload : List.of(step, bad)) {
+            send(Json.obj().put("protocol", "nekkora-nm/1").put("type", "studio.event").put("event", "studio.recording.step").put("payload", payload)
+                    .put("controller", Json.obj().put("instanceId", server.instanceId()).build()).build());
+        }
+        await(x -> x.steps().accepted() == 1, "etapa entregue ao domínio");
+        com.nekkora.studio.domain.StepDraft d = drafts.get(0);
+        assertFalse(d.element().accessibleName().contains("ana.souza@exemplo.com"), "host reaplicou a máscara: " + d.element().accessibleName());
+        assertFalse(d.context().location().contains("abc123def456ghi789jkl"), "host sanitizou a URL: " + d.context().location());
+        long deadline = System.currentTimeMillis() + 10000;
+        while (fromHost.stream().noneMatch(m -> "studio.recording.steps.ack".equals(m.get("command"))) && System.currentTimeMillis() < deadline) Thread.sleep(20);
+        Map<String, Object> ack = fromHost.stream().filter(m -> "studio.recording.steps.ack".equals(m.get("command"))).findFirst().orElseThrow();
+        assertEquals(1L, Json.number(Json.object(ack, "payload"), "upToSequence", -1), "ACK só depois do domínio, pelo host real");
+        Thread.sleep(500);
+        assertEquals(1, drafts.size(), "etapa fora do contrato (com valor) não atravessa o host");
+        StringBuilder logs = new StringBuilder(Files.readString(tmp.resolve("host-stderr.txt"), StandardCharsets.ISO_8859_1));
+        Path logDir = tmp.resolve("host-data").resolve("logs");
+        if (Files.isDirectory(logDir)) {
+            try (var files = Files.list(logDir)) {
+                for (Path f : files.filter(f -> f.toString().endsWith(".log")).toList()) {
+                    logs.append(Files.readString(f, StandardCharsets.ISO_8859_1)); // o .lck fica travado pelo host em execução
+                }
+            }
+        }
+        assertFalse(logs.toString().contains("s3nh@"), "nem nos logs do host");
+        assertTrue(logs.toString().contains("fora do contrato"), "recusa registrada (sem o conteúdo): " + logs.length() + " bytes de log");
+        recorder.cancel();
     }
 
     @Test

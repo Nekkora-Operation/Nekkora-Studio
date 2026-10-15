@@ -180,8 +180,9 @@ class RecorderStudioTest {
         assertTrue(panel.contains("Consulta de clientes") && panel.contains("Sistema de testes"), panel);
         assertEquals("Autenticação", Edt.call(() -> studio.recorderPresenter().panel().sessionCombo().getSelectedValue().name()));
         assertFalse(panel.contains("Em execução"), "o estado da gravação não fala em execução de automações");
-        assertTrue(panel.contains("Captura de ações: próxima versão"), "limitação explicada");
-        assertTrue(panel.contains("Configuração para a próxima etapa"), "modo identificado como configuração");
+        // STUDIO-003: este navegador simulado não anuncia a entrega de etapas (extensão anterior): gravação só técnica.
+        assertTrue(panel.contains("Captura de ações indisponível nesta gravação"), "limitação explicada: " + panel);
+        assertTrue(panel.contains("Capturar: registra o elemento sem executar a ação"), "o que cada modo faz");
     }
 
     @Test
