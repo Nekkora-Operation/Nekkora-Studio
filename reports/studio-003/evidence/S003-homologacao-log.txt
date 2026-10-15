@@ -1,0 +1,53 @@
+Tela: java.awt.Rectangle[x=0,y=0,width=1920,height=1032] · java 21.0.12
+Native Host instalado pelo script oficial (install-host.ps1)
+Chrome for Testing: 155.0.8059.39
+OK    Conexão autenticada Studio ⇄ host ⇄ extensão
+OK    Floating Recorder não roubou o foco do Studio
+OK    Cenário 1: Preencher Usuário, Preencher Senha, Clicar em Entrar
+OK    S003-013 senha sem valor literal no domínio
+OK    S003-034 etapas RECORDED pelo StepIntake
+OK    S003-026 'Entrar' com localizador validado
+OK    S003-020 envio do formulário como evidência do clique (sem segundo clique)
+OK    S003-017 Floating Recorder com a contagem real
+OK    S003-004 a página seguiu para a consulta (ação executada)
+captura S003-01-login-etapas.png (1920x1000)
+OK    Cenário 2/6: Clicar em Clientes, Selecionar São Paulo, Preencher Pesquisa, Clicar em Pesquisar na sessão Consulta
+OK    S003-033 nenhuma etapa da Consulta caiu na Autenticação
+OK    S003-016 select e option em UMA etapa com a opção como parâmetro
+captura S003-02-consulta-detalhes-select.png (1920x1000)
+OK    Cenário 3/S003-003: CAPTURE_ONLY não executou a ação
+OK    Cenário 3: etapa proposta (não executada)
+captura S003-03-capture-only-proposta.png (1920x1000)
+OK    S003-043 eventos programáticos não viram etapas (só o clique real)
+OK    S003-027 alvo ambíguo marcado como não classificado, sem identidade inventada
+OK    Finalizar: captura de ações completa e PageMap não exportado
+captura S003-04-resumo-finalizado.png (400x505)
+OK    Cenário 4: etapas do iframe com trajetória que entra no iframe
+OK    S003-024: Shadow DOM com trajetória pelo shadow root; clique no ícone identifica o botão
+captura S003-05-iframe-trajetoria.png (1920x1000)
+OK    S003-025 iframe sem permissão: cobertura parcial declarada
+OK    Cenário 5: ações antes e depois da troca de rota em ordem
+OK    Cenário 7: desconexão mostrada como estado real
+captura S003-06-desconectado.png (1920x1000)
+OK    S003-029/030 após reconexão nenhuma etapa duplicada
+OK    Cenário 7: aba fechada mostrada como estado real (TAB_CLOSED)
+captura S003-07-aba-fechada.png (1920x1000)
+Acesso ao site http://site-a.nekkora.test/* → revogado pelo controle do Chrome
+OK    Cenário 7 / S003-040: revogação → DEGRADED (PERMISSION_REVOKED)
+captura S003-08-permissao-revogada.png (1920x1000)
+Acesso ao site http://site-a.nekkora.test/* → concedido pelo controle do Chrome
+OK    S003-038 cancelar descarta só a gravação cancelada (as anteriores ficam)
+OK    S003-036 nenhum identificador interno na tela
+OK    S003-037 'S…' ausente do domínio, da tela, do armazenamento da extensão e dos logs do host
+OK    S003-037 'a…' ausente do domínio, da tela, do armazenamento da extensão e dos logs do host
+captura S003-09-detalhes-senha-sem-valor.png (1920x1000)
+captura S003-10-tema-sakura-dark.png (400x505)
+captura S003-10-tema-midnight-dark.png (400x505)
+captura S003-10-tema-porcelain-light.png (400x505)
+captura S003-10-tema-sage-light.png (400x505)
+captura S003-11-automacao-final.png (1920x1000)
+Automação final:
+  Sessão Autenticação: [Preencher campo Usuário, Preencher campo Senha, Clicar no botão Entrar]
+  Sessão Consulta: [Clicar no link Clientes, Selecionar São Paulo no campo Estado, Preencher campo Pesquisa, Clicar no botão Pesquisar, Clicar no botão Adicionar linha, Clicar no botão Preencher automaticamente, Interação não classificada em <span>]
+  Sessão Componentes: [Preencher campo Nome, Clicar no botão Salvar cadastro, Preencher campo Usuário do componente, Clicar no botão → Entrar, Clicar no botão Clientes, Preencher campo Filtro, Clicar no botão Filtrar, Clicar no botão Filtrar]
+RESULTADO: 29 verificações, 0 falha(s)
