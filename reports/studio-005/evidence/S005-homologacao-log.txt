@@ -1,0 +1,73 @@
+Tela: java.awt.Rectangle[x=0,y=0,width=1920,height=1032] · java 21.0.12
+Native Host instalado pelo script oficial (install-host.ps1)
+Chrome for Testing: 155.0.8059.39
+OK    Conexão autenticada Studio ⇄ host ⇄ extensão
+OK    S005-003 evidence/1 negociada com a extensão real
+OK    Cenário 1: mensagem de erro associada ao clique em Entrar (indicador de erro, texto liberado)
+OK    Cenário 1: envio do formulário observado diretamente
+OK    S005-034 resumo estruturado: mudanças observadas, indicador de erro, negócio NÃO validado
+OK    S005-027/033 a etapa não foi editada pela evidência (nome, tipo, original)
+OK    S005-020 mensagem que já estava na tela não virou evidência
+OK    S005-062 (bloqueio S004) automação bloqueada para edição enquanto recebe evidências
+OK    S005-057 Floating Recorder mostra Evidências e Última observação
+captura S005-01-floating-evidencias.png (400x551)
+OK    S005-058 painel: grupo Evidências com a mensagem e 'Resultado de negócio: Não validado'
+captura S005-02-login-erro-painel.png (1920x1000)
+OK    Cenário 2: mensagem 1 s depois associada à etapa (status, não sucesso de negócio)
+  do início do gesto de clique até a mensagem tardia observada: 1930 ms (o clique em si acontece ~0,9 s depois do início)
+OK    Cenário 2: observada depois do atraso de 1 s da página e dentro da janela de 3 s
+OK    S005-034/064 'sucesso' no texto não vira resultado de negócio
+OK    Cenário 3: um aviso com duas ações candidatas fica SEM etapa (nenhuma escolhida)
+OK    Cenário 3: nenhuma das duas etapas recebeu o aviso
+OK    Cenário 3: painel da automação lista a evidência sem etapa definida
+captura S005-03-ambigua-sem-etapa.png (1920x1000)
+OK    Cenário 4: CEP inválido ao sair do campo (aria-invalid, observado diretamente)
+OK    Cenário 4: e-mail obrigatório pela validação nativa (sem reportValidity)
+OK    Cenário 4: formulário não enviado
+captura S005-04-validacao.png (1920x1000)
+OK    Cenário 5: carregamento → fim → conteúdo → contagem, sem concluir sucesso
+OK    Cenário 5: conteúdo da lista não saiu da página
+captura S005-05-pesquisa-carregamento.png (1920x1000)
+OK    Cenário 6: rota alterada no mesmo documento (History API)
+OK    Cenário 6: aria-expanded false → true observado no próprio botão
+OK    Cenário 6: novo documento e janela INCOMPLETA (WINDOW_CUT_BY_NAVIGATION)
+captura S005-06-spa-estado.png (1920x1000)
+OK    Cenário 7: mensagem do iframe autorizado é da ação no iframe (documento FRAME)
+OK    Cenário 7: clique no iframe sem permissão não gerou etapa nem evidência
+OK    Cenário 7: aviso escrito no iframe pelo principal NÃO foi atribuído à ação do principal
+OK    Cenário 7: iframe sem permissão → cobertura parcial declarada
+captura S005-07-iframe.png (1920x1000)
+OK    Cenário 8: 7 mensagens observadas; só 'Senha incorreta.' (sem a marcação HTML) teve o texto liberado
+OK    Cenário 8: as outras 6 com o texto omitido por privacidade
+captura S005-08-sensivel-omitido.png (1920x1000)
+OK    S005-039/057 resumo com evidências e negócio não validado
+captura S005-09-resumo-com-evidencias.png (400x551)
+OK    S005-047 'Sen…' ausente do domínio, da tela, do armazenamento da extensão e dos logs do host
+OK    S005-047 'ana…' ausente do domínio, da tela, do armazenamento da extensão e dos logs do host
+OK    S005-047 'Joa…' ausente do domínio, da tela, do armazenamento da extensão e dos logs do host
+OK    S005-047 'Kq7…' ausente do domínio, da tela, do armazenamento da extensão e dos logs do host
+OK    S005-047 '123…' ausente do domínio, da tela, do armazenamento da extensão e dos logs do host
+OK    S005-047 'ana…' ausente do domínio, da tela, do armazenamento da extensão e dos logs do host
+OK    S005-047 'eyJ…' ausente do domínio, da tela, do armazenamento da extensão e dos logs do host
+OK    S005-047 '<b>…' ausente do domínio, da tela, do armazenamento da extensão e dos logs do host
+OK    S005-050 nenhum identificador interno na tela
+OK    S005-058/062 aba Evidências é a última (abas anteriores nas mesmas posições)
+OK    Cenário 9: linha do tempo com horário real, mensagem e negócio não validado
+captura S005-10-aba-evidencias.png (760x964)
+OK    S005-031 desfazer não apagou evidências
+OK    S005-032 refazer não reaplicou nem duplicou evidências
+OK    S005-030 duplicada sem evidências (não é interação observada)
+OK    S005-029 mover preserva as evidências
+OK    Cenário 10: pausa corta a janela (INCOMPLETA, WINDOW_CUT_BY_PAUSE)
+OK    Cenário 10: mensagem que apareceu durante a pausa não virou evidência
+OK    S005-025 após reconexão nenhuma evidência duplicada
+  evidências da etapa depois da reconexão: [OBSERVATION_COMPLETE]
+captura S005-11-falhas.png (1920x1000)
+OK    S005-040 cancelar descarta etapas e evidências desta gravação (as anteriores ficam)
+captura S005-12-automacao-final.png (1920x1000)
+Automação final:
+  Sessão Autenticação: [Preencher campo Usuário, Preencher campo Senha, Entrar no sistema, Clicar no botão Enviar pedido, Clicar no botão Atualizar, Clicar no botão Sincronizar]
+  Sessão Consulta: [Entrar no sistema, Preencher campo CEP, Clicar no botão Cadastrar, Preencher campo Termo, Clicar no botão Pesquisar, Clicar no botão Clientes, Clicar no botão Filtros, Clicar no link Ir para pedidos]
+  Sessão Quadros: [Clicar no botão Salvar rascunho, Clicar no botão Avisar no quadro, Preencher campo Nome, Preencher campo Código de acesso, Clicar no botão Verificar CPF, Clicar no botão Reenviar código, Clicar no botão Sessão, Clicar no botão Saudar, Clicar no botão Validar código, Clicar no botão Termos, Clicar no botão Marcação]
+  Sessão Falhas: []
+RESULTADO: 50 verificações, 0 falha(s)
