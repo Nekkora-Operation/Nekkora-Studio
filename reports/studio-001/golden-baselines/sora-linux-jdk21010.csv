@@ -1,0 +1,46 @@
+nivel;texto;metrica;tinta;preferida;tinta/metrica;cortaria_sem_folga;cortaria_com_folga
+DISPLAY_L;Nova etapa;174;172;184;0.989;não;não
+DISPLAY_L;Nova automação;257;256;272;0.996;não;não
+DISPLAY_L;Editar etapa;184;183;195;0.995;não;não
+DISPLAY_L;Renomear sessão;266;265;282;0.996;não;não
+DISPLAY_L;Propriedades;207;208;219;1.005;SIM;não
+DISPLAY_L;Automações;192;192;204;1.000;não;não
+DISPLAY_L;Sessões lógicas;239;239;253;1.000;não;não
+DISPLAY_L;Nekkora — composição de referência;564;562;598;0.996;não;não
+DISPLAY_L;Wwwmmm;171;171;181;1.000;não;não
+DISPLAY_L;rrrfff;70;72;74;1.029;SIM;não
+DISPLAY_L;Configurações avançadas;390;390;413;1.000;não;não
+DISPLAY_M;Nova etapa;138;137;146;0.993;não;não
+DISPLAY_M;Nova automação;204;204;216;1.000;não;não
+DISPLAY_M;Editar etapa;145;144;154;0.993;não;não
+DISPLAY_M;Renomear sessão;211;212;224;1.005;SIM;não
+DISPLAY_M;Propriedades;165;165;175;1.000;não;não
+DISPLAY_M;Automações;154;154;163;1.000;não;não
+DISPLAY_M;Sessões lógicas;191;192;202;1.005;SIM;não
+DISPLAY_M;Nekkora — composição de referência;452;451;479;0.998;não;não
+DISPLAY_M;Wwwmmm;137;136;145;0.993;não;não
+DISPLAY_M;rrrfff;56;56;59;1.000;não;não
+DISPLAY_M;Configurações avançadas;312;313;331;1.003;SIM;não
+H1;Nova etapa;118;117;125;0.992;não;não
+H1;Nova automação;177;176;188;0.994;não;não
+H1;Editar etapa;125;124;133;0.992;não;não
+H1;Renomear sessão;180;179;191;0.994;não;não
+H1;Propriedades;139;139;147;1.000;não;não
+H1;Automações;132;132;140;1.000;não;não
+H1;Sessões lógicas;164;164;174;1.000;não;não
+H1;Nekkora — composição de referência;381;380;404;0.997;não;não
+H1;Wwwmmm;117;116;124;0.991;não;não
+H1;rrrfff;48;48;51;1.000;não;não
+H1;Configurações avançadas;268;268;284;1.000;não;não
+H2;Nova etapa;92;92;98;1.000;não;não
+H2;Nova automação;138;138;146;1.000;não;não
+H2;Editar etapa;98;98;104;1.000;não;não
+H2;Renomear sessão;145;145;154;1.000;não;não
+H2;Propriedades;112;112;119;1.000;não;não
+H2;Automações;105;105;111;1.000;não;não
+H2;Sessões lógicas;132;132;140;1.000;não;não
+H2;Nekkora — composição de referência;306;306;324;1.000;não;não
+H2;Wwwmmm;93;92;99;0.989;não;não
+H2;rrrfff;39;39;41;1.000;não;não
+H2;Configurações avançadas;210;210;223;1.000;não;não
+RESUMO: 44 títulos; maior tinta/métrica = 1.029; cortados sem folga = 5; cortados com folga de 6% = 0

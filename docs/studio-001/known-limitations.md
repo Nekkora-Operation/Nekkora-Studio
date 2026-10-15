@@ -18,12 +18,18 @@
 
 - **Toolbar fora da ordem de Tab**: padrão do FlatLaf (`ToolBar.focusableButtons`). Todas as ações da toolbar têm
   atalho e equivalente focável no conteúdo.
-- **Folga de 6% em títulos Sora** (`NekkoraTextLabel`): heurística medida no Windows; em outros sistemas a diferença de
-  métricas pode ser outra. Títulos em Inter não mudam.
-- **Golden screenshots**: as imagens de referência do Windows usadas na comparação já existiam localmente e **não são
-  versionadas** (`golden/windows/` estava fora do Git antes desta missão e assim permaneceu). As de Linux, versionadas,
-  não puderam ser verificadas nesta máquina; o único rótulo Sora da composição golden é o título do topo, sem nada à
-  direita, então não se espera deslocamento — a confirmar no próximo build Linux.
+- **Folga de 6% em títulos Sora** (`NekkoraTextLabel`): heurística medida na janela real do Windows (~4%). No Linux,
+  a medição foi headless (até 2,9%, nenhum título cortado), porque não houve janela real Linux. Títulos em Inter não
+  mudam.
+- **Golden screenshots** (situação em 2026-10-14, PR #2): os dois baselines estão versionados.
+  - Windows: as 4 imagens originais de 2026-09-26 (Microsoft OpenJDK 21.0.12), as mesmas usadas como referência
+    durante a STUDIO-001, versionadas sem regeneração.
+  - Linux: regravadas no ambiente de referência fixado por digest (Temurin 21.0.12.1+1, `tools/golden-linux.sh`). As
+    anteriores correspondiam ao JDK 21.0.10, e a partir do 21.0.11 a métrica dos títulos em Sora mudou.
+  - A STUDIO-001 não altera a composição golden em nenhum dos dois sistemas.
+  - A folga de títulos foi verificada também no Linux.
+  - Os golden são sensíveis à versão do JDK: fora do ambiente de referência, uma diferença pode vir do JDK. Detalhes
+    em `reports/studio-001-golden-baselines-report.md`.
 - **150%**: a tela disponível é 1920×1080 (área útil 1920×1032). A execução real a 150% usou 1920×1032 físicos
   (≈1280×688 lógicos); 1366×768 lógicos a 150% (2049×1152 físicos) não cabem nesta tela e foram verificados de forma
   headless por `Scale150Test`.

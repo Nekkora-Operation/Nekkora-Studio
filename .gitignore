@@ -10,3 +10,6 @@ target/
 .DS_Store
 out/
 build/
+
+# Renderizações geradas quando um golden screenshot falha (diagnóstico local)
+*.actual.png
