@@ -48,6 +48,8 @@ public final class AutomationStep {
     private List<StepComment> comments;
     private Map<StepField, Instant> edits = Map.of();
     private Instant lastManualChange;
+    /** Estado efetivo imutável atual, compartilhado pelas fotografias do histórico enquanto a etapa não muda. */
+    private State cached;
 
     AutomationStep(StepId id, String name, String description, StepDraft draft, Instant createdAt) {
         this(id, name, description, draft, createdAt, null);
@@ -173,10 +175,12 @@ public final class AutomationStep {
 
     /** Fotografia imutável do estado efetivo (histórico de edição em memória). */
     State state() {
-        return new State(name, description, actionType, parameters, element, manualLocators, comments, edits, lastManualChange);
+        if (cached == null) cached = new State(name, description, actionType, parameters, element, manualLocators, comments, edits, lastManualChange);
+        return cached;
     }
 
     void apply(State s) {
+        cached = s;
         this.name = s.name();
         this.description = s.description();
         this.actionType = s.actionType();

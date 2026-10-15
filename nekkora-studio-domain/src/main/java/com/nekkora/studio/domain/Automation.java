@@ -463,13 +463,16 @@ public final class Automation {
      * identidades, sem criar novas. Só contém estados que o domínio aceitou.
      */
     public Snapshot snapshot() {
-        java.util.Map<AutomationStep, AutomationStep.State> steps = new java.util.IdentityHashMap<>();
-        List<LogicalSession.State> sessionStates = new ArrayList<>();
+        List<LogicalSession.State> sessionStates = new ArrayList<>(sessions.size());
+        List<AutomationStep.State[]> stepStates = new ArrayList<>(sessions.size());
         for (LogicalSession s : sessions) {
-            sessionStates.add(s.state());
-            for (AutomationStep st : s.steps()) steps.put(st, st.state());
+            LogicalSession.State st = s.state();
+            sessionStates.add(st);
+            AutomationStep.State[] states = new AutomationStep.State[st.steps().size()];
+            for (int i = 0; i < states.length; i++) states[i] = st.steps().get(i).state(); // compartilhado enquanto a etapa não muda
+            stepStates.add(states);
         }
-        return new Snapshot(this, revision, name, description, List.copyOf(sessions), sessionStates, steps);
+        return new Snapshot(this, revision, name, description, List.copyOf(sessions), sessionStates, stepStates);
     }
 
     /**
@@ -484,8 +487,12 @@ public final class Automation {
         this.description = snapshot.description;
         sessions.clear();
         sessions.addAll(snapshot.sessions);
-        for (int i = 0; i < snapshot.sessions.size(); i++) snapshot.sessions.get(i).apply(snapshot.sessionStates.get(i));
-        snapshot.steps.forEach(AutomationStep::apply);
+        for (int i = 0; i < snapshot.sessions.size(); i++) {
+            LogicalSession.State st = snapshot.sessionStates.get(i);
+            snapshot.sessions.get(i).apply(st);
+            AutomationStep.State[] states = snapshot.stepStates.get(i);
+            for (int j = 0; j < states.length; j++) st.steps().get(j).apply(states[j]);
+        }
         touch();
     }
 
@@ -497,17 +504,17 @@ public final class Automation {
         private final String description;
         private final List<LogicalSession> sessions;
         private final List<LogicalSession.State> sessionStates;
-        private final java.util.Map<AutomationStep, AutomationStep.State> steps;
+        private final List<AutomationStep.State[]> stepStates;
 
         private Snapshot(Automation owner, long revision, String name, String description, List<LogicalSession> sessions,
-                List<LogicalSession.State> sessionStates, java.util.Map<AutomationStep, AutomationStep.State> steps) {
+                List<LogicalSession.State> sessionStates, List<AutomationStep.State[]> stepStates) {
             this.owner = owner;
             this.revision = revision;
             this.name = name;
             this.description = description;
             this.sessions = sessions;
             this.sessionStates = sessionStates;
-            this.steps = steps;
+            this.stepStates = stepStates;
         }
 
         /** Revisão da automação no instante da fotografia. */

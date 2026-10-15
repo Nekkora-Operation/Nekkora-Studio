@@ -104,18 +104,27 @@ public final class EditHistory {
         return Optional.ofNullable(redo.getOrDefault(id, new ArrayDeque<>()).peek());
     }
 
-    /** Desfeita: a entrada passa para a pilha de refazer, esperando a revisão atual. */
+    /**
+     * Desfeita: a entrada passa para a pilha de refazer, esperando a revisão atual. A automação voltou ao estado "antes"
+     * dela; se a entrada anterior (agora no topo) terminou exatamente nesse estado — nada aconteceu entre as duas —, ela
+     * passa a esperar a revisão atual (restaurar conta revisão). Se houve uma alteração externa entre elas (ex.: etapas
+     * do Recorder), a anterior continua esperando a revisão antiga e será recusada como conflito.
+     */
     void undone(AutomationId id, long revisionNow) {
         Entry e = undo.get(id).pop();
         e.expect(revisionNow);
         redo.computeIfAbsent(id, k -> new ArrayDeque<>()).push(e);
+        Entry previous = undo.get(id).peek();
+        if (previous != null && previous.after().revision() == e.before().revision()) previous.expect(revisionNow);
     }
 
-    /** Refeita: volta para a pilha de desfazer. */
+    /** Refeita: volta para a pilha de desfazer; a próxima a refazer, se começa no estado atual, espera a revisão atual. */
     void redone(AutomationId id, long revisionNow) {
         Entry e = redo.get(id).pop();
         e.expect(revisionNow);
         undo.computeIfAbsent(id, k -> new ArrayDeque<>()).push(e);
+        Entry next = redo.get(id).peek();
+        if (next != null && next.before().revision() == e.after().revision()) next.expect(revisionNow);
     }
 
     /** Descarta o histórico da automação (conflito com uma alteração externa). */
