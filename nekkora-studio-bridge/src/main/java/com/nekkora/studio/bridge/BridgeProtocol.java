@@ -12,12 +12,16 @@ public final class BridgeProtocol {
 
     public static final List<String> COMMANDS = List.of("bridge.status", "bridge.heartbeat", "browser.tabs.list",
             "studio.recording.start", "studio.recording.pause", "studio.recording.resume", "studio.recording.mode",
-            "studio.recording.finish", "studio.recording.cancel", "studio.recording.status", "studio.recording.renew");
+            "studio.recording.finish", "studio.recording.cancel", "studio.recording.status", "studio.recording.renew",
+            // STUDIO-003: entrega confiável das etapas gravadas e rota de sessão lógica
+            "studio.recording.steps.ack", "studio.recording.steps.sync", "studio.recording.route");
 
     public static final List<String> EVENTS = List.of("bridge.connected", "bridge.disconnected",
             "studio.recording.started", "studio.recording.paused", "studio.recording.resumed", "studio.recording.modeChanged",
             "studio.recording.finished", "studio.recording.cancelled", "studio.recording.degraded", "studio.recording.recovered",
-            "studio.recording.failed", "studio.recording.expired");
+            "studio.recording.failed", "studio.recording.expired",
+            // STUDIO-003: etapa gravada
+            "studio.recording.step");
 
     public static final List<String> RECORDING_STATES = List.of("RECORDING", "PAUSED", "DEGRADED", "COMPLETED", "CANCELLED", "EXPIRED", "FAILED");
 

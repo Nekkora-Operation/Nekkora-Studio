@@ -36,6 +36,10 @@ final class FakeBrowser implements BrowserLink {
     String mode = "CAPTURE_ONLY";
     String recordingId;
     long clock = 0;
+    /** A extensão anuncia a entrega de etapas quando o início pediu steps/1 (STUDIO-003). */
+    boolean stepsEnabled;
+    /** Simula a extensão da STUDIO-002: recusa o início com a capacidade steps/1 (campo fora do contrato). */
+    boolean legacy;
     int otherConsumers = 0;
 
     @Override
@@ -77,6 +81,11 @@ final class FakeBrowser implements BrowserLink {
         String rid = Json.string(c.payload(), "recordingId");
         switch (c.type()) {
             case "studio.recording.start" -> {
+                if (legacy && c.payload().containsKey("capabilities")) {
+                    c.future().completeExceptionally(new BridgeCommandException(BridgeError.BAD_REQUEST, "Comando fora do contrato nekkora-bridge/1.", null, false));
+                    return null;
+                }
+                stepsEnabled = c.payload().containsKey("capabilities");
                 recordingId = rid;
                 state = "RECORDING";
                 mode = Json.string(c.payload(), "mode");
@@ -123,7 +132,7 @@ final class FakeBrowser implements BrowserLink {
     Map<String, Object> recording() {
         clock += 1000;
         boolean attached = "RECORDING".equals(state);
-        return Json.obj().put("recordingId", recordingId).put("state", state).put("mode", mode)
+        return withSteps(Json.obj().put("recordingId", recordingId).put("state", state).put("mode", mode)
                 .put("tab", Json.obj().put("tabRef", "t-AAAAAAAAAA").put("title", "Sistema de testes").put("host", "127.0.0.1").build())
                 .put("capture", Json.obj().put("recorderAttached", attached).put("otherConsumers", otherConsumers)
                         .put("captureStatus", attached || otherConsumers > 0 ? "ACTIVE" : null).build())
@@ -131,7 +140,15 @@ final class FakeBrowser implements BrowserLink {
                 .put("counters", Json.obj().put("segments", 1).put("technicalCaptures", 1).put("synchronizations", 3).put("recoveries", 0).build())
                 .put("lease", Json.obj().put("leaseMs", 30000).put("expiresInMs", 30000).build())
                 .put("startedAt", Instant.ofEpochMilli(0).toString()).put("updatedAt", Instant.ofEpochMilli(clock).toString())
-                .put("reason", null).build();
+                .put("reason", null).build());
+    }
+
+    /** Fotografia da gravação; com steps/1 negociado, inclui o estado da entrega (como a extensão real). */
+    private Map<String, Object> withSteps(Map<String, Object> rec) {
+        if (stepsEnabled) {
+            rec.put("steps", Json.obj().put("enabled", true).put("lastSequence", 0).put("ackedSequence", 0).put("pending", 0).put("lost", 0).build());
+        }
+        return rec;
     }
 
     Map<String, Object> summary(String outcome) {
