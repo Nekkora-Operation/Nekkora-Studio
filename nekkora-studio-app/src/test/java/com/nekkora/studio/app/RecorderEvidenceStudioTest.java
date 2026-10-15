@@ -260,6 +260,15 @@ class RecorderEvidenceStudioTest {
         assertEquals(6, Edt.call(() -> form.tabs().getTabCount()));
         assertEquals("Origem e alterações", Edt.call(() -> form.tabs().getTitleAt(4)), "abas existentes nas mesmas posições");
         assertEquals("Evidências", Edt.call(() -> form.tabs().getTitleAt(StepDetailsForm.EVIDENCE_TAB)), "Evidências é a última aba");
+        // as seis abas cabem na largura útil do diálogo grande (760 lógicos − margens = 700), na escala da tela em uso,
+        // sem esconder "Geral" atrás das setas de rolagem
+        Edt.render(form, com.nekkora.ui.theme.Scale.px(700), com.nekkora.ui.theme.Scale.px(640));
+        for (int i = 0; i < 6; i++) {
+            int index = i;
+            java.awt.Rectangle r = Edt.call(() -> form.tabs().getBoundsAt(index));
+            int width = Edt.call(() -> form.tabs().getWidth());
+            assertTrue(r != null && r.x >= 0 && r.x + r.width <= width, "aba " + index + " visível sem rolagem: " + r + " em " + width);
+        }
         Edt.run(() -> form.tabs().setSelectedIndex(StepDetailsForm.EVIDENCE_TAB));
         String tab = StudioFixture.texts(Edt.call(() -> (JComponent) form.tabs().getComponentAt(StepDetailsForm.EVIDENCE_TAB)));
         assertTrue(tab.contains("Linha do tempo") && tab.contains("Usuário ou senha inválidos.") && tab.contains("Não validado"), tab);

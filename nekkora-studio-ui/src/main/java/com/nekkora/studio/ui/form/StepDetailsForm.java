@@ -273,6 +273,9 @@ public final class StepDetailsForm extends StudioForm<StepDetailsForm.Values> {
         // ------------------------------------------------ Evidências (STUDIO-005): somente leitura e ÚLTIMA aba — as
         // posições das abas anteriores não mudam
         tabs.addTab("Evidências", IconName.EYE, evidenceTab(step));
+        // seis abas cabem na largura do diálogo sem rolagem (nenhuma aba fica escondida atrás das setas): só o espaçamento
+        // horizontal de cada aba diminui — títulos, ícones e ordem continuam os mesmos
+        tabs.putClientProperty("JTabbedPane.tabInsets", new java.awt.Insets(4, 8, 4, 8));
         add(tabs);
 
         load(step);
