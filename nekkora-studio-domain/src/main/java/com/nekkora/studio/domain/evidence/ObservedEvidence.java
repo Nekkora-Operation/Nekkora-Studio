@@ -110,8 +110,28 @@ public record ObservedEvidence(String evidenceId, long sequence, String recordin
                 return none();
             }
             String t = text.strip();
-            return t.length() <= MESSAGE_MAX && DisplaySafety.isSafeToDisplay(t) && !t.matches("(?s).*\\d{4,}.*") ? new Message(Availability.AVAILABLE, t)
-                    : suppressed();
+            return t.length() <= MESSAGE_MAX && DisplaySafety.isSafeToDisplay(t) && !t.matches("(?s).*\\d{4,}.*") && !looksIdentifying(t)
+                    ? new Message(Availability.AVAILABLE, t) : suppressed();
+        }
+
+        /**
+         * Fail-closed pela forma (revisão do PR #6 da extensão), a mesma regra das outras barreiras: palavra com letras e
+         * dígitos, palavra com maiúscula interna ou nome próprio fora do início da frase.
+         */
+        static boolean looksIdentifying(String text) {
+            for (String sentence : text.split("[.!?…]+\\s*")) {
+                int i = 0;
+                for (String w : sentence.strip().split("[\\s,;:()\"“”'’«»/–—-]+")) {
+                    if (w.isEmpty()) {
+                        continue;
+                    }
+                    if (w.matches("(?=.*\\d)(?=.*\\p{L}).*") || w.matches(".*\\p{Ll}\\p{Lu}.*") || (i > 0 && w.matches("\\p{Lu}\\p{Ll}+.*"))) {
+                        return true;
+                    }
+                    i++;
+                }
+            }
+            return false;
         }
     }
 

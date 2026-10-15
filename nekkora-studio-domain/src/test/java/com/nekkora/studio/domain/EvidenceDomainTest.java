@@ -127,6 +127,11 @@ class EvidenceDomainTest {
         assertEquals(Message.Availability.SUPPRESSED, Message.of("Enviamos para ana.souza@exemplo.com").availability());
         assertEquals(Message.Availability.SUPPRESSED, Message.of("Conta 98765432 bloqueada").availability());
         assertEquals(Message.Availability.SUPPRESSED, Message.of("x".repeat(161)).availability());
+        // revisão do PR #6 da extensão: valor repetido pela página e dado de terceiro (fail-closed pela forma)
+        assertEquals(Message.Availability.SUPPRESSED, Message.of("O código Kq7Segredo expirou.").availability());
+        assertEquals(Message.Availability.SUPPRESSED, Message.of("Olá, JoanaPrado!").availability());
+        assertEquals(Message.Availability.SUPPRESSED, Message.of("Cliente Maria Souza já possui cadastro.").availability());
+        assertEquals(Message.Availability.AVAILABLE, Message.of("Informe o CEP.").availability());
         assertThrows(IllegalArgumentException.class, () -> new Message(Message.Availability.AVAILABLE, "token eyJhbGciOiJIUzI1NiJ9abcdef.eyJzdWIiOiIxMjM0.abcdefghij"));
         assertThrows(IllegalArgumentException.class, () -> new Message(Message.Availability.SUPPRESSED, "texto"), "suprimida não tem texto");
         ObservedEvidence e = new ObservedEvidence("evd-1", 1, "rec-1", "ev-1", T, EvidenceType.VALIDATION_FEEDBACK, Source.FORM_OBSERVER, Relation.AFTER_ACTION,
