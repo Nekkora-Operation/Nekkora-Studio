@@ -118,6 +118,6 @@ final class Cdp implements AutoCloseable {
 
     @Override
     public void close() {
-        http.close();
+        http.shutdownNow(); // close() esperaria os WebSockets ainda abertos
     }
 }

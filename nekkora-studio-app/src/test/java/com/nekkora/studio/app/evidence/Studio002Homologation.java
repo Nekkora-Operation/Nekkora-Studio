@@ -785,6 +785,8 @@ public final class Studio002Homologation {
 
     private void teardown() {
         try {
+            if (harness != null) harness.close();
+            if (panel != null) panel.close();
             if (cdp != null) cdp.close();
         } catch (RuntimeException ignored) {
             // encerramento
