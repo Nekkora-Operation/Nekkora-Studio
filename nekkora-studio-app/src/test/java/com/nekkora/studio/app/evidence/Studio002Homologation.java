@@ -760,6 +760,7 @@ public final class Studio002Homologation {
     private static void collectTexts(Component c, StringBuilder b) {
         if (c instanceof javax.swing.JLabel l && l.getText() != null) b.append(l.getText()).append('\n');
         if (c instanceof AbstractButton ab && ab.getText() != null) b.append(ab.getText()).append('\n');
+        if (c instanceof JTextComponent t && t.getText() != null) b.append(t.getText()).append('\n'); // parágrafos (avisos)
         if (c instanceof Container ct) for (Component ch : ct.getComponents()) collectTexts(ch, b);
     }
 

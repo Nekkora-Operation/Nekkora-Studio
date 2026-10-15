@@ -89,9 +89,10 @@ public final class BridgeDirectory {
             acl.setAcl(List.of(b.build()));
             return;
         }
-        PosixFileAttributeView posix = Files.getFileAttributeView(p, PosixFileAttributeView.class, LinkOption.NOFOLLOW_LINKS);
-        if (posix != null) {
-            posix.setPermissions(PosixFilePermissions.fromString(directory ? "rwx------" : "rw-------"));
+        if (Files.getFileAttributeView(p, PosixFileAttributeView.class) != null) {
+            // chmod pelo caminho: com NOFOLLOW_LINKS o Java abre o arquivo, e abrir um Unix Domain Socket falha (ENXIO).
+            // O próprio diretório já é 700 (criado/restringido antes): ninguém mais alcança o que está dentro dele.
+            Files.setPosixFilePermissions(p, PosixFilePermissions.fromString(directory ? "rwx------" : "rw-------"));
         }
     }
 
