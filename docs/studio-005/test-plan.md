@@ -78,8 +78,10 @@ Os nomes dos testes começam pelo número da matriz (ex.: `test('S005-021 — �
 | S005-059 | Acessibilidade | A `s005AcessibilidadeETemas` |
 | S005-060 | Quatro temas | A `s005AcessibilidadeETemas` |
 | S005-061 | Golden screenshots preservados | suíte do Studio (golden tests existentes, sem ajuste) |
-| S005-062 | Regressão STUDIO-001 a 004 | Studio 337/337 Windows e Linux; HR (bloqueio S004) |
-| S005-063 | Regressão da Chrome Extension | Java 237, Node 133, navegador 226 |
+| S005-062 | Regressão STUDIO-001 a 004 | Studio 338/338 Windows e Linux; HR (bloqueio S004) |
+| S005-063 | Regressão da Chrome Extension | Java 238, Node 134, navegador 227 |
+| REV3-P1 | Metadados com texto da página (região `aria-label`/`aria-labelledby`, rótulo do campo, título) | Node `REV-final P1`, host `revisaoFinalMetadados…`, R `revFinalMetadados…`, D, IT `s005MetadataStrict` |
+| REV3-P2 | `Message` pública não aceita `AVAILABLE` | D `EvidenceDomainTest` |
 | REV-P1b | Reinício do service worker com janela aberta | N-E (2 testes) e IT `s005ServiceWorkerRestartDuringWindow` (reinício real) |
 | S005-064 | Nenhuma execução ou validação inventada | D, N-E, IT |
 
@@ -87,9 +89,9 @@ Os nomes dos testes começam pelo número da matriz (ex.: `test('S005-021 — �
 
 | Suíte | Antes | Depois |
 |---|---|---|
-| Studio (Windows) | 307 | **337** (+12 domínio, +12 Recorder, +6 aplicação) |
-| Studio (Linux, Docker Temurin 21) | 307 | **337** |
-| Extensão Java | 232 | **237** |
-| Extensão Node | 96 | **133** |
-| Extensão navegador (6 grupos) | 211 | **226** |
+| Studio (Windows) | 307 | **338** (+12 domínio, +13 Recorder, +6 aplicação) |
+| Studio (Linux, Docker Temurin 21) | 307 | **338** |
+| Extensão Java | 232 | **238** |
+| Extensão Node | 96 | **134** |
+| Extensão navegador (6 grupos) | 211 | **227** |
 | Homologação real Studio (Robot) | — | **50/0** |

@@ -276,3 +276,25 @@ mensagens e nenhuma com texto.
 **Próximos passos combinados:** encerrar a STUDIO-005 (merge depois da conferência final), depois CHROME-SECURITY-001
 (exposição de valores na captura técnica antiga, avaliando todos os canais da extensão) e só então a STUDIO-006
 (persistência).
+
+## Anexo 3 — revisão 3: metadados controlados (P1) e `Message` sem `AVAILABLE` (P2)
+
+| Repositório | Commit | O que mudou |
+|---|---|---|
+| Extensão | `8efbf13` | região e campo só do vocabulário controlado; título `null`; três barreiras; reproduções (Node, host, IT no Chrome real) |
+| Studio | `8407f9d` | `ObservedEvidence`: região e campo pelo `EvidenceVocabulary`, título `null`; **P2**: `Message` recusa `AVAILABLE`; reprodução no Recorder; homologação |
+
+| Onde | Antes (reproduzido) | Depois |
+|---|---|---|
+| Node (`studio-evidence.test.js`, `REV-final P1`) | `region` com o `aria-label`, `field` com o rótulo, `title` com o título | só vocabulário; título `null` |
+| Native Host (`EvidencePrivacyTest.revisaoFinalMetadadosComTextoDaPaginaNaoAtravessamOHost`) | metadados mascarados, texto passava | fora do vocabulário → `null` |
+| Studio (`RecorderEvidenceTest.revFinalMetadadosComTextoDaPaginaNaoEntramNoStudio`) | região/campo/título "seguros" passavam | fora do vocabulário → `null`; título `null` |
+| Chrome real (`Studio005EvidenceIT.s005MetadataStrict`, lab `metadados.html`) | `"region":"mensagem de erro o cliente joão já existe"` | `region: "mensagem de erro"`, `SUPPRESSED`/`null`, `MESSAGE_SUPPRESSED`; campo `"campo de telefone"`; título `null` |
+
+**Novo achado, para a CHROME-SECURITY-001:** o canal de **etapas** (STUDIO-003) leva o nome acessível do elemento.
+O teste de metadados registrou `"telefone do cliente joão"`. Também o caminho das URLs sanitizadas pode conter texto.
+Nada disso foi alterado nesta revisão, e a restrição de não usar o Recorder com dados reais continua.
+
+**Regressão:** Studio 338/338 (Windows) e 338/338 (Linux, contra `8efbf13`); extensão 238/134/227; **homologação real
+50/0** (log e capturas atualizados). Nas evidências da extensão, nenhuma mensagem com texto, regiões e campos só do
+vocabulário, títulos `null`.
