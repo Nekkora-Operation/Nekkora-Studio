@@ -59,6 +59,10 @@ public final class AutomationOverview extends NekkoraPanel {
     private final CardLayout cards = new CardLayout();
     private final JPanel body = new JPanel(cards);
     private final Map<SessionId, LogicalSessionView> views = new LinkedHashMap<>();
+    private final com.nekkora.ui.feedback.NekkoraBanner lockBanner = new com.nekkora.ui.feedback.NekkoraBanner(com.nekkora.ui.core.Severity.INFO,
+            "Esta automação está sendo gravada", "Finalize ou cancele a gravação para reorganizar, mover, excluir ou editar as etapas com segurança. "
+                    + "Você pode continuar navegando e consultando as propriedades.");
+    private boolean editable = true;
 
     public AutomationOverview(Automation automation, Listener listener) {
         super(new BorderLayout(), Background.SURFACE);
@@ -79,6 +83,9 @@ public final class AutomationOverview extends NekkoraPanel {
         heading.add(texts);
         heading.addGlue();
         doc.add(heading);
+        lockBanner.setVisible(false);
+        lockBanner.getAccessibleContext().setAccessibleName("Edição bloqueada durante a gravação");
+        doc.add(lockBanner);
         doc.add(description);
 
         NekkoraStack actions = NekkoraStack.horizontal(Spacing.SPACE_4).align(NekkoraStack.Align.CENTER);
@@ -113,7 +120,11 @@ public final class AutomationOverview extends NekkoraPanel {
         for (LogicalSession s : automation.sessions()) order.add(s.id());
         views.keySet().retainAll(order);
         boolean reordered = !new ArrayList<>(views.keySet()).equals(order.subList(0, Math.min(order.size(), views.size())));
-        for (SessionId id : order) views.computeIfAbsent(id, k -> new LogicalSessionView(k, listener));
+        for (SessionId id : order) views.computeIfAbsent(id, k -> {
+            LogicalSessionView v = new LogicalSessionView(k, listener);
+            v.setEditable(editable);
+            return v;
+        });
         if (reordered || sessionStack.getComponentCount() != order.size()) {
             sessionStack.removeAll();
             for (SessionId id : order) sessionStack.add(views.get(id));
@@ -134,6 +145,15 @@ public final class AutomationOverview extends NekkoraPanel {
      * ou reordenada cai na reconciliação completa.
      */
     public void refreshSession(SessionId affected) {
+        refreshSessions(java.util.Set.of(affected));
+    }
+
+    /**
+     * Atualização restrita a algumas sessões (STUDIO-004: origem e destino de uma movimentação): relê só as afetadas e
+     * apenas RENUMERA as demais cuja numeração mudou. Estrutura diferente (sessão nova, removida ou reordenada) cai na
+     * reconciliação completa.
+     */
+    public void refreshSessions(java.util.Set<SessionId> affectedSessions) {
         List<LogicalSession> sessions = automation.sessions();
         boolean sameStructure = sessions.size() == views.size() && sessionStack.getComponentCount() == sessions.size();
         if (sameStructure) {
@@ -145,21 +165,16 @@ public final class AutomationOverview extends NekkoraPanel {
                 }
             }
         }
-        if (!sameStructure || !views.containsKey(affected)) {
+        if (!sameStructure || affectedSessions.isEmpty() || !views.keySet().containsAll(affectedSessions)) {
             refresh();
             return;
         }
         refreshHeader();
         int first = 1;
-        boolean after = false;
         for (LogicalSession s : sessions) {
             LogicalSessionView v = views.get(s.id());
-            if (s.id().equals(affected)) {
-                v.refresh(automation, first);
-                after = true;
-            } else if (after) {
-                v.renumber(first);
-            }
+            if (affectedSessions.contains(s.id())) v.refresh(automation, first);
+            else v.renumber(first); // só redesenha se a numeração mudou
             first += s.stepCount();
         }
         revalidate();
@@ -172,7 +187,7 @@ public final class AutomationOverview extends NekkoraPanel {
         description.setText(automation.description());
         description.setVisible(!automation.description().isBlank());
         summary.setText(StudioText.summary(automation));
-        newStep.setEnabled(!automation.sessions().isEmpty());
+        newStep.setEnabled(editable && !automation.sessions().isEmpty());
     }
 
     /**
@@ -203,5 +218,23 @@ public final class AutomationOverview extends NekkoraPanel {
 
     public NekkoraButton newStepButton() {
         return newStep;
+    }
+
+    /** STUDIO-004: bloqueio de edição enquanto a automação recebe uma gravação (navegação e consulta continuam). */
+    public void setEditable(boolean value) {
+        editable = value;
+        lockBanner.setVisible(!value);
+        for (LogicalSessionView v : views.values()) v.setEditable(value);
+        newStep.setEnabled(value && !automation.sessions().isEmpty());
+        revalidate();
+        repaint();
+    }
+
+    public boolean isEditable() {
+        return editable;
+    }
+
+    public com.nekkora.ui.feedback.NekkoraBanner lockBanner() {
+        return lockBanner;
     }
 }

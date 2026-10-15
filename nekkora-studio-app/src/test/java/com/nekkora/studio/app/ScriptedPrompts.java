@@ -28,6 +28,9 @@ public final class ScriptedPrompts implements StudioPrompts {
     public final List<FormSpec<?>> shown = new ArrayList<>();
     public final List<Boolean> results = new ArrayList<>();
     public final List<String> exitMessages = new ArrayList<>();
+    private final Deque<Boolean> confirmAnswers = new ArrayDeque<>();
+    /** Confirmações pedidas (STUDIO-004: excluir, remover parâmetros incompatíveis). */
+    public final List<Confirmation> confirmations = new ArrayList<>();
 
     /** Próximo diálogo: preenche e confirma. */
     public ScriptedPrompts then(Consumer<StudioForm<?>> fill) {
@@ -39,6 +42,20 @@ public final class ScriptedPrompts implements StudioPrompts {
     public ScriptedPrompts thenCancel() {
         answers.add(new Answer(f -> { }, true));
         return this;
+    }
+
+    /** Próxima confirmação: aceita ({@code true}) ou recusa. */
+    public ScriptedPrompts thenConfirm(boolean accept) {
+        confirmAnswers.add(accept);
+        return this;
+    }
+
+    @Override
+    public boolean confirm(Confirmation confirmation) {
+        confirmations.add(confirmation);
+        Boolean b = confirmAnswers.poll();
+        if (b == null) throw new AssertionError("Confirmação inesperada: " + confirmation.title());
+        return b;
     }
 
     public ScriptedPrompts thenExit(boolean discard) {

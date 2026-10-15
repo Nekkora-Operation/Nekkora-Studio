@@ -17,5 +17,9 @@ public enum StudioChange {
     /** Nova notificação para o usuário. */
     NOTICE,
     /** Diálogo/operação em andamento. */
-    OPERATION
+    OPERATION,
+    /** Histórico de edição (desfazer/refazer) de uma automação (STUDIO-004). */
+    HISTORY,
+    /** Uma automação passou a estar (ou deixou de estar) bloqueada para edição por uma gravação (STUDIO-004). */
+    EDIT_LOCK
 }

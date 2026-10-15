@@ -7,16 +7,25 @@ import com.nekkora.ui.input.NekkoraTextArea;
 import com.nekkora.ui.input.NekkoraTextField;
 import javax.swing.JComponent;
 
-/** Formulário de nome (obrigatório) e descrição opcional — automação, sessão, renomear sessão. */
+/**
+ * Formulário de nome (obrigatório), descrição opcional e — STUDIO-004, para sessões — observações opcionais:
+ * automação, sessão, renomear sessão, editar automação, editar sessão.
+ */
 public final class NameDescriptionForm extends StudioForm<NameDescriptionForm.Values> {
 
-    /** Valores digitados (sem normalização — o domínio normaliza). */
-    public record Values(String name, String description) {}
+    /** Valores digitados (sem normalização — o domínio normaliza). {@code notes} é vazio sem o campo de observações. */
+    public record Values(String name, String description, String notes) {
+        public Values(String name, String description) {
+            this(name, description, "");
+        }
+    }
 
     private final NekkoraTextField name;
     private final NekkoraFormField nameField;
     private final NekkoraTextArea description;
     private final NekkoraFormField descriptionField;
+    private NekkoraTextArea notes;
+    private NekkoraFormField notesField;
 
     /**
      * @param nameLabel        rótulo do nome
@@ -39,6 +48,14 @@ public final class NameDescriptionForm extends StudioForm<NameDescriptionForm.Va
         }
     }
 
+    /** Acrescenta o campo de observações (sessões lógicas). */
+    public NameDescriptionForm withNotes(String helper) {
+        notes = FormKeys.tabMovesFocus(new NekkoraTextArea("Informações úteis para quem revisar a sessão (opcional).", 3));
+        notesField = new NekkoraFormField("Observações", notes.scrollable()).optional().helper(helper);
+        add(notesField);
+        return this;
+    }
+
     public NameDescriptionForm withValues(String nameText, String descriptionText) {
         name.setText(nameText == null ? "" : nameText);
         if (description != null) description.setText(descriptionText == null ? "" : descriptionText);
@@ -46,9 +63,14 @@ public final class NameDescriptionForm extends StudioForm<NameDescriptionForm.Va
         return this;
     }
 
+    public NameDescriptionForm withNotesValue(String notesText) {
+        if (notes != null) notes.setText(notesText == null ? "" : notesText);
+        return this;
+    }
+
     @Override
     public Values values() {
-        return new Values(name.getText(), description == null ? "" : description.getText());
+        return new Values(name.getText(), description == null ? "" : description.getText(), notes == null ? "" : notes.getText());
     }
 
     public NekkoraTextField nameInput() {
@@ -57,6 +79,10 @@ public final class NameDescriptionForm extends StudioForm<NameDescriptionForm.Va
 
     public NekkoraTextArea descriptionInput() {
         return description;
+    }
+
+    public NekkoraTextArea notesInput() {
+        return notes;
     }
 
     @Override
@@ -76,6 +102,6 @@ public final class NameDescriptionForm extends StudioForm<NameDescriptionForm.Va
 
     @Override
     protected NekkoraFormField[] fields() {
-        return new NekkoraFormField[] {nameField, descriptionField};
+        return new NekkoraFormField[] {nameField, descriptionField, notesField};
     }
 }

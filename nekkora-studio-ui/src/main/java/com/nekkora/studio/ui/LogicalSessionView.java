@@ -18,11 +18,19 @@ import com.nekkora.ui.icon.IconName;
 import com.nekkora.ui.typography.NekkoraParagraph;
 import com.nekkora.ui.typography.NekkoraText;
 import com.nekkora.ui.typography.TextTone;
+import com.nekkora.ui.action.NekkoraKeys;
+import com.nekkora.ui.navigation.NekkoraPopupMenu;
 import java.awt.CardLayout;
+import java.awt.event.InputEvent;
+import java.awt.event.KeyEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import javax.swing.JComponent;
 import javax.swing.JPanel;
+import javax.swing.KeyStroke;
 
 /**
  * Uma sessão lógica e suas etapas, em ordem. É uma <b>visão</b> do domínio: não guarda cópia das etapas —
@@ -42,6 +50,41 @@ public final class LogicalSessionView extends NekkoraCard {
         void addStepRequested(SessionId session);
 
         void renameSessionRequested(SessionId session);
+
+        // ---- STUDIO-004: edição (padrões mantêm os ouvintes anteriores funcionando)
+
+        /** Editar a etapa (F2, menu de contexto). */
+        default void editStepRequested(SessionId session, StepId step) {
+            stepOpened(session, step);
+        }
+
+        /** Mover a etapa uma posição (Alt+↑ = -1, Alt+↓ = +1). */
+        default void moveStepRequested(StepId step, int delta) {
+        }
+
+        /** Mover a etapa para outra sessão ou posição (diálogo). */
+        default void moveStepToRequested(StepId step) {
+        }
+
+        default void duplicateStepRequested(StepId step) {
+        }
+
+        /** Excluir a etapa (Delete, menu de contexto) — sempre com confirmação. */
+        default void deleteStepRequested(StepId step) {
+        }
+
+        /** Editar nome, descrição e observações da sessão. */
+        default void editSessionRequested(SessionId session) {
+            renameSessionRequested(session);
+        }
+
+        /** Mover a sessão uma posição (-1 para cima, +1 para baixo). */
+        default void moveSessionRequested(SessionId session, int delta) {
+        }
+
+        /** Excluir a sessão (e as etapas dela) — sempre com confirmação. */
+        default void deleteSessionRequested(SessionId session) {
+        }
     }
 
     private static final String LIST = "list";
@@ -54,7 +97,8 @@ public final class LogicalSessionView extends NekkoraCard {
     private final CardLayout cards = new CardLayout();
     private final JPanel body = new JPanel(cards);
     private final NekkoraIconButton addStep = new NekkoraIconButton(IconName.PLUS, "Adicionar etapa nesta sessão").withSize(ControlSize.SMALL);
-    private final NekkoraIconButton rename = new NekkoraIconButton(IconName.EDIT, "Renomear sessão").withSize(ControlSize.SMALL);
+    private final NekkoraIconButton rename = new NekkoraIconButton(IconName.EDIT, "Editar sessão").withSize(ControlSize.SMALL);
+    private final NekkoraIconButton more = new NekkoraIconButton(IconName.MORE_HORIZONTAL, "Mais ações da sessão").withSize(ControlSize.SMALL);
     private final NekkoraBadge selectedBadge = new NekkoraBadge("Selecionada", Tone.ACCENT).withIcon(IconName.CHECK)
             .withSize(NekkoraBadge.Size.SMALL);
     private Map<StepId, Integer> numbers = Map.of();
@@ -62,14 +106,18 @@ public final class LogicalSessionView extends NekkoraCard {
     private int refreshes;
     private boolean adjusting;
     private boolean highlighted;
+    private boolean editable = true;
+    private boolean canMoveUp;
+    private boolean canMoveDown;
 
     public LogicalSessionView(SessionId sessionId, Listener listener) {
         this.sessionId = sessionId;
         this.listener = listener;
         selectedBadge.setVisible(false);
-        setHeaderActions(selectedBadge, addStep, rename);
+        setHeaderActions(selectedBadge, addStep, rename, more);
         addStep.addActionListener(e -> listener.addStepRequested(sessionId));
-        rename.addActionListener(e -> listener.renameSessionRequested(sessionId));
+        rename.addActionListener(e -> listener.editSessionRequested(sessionId));
+        more.addActionListener(e -> sessionMenu().show(more, 0, more.getHeight()));
         setOnClick(() -> listener.sessionSelected(sessionId));
 
         steps.withLabel(this::labelOf).withSecondary(LogicalSessionView::detailOf, true).withIcon(s -> ActionTypeStyle.icon(s.actionType()));
@@ -79,6 +127,7 @@ public final class LogicalSessionView extends NekkoraCard {
             if (s != null) listener.stepSelected(sessionId, s.id());
         });
         steps.onItemActivated(s -> listener.stepOpened(sessionId, s.id()));
+        installStepEditing();
 
         NekkoraStack empty = NekkoraStack.horizontal(Spacing.SPACE_5).align(NekkoraStack.Align.CENTER);
         empty.add(NekkoraText.muted("Nenhuma etapa nesta sessão."));
@@ -99,6 +148,87 @@ public final class LogicalSessionView extends NekkoraCard {
         return sessionId;
     }
 
+    // ------------------------------------------------------------------ STUDIO-004: edição pelo teclado e menus
+
+    /**
+     * Atalhos da lista de etapas (somente com o foco NA lista — nunca num campo de texto): Delete exclui (com
+     * confirmação), Alt+↑/Alt+↓ movem, Ctrl+D duplica, Shift+F10/tecla de menu abrem o menu de contexto.
+     */
+    private void installStepEditing() {
+        bindStep(KeyStroke.getKeyStroke(KeyEvent.VK_DELETE, 0), "studio.step.delete", s -> listener.deleteStepRequested(s.id()));
+        bindStep(KeyStroke.getKeyStroke(KeyEvent.VK_UP, InputEvent.ALT_DOWN_MASK), "studio.step.up", s -> listener.moveStepRequested(s.id(), -1));
+        bindStep(KeyStroke.getKeyStroke(KeyEvent.VK_DOWN, InputEvent.ALT_DOWN_MASK), "studio.step.down", s -> listener.moveStepRequested(s.id(), 1));
+        bindStep(NekkoraKeys.shortcut(KeyEvent.VK_D), "studio.step.duplicate", s -> listener.duplicateStepRequested(s.id()));
+        // clique direito seleciona a etapa sob o ponteiro antes de abrir o menu
+        steps.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent e) {
+                if (e.isPopupTrigger() || javax.swing.SwingUtilities.isRightMouseButton(e)) {
+                    int i = steps.locationToIndex(e.getPoint());
+                    if (i >= 0) steps.setSelectedIndex(i);
+                }
+            }
+        });
+        NekkoraPopupMenu.installContextMenu(steps, () -> {
+            AutomationStep s = steps.getSelectedValue();
+            return s == null ? null : stepMenu(s);
+        });
+    }
+
+    private void bindStep(KeyStroke key, String name, java.util.function.Consumer<AutomationStep> action) {
+        steps.getInputMap(JComponent.WHEN_FOCUSED).put(key, name);
+        steps.getActionMap().put(name, new javax.swing.AbstractAction() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent e) {
+                AutomationStep s = steps.getSelectedValue();
+                if (s != null && editable) action.accept(s);
+            }
+        });
+    }
+
+    /** Menu de contexto de uma etapa (os mesmos casos de uso dos atalhos e do painel de propriedades). */
+    public NekkoraPopupMenu stepMenu(AutomationStep s) {
+        NekkoraPopupMenu m = new NekkoraPopupMenu().header(s.name());
+        m.item("Editar etapa", IconName.EDIT, KeyStroke.getKeyStroke(KeyEvent.VK_F2, 0), () -> listener.editStepRequested(sessionId, s.id()));
+        if (editable) {
+            m.item("Mover para cima", IconName.ARROW_UP, KeyStroke.getKeyStroke(KeyEvent.VK_UP, InputEvent.ALT_DOWN_MASK),
+                    () -> listener.moveStepRequested(s.id(), -1));
+            m.item("Mover para baixo", IconName.ARROW_DOWN, KeyStroke.getKeyStroke(KeyEvent.VK_DOWN, InputEvent.ALT_DOWN_MASK),
+                    () -> listener.moveStepRequested(s.id(), 1));
+            m.item("Mover para…", IconName.SORT, null, () -> listener.moveStepToRequested(s.id()));
+            m.item("Duplicar", IconName.COPY, NekkoraKeys.shortcut(KeyEvent.VK_D), () -> listener.duplicateStepRequested(s.id()));
+            m.separator();
+            m.danger("Excluir etapa", IconName.TRASH, () -> listener.deleteStepRequested(s.id()));
+        }
+        return m;
+    }
+
+    /** Menu "Mais ações" da sessão. */
+    public NekkoraPopupMenu sessionMenu() {
+        NekkoraPopupMenu m = new NekkoraPopupMenu();
+        m.item("Editar sessão", IconName.EDIT, null, () -> listener.editSessionRequested(sessionId));
+        if (editable) {
+            if (canMoveUp) m.item("Mover sessão para cima", IconName.ARROW_UP, null, () -> listener.moveSessionRequested(sessionId, -1));
+            if (canMoveDown) m.item("Mover sessão para baixo", IconName.ARROW_DOWN, null, () -> listener.moveSessionRequested(sessionId, 1));
+            m.separator();
+            m.danger("Excluir sessão", IconName.TRASH, () -> listener.deleteSessionRequested(sessionId));
+        }
+        return m;
+    }
+
+    /**
+     * Edição permitida (falso enquanto a automação recebe uma gravação): as ações de alterar ficam indisponíveis, mas a
+     * sessão continua navegável e consultável.
+     */
+    public void setEditable(boolean value) {
+        editable = value;
+        addStep.setEnabled(value);
+    }
+
+    public boolean isEditable() {
+        return editable;
+    }
+
     /** Relê sessão e numeração do domínio. Preserva a etapa selecionada, se ainda existir. */
     public void refresh(Automation automation) {
         int first = 1;
@@ -117,6 +247,8 @@ public final class LogicalSessionView extends NekkoraCard {
         refreshes++;
         LogicalSession session = automation.session(sessionId).orElseThrow();
         int number = automation.sessionNumber(sessionId);
+        canMoveUp = number > 1;
+        canMoveDown = number < automation.sessions().size();
         setTitle(session.name(), "Sessão " + number + " · " + StudioText.steps(session.stepCount()));
         getAccessibleContext().setAccessibleName("Sessão " + number + ": " + session.name());
         description.setText(session.description());

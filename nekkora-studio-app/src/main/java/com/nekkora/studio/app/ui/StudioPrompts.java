@@ -20,4 +20,14 @@ public interface StudioPrompts {
 
     /** Pergunta se o usuário quer fechar descartando as alterações em memória. */
     boolean confirmExit(String message);
+
+    /**
+     * STUDIO-004: confirmação explícita de uma operação (ex.: excluir, remover parâmetros incompatíveis).
+     *
+     * @return {@code true} se o usuário confirmou
+     */
+    boolean confirm(Confirmation confirmation);
+
+    /** Pergunta de confirmação: título, explicação, rótulo do botão e se a operação é destrutiva. */
+    record Confirmation(String title, String message, String confirmLabel, boolean danger) {}
 }

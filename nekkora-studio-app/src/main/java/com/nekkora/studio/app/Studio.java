@@ -40,6 +40,8 @@ public final class Studio {
         // STUDIO-003: as etapas gravadas entram pelo StepIntake do WorkspaceService (na EDT).
         recorder = new RecorderController(link, clock, RecorderController.Options.defaults(), new com.nekkora.studio.app.recorder.WorkspaceStepSink(service));
         recorderPresenter = new RecorderPresenter(service, controller, recorder, view, recorderPrompts, hostFactory);
+        // STUDIO-004: edição bloqueada (no caso de uso) na automação que recebe uma gravação — estado vivo do Recorder
+        service.setRecordingGuard(id -> RecorderPresenter.locks(recorder.snapshot(), id));
     }
 
     /** Studio sem ligação com o navegador (testes e uso sem Bridge): Gravar explica que o navegador não está conectado. */

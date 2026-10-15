@@ -51,7 +51,7 @@ public final class StudioController {
 
     public void newSession() {
         Automation a = active().orElse(null);
-        if (a == null) return;
+        if (a == null) return; // permitido durante a gravação: é assim que o Floating Recorder cria a próxima sessão
         runForm(StudioOperation.NEW_SESSION, StudioForms.newSession(a),
                 v -> attempt(() -> service.addSession(a.id(), v.name(), v.description())));
     }
@@ -59,7 +59,7 @@ public final class StudioController {
     /** Nova etapa; {@code preselected} pode ser nulo (o formulário sugere a sessão selecionada ou a última). */
     public void newStep(SessionId preselected) {
         Automation a = active().orElse(null);
-        if (a == null || a.sessions().isEmpty()) return;
+        if (a == null || a.sessions().isEmpty() || !editable(a)) return;
         SessionId pre = preselected != null ? preselected : selectedSession().orElse(null);
         runForm(StudioOperation.NEW_STEP, StudioForms.newStep(a, pre),
                 v -> attempt(() -> service.addManualStep(a.id(), v.session(), v.name(), v.actionType(), v.description())));
@@ -67,7 +67,7 @@ public final class StudioController {
 
     public void renameSession(SessionId sessionId) {
         Automation a = active().orElse(null);
-        if (a == null) return;
+        if (a == null || !editable(a)) return;
         LogicalSession s = a.session(sessionId).orElse(null);
         if (s == null) return;
         service.select(new Selection.OfSession(a.id(), sessionId));
@@ -80,7 +80,11 @@ public final class StudioController {
         selectedSession().ifPresent(this::renameSession);
     }
 
-    /** Detalhes da etapa (diálogo), com edição dos campos básicos. */
+    /**
+     * Detalhes e edição completa da etapa (STUDIO-004). Salvar aplica UMA edição validada pelo domínio. Se o tipo novo
+     * não aceita os parâmetros atuais, o usuário decide explicitamente removê-los — nunca são descartados em silêncio.
+     * Durante a gravação da automação os detalhes continuam consultáveis; salvar é recusado com o motivo.
+     */
     public void openStepDetails(StepId stepId) {
         Automation a = active().orElse(null);
         if (a == null) return;
@@ -88,8 +92,159 @@ public final class StudioController {
         if (step == null) return;
         SessionId session = a.sessionOf(stepId).orElseThrow().id();
         service.select(new Selection.OfStep(a.id(), session, stepId));
-        runForm(StudioOperation.STEP_DETAILS, StudioForms.stepDetails(a, step),
-                v -> attempt(() -> service.updateStepBasics(a.id(), stepId, v.name(), v.description(), v.actionType())));
+        runForm(StudioOperation.STEP_DETAILS, StudioForms.stepDetails(a, step), v -> {
+            try {
+                boolean drop = false;
+                if (v.parametersIncompatible()) {
+                    if (!prompts.confirm(new StudioPrompts.Confirmation("Remover parâmetros incompatíveis?",
+                            "O tipo \"" + v.actionType().label() + "\" não aceita os parâmetros atuais ("
+                                    + com.nekkora.studio.ui.StepPresentation.parameters(v.parameters())
+                                    + "). Para salvar, eles serão removidos da etapa.", "Remover parâmetros e salvar", true))) {
+                        return Optional.of(v.parameters().value().isPresent() ? ValidationProblem.VALUE_NOT_ACCEPTED : ValidationProblem.OPTION_NOT_ACCEPTED);
+                    }
+                    drop = true;
+                }
+                service.editStep(a.id(), stepId, v.toEdit(a, step, service.state().catalog().clock().instant(), drop));
+                return Optional.empty();
+            } catch (DomainValidationException e) {
+                return Optional.of(e.problem());
+            }
+        });
+    }
+
+    // ------------------------------------------------------------------ STUDIO-004: edição
+
+    /** F2: edita o item selecionado (automação, sessão ou etapa). */
+    public void editSelected() {
+        Automation a = active().orElse(null);
+        if (a == null) return;
+        switch (service.state().selection()) {
+            case Selection.OfSession s -> editSession(s.session());
+            case Selection.OfStep s -> openStepDetails(s.step());
+            default -> editAutomation();
+        }
+    }
+
+    /** Propriedades da automação (nome único, descrição). */
+    public void editAutomation() {
+        Automation a = active().orElse(null);
+        if (a == null || !editable(a)) return;
+        runForm(StudioOperation.EDIT_AUTOMATION, StudioForms.editAutomation(a), v -> attempt(() -> service.updateAutomation(a.id(), v.name(), v.description())));
+    }
+
+    /** Nome, descrição e observações de uma sessão. */
+    public void editSession(SessionId sessionId) {
+        Automation a = active().orElse(null);
+        if (a == null || !editable(a)) return;
+        LogicalSession s = a.session(sessionId).orElse(null);
+        if (s == null) return;
+        service.select(new Selection.OfSession(a.id(), sessionId));
+        runForm(StudioOperation.EDIT_SESSION, StudioForms.editSession(s),
+                v -> attempt(() -> service.editSession(a.id(), sessionId, v.name(), v.description(), v.notes())));
+    }
+
+    /** Move a sessão uma posição (-1 para cima, +1 para baixo); nos limites, nada acontece. */
+    public void moveSession(SessionId sessionId, int delta) {
+        Automation a = active().orElse(null);
+        if (a == null || !editable(a)) return;
+        int target = a.sessionNumber(sessionId) - 1 + delta;
+        if (a.sessionNumber(sessionId) == 0 || target < 0 || target >= a.sessions().size()) return;
+        attemptNotice("Sessão não movida", () -> service.moveSession(a.id(), sessionId, target));
+    }
+
+    /** Exclui a sessão — com confirmação explícita que diz quantas etapas vão junto. */
+    public void deleteSession(SessionId sessionId) {
+        Automation a = active().orElse(null);
+        if (a == null || !editable(a)) return;
+        LogicalSession s = a.session(sessionId).orElse(null);
+        if (s == null) return;
+        int n = s.stepCount();
+        String message = "Sessão: " + s.name() + "\nEtapas existentes: " + n + "\n\n" + (n == 0 ? "A sessão está vazia."
+                : "A exclusão também removerá " + (n == 1 ? "a etapa contida" : "as " + n + " etapas contidas") + " nesta sessão.")
+                + " Você pode desfazer enquanto o histórico desta automação existir.";
+        if (!confirmOperation(new StudioPrompts.Confirmation("Excluir sessão?", message, n == 0 ? "Excluir sessão" : "Excluir sessão e etapas", true))) return;
+        attemptNotice("Sessão não excluída", () -> service.removeSession(a.id(), sessionId));
+    }
+
+    /** Move a etapa uma posição dentro da sessão (Alt+↑ / Alt+↓). */
+    public void moveStep(StepId stepId, int delta) {
+        Automation a = active().orElse(null);
+        if (a == null || !editable(a)) return;
+        LogicalSession s = a.sessionOf(stepId).orElse(null);
+        if (s == null) return;
+        int target = s.positionOf(stepId) - 1 + delta;
+        if (target < 0 || target >= s.stepCount()) return;
+        attemptNotice("Etapa não movida", () -> service.moveStep(a.id(), stepId, s.id(), target));
+    }
+
+    /** Move a etapa para outra posição ou sessão (diálogo). */
+    public void moveStepTo(StepId stepId) {
+        Automation a = active().orElse(null);
+        if (a == null || !editable(a)) return;
+        AutomationStep step = a.step(stepId).orElse(null);
+        if (step == null) return;
+        runForm(StudioOperation.MOVE_STEP, StudioForms.moveStep(a, step), v -> attempt(() -> service.moveStep(a.id(), stepId, v.session(), v.index())));
+    }
+
+    public void duplicateStep(StepId stepId) {
+        Automation a = active().orElse(null);
+        if (a == null || !editable(a) || a.step(stepId).isEmpty()) return;
+        attemptNotice("Etapa não duplicada", () -> service.duplicateStep(a.id(), stepId));
+    }
+
+    /** Exclui a etapa — com confirmação. */
+    public void deleteStep(StepId stepId) {
+        Automation a = active().orElse(null);
+        if (a == null || !editable(a)) return;
+        AutomationStep step = a.step(stepId).orElse(null);
+        if (step == null) return;
+        String session = a.sessionOf(stepId).orElseThrow().name();
+        if (!confirmOperation(new StudioPrompts.Confirmation("Excluir etapa?", step.name() + "\n\nEsta operação removerá a etapa da sessão "
+                + session + ". Você pode desfazer enquanto o histórico desta automação existir.", "Excluir", true))) return;
+        attemptNotice("Etapa não excluída", () -> service.removeStep(a.id(), stepId));
+    }
+
+    /** Volta um campo da etapa gravada ao valor capturado. */
+    public void restoreOriginal(StepId stepId, com.nekkora.studio.domain.StepField field) {
+        Automation a = active().orElse(null);
+        if (a == null || !editable(a)) return;
+        attemptNotice("Valor original não restaurado", () -> service.restoreOriginal(a.id(), stepId, field));
+    }
+
+    /** Ctrl+Z: desfaz a última edição da automação ativa. */
+    public void undo() {
+        active().ifPresent(a -> attemptNotice("Nada foi desfeito", () -> service.undo(a.id())));
+    }
+
+    /** Ctrl+Y: refaz a última edição desfeita da automação ativa. */
+    public void redo() {
+        active().ifPresent(a -> attemptNotice("Nada foi refeito", () -> service.redo(a.id())));
+    }
+
+    /** Recusa logo (com o motivo) uma edição na automação que está sendo gravada; o caso de uso também recusa. */
+    private boolean editable(Automation a) {
+        if (!service.isLocked(a.id())) return true;
+        service.report(new com.nekkora.studio.app.workspace.Notice(com.nekkora.studio.app.workspace.Notice.Kind.WARNING,
+                "Edição indisponível durante a gravação", ValidationProblem.AUTOMATION_RECORDING.message()));
+        return false;
+    }
+
+    private boolean confirmOperation(StudioPrompts.Confirmation c) {
+        if (!service.beginOperation(StudioOperation.CONFIRM)) return false;
+        try {
+            return prompts.confirm(c);
+        } finally {
+            service.endOperation();
+        }
+    }
+
+    /** Executa um caso de uso sem formulário; uma recusa do domínio vira um aviso com o motivo. */
+    private void attemptNotice(String title, Runnable operation) {
+        try {
+            operation.run();
+        } catch (DomainValidationException e) {
+            service.report(new com.nekkora.studio.app.workspace.Notice(com.nekkora.studio.app.workspace.Notice.Kind.WARNING, title, e.problem().message()));
+        }
     }
 
     // ------------------------------------------------------------------ navegação e seleção

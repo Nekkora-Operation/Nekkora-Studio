@@ -147,6 +147,15 @@ class AutomationEditingTest {
         long rev = a.revision();
         a.describeSession(id, "Entrada no sistema", "Credenciais do cliente");
         assertEquals(rev, a.revision(), "sem efeito: revisão igual");
+
+        assertTrue(a.editSession(id, "Autenticação", "Acesso inicial", "Observação"));
+        assertEquals(rev + 1, a.revision(), "edição completa = uma revisão");
+        assertEquals(ValidationProblem.DESCRIPTION_TOO_LONG, assertThrows(DomainValidationException.class,
+                () -> a.editSession(id, "Novo nome", "x".repeat(Texts.DESCRIPTION_MAX + 1), "")).problem());
+        assertEquals("Autenticação", s.name(), "nome não muda quando a descrição é recusada (sem alteração parcial)");
+        assertEquals(ValidationProblem.SESSION_NAME_IN_USE, assertThrows(DomainValidationException.class,
+                () -> a.editSession(id, "consulta", "", "")).problem());
+        assertFalse(a.editSession(id, "Autenticação", "Acesso inicial", "Observação"));
     }
 
     @Test

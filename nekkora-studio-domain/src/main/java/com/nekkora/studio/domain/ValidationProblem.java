@@ -44,7 +44,7 @@ public enum ValidationProblem {
     NOTHING_TO_UNDO(Field.NONE, "Não há alteração para desfazer nesta automação."),
     NOTHING_TO_REDO(Field.NONE, "Não há alteração para refazer nesta automação."),
     HISTORY_CONFLICT(Field.NONE,
-            "A automação mudou por outro caminho depois desta alteração (por exemplo, recebeu etapas gravadas). O histórico de edição foi descartado para não aplicar uma alteração sobre um estado diferente.");
+            "A automação mudou por outro caminho depois desta alteração (por exemplo, recebeu etapas do Recorder). O histórico de edição foi descartado para não aplicar uma alteração sobre um estado diferente.");
 
     /** Campo do formulário ao qual o problema se refere (para posicionar a mensagem). */
     public enum Field { NONE, NAME, DESCRIPTION, SESSION, ACTION_TYPE, VALUE, LOCATOR, COMMENT }

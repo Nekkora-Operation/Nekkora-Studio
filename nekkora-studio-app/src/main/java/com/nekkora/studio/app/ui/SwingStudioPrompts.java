@@ -25,4 +25,10 @@ public final class SwingStudioPrompts implements StudioPrompts {
     public boolean confirmExit(String message) {
         return StudioDialogs.confirmDiscardOnExit(parent.get(), message);
     }
+
+    @Override
+    public boolean confirm(Confirmation c) {
+        return c.danger() ? com.nekkora.ui.dialog.NekkoraConfirmationDialog.confirmDanger(parent.get(), c.title(), c.message(), c.confirmLabel())
+                : com.nekkora.ui.dialog.NekkoraConfirmationDialog.confirm(parent.get(), c.title(), c.message(), c.confirmLabel());
+    }
 }

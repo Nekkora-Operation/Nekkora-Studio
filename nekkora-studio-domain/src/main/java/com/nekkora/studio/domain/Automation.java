@@ -229,6 +229,26 @@ public final class Automation {
     // ------------------------------------------------------------------ STUDIO-004: estrutura
 
     /**
+     * Edita nome, descrição e observações de uma sessão numa única operação: tudo é validado antes (nome único, limites)
+     * e nada muda se algum campo for recusado. Sem diferença, sem revisão.
+     *
+     * @return {@code false} se nada mudou
+     */
+    public boolean editSession(SessionId sessionId, String newName, String newDescription, String newNotes) {
+        LogicalSession session = requireSession(sessionId);
+        String n = Texts.requireName(newName);
+        String d = Texts.optionalDescription(newDescription);
+        String notes = Texts.optionalDescription(newNotes);
+        requireUniqueSessionName(n, sessionId);
+        if (n.equals(session.name()) && d.equals(session.description()) && notes.equals(session.notes())) return false;
+        session.rename(n);
+        session.describe(d);
+        session.annotate(notes);
+        touch();
+        return true;
+    }
+
+    /**
      * Muda a posição de uma sessão. {@code targetIndex} é a posição final (0..n-1) na lista de sessões. A identidade e as
      * etapas da sessão não mudam; a numeração das etapas é recalculada (é derivada da ordem).
      *
