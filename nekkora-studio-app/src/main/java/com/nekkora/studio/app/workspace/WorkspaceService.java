@@ -73,7 +73,7 @@ public final class WorkspaceService implements StepIntake {
         Automation a = state.catalog().require(automationId);
         LogicalSession s = a.addSession(name, description);
         state.select(automationId, new Selection.OfSession(automationId, s.id()));
-        changed(a, true);
+        changed(a, s.id(), true);
         return s;
     }
 
@@ -81,7 +81,7 @@ public final class WorkspaceService implements StepIntake {
         requireEdt();
         Automation a = state.catalog().require(automationId);
         a.renameSession(sessionId, name);
-        changed(a, false);
+        changed(a, sessionId, false);
     }
 
     /** Etapa manual básica, acrescentada ao final da sessão e selecionada. */
@@ -98,7 +98,7 @@ public final class WorkspaceService implements StepIntake {
         requireEdt();
         Automation a = state.catalog().require(automationId);
         AutomationStep step = a.appendStep(sessionId, draft);
-        changed(a, false);
+        changed(a, sessionId, false);
         return step;
     }
 
@@ -106,7 +106,7 @@ public final class WorkspaceService implements StepIntake {
         requireEdt();
         Automation a = state.catalog().require(automationId);
         a.updateStepBasics(stepId, name, description, type);
-        changed(a, false);
+        changed(a, a.sessionOf(stepId).map(LogicalSession::id).orElse(null), false);
     }
 
     /** Seleciona um item da automação indicada (que se torna a ativa). */
@@ -136,6 +136,13 @@ public final class WorkspaceService implements StepIntake {
         else state.fire(id, StudioChange.SELECTION);
     }
 
+    /** Informa o usuário sobre algo que REALMENTE aconteceu fora dos casos de uso do domínio (ex.: o navegador recusou gravar). */
+    public void report(Notice notice) {
+        requireEdt();
+        state.notice(notice);
+        state.fire(null, StudioChange.NOTICE);
+    }
+
     /** Marca o início de uma operação interativa; {@code false} se já houver outra em andamento. */
     public boolean beginOperation(StudioOperation op) {
         requireEdt();
@@ -151,10 +158,10 @@ public final class WorkspaceService implements StepIntake {
         state.fire(null, StudioChange.OPERATION);
     }
 
-    private void changed(Automation a, boolean selectionChanged) {
+    private void changed(Automation a, SessionId session, boolean selectionChanged) {
         state.markUnsaved();
-        if (selectionChanged) state.fire(a.id(), StudioChange.CONTENT, StudioChange.CATALOG, StudioChange.UNSAVED_CHANGES, StudioChange.SELECTION);
-        else state.fire(a.id(), StudioChange.CONTENT, StudioChange.CATALOG, StudioChange.UNSAVED_CHANGES);
+        if (selectionChanged) state.fireFor(a.id(), session, StudioChange.CONTENT, StudioChange.CATALOG, StudioChange.UNSAVED_CHANGES, StudioChange.SELECTION);
+        else state.fireFor(a.id(), session, StudioChange.CONTENT, StudioChange.CATALOG, StudioChange.UNSAVED_CHANGES);
     }
 
     private static void requireEdt() {

@@ -8,7 +8,8 @@
 #
 # Uso (na raiz do repositório):
 #   tools/golden-linux.sh golden   só GoldenScreenshotTest
-#   tools/golden-linux.sh verify   ./mvnw clean verify completo (padrão)
+#   tools/golden-linux.sh verify   ./mvnw clean verify completo (padrão; compila o Native Host da extensão ao lado,
+#                                  se houver, para os testes cruzados do Bridge)
 #   tools/golden-linux.sh update   regrava os 4 golden Linux e copia SÓ eles para golden/linux/
 #
 # Atualizar a imagem de referência é uma decisão de homologação: troque IMAGE e TAG juntos, rode "update",
@@ -37,6 +38,11 @@ cat > "$WORK/run.sh" <<'EOF'
 set -u
 mkdir -p /nk/Nekkora-Studio && tar -xf /in/studio.tar -C /nk/Nekkora-Studio
 if [ -f /in/extension.tar ]; then mkdir -p /nk/Nekkora-Extension-Chrome && tar -xf /in/extension.tar -C /nk/Nekkora-Extension-Chrome; fi
+# verify: com a extensão ao lado, compila o Native Host dela (sem testes) para os testes cruzados do Bridge
+if [ "$1" = verify ] && [ -f /nk/Nekkora-Extension-Chrome/java-core/native-host/pom.xml ]; then
+  (cd /nk/Nekkora-Extension-Chrome && chmod +x mvnw && ./mvnw -B -ntp -q -pl java-core/native-host -am package -DskipTests) \
+    && echo "native host da extensão compilado" || echo "native host da extensão NÃO compilado (testes cruzados serão ignorados)"
+fi
 cd /nk/Nekkora-Studio && chmod +x mvnw
 java -version 2>&1 | sed -n 2p
 case "$1" in

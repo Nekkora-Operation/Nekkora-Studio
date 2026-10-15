@@ -20,7 +20,13 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-/** S001-019 (camadas), S001-020 (sem funcionalidades fictícias) e S001-021 (encerramento). */
+/**
+ * S001-019 (camadas), S001-020 / S002-030 (sem funcionalidades fictícias) e S001-021 (encerramento).
+ *
+ * <p>STUDIO-002: "Gravar" deixou de ser uma ação futura (a gravação técnica é real e só muda de estado com a confirmação
+ * da extensão — coberta por {@code RecorderStudioTest}); executar e salvar continuam apenas desabilitados. As regras
+ * de camadas passam a valer também para os módulos novos (bridge e recorder).
+ */
 class StudioScopeTest {
     private static final Path ROOT = Path.of("..");
     private final StudioFixture fx = new StudioFixture();
@@ -38,10 +44,13 @@ class StudioScopeTest {
         v.addAll(imports("nekkora-design-tokens", Pattern.compile("import\\s+com\\.nekkora\\.(studio|ui)\\.")));
         v.addAll(imports("nekkora-studio-domain", Pattern.compile("import\\s+(javax\\.swing|java\\.awt|com\\.formdev|com\\.nekkora\\.ui|com\\.nekkora\\.tokens|com\\.nekkora\\.studio\\.(ui|app))\\b")));
         v.addAll(imports("nekkora-studio-ui", Pattern.compile("import\\s+com\\.nekkora\\.studio\\.app\\.")));
+        // STUDIO-002: o Bridge é transporte puro (sem domínio, sem Swing); o Recorder é Java puro (sem Swing).
+        v.addAll(imports("nekkora-studio-bridge", Pattern.compile("import\\s+(javax\\.swing|java\\.awt|com\\.formdev|com\\.nekkora\\.ui|com\\.nekkora\\.tokens|com\\.nekkora\\.studio\\.(domain|ui|app|recorder))\\b")));
+        v.addAll(imports("nekkora-studio-recorder", Pattern.compile("import\\s+(javax\\.swing|java\\.awt|com\\.formdev|com\\.nekkora\\.ui|com\\.nekkora\\.tokens|com\\.nekkora\\.studio\\.(ui|app))\\b")));
         v.addAll(imports("nekkora-swing-showcase", Pattern.compile("import\\s+com\\.nekkora\\.studio\\.")));
         assertTrue(v.isEmpty(), "Dependências entre camadas proibidas:\n" + String.join("\n", v));
 
-        Pattern studioArtifact = Pattern.compile("<artifactId>nekkora-studio-(domain|ui|app)</artifactId>");
+        Pattern studioArtifact = Pattern.compile("<artifactId>nekkora-studio-(domain|ui|app|bridge|recorder)</artifactId>");
         for (String ds : List.of("nekkora-design-tokens", "nekkora-swing-ui", "nekkora-swing-showcase")) {
             assertFalse(studioArtifact.matcher(Files.readString(ROOT.resolve(ds + "/pom.xml"))).find(), ds + " não pode depender do Studio");
         }
@@ -49,6 +58,12 @@ class StudioScopeTest {
         assertFalse(studioUiPom.contains("<artifactId>nekkora-studio-app</artifactId>"));
         String domainPom = Files.readString(ROOT.resolve("nekkora-studio-domain/pom.xml"));
         assertFalse(domainPom.contains("flatlaf") || domainPom.contains("nekkora-swing-ui"));
+        for (String pure : List.of("nekkora-studio-bridge", "nekkora-studio-recorder")) {
+            String pom = Files.readString(ROOT.resolve(pure + "/pom.xml"));
+            assertFalse(pom.contains("flatlaf") || pom.contains("nekkora-swing-ui") || pom.contains("nekkora-studio-ui"), pure + " sem Swing");
+        }
+        assertFalse(Files.readString(ROOT.resolve("nekkora-studio-bridge/pom.xml")).contains("<artifactId>nekkora-studio-domain</artifactId>"),
+                "o Bridge não conhece o domínio das automações");
     }
 
     private static List<String> imports(String module, Pattern forbidden) throws IOException {
@@ -67,13 +82,16 @@ class StudioScopeTest {
     }
 
     @Test
-    @DisplayName("S001-020 gravar, executar e salvar existem apenas desabilitados e sem efeito")
+    @DisplayName("S001-020 executar e salvar existem apenas desabilitados e sem efeito (gravar é real desde a STUDIO-002)")
     void futurasDesabilitadas() {
         StudioActions actions = fx.studio.view().actions();
+        assertEquals(List.of(StudioActions.RUN, StudioActions.SAVE), StudioActions.FUTURE);
         for (String id : StudioActions.FUTURE) assertFalse(Edt.call(() -> actions.get(id).isEnabled()), id);
+        assertFalse(Edt.call(() -> actions.get(StudioActions.RECORD).isEnabled()), "sem automação/sessão de destino não há o que gravar");
+        assertEquals("Gravar", Edt.call(() -> actions.get(StudioActions.RECORD).getValue(javax.swing.Action.NAME)));
         List<NekkoraToolbarButton> future = new ArrayList<>();
         Edt.run(() -> collect(fx.studio.view().component(), future));
-        assertEquals(3, future.size(), "gravar, executar e salvar na toolbar");
+        assertEquals(2, future.size(), "executar e salvar na toolbar");
         for (NekkoraToolbarButton b : future) {
             assertFalse(Edt.call(b::isEnabled));
             assertTrue(Edt.call(b::getToolTipText).contains("próxima versão") || Edt.call(b::getToolTipText).contains("não está disponível"));
@@ -92,21 +110,28 @@ class StudioScopeTest {
     }
 
     @Test
-    @DisplayName("S001-020 código do Studio sem login, licença, IA, execução, exportação ou sucesso simulado")
+    @DisplayName("S001-020/S002-030 código do Studio sem login, licença, IA, execução, sensores de interação, exportação ou sucesso simulado")
     void semFuncionalidadesFicticias() throws IOException {
         Pattern fake = Pattern.compile("(?i)(execução concluída|alterações salvas|\"salvo\"|gravando|itens processados|login\\s*\\(|"
-                + "licen[cç]a ativ|trial|ollama|openai|anthropic|playwright|selenium|pdf|ana souza)");
+                + "licen[cç]a ativ|trial|ollama|openai|anthropic|playwright|selenium|pdf|ana souza|etapas? gravadas?|cliques? capturados?)");
+        // Único uso legítimo de "Gravando": o rótulo do botão, devolvido SOMENTE para o estado RECORDING confirmado pela
+        // extensão (verificado em RecorderStudioTest).
+        String confirmedLabel = "case RECORDING -> \"Gravando\";";
         List<String> v = new ArrayList<>();
-        for (String module : List.of("nekkora-studio-domain", "nekkora-studio-ui", "nekkora-studio-app")) {
+        for (String module : List.of("nekkora-studio-domain", "nekkora-studio-ui", "nekkora-studio-app", "nekkora-studio-bridge", "nekkora-studio-recorder")) {
             try (Stream<Path> files = Files.walk(ROOT.resolve(module).resolve("src/main/java"))) {
                 for (Path f : files.filter(p -> p.toString().endsWith(".java")).toList()) {
                     String name = f.getFileName().toString();
-                    if (name.matches("(?i).*(login|auth|license|licen[cç]a|recorder|executor|runner|llm|export).*")) v.add("classe: " + f);
+                    // "recorder" saiu da lista (STUDIO-002); BridgeAuth é a autenticação LOCAL do canal, não login de usuário.
+                    if (name.matches("(?i).*(login|license|licen[cç]a|executor|runner|llm|export|sensor|clickcapture).*") || name.matches("(Ai|AI)[A-Z].*")
+                            || (name.matches("(?i).*auth.*") && !name.equals("BridgeAuth.java"))) v.add("classe: " + f);
                     List<String> lines = Files.readAllLines(f);
                     for (int i = 0; i < lines.size(); i++) {
                         String l = lines.get(i).strip();
                         if (l.startsWith("*") || l.startsWith("//") || l.startsWith("/**")) continue; // documentação pode citar o escopo futuro
-                        if (fake.matcher(l).find()) v.add(f.getFileName() + ":" + (i + 1) + "  " + l);
+                        if (fake.matcher(l).find() && !(f.getFileName().toString().equals("RecorderPresenter.java") && l.equals(confirmedLabel))) {
+                            v.add(f.getFileName() + ":" + (i + 1) + "  " + l);
+                        }
                     }
                 }
             }

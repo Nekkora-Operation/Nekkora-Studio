@@ -126,7 +126,12 @@ public final class StudioState {
     }
 
     void fire(AutomationId automation, StudioChange first, StudioChange... rest) {
-        StudioEvent e = new StudioEvent(EnumSet.of(first, rest), automation);
+        fireFor(automation, null, first, rest);
+    }
+
+    /** Notifica uma alteração restrita a uma sessão lógica (a tela atualiza só a parte afetada). */
+    void fireFor(AutomationId automation, com.nekkora.studio.domain.SessionId session, StudioChange first, StudioChange... rest) {
+        StudioEvent e = new StudioEvent(EnumSet.of(first, rest), automation, session);
         for (Consumer<StudioEvent> l : listeners) l.accept(e);
     }
 }

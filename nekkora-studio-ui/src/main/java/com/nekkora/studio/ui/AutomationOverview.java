@@ -108,13 +108,7 @@ public final class AutomationOverview extends NekkoraPanel {
 
     /** Relê o domínio: cabeçalho, sessões novas/alteradas e etapas. */
     public void refresh() {
-        title.setText(automation.name());
-        getAccessibleContext().setAccessibleName("Automação " + automation.name());
-        description.setText(automation.description());
-        description.setVisible(!automation.description().isBlank());
-        summary.setText(StudioText.summary(automation));
-        newStep.setEnabled(!automation.sessions().isEmpty());
-
+        refreshHeader();
         List<SessionId> order = new ArrayList<>();
         for (LogicalSession s : automation.sessions()) order.add(s.id());
         views.keySet().retainAll(order);
@@ -124,10 +118,61 @@ public final class AutomationOverview extends NekkoraPanel {
             sessionStack.removeAll();
             for (SessionId id : order) sessionStack.add(views.get(id));
         }
-        for (LogicalSessionView v : views.values()) v.refresh(automation);
+        int first = 1;
+        for (LogicalSession s : automation.sessions()) {
+            views.get(s.id()).refresh(automation, first);
+            first += s.stepCount();
+        }
         cards.show(body, order.isEmpty() ? EMPTY : SESSIONS);
         revalidate();
         repaint();
+    }
+
+    /**
+     * Atualização restrita a uma sessão (STUDIO-002): relê só a sessão afetada e apenas RENUMERA as seguintes, se a
+     * numeração delas mudou — as demais sessões não são reconstruídas e a seleção é preservada. Sessão nova, removida
+     * ou reordenada cai na reconciliação completa.
+     */
+    public void refreshSession(SessionId affected) {
+        List<LogicalSession> sessions = automation.sessions();
+        boolean sameStructure = sessions.size() == views.size() && sessionStack.getComponentCount() == sessions.size();
+        if (sameStructure) {
+            int i = 0;
+            for (SessionId id : views.keySet()) {
+                if (!id.equals(sessions.get(i++).id())) {
+                    sameStructure = false;
+                    break;
+                }
+            }
+        }
+        if (!sameStructure || !views.containsKey(affected)) {
+            refresh();
+            return;
+        }
+        refreshHeader();
+        int first = 1;
+        boolean after = false;
+        for (LogicalSession s : sessions) {
+            LogicalSessionView v = views.get(s.id());
+            if (s.id().equals(affected)) {
+                v.refresh(automation, first);
+                after = true;
+            } else if (after) {
+                v.renumber(first);
+            }
+            first += s.stepCount();
+        }
+        revalidate();
+        repaint();
+    }
+
+    private void refreshHeader() {
+        title.setText(automation.name());
+        getAccessibleContext().setAccessibleName("Automação " + automation.name());
+        description.setText(automation.description());
+        description.setVisible(!automation.description().isBlank());
+        summary.setText(StudioText.summary(automation));
+        newStep.setEnabled(!automation.sessions().isEmpty());
     }
 
     /**

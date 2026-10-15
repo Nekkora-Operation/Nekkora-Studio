@@ -70,6 +70,8 @@ public final class StudioView {
     private final NekkoraCaption unsavedStatus = NekkoraStatusBar.item(IconName.ALERT, "Alterações não salvas");
     private final NekkoraCaption countStatus = NekkoraStatusBar.item(IconName.WORKFLOW, "");
     private final NekkoraCaption themeStatus = NekkoraStatusBar.item(IconName.SUN, "");
+    private final java.util.List<JComponent> extraStatus = new java.util.ArrayList<>();
+    private NekkoraStatusBar statusBar;
     private final ThemeListener themeListener = (oldTheme, newTheme) -> updateTheme();
     private final java.util.function.Consumer<StudioEvent> stateListener = this::onEvent;
     private boolean syncingTabs;
@@ -157,6 +159,9 @@ public final class StudioView {
         tb.add(new NekkoraToolbarButton(actions.get(StudioActions.NEW_SESSION), true));
         tb.add(new NekkoraToolbarButton(actions.get(StudioActions.NEW_STEP), true));
         tb.addSeparator();
+        NekkoraToolbarButton record = new NekkoraToolbarButton(actions.get(StudioActions.RECORD), true);
+        record.getAccessibleContext().setAccessibleDescription("Gravação técnica numa aba autorizada do Chrome; mostra o Recorder quando há gravação.");
+        tb.add(record);
         for (String id : StudioActions.FUTURE) {
             NekkoraToolbarButton b = new NekkoraToolbarButton(actions.get(id), false);
             NekkoraTooltips.install(b, actions.get(id).getValue(javax.swing.Action.NAME) + " — "
@@ -197,6 +202,7 @@ public final class StudioView {
         bar.addLeft(unsavedStatus);
         bar.addLeft(countStatus);
         bar.addRight(themeStatus);
+        statusBar = bar;
         return bar;
     }
 
@@ -206,7 +212,10 @@ public final class StudioView {
         if (e.has(StudioChange.CATALOG)) refreshNavigator();
         if (e.has(StudioChange.CONTENT) && e.automation() != null) {
             AutomationOverview o = overviews.get(e.automation());
-            if (o != null) o.refresh();
+            if (o != null) {
+                if (e.session() != null) o.refreshSession(e.session()); // só a sessão afetada (e a numeração seguinte)
+                else o.refresh();
+            }
         }
         if (e.has(StudioChange.OPEN_AUTOMATIONS) || e.has(StudioChange.ACTIVE_AUTOMATION)) syncTabs();
         if (e.has(StudioChange.ACTIVE_AUTOMATION)) {
@@ -416,5 +425,16 @@ public final class StudioView {
 
     public List<NekkoraCaption> statusItems() {
         return List.of(draftStatus, unsavedStatus, countStatus, themeStatus);
+    }
+
+    /** Item adicional da barra de status (ex.: conexão com o navegador, STUDIO-002). */
+    public void addStatusItem(JComponent item) {
+        extraStatus.add(item);
+        statusBar.addLeft(item);
+        statusBar.revalidate();
+    }
+
+    public List<JComponent> extraStatusItems() {
+        return List.copyOf(extraStatus);
     }
 }

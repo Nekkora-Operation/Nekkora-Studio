@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>com.nekkora</groupId>
+    <artifactId>nekkora-studio-parent</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+  </parent>
+
+  <artifactId>nekkora-studio-bridge</artifactId>
+  <name>Nekkora Studio Bridge</name>
+  <description>Studio Bridge (nekkora-bridge/1): canal local autenticado entre o Studio e o Native Host da Chrome Extension. Java puro, sem dependências: Unix Domain Socket (ou TCP em 127.0.0.1), descoberta restrita ao usuário, desafio-resposta HMAC, batimentos.</description>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+</project>

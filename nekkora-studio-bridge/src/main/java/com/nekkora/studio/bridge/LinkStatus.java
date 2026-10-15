@@ -1,0 +1,34 @@
+package com.nekkora.studio.bridge;
+
+/**
+ * Estado da ligação do Studio com o navegador.
+ *
+ * @param state     estado
+ * @param detail    detalhe técnico estável (ex.: OTHER_INSTANCE, HEARTBEAT_LOST, CHROME_DISCONNECTED), ou null
+ * @param extension versão/modo da extensão conectada (somente em CONNECTED)
+ */
+public record LinkStatus(State state, String detail, ExtensionInfo extension) {
+
+    public enum State {
+        /** Bridge sendo publicado. */
+        STARTING,
+        /** Bridge publicado; nenhuma extensão conectada (Chrome fechado ou conexão desligada no painel). */
+        WAITING,
+        /** Extensão conectada e autenticada. */
+        CONNECTED,
+        /** O Bridge não pôde ser publicado (outra instância, diretório inseguro, E/S); o Studio segue sem gravação. */
+        UNAVAILABLE
+    }
+
+    /** Versão e modo de construção da extensão conectada. */
+    public record ExtensionInfo(String version, String buildMode) {
+    }
+
+    public static LinkStatus of(State state, String detail) {
+        return new LinkStatus(state, detail, null);
+    }
+
+    public boolean connected() {
+        return state == State.CONNECTED;
+    }
+}

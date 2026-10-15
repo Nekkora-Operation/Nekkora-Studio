@@ -18,12 +18,22 @@ nekkora-design-tokens   → tokens semânticos + 4 temas (sem Swing)
 nekkora-swing-ui        → tema/LaF, tipografia, ícones, marca, componentes e padrões genéricos de estúdio
 nekkora-swing-showcase  → "Nekkora Design System Showcase" + tela Studio fictícia (demonstração)
 nekkora-studio-domain   → modelo de automações: Automação → Sessões lógicas → Etapas (Java puro)
-nekkora-studio-ui       → peças visuais do Studio (navegação, automação, sessões, etapas, propriedades, diálogos)
+nekkora-studio-bridge   → Studio Bridge nekkora-bridge/1: canal local autenticado com o Native Host (Java puro)
+nekkora-studio-recorder → RecorderController: gravação técnica confirmada pela extensão (Java puro)
+nekkora-studio-ui       → peças visuais do Studio (navegação, automação, sessões, etapas, propriedades, diálogos,
+                          Floating Recorder)
 nekkora-studio-app      → a aplicação Nekkora Studio (jar executável)
 ```
 
 O Nekkora Studio funcional nasceu na missão STUDIO-001 — veja [docs/studio-001](docs/studio-001/architecture.md) e o
 [relatório](reports/studio-001-final-report.md).
+
+**STUDIO-002 — gravação técnica controlada pelo Studio.** Com o Chrome aberto e "Conectar ao Nekkora Studio" ligado no
+painel da [Nekkora Extension](https://github.com/Nekkora-Operation/Nekkora-Extension-Chrome), o botão **Gravar** inicia
+uma captura técnica real numa aba autorizada e abre o **Floating Recorder** (pausar, continuar, modo, nova sessão,
+finalizar, cancelar). Nesta versão a gravação acompanha a página, mas ainda **não cria etapas** (STUDIO-003) e
+finalizar **não exporta** PageMap. Veja [docs/studio-002](docs/studio-002/architecture.md) e o
+[relatório](reports/studio-002-final-report.md).
 
 Camadas: **Tokens → Temas → Primitivas → Componentes → Padrões → Studio**. Detalhes em
 [docs/ARQUITETURA.md](docs/ARQUITETURA.md).
@@ -36,7 +46,8 @@ Camadas: **Tokens → Temas → Primitivas → Componentes → Padrões → Stud
 ## Comandos
 
 ```bash
-./mvnw verify                      # compila + 162 testes (tokens, design system, Showcase e Studio)
+./mvnw verify                      # compila e roda a suíte (tokens, design system, Showcase, Studio, Bridge, Recorder)
+tools/golden-linux.sh verify       # a mesma suíte no ambiente Linux de referência (Docker, JDK fixado por digest)
 ./studio.sh                        # abre o Nekkora Studio (Windows: studio.cmd)
 ./studio.sh --theme=porcelain-light
 java -jar nekkora-studio-app/target/nekkora-studio.jar          # depois de ./mvnw package

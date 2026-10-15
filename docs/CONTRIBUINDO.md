@@ -56,6 +56,21 @@ componentes de tipografia e os tokens. Copie o `DesignLintTest` para o módulo d
   `node tools/extract-icons.mjs <icons.tsx> tools/extra-icons.txt > .../nekkora-icons.txt` +
   `node tools/gen-icon-enum.mjs ... > .../IconName.java`.
 
+## Gravação técnica e Bridge (STUDIO-002)
+
+- O Studio publica o Bridge em `%LOCALAPPDATA%\Nekkora\Studio\bridge` (Unix Domain Socket; TCP em `127.0.0.1` como
+  alternativa). Para testes, use `-Dnekkora.bridge.dir=<pasta>` ou `NEKKORA_BRIDGE_DIR`; `-Dnekkora.bridge.transport=tcp`
+  força o TCP local.
+- O contrato `nekkora-bridge/1` é mantido no repositório da extensão. Ao mudá-lo, copie
+  `contracts/studio-bridge.schema.json` e `contracts/studio-bridge/` para
+  `nekkora-studio-bridge/src/test/resources/contracts/`: o `BridgeContractFixturesTest` acusa divergência quando os dois
+  repositórios estão lado a lado.
+- O `RealNativeHostBridgeTest` usa o JAR do Native Host compilado ao lado (`../Nekkora-Extension-Chrome`); sem ele, o
+  teste é ignorado.
+- Homologação real no Windows (janela, Chrome for Testing e host instalado; mexe na área de trabalho):
+  `java -cp <classpath de teste do app> com.nekkora.studio.app.evidence.Studio002Homologation <saida> <repositorio-da-extensao>`.
+  O roteiro está em `docs/studio-002/test-plan.md`.
+
 ## Definition of Done (V1)
 
 - Abrir o Showcase, alternar entre os 4 temas e ver todos os componentes consistentes, sem cores,
