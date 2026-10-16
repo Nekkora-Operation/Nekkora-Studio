@@ -62,6 +62,10 @@ class CapturePrivacyTest {
             assertEquals(c.get("out"), CapturePrivacy.isCarrier(text(c.get("tag")), text(c.get("role")), Boolean.TRUE.equals(c.get("hasHref"))),
                     "isCarrier " + c.get("tag"));
         }
+        for (Object o : MiniJson.arr(v.get("tags"))) {
+            Map<String, Object> c = MiniJson.obj(o);
+            assertEquals(text(c.get("out")), CapturePrivacy.tagName(text(c.get("in"))), "tagName " + c.get("in"));
+        }
     }
 
     @Test

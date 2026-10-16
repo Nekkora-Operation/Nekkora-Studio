@@ -107,6 +107,13 @@ public record RecordedStep(String recordingId, String eventId, long sequence, St
         // P1-01 (revisão dos PRs #7): papel ARIA só pela regra fechada do atributo role
         String role = e.get("role") instanceof String s ? CapturePrivacy.attribute("role", s, null, null) : null;
         e.put("role", role == null || role.isEmpty() ? null : role);
+        // 2ª revisão dos PRs #7: nome de elemento fora do catálogo HTML/SVG/MathML e do vocabulário => marcador neutro
+        if (e.get("tag") instanceof String t && !"unknown".equals(t)) {
+            String safe = CapturePrivacy.tagName(t);
+            e.put("tag", safe == null ? "unknown" : safe);
+        } else if (e.containsKey("tag") && !(e.get("tag") instanceof String)) {
+            e.put("tag", "unknown");
+        }
         boolean sensitive = Boolean.TRUE.equals(e.get("sensitive"));
         for (String k : new String[]{"htmlId", "htmlName"}) {
             Object v = e.get(k);

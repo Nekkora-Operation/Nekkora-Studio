@@ -32,9 +32,9 @@ class RecordedStepsTest {
         e.put("htmlName", null);
         e.put("sensitive", sensitive);
         e.put("locators", List.of(
-                Json.obj().put("strategy", "ID").put("description", "id \"" + htmlId + "\"").put("css", "#" + htmlId).put("xpath", null)
+                Json.obj().put("strategy", "ID").put("description", tag + " {id=" + htmlId + "}").put("css", "#" + htmlId).put("xpath", null)
                         .put("matchCount", 1).put("matchesTarget", true).put("stability", "HEURISTIC_STABLE").put("validation", "LIVE").build(),
-                Json.obj().put("strategy", "TEXT").put("description", "texto").put("css", null).put("xpath", "//button")
+                Json.obj().put("strategy", "TEXT").put("description", "button {text=\"Entrar\"}").put("css", null).put("xpath", "//button")
                         .put("matchCount", 3).put("matchesTarget", true).put("stability", "UNKNOWN").put("validation", "NONE").build()));
         e.put("preferredLocator", 0);
         e.put("accessPath", List.of(Json.obj().put("type", "MAIN_DOCUMENT").put("label", "Login de teste").put("locator", null).build(),
@@ -308,5 +308,45 @@ class RecordedStepsTest {
         ElementReference ref = RecordedStepDrafts.draft(r).element();
         assertEquals(1, ref.locators().size(), "a posição estrutural continua");
         assertTrue(ref.locators().get(0).expression().contains("nth-of-type(123)"));
+    }
+
+    @Test
+    void sec001SegundaRevisaoOperadoresCssValorSemAspasENomeDeComponente() {
+        // 2ª revisão dos PRs #7: o Studio recebe payload adversarial — operadores CSS além de "=", escape CSS, construção não
+        // reconhecida, valor sem aspas na notação semântica e nome de componente com dado de pessoa
+        String[][] forged = {
+            {"button[data-client^=joao-oliveira]", null, ""},
+            {"button[data-client~=joao-oliveira]", null, ""},
+            {"input[aria-label*=gumercindo-tavares]", null, ""},
+            {"#\\6a oao-oliveira", null, ""},
+            {"button:not([data-client=joao-oliveira])", null, ""},
+            {null, "//ficha-cliente-joao/button", ""},
+            {null, null, "button {aria-label=Consultar Joao Oliveira}"},
+        };
+        for (String[] f : forged) {
+            Map<String, Object> el = element("BUTTON", "Salvar", "ficha-cliente-joao", "salvar", false);
+            el.put("locators", List.of(Json.obj().put("strategy", "ATTRIBUTE").put("description", f[2]).put("css", f[0]).put("xpath", f[1])
+                    .put("matchCount", 1).put("matchesTarget", true).put("stability", "HEURISTIC_STABLE").put("validation", "LIVE").build()));
+            el.put("preferredLocator", 0);
+            el.put("accessPath", List.of(Json.obj().put("type", "SHADOW_ROOT").put("label", "").put("locator", "ficha-cliente-joao[data-x~=joao]")
+                    .put("restriction", null).build()));
+            RecordedStep r = parse(step("rec-1", 1, "route-1", "CLICK", el, "CAPTURE_AND_INTERACT"));
+            String all = r.element().toString();
+            assertFalse(all.contains("joao") || all.contains("gumercindo") || all.contains("6a oao"), all);
+            assertEquals("custom-element", r.element().get("tag"));
+            assertTrue(r.notes().contains("LOCATORS_WITHHELD"), r.notes().toString());
+            assertEquals(0, RecordedStepDrafts.draft(r).element().locators().size());
+        }
+        // operador reconhecido com literal da política e posição de componente retido (:nth-child) continuam
+        Map<String, Object> ok = element("BUTTON", "Salvar", "button", "salvar", false);
+        ok.put("locators", List.of(Json.obj().put("strategy", "POSITIONAL").put("description", "html >> body >> * {nth-child 3} >> button {nth-of-type 1}")
+                .put("css", "html > body > :nth-child(3) > button:nth-of-type(1)").put("xpath", "/html/body/*[3]/button[1]").put("matchCount", 1)
+                .put("matchesTarget", true).put("stability", "HEURISTIC_UNSTABLE").put("validation", "LIVE").build(),
+                Json.obj().put("strategy", "ATTRIBUTE").put("description", "").put("css", "input[aria-label*='Salvar']").put("xpath", null)
+                        .put("matchCount", 1).put("matchesTarget", true).put("stability", "HEURISTIC_STABLE").put("validation", "LIVE").build()));
+        ok.put("preferredLocator", 0);
+        RecordedStep r = parse(step("rec-1", 2, "route-1", "CLICK", ok, "CAPTURE_AND_INTERACT"));
+        assertEquals(2, RecordedStepDrafts.draft(r).element().locators().size(), r.element().toString());
+        assertEquals("button", r.element().get("tag"));
     }
 }

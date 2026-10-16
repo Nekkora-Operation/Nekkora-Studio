@@ -129,7 +129,7 @@ class RecorderStepsStudioTest {
         e.put("htmlId", htmlId);
         e.put("htmlName", null);
         e.put("sensitive", sensitive);
-        e.put("locators", List.of(Json.obj().put("strategy", "ID").put("description", "id \"" + htmlId + "\"").put("css", "#" + htmlId).put("xpath", null)
+        e.put("locators", List.of(Json.obj().put("strategy", "ID").put("description", tag + " {id=" + htmlId + "}").put("css", "#" + htmlId).put("xpath", null)
                 .put("matchCount", 1).put("matchesTarget", true).put("stability", "HEURISTIC_STABLE").put("validation", "LIVE").build()));
         e.put("preferredLocator", 0);
         e.put("accessPath", List.of(Json.obj().put("type", "MAIN_DOCUMENT").put("label", "Login de teste").put("locator", null).build()));
@@ -226,7 +226,7 @@ class RecorderStepsStudioTest {
         Edt.flush();
         String props = StudioFixture.texts(studio.view().component());
         for (String expected : List.of("Gravada", "Capturar e interagir", "Interação observada e encaminhada à página", "Não validado", "envio de formulário",
-                "Botão", "<button>", "entrar", "id \"entrar\"")) {
+                "Botão", "<button>", "entrar", "button {id=entrar}")) {
             assertTrue(props.contains(expected), "detalhe '" + expected + "' ausente em: " + props);
         }
         assertFalse(INTERNAL.matcher(props).find(), "IDs internos: " + INTERNAL.matcher(props).results().map(m -> m.group()).toList());
