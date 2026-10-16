@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nekkora.dev/contracts/validation-report/1.0.0",
+  "title": "Relatório de validação estrutural do Nekkora Studio — 1.0.0",
+  "description": "Saída do Automation Validation Engine (STUDIO-007). Derivada da automação, nunca persistida no projeto .nekkora. Determinística: o mesmo estado e a mesma versão das regras produzem os mesmos bytes (sem instantes, sem identificadores gerados). Não contém valores, nomes de variáveis ou credenciais, conteúdo de páginas, localizadores nem objetos do domínio: só identidades, códigos estáveis e textos de modelos controlados. Nenhum estado significa 'pronto para executar'.",
+  "$defs": {
+    "Uuid": { "type": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$" },
+    "Count": { "type": "integer", "minimum": 0 },
+    "Report": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "version", "rules", "automationId", "status", "summary", "findings"],
+      "properties": {
+        "schema": { "const": "nekkora-studio/validation-report" },
+        "version": { "const": "1.0.0" },
+        "rules": { "const": "nekkora-validation-rules/1.0.0", "description": "Versão das regras que produziram o relatório." },
+        "automationId": { "$ref": "#/$defs/Uuid" },
+        "status": { "$ref": "#/$defs/Status" },
+        "summary": { "$ref": "#/$defs/Summary" },
+        "findings": { "type": "array", "items": { "$ref": "#/$defs/Finding" }, "description": "Ordem: automação, sessões, etapas, regras." }
+      }
+    },
+    "Status": {
+      "enum": ["INCOMPLETE", "NOT_FULLY_ASSESSABLE", "NO_STATIC_BLOCKERS"],
+      "description": "INCOMPLETE: há bloqueios. NOT_FULLY_ASSESSABLE: sem bloqueios, mas há aspectos que o modelo não avalia. NO_STATIC_BLOCKERS: as regras estáticas não encontraram bloqueios — não significa pronta para execução."
+    },
+    "Summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sessions", "steps", "blockers", "warnings", "infos", "stepsWithoutFindings", "stepsWithBlockers"],
+      "properties": {
+        "sessions": { "$ref": "#/$defs/Count" },
+        "steps": { "$ref": "#/$defs/Count" },
+        "blockers": { "$ref": "#/$defs/Count" },
+        "warnings": { "$ref": "#/$defs/Count" },
+        "infos": { "$ref": "#/$defs/Count" },
+        "stepsWithoutFindings": { "$ref": "#/$defs/Count" },
+        "stepsWithBlockers": { "$ref": "#/$defs/Count" }
+      }
+    },
+    "Finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "code", "severity", "scope", "sessionId", "stepId", "position", "field", "detail", "limitsAssessment", "explanation", "guidance"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[A-Z_]{1,60}:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(:[A-Z_]{1,40})?$", "description": "código:identidade[:detalhe] — estável para o mesmo estado." },
+        "code": { "$ref": "#/$defs/Code" },
+        "severity": { "enum": ["BLOCKER", "WARNING", "INFO"] },
+        "scope": { "enum": ["AUTOMATION", "SESSION", "STEP"] },
+        "sessionId": { "anyOf": [ { "$ref": "#/$defs/Uuid" }, { "type": "null" } ] },
+        "stepId": { "anyOf": [ { "$ref": "#/$defs/Uuid" }, { "type": "null" } ] },
+        "position": { "anyOf": [ { "$ref": "#/$defs/Position" }, { "type": "null" } ] },
+        "field": { "enum": ["STRUCTURE", "ACTION_TYPE", "PARAMETERS", "ELEMENT", "LOCATORS", "OBSERVATION"] },
+        "detail": { "anyOf": [ { "$ref": "#/$defs/Detail" }, { "type": "null" } ] },
+        "limitsAssessment": { "type": "boolean" },
+        "explanation": { "type": "string", "minLength": 1, "description": "Modelo textual controlado; nunca valores nem conteúdo da página." },
+        "guidance": { "type": "string", "minLength": 1 }
+      }
+    },
+    "Position": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["session", "step"],
+      "properties": {
+        "session": { "type": "integer", "minimum": 1 },
+        "step": { "anyOf": [ { "type": "integer", "minimum": 1 }, { "type": "null" } ] }
+      }
+    },
+    "Code": {
+      "enum": ["AUTOMATION_HAS_NO_SESSIONS", "AUTOMATION_HAS_NO_STEPS", "UNATTRIBUTED_EVIDENCE", "SESSION_EMPTY", "ACTION_UNCLASSIFIED",
+        "WAIT_CONDITION_NOT_MODELED", "OBSERVE_IS_NOT_VALIDATION", "REQUIRED_VALUE_MISSING", "KEY_NOT_CONFIGURED", "KEY_NOT_RECOGNIZED",
+        "NAVIGATION_TARGET_MISSING", "NAVIGATION_TARGET_NOT_ADDRESS", "OPTION_NOT_CONFIGURED", "PARAMETER_NOT_APPLICABLE",
+        "VARIABLE_RESOLUTION_UNAVAILABLE", "CREDENTIAL_RESOLUTION_UNAVAILABLE", "SENSITIVE_FIELD_WITHOUT_CREDENTIAL", "ELEMENT_MISSING",
+        "LOCATOR_MISSING", "MANUAL_LOCATOR_ONLY", "LOCATOR_NOT_VALIDATED", "LOCATOR_MULTIPLE_MATCHES", "LOCATOR_VALIDATED_AT_CAPTURE",
+        "LOCATOR_PREFERENCE_NOT_SET", "LOCATOR_STABILITY_UNKNOWN", "LOCATOR_UNSTABLE", "LOCATOR_POSITIONAL", "MANUAL_LOCATOR_UNVERIFIED",
+        "OBSTACLE_HIGH", "OBSTACLE_MEDIUM", "OBSTACLE_LOW", "RECORDER_NO_UNIQUE_LOCATOR", "RECORDER_SAFE_LOCATOR_UNAVAILABLE",
+        "RECORDER_LIVE_CHECK_UNAVAILABLE", "PRIVACY_LOCATORS_WITHHELD", "PRIVACY_OPTION_WITHHELD", "OBSERVATION_SIGNALS",
+        "OBSERVATION_ERROR_INDICATOR", "OBSERVATION_INCOMPLETE", "OBSERVATION_IN_PROGRESS"],
+      "description": "Códigos estáveis; a severidade, o campo e os textos de cada código são fixos (docs/studio-007/validation-model.md)."
+    },
+    "Detail": {
+      "enum": ["NESTED_IFRAME", "FRAME_CONTEXT", "CROSS_ORIGIN_FRAME", "INACCESSIBLE_FRAME", "SANDBOXED_FRAME", "FRAME_LOADING", "SHADOW_DOM",
+        "CLOSED_SHADOW_ROOT", "VIRTUALIZED_COMPONENT", "DYNAMIC_IDS", "AMBIGUOUS_ELEMENTS", "ASYNC_LOADING", "TRANSIENT_ELEMENTS", "MODAL",
+        "PORTAL", "SPA_NAVIGATION", "INTERACTION_DEPENDENCY", "INACCESSIBLE_ELEMENTS", "HUMAN_VERIFICATION", "ANTIBOT_TECHNOLOGY",
+        "ACCESS_BLOCKED", "UNKNOWN_PROTECTION", "ELEMENT_UNRESOLVED", "AMBIGUOUS_TARGET", "INDISTINGUISHABLE_LOOKALIKES", "ACCESS_RESTRICTED",
+        "OTHER"],
+      "description": "Vocabulário fechado: tipos de obstáculo do PageMap 0.2.0 e do Recorder; qualquer outro valor vira OTHER."
+    }
+  }
+}

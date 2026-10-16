@@ -19,6 +19,7 @@
     <module>nekkora-studio-bridge</module>
     <module>nekkora-studio-recorder</module>
     <module>nekkora-studio-persistence</module>
+    <module>nekkora-studio-validation</module>
     <module>nekkora-studio-ui</module>
     <module>nekkora-studio-app</module>
   </modules>
@@ -61,6 +62,11 @@
       <dependency>
         <groupId>com.nekkora</groupId>
         <artifactId>nekkora-studio-persistence</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.nekkora</groupId>
+        <artifactId>nekkora-studio-validation</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
