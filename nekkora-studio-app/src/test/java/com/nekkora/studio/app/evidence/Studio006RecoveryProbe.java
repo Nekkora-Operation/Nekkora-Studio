@@ -64,8 +64,13 @@ public final class Studio006RecoveryProbe {
         Path project = Path.of(args[1]).toAbsolutePath().normalize();
         int code = 1;
         try {
-            if (args[0].equals("crash")) p.crash(project);
-            else p.restart(project);
+            switch (args[0]) {
+                case "crash" -> p.crash(project);
+                case "exit-discard" -> p.exitDiscard(project);
+                case "exit-save" -> p.exitSave(project);
+                case "none" -> p.none();
+                default -> p.restart(project);
+            }
             code = p.failures == 0 ? 0 : 2;
         } catch (Throwable t) {
             System.out.println("ERRO " + t);
@@ -80,8 +85,13 @@ public final class Studio006RecoveryProbe {
     }
 
     private void launch(List<Path> open) throws Exception {
-        window = edt(() -> StudioApplication.launch(Optional.of(NekkoraThemes.SAKURA_DARK), BrowserLink.offline("DISABLED"), () -> { }, StudioEnvironment.installation(),
-                open));
+        launch(open, () -> { });
+    }
+
+    /** {@code afterExit} roda quando o Studio encerraria a JVM (na aplicação real: fecha o Bridge e chama {@code System.exit}). */
+    private void launch(List<Path> open, Runnable afterExit) throws Exception {
+        window = edt(() -> StudioApplication.launch(Optional.of(NekkoraThemes.SAKURA_DARK), BrowserLink.offline("DISABLED"), afterExit,
+                StudioEnvironment.installation(), open));
         edt(() -> {
             window.frame().setSize(870, 1000);
             window.frame().setLocation(0, 0);
@@ -181,6 +191,83 @@ public final class Studio006RecoveryProbe {
                 && !Studio006Homologation.sha(project).equals(before));
         waitFor("fotografias apagadas", 20, () -> snapshots().isEmpty());
         capture(window.frame(), "16-recuperado-salvo");
+        System.out.println("DONE");
+    }
+
+    // ============================================================================== revisão 1 (P1-B): encerramento real
+
+    /** Encerramento real: confere o disco no instante em que a JVM terminaria e então chama {@code System.exit}. */
+    private Runnable exitChecking(String label) {
+        return () -> {
+            try {
+                List<Path> left = snapshots();
+                check(label + " (" + left.size() + " no disco no instante do encerramento)", left.isEmpty());
+            } catch (Exception e) {
+                check(label + " (" + e + ")", false);
+            }
+            System.out.println("EXIT");
+            System.out.flush();
+            System.exit(failures == 0 ? 0 : 2);
+        };
+    }
+
+    /** Abre o projeto, altera e grava uma fotografia (recuperação já consentida neste diretório de dados). */
+    private Automation editWithSnapshot(Path project, String newName, Runnable afterExit) throws Exception {
+        launch(List.of(project), afterExit);
+        waitFor("projeto aberto", 30, () -> edt(() -> window.studio().state().activeAutomation().isPresent()));
+        Automation a = edt(() -> window.studio().state().activeAutomation().orElseThrow());
+        AutomationStep entrar = edt(() -> a.sessions().get(0).steps().get(2));
+        edt(() -> {
+            window.studio().service().updateStepBasics(a.id(), entrar.id(), newName, "", ActionType.CLICK);
+            return null;
+        });
+        focusWorkspace(); // a janela ganha o foco: o ciclo de vida não dispara outra fotografia fora de hora
+        int written = edt(() -> window.studio().projects().checkpoint()).get(30, java.util.concurrent.TimeUnit.SECONDS);
+        waitFor("fotografia de recuperação", 30, () -> snapshots().size() == 1);
+        check("Revisão 1: alteração não salva com fotografia de recuperação gravada (" + written + ")", snapshots().size() == 1
+                && edt(() -> window.studio().state().project(a.id()).orElseThrow().dirty()));
+        return a;
+    }
+
+    /** Sair → Descartar alterações pelo diálogo real; o processo encerra de verdade ({@code System.exit}). */
+    private void exitDiscard(Path project) throws Exception {
+        editWithSnapshot(project, "Alteração descartada ao sair", exitChecking("P1-B cenário A: Sair → Descartar alterações só encerra depois de apagar as fotografias"));
+        menu("Arquivo", "Sair");
+        NekkoraDialog d = waitDialog("Sair do Nekkora Studio?");
+        capture(d, "17-sair-descartar");
+        click(edt(() -> find(d, AbstractButton.class, b -> "Descartar alterações".equals(b.getText()) && b.isShowing())));
+        Thread.sleep(30_000); // o encerramento chama System.exit; se não chamar, o roteiro principal acusa
+        check("P1-B cenário A: o Studio encerrou", false);
+    }
+
+    /** Ctrl+S e, assim que o salvamento é informado, Sair (sem pergunta: nada pendente). */
+    private void exitSave(Path project) throws Exception {
+        Automation a = editWithSnapshot(project, "Alteração salva antes de sair",
+                exitChecking("P1-B cenário B: salvar e sair logo em seguida não deixa fotografia superada"));
+        focusWorkspace();
+        press(KeyEvent.VK_CONTROL, KeyEvent.VK_S);
+        waitFor("salvamento informado", 30, () -> edt(() -> !window.studio().state().project(a.id()).orElseThrow().dirty()));
+        check("P1-B cenário B: no instante em que o salvamento é informado, a fotografia superada já não existe", snapshots().isEmpty());
+        menu("Arquivo", "Sair");
+        Thread.sleep(30_000);
+        check("P1-B cenário B: o Studio encerrou", false);
+    }
+
+    /** Novo processo no mesmo diretório de dados: nenhuma recuperação é oferecida. */
+    private void none() throws Exception {
+        launch(List.of());
+        long end = System.currentTimeMillis() + 10_000;
+        boolean offered = false;
+        while (System.currentTimeMillis() < end && !offered) {
+            offered = edt(() -> {
+                for (Window w : Window.getWindows()) if (w instanceof NekkoraDialog nd && nd.isShowing() && "Recuperação disponível".equals(nd.getTitle())) return true;
+                return false;
+            });
+            Thread.sleep(200);
+        }
+        check("P1-B: novo processo do Studio não oferece alterações descartadas nem fotografias superadas", !offered
+                && edt(() -> window.studio().state().catalog().all().isEmpty()));
+        capture(window.frame(), "18-reinicio-sem-oferta");
         System.out.println("DONE");
     }
 

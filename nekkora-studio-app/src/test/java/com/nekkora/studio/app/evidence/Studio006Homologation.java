@@ -458,6 +458,41 @@ public final class Studio006Homologation {
         try (Stream<Path> s = Files.walk(data.resolve("recovery"))) {
             check("S006-064 fotografias superadas pelo salvamento confirmado foram apagadas", s.noneMatch(p -> p.toString().endsWith(".nekkora")));
         }
+        exitScenarios(data, project);
+    }
+
+    /**
+     * Revisão 1 do PR #8 (P1-B), com processos REAIS que terminam por {@code System.exit}: Sair → Descartar alterações;
+     * salvar e sair logo em seguida; e um novo processo no mesmo diretório de dados, que não pode oferecer nada.
+     */
+    private void exitScenarios(Path data, Path project) throws Exception {
+        log("Revisão 1 (P1-B) — encerramento real com fotografias de recuperação");
+        String before = sha(project);
+        Process discard = probe("exit-discard", data, project);
+        String exited = waitLine(discard, "EXIT", 240);
+        boolean ended = discard.waitFor(60, java.util.concurrent.TimeUnit.SECONDS);
+        check("P1-B cenário A: Sair → Descartar alterações encerrou o processo do Studio (System.exit, código 0)", exited != null && ended && discard.exitValue() == 0);
+        check("P1-B cenário A: descartar não alterou o arquivo do projeto (mesmo SHA-256)", sha(project).equals(before));
+        check("P1-B cenário A: nenhuma fotografia no diretório de dados depois do encerramento", recoveryFiles(data).isEmpty());
+        Process save = probe("exit-save", data, project);
+        exited = waitLine(save, "EXIT", 240);
+        ended = save.waitFor(60, java.util.concurrent.TimeUnit.SECONDS);
+        check("P1-B cenário B: salvar e sair encerrou o processo do Studio (System.exit, código 0)", exited != null && ended && save.exitValue() == 0);
+        ProjectFiles.Loaded saved = new ProjectFiles(new ProjectRepository(), "homologacao").load(project, Clock.systemUTC());
+        check("P1-B cenário B: o arquivo tem a alteração salva antes de sair", saved.automation().sessions().get(0).steps().stream()
+                .anyMatch(s -> s.name().equals("Alteração salva antes de sair")));
+        check("P1-B cenário B: nenhuma fotografia no diretório de dados depois do encerramento", recoveryFiles(data).isEmpty());
+        Process none = probe("none", data, project);
+        String done = waitLine(none, "DONE", 120);
+        ended = none.waitFor(60, java.util.concurrent.TimeUnit.SECONDS);
+        check("P1-B: novo processo concluído sem oferta de recuperação", done != null && ended && none.exitValue() == 0);
+    }
+
+    private static List<Path> recoveryFiles(Path data) throws IOException {
+        if (!Files.isDirectory(data.resolve("recovery"))) return List.of();
+        try (Stream<Path> s = Files.walk(data.resolve("recovery"))) {
+            return s.filter(Files::isRegularFile).toList();
+        }
     }
 
     private Process probe(String phase, Path data, Path project) throws IOException {
