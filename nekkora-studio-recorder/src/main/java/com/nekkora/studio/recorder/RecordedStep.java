@@ -1,6 +1,7 @@
 package com.nekkora.studio.recorder;
 
 import com.nekkora.studio.bridge.json.Json;
+import com.nekkora.studio.domain.privacy.CapturePrivacy;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -22,11 +23,11 @@ import java.util.regex.Pattern;
  * @param proposed    proposta (CAPTURE_ONLY: ação não executada) ou interação encaminhada à página
  * @param action      CLICK, FILL, SELECT_OPTION, CHECK, UNCHECK, PRESS_KEY ou UNKNOWN
  * @param element     referência do elemento (mapa do contrato ElementRef)
- * @param optionLabel opção escolhida (SELECT_OPTION), ou null
- * @param optionValue valor técnico da opção, ou null
+ * @param optionLabel sempre null (CHROME-SECURITY-001: a opção escolhida é valor do usuário e nunca é aceita)
+ * @param optionValue sempre null
  * @param key         tecla (PRESS_KEY), ou null
- * @param url         URL sanitizada do documento, ou null
- * @param title       título do documento, ou null
+ * @param url         URL do documento como MODELO (nekkora-privacy/2), ou null
+ * @param title       título do documento só se for do vocabulário controlado, ou null
  * @param inFrame     a interação veio de um documento de iframe acompanhado
  * @param navigationAfter navegação observada logo depois (NONE, SAME_DOCUMENT, NEW_DOCUMENT) ou null
  * @param evidence    códigos de evidência
@@ -74,6 +75,12 @@ public record RecordedStep(String recordingId, String eventId, long sequence, St
         }
         Map<String, Object> option = Json.object(params, "option");
         Map<String, Object> ctx = Json.object(p, "context");
+        // CHROME-SECURITY-001 — 4ª barreira: o Studio reaplica nekkora-privacy/2 a tudo, mesmo vindo de extensão antiga
+        List<String> notes = new ArrayList<>(strings(Json.array(p, "notes")));
+        Map<String, Object> safeElement = guard(element, notes);
+        if (option != null && !notes.contains("OPTION_WITHHELD")) {
+            notes.add("OPTION_WITHHELD"); // a opção escolhida não é aceita, nem de uma extensão anterior à política
+        }
         Map<String, Object> after = ctx == null ? null : Json.object(ctx, "after");
         Instant at;
         try {
@@ -81,11 +88,83 @@ public record RecordedStep(String recordingId, String eventId, long sequence, St
         } catch (RuntimeException e) {
             at = null;
         }
-        return Optional.of(new RecordedStep(recordingId, eventId, sequence, routeRef, at, mode, "PROPOSED".equals(observation), action, element,
-                option == null ? null : Json.string(option, "label"), option == null ? null : Json.string(option, "value"), Json.string(params, "key"),
-                ctx == null ? null : Json.string(ctx, "url"), ctx == null ? null : Json.string(ctx, "title"),
+        return Optional.of(new RecordedStep(recordingId, eventId, sequence, routeRef, at, mode, "PROPOSED".equals(observation), action, safeElement,
+                null, null, Json.string(params, "key"),
+                ctx == null ? null : CapturePrivacy.urlTemplate(Json.string(ctx, "url")), ctx == null ? null : CapturePrivacy.title(Json.string(ctx, "title")),
                 ctx != null && "FRAME".equals(Json.string(ctx, "frame")), after == null ? null : Json.string(after, "navigation"),
-                strings(Json.array(p, "evidence")), strings(Json.array(p, "notes")), Math.max(1, Json.number(p, "events", 1))));
+                strings(Json.array(p, "evidence")), notes, Math.max(1, Json.number(p, "events", 1))));
+    }
+
+    /**
+     * Referência do elemento pela política: nome, rótulos e nomes de contexto só do vocabulário (senão ""); id/name só
+     * identificadores do vocabulário; localizador com qualquer literal fora da política é descartado (LOCATORS_WITHHELD) —
+     * o Studio não reescreve nem "conserta" localizadores.
+     */
+    @SuppressWarnings("unchecked")
+    static Map<String, Object> guard(Map<String, Object> element, List<String> notes) {
+        Map<String, Object> e = new java.util.LinkedHashMap<>(element);
+        e.put("name", nameOrEmpty(e.get("name")));
+        boolean sensitive = Boolean.TRUE.equals(e.get("sensitive"));
+        for (String k : new String[]{"htmlId", "htmlName"}) {
+            Object v = e.get(k);
+            e.put(k, sensitive || !(v instanceof String s) ? null : CapturePrivacy.identifier(s));
+        }
+        if (e.get("locators") instanceof List<?> ls) {
+            List<Object> kept = new ArrayList<>();
+            int preferred = e.get("preferredLocator") instanceof Number n ? n.intValue() : -1;
+            int newPreferred = -1;
+            for (int i = 0; i < ls.size(); i++) {
+                if (ls.get(i) instanceof Map<?, ?> l && safe(l.get("css")) && safe(l.get("xpath")) && safe(l.get("description"))) {
+                    if (i == preferred) {
+                        newPreferred = kept.size();
+                    }
+                    kept.add(l);
+                }
+            }
+            if (kept.size() < ls.size()) {
+                if (!notes.contains("LOCATORS_WITHHELD")) {
+                    notes.add("LOCATORS_WITHHELD");
+                }
+                e.put("locators", kept);
+                e.put("preferredLocator", (long) newPreferred);
+            }
+        }
+        if (e.get("accessPath") instanceof List<?> ap) {
+            List<Object> out = new ArrayList<>();
+            for (Object o : ap) {
+                if (o instanceof Map<?, ?> m) {
+                    Map<String, Object> s = new java.util.LinkedHashMap<>((Map<String, Object>) m);
+                    s.put("label", nameOrEmpty(s.get("label")));
+                    if (!safe(s.get("locator"))) {
+                        s.put("locator", null);
+                    }
+                    out.add(s);
+                }
+            }
+            e.put("accessPath", out);
+        }
+        if (e.get("context") instanceof List<?> cs) {
+            List<Object> out = new ArrayList<>();
+            for (Object o : cs) {
+                if (o instanceof Map<?, ?> m) {
+                    Map<String, Object> s = new java.util.LinkedHashMap<>((Map<String, Object>) m);
+                    s.put("name", nameOrEmpty(s.get("name")));
+                    out.add(s);
+                }
+            }
+            e.put("context", out);
+        }
+        return e;
+    }
+
+    private static String nameOrEmpty(Object v) {
+        String t = v instanceof String s ? CapturePrivacy.interfaceText(s) : null;
+        return t == null ? "" : t;
+    }
+
+    private static boolean safe(Object expr) {
+        // null do JSON chega como Json.NULL: ausência de expressão, não expressão insegura
+        return expr == null || expr == Json.NULL || expr instanceof String s && CapturePrivacy.expressionSafe(s);
     }
 
     private static boolean id(String s) {

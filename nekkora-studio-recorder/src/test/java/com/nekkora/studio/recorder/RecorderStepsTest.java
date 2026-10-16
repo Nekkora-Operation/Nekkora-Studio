@@ -167,7 +167,9 @@ class RecorderStepsTest {
     void s003030LacunaDetectadaPelaRenovacaoPedeReemissao() throws Exception {
         String rid = startRecording();
         String r1 = route(browser.last("studio.recording.start"));
-        emitStep(rid, 1, r1, "CLICK", "A");
+        // CHROME-SECURITY-001: nomes do vocabulário controlado (letras soltas como "B" não são metadado de interface e
+        // sairiam vazias), para a ORDEM continuar verificável pelo nome
+        emitStep(rid, 1, r1, "CLICK", "Entrar");
         await(() -> delivered.size() == 1, "1 entregue");
         // a extensão emitiu 3 etapas, mas 2 e 3 se perderam no canal (ex.: Studio reconectado)
         browser.auto = c -> c.type().equals("studio.recording.renew")
@@ -178,10 +180,10 @@ class RecorderStepsTest {
         FakeBrowser.Call sync = browser.last("studio.recording.steps.sync");
         assertEquals(1L, sync.payload().get("afterSequence"));
         assertTrue(rec.snapshot().steps().waiting(), "a interface mostra que faltam etapas");
-        emitStep(rid, 2, r1, "CLICK", "B");
-        emitStep(rid, 3, r1, "CLICK", "C");
+        emitStep(rid, 2, r1, "CLICK", "Salvar");
+        emitStep(rid, 3, r1, "CLICK", "Voltar");
         await(() -> delivered.size() == 3, "reemitidas entregues em ordem");
-        assertEquals(List.of("Clicar no botão A", "Clicar no botão B", "Clicar no botão C"), delivered.stream().map(Delivered::name).toList());
+        assertEquals(List.of("Clicar no botão Entrar", "Clicar no botão Salvar", "Clicar no botão Voltar"), delivered.stream().map(Delivered::name).toList());
     }
 
     @Test

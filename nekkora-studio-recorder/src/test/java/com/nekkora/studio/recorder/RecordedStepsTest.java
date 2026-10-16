@@ -64,6 +64,15 @@ class RecordedStepsTest {
         return p;
     }
 
+    /**
+     * CHROME-SECURITY-001: o nome do controle entra no nome da etapa só se for do vocabulário controlado; senão a etapa
+     * usa o nome genérico do tipo de controle.
+     */
+    private static String named(String prefix, String controlName, String generic) {
+        String t = com.nekkora.studio.domain.privacy.CapturePrivacy.interfaceText(controlName);
+        return t == null ? generic : prefix + " " + t;
+    }
+
     private static RecordedStep parse(Map<String, Object> p) {
         return RecordedStep.parse(p).orElseThrow();
     }
@@ -131,16 +140,19 @@ class RecordedStepsTest {
     void s003016NomesDeTodasAsAcoes() {
         Map<String, Object> sel = step("rec-1", 1, "route-1", "SELECT_OPTION", element("SELECT", "Estado", "select", "estado", false), "CAPTURE_AND_INTERACT");
         sel.put("parameters", Json.obj().put("valueCaptured", false).put("option", Json.obj().put("label", "São Paulo").put("value", "SP").build()).put("key", null).build());
-        StepDraft s = RecordedStepDrafts.draft(parse(sel));
-        assertEquals("Selecionar São Paulo no campo Estado", s.name());
-        assertEquals("São Paulo", s.parameters().option().orElseThrow().label());
-        assertEquals("SP", s.parameters().option().orElseThrow().value());
+        RecordedStep parsedSel = parse(sel);
+        StepDraft s = RecordedStepDrafts.draft(parsedSel);
+        // CHROME-SECURITY-001: a opção escolhida é valor do usuário — nem de extensão antiga é aceita (OPTION_WITHHELD);
+        // a escolha é configurada no Studio
+        assertEquals("Selecionar opção no campo Estado", s.name());
+        assertTrue(s.parameters().option().isEmpty());
+        assertTrue(parsedSel.notes().contains("OPTION_WITHHELD"), parsedSel.notes().toString());
 
         Map<String, Object> radio = step("rec-1", 2, "route-1", "CHECK", element("RADIO", "Pessoa física", "input", "pf", false), "CAPTURE_AND_INTERACT");
-        assertEquals("Marcar opção Pessoa física", RecordedStepDrafts.draft(parse(radio)).name());
-        assertEquals("Marcar Somente ativos", RecordedStepDrafts.draft(parse(step("rec-1", 3, "route-1", "CHECK",
+        assertEquals(named("Marcar opção", "Pessoa física", "Marcar opção"), RecordedStepDrafts.draft(parse(radio)).name());
+        assertEquals(named("Marcar", "Somente ativos", "Marcar caixa de seleção"), RecordedStepDrafts.draft(parse(step("rec-1", 3, "route-1", "CHECK",
                 element("CHECKBOX", "Somente ativos", "input", "ativos", false), "CAPTURE_AND_INTERACT"))).name());
-        assertEquals("Desmarcar Somente ativos", RecordedStepDrafts.draft(parse(step("rec-1", 4, "route-1", "UNCHECK",
+        assertEquals(named("Desmarcar", "Somente ativos", "Desmarcar caixa de seleção"), RecordedStepDrafts.draft(parse(step("rec-1", 4, "route-1", "UNCHECK",
                 element("CHECKBOX", "Somente ativos", "input", "ativos", false), "CAPTURE_AND_INTERACT"))).name());
         assertEquals("Clicar no link Clientes", RecordedStepDrafts.draft(parse(step("rec-1", 5, "route-1", "CLICK",
                 element("LINK", "Clientes", "a", "menu", false), "CAPTURE_AND_INTERACT"))).name());
@@ -172,7 +184,9 @@ class RecordedStepsTest {
         sel.put("parameters", Json.obj().put("valueCaptured", false).put("option", Json.obj().put("label", "ana@exemplo.com").put("value", "x").build()).put("key", null).build());
         StepDraft s = RecordedStepDrafts.draft(parse(sel));
         assertTrue(s.parameters().option().isEmpty(), "opção com dado pessoal não é guardada");
-        assertEquals("Selecionar opção no campo Contato", s.name());
+        // o rótulo do campo só aparece se for do vocabulário controlado ("Contato" não é)
+        String campo = com.nekkora.studio.domain.privacy.CapturePrivacy.interfaceText("Contato");
+        assertEquals(campo == null ? "Selecionar opção no campo" : "Selecionar opção no campo " + campo, s.name());
         for (String name : List.of(s.name(), s.description())) {
             assertTrue(DisplaySafety.isSafeToDisplay(name), name);
             assertFalse(name.contains("rec-1") || name.contains("tgt-") || name.contains("n12"));
@@ -236,8 +250,40 @@ class RecordedStepsTest {
         Map<String, Object> p = step("rec-1", 4, "route-1", "SELECT_OPTION", element("SELECT", "Estado", "select", "estado", false), "CAPTURE_AND_INTERACT");
         p.put("parameters", Json.obj().put("valueCaptured", false).put("option", Json.obj().put("label", "São Paulo").put("value", "SP").build())
                 .put("key", null).build());
-        StepDraft d = RecordedStepDrafts.draft(parse(p));
-        assertEquals("São Paulo", d.parameters().option().orElseThrow().label(), "compatível com as opções sanitizadas da STUDIO-003");
-        assertEquals("SP", d.parameters().option().orElseThrow().value());
+        RecordedStep parsed = parse(p);
+        StepDraft d = RecordedStepDrafts.draft(parsed);
+        // CHROME-SECURITY-001: o evento da STUDIO-003 com opção continua ACEITO (vira etapa, contrato inalterado), mas a
+        // opção em si não entra no modelo (OPTION_WITHHELD) — a escolha é configurada no Studio
+        assertEquals("Selecionar opção no campo Estado", d.name());
+        assertTrue(d.parameters().option().isEmpty());
+        assertTrue(parsed.notes().contains("OPTION_WITHHELD"));
+    }
+
+    @Test
+    void sec001QuartaBarreiraEtapaDeExtensaoAntigaNaoTrazTextoDaPagina() {
+        // CHROME-SECURITY-001: uma extensão anterior à nekkora-privacy/2 (ou com defeito) envia nome, ids, localizadores,
+        // opção, URL e título com dados de pessoas (fictícios) — o Studio reaplica a política antes de criar a etapa
+        Map<String, Object> e = element("BUTTON", "Consultar cliente Bartolomeu Quixadá", "button", "cliente-anacleto-prudencio", false);
+        e.put("htmlName", "usuario_hermengarda");
+        e.put("accessPath", List.of(Json.obj().put("type", "MAIN_DOCUMENT").put("label", "Ficha de Lucíola Assumpção").put("locator", null).build()));
+        e.put("context", List.of(Json.obj().put("relation", "IN_FORM").put("kind", "FORM").put("name", "Cadastro de Nicanor Esperança").build()));
+        Map<String, Object> p = step("rec-9", 1, "route-1", "SELECT_OPTION", e, "CAPTURE_AND_INTERACT");
+        p.put("parameters", Json.obj().put("valueCaptured", false).put("option", Json.obj().put("label", "Zéfiro Quintanilha").put("value", "t1").build())
+                .put("key", null).build());
+        p.put("context", Json.obj().put("url", "http://127.0.0.1:18765/clientes/joao-oliveira?cliente=Ataulfo#ficha").put("title", "Ficha de Belmira Saraiva")
+                .put("frame", "MAIN").build());
+        RecordedStep s = parse(p);
+        String all = s.toString() + s.element();
+        for (String secret : new String[]{"Quixad", "anacleto", "hermengarda", "Assump", "Esperan", "Quintanilha", "oliveira", "Ataulfo", "Saraiva"}) {
+            assertFalse(all.contains(secret), secret + " em " + all);
+        }
+        assertEquals("", s.element().get("name"));
+        assertEquals(null, s.element().get("htmlId"));
+        assertEquals(null, s.optionLabel());
+        assertEquals("http://127.0.0.1:18765/clientes/{…}?cliente={…}", s.url());
+        assertEquals(null, s.title());
+        assertTrue(s.notes().contains("OPTION_WITHHELD") && s.notes().contains("LOCATORS_WITHHELD"), s.notes().toString());
+        StepDraft d = RecordedStepDrafts.draft(s);
+        assertFalse(d.name().contains("Quixad"), d.name());
     }
 }

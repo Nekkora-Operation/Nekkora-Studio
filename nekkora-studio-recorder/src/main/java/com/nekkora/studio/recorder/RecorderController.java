@@ -199,7 +199,7 @@ public final class RecorderController implements AutoCloseable {
                 if (o instanceof Map<?, ?> raw) {
                     @SuppressWarnings("unchecked")
                     Map<String, Object> t = (Map<String, Object>) raw;
-                    out.add(new BrowserTab(Json.string(t, "tabRef"), safe(Json.string(t, "title")), safe(Json.string(t, "host")),
+                    out.add(new BrowserTab(Json.string(t, "tabRef"), tabTitle(Json.string(t, "title")), safe(Json.string(t, "host")),
                             TabAccess.of(Json.string(t, "access")), Json.bool(t, "active", false), Json.bool(t, "recording", false)));
                 }
             }
@@ -706,7 +706,7 @@ public final class RecorderController implements AutoCloseable {
             }
         }
         Map<String, Object> tab = Json.object(rec, "tab");
-        String title = safe(Json.string(tab, "title"));
+        String title = tabTitle(Json.string(tab, "title"));
         tabTitle = title != null ? title : tabTitle;
         tabHost = safe(Json.string(tab, "host")) != null ? safe(Json.string(tab, "host")) : tabHost;
         progress = progressOf(rec);
@@ -1325,6 +1325,11 @@ public final class RecorderController implements AutoCloseable {
 
     private static String safe(String s) {
         return s == null || DisplaySafety.isSafeToDisplay(s) ? s : null;
+    }
+
+    /** Título de aba (CHROME-SECURITY-001, D4): só se for do vocabulário controlado; senão null (a aba é identificada pelo host). */
+    private static String tabTitle(String s) {
+        return s == null ? null : com.nekkora.studio.domain.privacy.CapturePrivacy.title(s);
     }
 
     private static Instant parse(String s) {

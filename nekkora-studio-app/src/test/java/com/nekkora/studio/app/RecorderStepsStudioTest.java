@@ -311,10 +311,11 @@ class RecorderStepsStudioTest {
         step(rid, 2, r, "PRESS_KEY", element("SEARCH_INPUT", "Pesquisa", "input", "pesquisa", false),
                 Json.obj().put("valueCaptured", false).put("option", null).put("key", "Enter").build());
         await(() -> studio.recorder().snapshot().steps().accepted() == 2, "registradas");
-        assertEquals(List.of("Selecionar São Paulo no campo Estado", "Pressionar Enter no campo Pesquisa"), names(consulta));
+        // CHROME-SECURITY-001: a opção escolhida é valor do usuário (OPTION_WITHHELD) — configurada no Studio
+        assertEquals(List.of("Selecionar opção no campo Estado", "Pressionar Enter no campo Pesquisa"), names(consulta));
         AutomationStep sel = Edt.call(() -> consulta.steps().get(0));
         assertEquals(ActionType.SELECT_OPTION, sel.actionType());
-        assertEquals("SP", sel.parameters().option().orElseThrow().value());
+        assertTrue(sel.parameters().option().isEmpty(), "opção não chega ao modelo");
         List<String> types = new ArrayList<>();
         Edt.run(() -> consulta.steps().forEach(s -> types.add(s.actionType().name())));
         assertEquals(List.of("SELECT_OPTION", "PRESS_KEY"), types);
