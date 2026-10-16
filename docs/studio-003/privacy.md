@@ -1,5 +1,7 @@
 # STUDIO-003 — Privacidade no Studio
 
+> **CHROME-SECURITY-001:** a política reconhecida passou a ser `nekkora-privacy/2`, e o Studio a **reaplica** a tudo o que recebe (`CapturePrivacy`, `RecordedStep.guard`). Referências marcadas com a `nekkora-privacy/1` não são exibidas como seguras. Ver o relatório `reports/chrome-security-001-final-report.md` no repositório da extensão.
+
 A sanitização principal pertence ao produtor: a extensão, em três barreiras (content script, service worker e
 Native Host), descritas em `Nekkora-Extension-Chrome/docs/studio-003/privacy.md`. O Studio acrescenta as suas.
 

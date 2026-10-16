@@ -1,5 +1,7 @@
 # STUDIO-001 — Modelo de domínio
 
+> **CHROME-SECURITY-001:** a política reconhecida passou a ser `nekkora-privacy/2`, e o Studio a **reaplica** a tudo o que recebe (`CapturePrivacy`, `RecordedStep.guard`). Referências marcadas com a `nekkora-privacy/1` não são exibidas como seguras. Ver o relatório `reports/chrome-security-001-final-report.md` no repositório da extensão.
+
 Módulo `nekkora-studio-domain`, pacote `com.nekkora.studio.domain`. Java 21 puro, testável sem Swing.
 
 ```text
