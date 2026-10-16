@@ -1,0 +1,33 @@
+{
+  "schema": "nekkora-studio/semantic-contract",
+  "version": "1.0.0",
+  "automationId": "cfdf92ab-3116-49eb-b2b9-6c9000c18084",
+  "modelVersion": "1.1.0",
+  "dataFlowRules": "nekkora-validation-rules/1.1.0",
+  "summary": {"variables": 2, "steps": 5, "variableReferences": 4, "undeclaredReferences": 1, "uncertainties": 5},
+  "variables": [
+    {"variableId": "607c35e0-7ecd-4165-ba29-93381283114a", "name": "cliente.cpf", "technicalType": "STRING", "semanticType": "BRAZILIAN_CPF", "semanticStatus": "USER_CONFIRMED", "sensitivity": "PERSONAL_DATA",
+      "scope": {"kind": "AUTOMATION", "sessionId": null}, "origin": {"kind": "INPUT", "constantDeclared": false, "producer": null},
+      "constraints": {"required": false, "minLength": null, "maxLength": null, "textFormat": "ANY", "minimum": null, "maximum": null, "scale": null, "currency": null},
+      "consumers": ["8bf22622-2f14-40ea-80e7-6e8760fa5613"]},
+    {"variableId": "cbb058a9-00a7-450a-b49f-70e47bca7267", "name": "resultado.protocolo", "technicalType": "STRING", "semanticType": "IDENTIFIER", "semanticStatus": "PROPOSED_UNCONFIRMED", "sensitivity": "INTERNAL",
+      "scope": {"kind": "SESSION", "sessionId": "b2688de1-7ae2-49f6-835f-8307fe0f8737"}, "origin": {"kind": "STEP_OUTPUT", "constantDeclared": false, "producer": {"stepId": "3177d6e2-740d-4fb8-89ea-8e89f525d901", "status": "INVALID", "runtimeVerification": "UNVERIFIED_AT_RUNTIME"}},
+      "constraints": {"required": false, "minLength": null, "maxLength": null, "textFormat": "ANY", "minimum": null, "maximum": null, "scale": null, "currency": null},
+      "consumers": ["a1a786dd-4cd2-4c8b-aaf2-59fd91754aa3", "5f20edd2-11b6-4d6e-9604-b5f778efadd4"]}
+  ],
+  "steps": [
+    {"stepId": "8bf22622-2f14-40ea-80e7-6e8760fa5613", "sessionId": "b2688de1-7ae2-49f6-835f-8307fe0f8737", "position": {"session": 1, "step": 1}, "actionType": "FILL", "value": "VARIABLE", "reference": "DECLARED", "variableId": "607c35e0-7ecd-4165-ba29-93381283114a"},
+    {"stepId": "3177d6e2-740d-4fb8-89ea-8e89f525d901", "sessionId": "b2688de1-7ae2-49f6-835f-8307fe0f8737", "position": {"session": 1, "step": 2}, "actionType": "OBSERVE", "value": "NONE", "reference": null, "variableId": null},
+    {"stepId": "a1a786dd-4cd2-4c8b-aaf2-59fd91754aa3", "sessionId": "b2688de1-7ae2-49f6-835f-8307fe0f8737", "position": {"session": 1, "step": 3}, "actionType": "FILL", "value": "VARIABLE", "reference": "DECLARED", "variableId": "cbb058a9-00a7-450a-b49f-70e47bca7267"},
+    {"stepId": "5f20edd2-11b6-4d6e-9604-b5f778efadd4", "sessionId": "0f13e7d2-4e92-4e41-b3dd-9bcf4f1e6a07", "position": {"session": 2, "step": 1}, "actionType": "FILL", "value": "VARIABLE", "reference": "DECLARED", "variableId": "cbb058a9-00a7-450a-b49f-70e47bca7267"},
+    {"stepId": "06bbfbc3-cc8f-4b32-8b8f-b91fb843b47b", "sessionId": "0f13e7d2-4e92-4e41-b3dd-9bcf4f1e6a07", "position": {"session": 2, "step": 2}, "actionType": "FILL", "value": "VARIABLE", "reference": "UNDECLARED", "variableId": null}
+  ],
+  "uncertainties": [
+    {"code": "INPUT_VALUE_UNKNOWN", "variableId": "607c35e0-7ecd-4165-ba29-93381283114a", "stepId": null},
+    {"code": "STEP_OUTPUT_UNVERIFIED", "variableId": "cbb058a9-00a7-450a-b49f-70e47bca7267", "stepId": "3177d6e2-740d-4fb8-89ea-8e89f525d901"},
+    {"code": "SEMANTIC_UNCONFIRMED", "variableId": "cbb058a9-00a7-450a-b49f-70e47bca7267", "stepId": null},
+    {"code": "OUT_OF_SCOPE_REFERENCE", "variableId": "cbb058a9-00a7-450a-b49f-70e47bca7267", "stepId": "5f20edd2-11b6-4d6e-9604-b5f778efadd4"},
+    {"code": "UNDECLARED_REFERENCE", "variableId": null, "stepId": "06bbfbc3-cc8f-4b32-8b8f-b91fb843b47b"}
+  ],
+  "exclusions": ["RUNTIME_VALUES", "CONSTANT_VALUES", "LITERAL_VALUES", "CREDENTIAL_ALIASES", "UNDECLARED_REFERENCE_NAMES", "AUTOMATION_SESSION_AND_STEP_NAMES", "FREE_TEXT_PURPOSE", "PAGE_CONTENT", "LOCATORS", "EVIDENCE"]
+}

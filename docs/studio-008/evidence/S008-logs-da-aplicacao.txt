@@ -1,0 +1,8 @@
+INFO com.nekkora.studio.app.workspace.ProjectService projeto operacao=salvar resultado=ok duracaoMs=9 bytes=4916 codigo=-
+INFO com.nekkora.studio.app.workspace.ProjectService projeto operacao=descartar-recuperacao resultado=ok duracaoMs=0 bytes=-1 codigo=-
+INFO com.nekkora.studio.app.workspace.ProjectService projeto operacao=salvar resultado=ok duracaoMs=16 bytes=5863 codigo=-
+INFO com.nekkora.studio.app.workspace.ProjectService projeto operacao=descartar-recuperacao resultado=ok duracaoMs=0 bytes=-1 codigo=-
+INFO com.nekkora.studio.app.workspace.ProjectService projeto operacao=abrir resultado=ok duracaoMs=2 bytes=5863 codigo=-
+INFO com.nekkora.studio.app.workspace.ProjectService projeto operacao=abrir resultado=ok duracaoMs=2 bytes=4916 codigo=-
+INFO com.nekkora.studio.app.workspace.ProjectService projeto operacao=abrir resultado=ok duracaoMs=51 bytes=14889 codigo=-
+INFO com.nekkora.studio.app.workspace.ProjectService projeto operacao=abrir resultado=ok duracaoMs=213 bytes=3140730 codigo=-

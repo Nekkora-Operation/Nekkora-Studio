@@ -1,0 +1,68 @@
+Tela: java.awt.Rectangle[x=0,y=0,width=1920,height=1032] · java 21.0.12
+OK    atalho Ctrl+Shift+B de Variáveis e dependências (o botão fica no painel de propriedades da automação)
+OK    sem variáveis o projeto é gravado em 1.0.0 (1.0.0)
+OK    painel de propriedades da automação: botão Variáveis e dependências e versão do modelo 1.0.0 sem "(anterior)"
+captura S008-01-variaveis-vazio.png (1350x891)
+OK    formulário sem campo de valor de execução: só a declaração
+captura S008-01-nova-variavel-cpf.png (760x652)
+captura S008-01-constante-nao-criptografada.png (760x652)
+OK    CPF com valor fixo recusado no campo (dados pessoais não podem ter valor fixo); nada declarado
+captura S008-01-constante-sensivel-recusada.png (760x652)
+OK    CPF declarado como entrada, dados pessoais, significado confirmado, sem valor
+OK    painel lista a declaração: cliente.cpf · Texto · CPF · Entrada · Automação inteira · não usada · Dados pessoais
+captura S008-01-cpf-declarado.png (1350x891)
+OK    editor de etapa lista só as variáveis declaradas visíveis
+OK    escolher preenche a referência e mostra a declaração: Declarada: Texto · CPF · origem entrada
+captura S008-02-editor-variavel-declarada.png (760x701)
+OK    etapa usa a variável declarada
+OK    validação 1.1: entrada não disponível (limita a avaliação), sem 'não declarada'
+captura S008-02-validacao-entrada.png (1350x891)
+captura S008-03-editor-fora-do-escopo.png (760x701)
+captura S008-03-editor-nao-declarada.png (760x701)
+OK    fora de escopo: VARIABLE_OUT_OF_SCOPE (bloqueio)
+OK    sem declaração (nome parecido não associado): VARIABLE_NOT_DECLARED
+captura S008-03-validacao-escopo-e-declaracao.png (1350x891)
+OK    saída de etapa anterior: STEP_OUTPUT_NOT_PROVEN (aviso que limita), nunca 'comprovada'
+captura S008-04-validacao-saida-nao-comprovada.png (1350x891)
+OK    painel: origem declarada 'não comprovada': Origem: Saída declarada de Sessão 1 · Etapa 02 — Ler protocolo (não comprovada)
+captura S008-04-variaveis-saida-de-etapa.png (1350x891)
+OK    contrato semântico: produtora sempre UNVERIFIED_AT_RUNTIME, sem nomes de etapas
+OK    prévia antes de confirmar: 1 etapa passa a usar o novo nome, na mesma operação.
+captura S008-05-renomear-previa.png (540x344)
+OK    renomeado junto com a referência da etapa
+captura S008-05-renomeado.png (1350x891)
+OK    Ctrl+Z: nome e referência voltam juntos
+captura S008-05-depois-do-desfazer.png (1350x891)
+OK    Ctrl+Y: renomeado de novo
+OK    arquivo 1.0 intocado até salvar
+captura S008-06-confirmar-migracao.png (420x237)
+OK    cancelar a migração: arquivo 1.0 intacto, nenhuma cópia, continua não salvo
+OK    cópia de segurança idêntica ao arquivo 1.0.0
+OK    arquivo do projeto agora em 1.1.0 com variables.json
+OK    variables.json só com declarações: sem valores (nenhum dígito de CPF, nenhum campo de valor)
+captura S008-06-salvo-1.1.png (1350x891)
+OK    reaberto (1.1): 2 variáveis, referências preservadas, formato no estado = 1.1.0
+OK    cópia 1.0.0 aberta pelo leitor 1.0 (sem variáveis, formato 1.0.0)
+captura S008-06-copia-1.0-aberta.png (1350x891)
+OK    projeto da STUDIO-006 aberto; nenhum diálogo pedindo credenciais
+OK    regras 1.1 sobre o projeto antigo: credencial só alias (CREDENTIAL_RESOLUTION_UNAVAILABLE) e referência sem declaração apontada
+OK    Executar continua indisponível
+captura S008-07-projeto-antigo-validado.png (1350x891)
+OK    validar não altera o projeto antigo (sem *, sem gravação)
+OK    fechado sem gravar: arquivo antigo idêntico e ainda 1.0.0
+OK    projeto de 5.000 etapas e 1.000 variáveis aberto
+OK    5.000 etapas: abrir, painel, validar e renomear sem travar ({abrir5000Ms=4340, painelVariaveis5000Ms=671, validar5000EdtMs=73, validar5000Ms=78, renomear5000EdtMs=7})
+captura S008-08-5000-etapas-variaveis.png (1350x891)
+OK    tema Sakura Dark: painel de variáveis visível
+captura S008-08-tema-sakura-dark.png (1350x891)
+OK    tema Midnight Dark: painel de variáveis visível
+captura S008-08-tema-midnight-dark.png (1350x891)
+OK    tema Porcelain Light: painel de variáveis visível
+captura S008-08-tema-porcelain-light.png (1350x891)
+OK    tema Sage Light: painel de variáveis visível
+captura S008-08-tema-sage-light.png (1350x891)
+OK    logs só com códigos e contagens: sem nomes de variáveis nem valores
+OK    recuperação sem valores de execução nem o valor fixo recusado (0 fotografia(s))
+métricas: {"abrir5000Ms": 4340, "painelVariaveis5000Ms": 671, "validar5000EdtMs": 73, "validar5000Ms": 78, "renomear5000EdtMs": 7}
+
+RESULTADO: 40 verificações, 0 falha(s)
