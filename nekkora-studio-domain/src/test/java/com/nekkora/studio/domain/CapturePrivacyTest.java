@@ -70,8 +70,15 @@ class CapturePrivacyTest {
         if (!Files.isDirectory(SIBLING)) {
             return; // ambiente sem o repositório irmão (ex.: Linux de referência): as cópias valem por si
         }
-        assertEquals(Files.readString(SIBLING.resolve("ui-vocabulary.json")), Files.readString(LOCAL_VOCABULARY), "rode a cópia de contracts/privacy");
-        assertEquals(Files.readString(SIBLING.resolve("privacy-v2-vectors.json")), Files.readString(LOCAL_VECTORS));
+        // conteúdo idêntico; o fim de linha depende do checkout (core.autocrlf) e não faz parte do contrato
+        assertEquals(lf(Files.readString(SIBLING.resolve("ui-vocabulary.json"))), lf(Files.readString(LOCAL_VOCABULARY)), "rode a cópia de contracts/privacy");
+        assertEquals(lf(Files.readString(SIBLING.resolve("privacy-v2-vectors.json"))), lf(Files.readString(LOCAL_VECTORS)));
+    }
+
+    private static String lf(String s) {
+        return s.replace("
+", "
+");
     }
 
     @Test
