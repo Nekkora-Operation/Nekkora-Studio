@@ -32,6 +32,11 @@ public final class ProjectFiles {
             Objects.requireNonNull(projectId, "projectId");
             return new Snapshot(projectId, a.id(), a.name(), a.createdAt(), a.stepCount(), ProjectCodec.documents(a));
         }
+
+        /** Versão do formato que esta fotografia produz (a menor capaz de representá-la). */
+        public String formatVersion() {
+            return ProjectFormat.versionFor(documents);
+        }
     }
 
     /** Projeto lido e reconstruído. */

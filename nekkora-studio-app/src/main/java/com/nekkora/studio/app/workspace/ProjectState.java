@@ -48,14 +48,17 @@ public final class ProjectState {
     private boolean reloading;
     private ProjectException.Error lastError;
     private boolean recovered;
+    /** Versão do formato do arquivo associado (STUDIO-008); vazia quando não se sabe (recuperação) ou não há arquivo. */
+    private String fileFormat;
 
     ProjectState(long generation) {
         this.generation = generation;
     }
 
     /** Projeto aberto de um arquivo (nada pendente). */
-    static ProjectState opened(Path path, String projectId, ProjectRepository.Fingerprint fingerprint, Instant savedAt) {
+    static ProjectState opened(Path path, String projectId, ProjectRepository.Fingerprint fingerprint, Instant savedAt, String fileFormat) {
         ProjectState p = new ProjectState(0);
+        p.fileFormat = fileFormat;
         p.path = path;
         p.projectId = projectId;
         p.fingerprint = fingerprint;
@@ -65,6 +68,11 @@ public final class ProjectState {
 
     public Optional<Path> path() {
         return Optional.ofNullable(path);
+    }
+
+    /** Versão do formato do arquivo associado, quando conhecida. */
+    public Optional<String> fileFormat() {
+        return Optional.ofNullable(fileFormat);
     }
 
     public Optional<String> projectId() {
@@ -133,8 +141,9 @@ public final class ProjectState {
         saving = true;
     }
 
-    void saved(Path path, String projectId, ProjectRepository.Fingerprint fingerprint, long generationWritten, Instant at) {
+    void saved(Path path, String projectId, ProjectRepository.Fingerprint fingerprint, long generationWritten, Instant at, String fileFormat) {
         saving = false;
+        this.fileFormat = fileFormat;
         lastError = null;
         recovered = false;
         this.path = path;

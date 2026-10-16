@@ -213,6 +213,26 @@ class ProjectFormat11ContractTest {
         assertFalse(Tamper.entries(p).containsKey(ProjectFormat.VARIABLES));
     }
 
+    @Test
+    @DisplayName("cópia de segurança da migração: só do conteúdo esperado, nunca substitui um arquivo existente")
+    void copiaDeSeguranca() throws Exception {
+        Path file = Files.copy(ProjectFormatContractTest.VALID.resolve(ProjectFormatContractTest.FIXTURE), dir.resolve("projeto.nekkora"));
+        ProjectRepository repo = new ProjectRepository();
+        ProjectRepository.Fingerprint fp = repo.fingerprintOf(file);
+        ProjectException changed = assertThrows(ProjectException.class, () -> repo.backupCopy(file, new ProjectRepository.Fingerprint(fp.size(), "00".repeat(32)),
+                "formato 1.0.0"));
+        assertEquals(ProjectException.Error.CONFLICT, changed.error());
+        assertFalse(Files.exists(dir.resolve("projeto (formato 1.0.0).nekkora")), "conteúdo diferente do esperado: nada copiado");
+        Path first = repo.backupCopy(file, fp, "formato 1.0.0");
+        Path second = repo.backupCopy(file, fp, "formato 1.0.0");
+        assertEquals(dir.resolve("projeto (formato 1.0.0).nekkora"), first);
+        assertEquals(dir.resolve("projeto (formato 1.0.0) 2.nekkora"), second);
+        assertArrayEquals(Files.readAllBytes(file), Files.readAllBytes(first));
+        try (Stream<Path> s = Files.list(dir)) {
+            assertEquals(3, s.count(), "nenhum temporário deixado");
+        }
+    }
+
     // ================================================================================================== fixtures inválidas
 
     @Test

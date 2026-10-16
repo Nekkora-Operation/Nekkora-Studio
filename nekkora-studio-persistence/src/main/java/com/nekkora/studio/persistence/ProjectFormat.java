@@ -97,6 +97,11 @@ public final class ProjectFormat {
         return hasVariables(supportedVersion) ? ModelVersion.V1_1 : ModelVersion.CURRENT;
     }
 
+    /** A versão (de um arquivo lido) já representa o catálogo de variáveis — gravar nela não é migração. */
+    public static boolean representsVariables(String version) {
+        return compatibility(version) == Compatibility.SUPPORTED && hasVariables(version);
+    }
+
     /** Menor versão do formato capaz de representar os documentos (D-S008-06). */
     public static String versionFor(java.util.Map<String, ?> documents) {
         return documents.containsKey(VARIABLES) ? FORMAT_VERSION_1_1 : FORMAT_VERSION;
