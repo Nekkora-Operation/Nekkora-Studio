@@ -25,6 +25,7 @@ public final class Studio {
     private final StudioState state;
     private final WorkspaceService service;
     private final com.nekkora.studio.app.workspace.ProjectService projects;
+    private final com.nekkora.studio.app.workspace.ValidationService validation;
     private final java.util.concurrent.ExecutorService persistence;
     private final StudioEnvironment environment;
     private final StudioController controller;
@@ -48,7 +49,8 @@ public final class Studio {
                 new com.nekkora.studio.persistence.ProjectRepository(environment.fileOps()), StudioApplication.VERSION);
         projects = new com.nekkora.studio.app.workspace.ProjectService(service, prompts, files, persistence, clock, environment.recents(),
                 environment.settings(), environment.recovery(files));
-        controller = new StudioController(service, projects, prompts, exitAction);
+        validation = new com.nekkora.studio.app.workspace.ValidationService(state); // STUDIO-007: diagnóstico estrutural (somente leitura)
+        controller = new StudioController(service, projects, validation, prompts, exitAction);
         view = new StudioView(state, controller);
         this.link = link;
         // STUDIO-003: as etapas gravadas entram pelo StepIntake do WorkspaceService (na EDT).
@@ -81,6 +83,11 @@ public final class Studio {
     /** Casos de uso de projeto (STUDIO-006). */
     public com.nekkora.studio.app.workspace.ProjectService projects() {
         return projects;
+    }
+
+    /** Validação estrutural (STUDIO-007). */
+    public com.nekkora.studio.app.workspace.ValidationService validation() {
+        return validation;
     }
 
     public StudioEnvironment environment() {

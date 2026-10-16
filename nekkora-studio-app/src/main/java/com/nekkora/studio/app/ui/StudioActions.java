@@ -36,6 +36,8 @@ public final class StudioActions {
     public static final String CLOSE_PROJECT = "studio.project.close";
     public static final String RECOVERY = "studio.project.recovery";
     public static final String EXIT = "studio.exit";
+    /** STUDIO-007: validação estrutural da automação ativa (não executa nada). */
+    public static final String VALIDATE = "studio.automation.validate";
 
     /** Ações que dependem de missões futuras e permanecem desabilitadas. */
     public static final List<String> FUTURE = List.of(RUN);
@@ -86,8 +88,11 @@ public final class StudioActions {
                 .description("Ativar, desativar ou limpar as cópias de recuperação das alterações não salvas."));
         registry.register(NekkoraAction.of(EXIT, "Sair", controller::requestExit).icon(IconName.X_CIRCLE).category("Arquivo")
                 .description("Fechar o Nekkora Studio."));
+        registry.register(NekkoraAction.of(VALIDATE, "Validar automação", controller::validateActive).icon(IconName.CHECK_CIRCLE)
+                .shortcut(NekkoraKeys.shortcut(KeyEvent.VK_V, InputEvent.SHIFT_DOWN_MASK)).category("Automação")
+                .description("Diagnóstico estrutural da automação ativa: parâmetros, elementos, localizadores e dependências. Não executa nenhuma etapa."));
         future(RUN, "Executar", IconName.PLAY, "A execução de automações chega em uma próxima versão do Studio.");
-        for (String id : List.of(NEW_SESSION, NEW_STEP, RENAME_SESSION, RECORD, EDIT, UNDO, REDO, SAVE, SAVE_AS, CLOSE_PROJECT)) get(id).setEnabled(false);
+        for (String id : List.of(NEW_SESSION, NEW_STEP, RENAME_SESSION, RECORD, EDIT, UNDO, REDO, SAVE, SAVE_AS, CLOSE_PROJECT, VALIDATE)) get(id).setEnabled(false);
     }
 
     /** Liga o botão Gravar ao Recorder (STUDIO-002). */

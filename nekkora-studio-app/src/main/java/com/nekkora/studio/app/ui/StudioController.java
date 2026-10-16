@@ -26,14 +26,17 @@ import java.util.function.Function;
 public final class StudioController {
     private final WorkspaceService service;
     private final com.nekkora.studio.app.workspace.ProjectService projects;
+    private final com.nekkora.studio.app.workspace.ValidationService validation;
     private final StudioPrompts prompts;
     private final Runnable exitAction;
     private java.util.function.Consumer<Runnable> exitGuard = Runnable::run;
+    private Runnable showValidation = () -> { };
 
-    public StudioController(WorkspaceService service, com.nekkora.studio.app.workspace.ProjectService projects, StudioPrompts prompts,
-            Runnable exitAction) {
+    public StudioController(WorkspaceService service, com.nekkora.studio.app.workspace.ProjectService projects,
+            com.nekkora.studio.app.workspace.ValidationService validation, StudioPrompts prompts, Runnable exitAction) {
         this.service = Objects.requireNonNull(service);
         this.projects = Objects.requireNonNull(projects);
+        this.validation = Objects.requireNonNull(validation);
         this.prompts = Objects.requireNonNull(prompts);
         this.exitAction = Objects.requireNonNull(exitAction);
     }
@@ -45,6 +48,62 @@ public final class StudioController {
     /** Casos de uso de projeto (STUDIO-006). */
     public com.nekkora.studio.app.workspace.ProjectService projects() {
         return projects;
+    }
+
+    /** Validação estrutural (STUDIO-007). */
+    public com.nekkora.studio.app.workspace.ValidationService validation() {
+        return validation;
+    }
+
+    // ------------------------------------------------------------------ STUDIO-007: validação
+
+    /** A tela registra como revelar o painel de validação. */
+    public void onValidationShown(Runnable show) {
+        this.showValidation = show == null ? () -> { } : show;
+    }
+
+    /**
+     * Automação → Validar automação: diagnóstico estrutural do estado ATUAL da automação ativa. Não executa nada, não
+     * consulta o navegador, não edita a automação (nada vai para o desfazer) e não a marca como não salva. Permitido
+     * durante uma gravação (consulta): o resultado pode ficar desatualizado logo depois, e o painel diz isso.
+     */
+    public void validateActive() {
+        active().ifPresent(a -> {
+            validation.validate(a.id());
+            showValidation.run();
+        });
+    }
+
+    /** Seleciona o lugar de um apontamento na automação ativa (a etapa pode ter mudado de sessão desde a validação). */
+    public void goToFinding(com.nekkora.studio.validation.Finding f) {
+        Automation a = active().orElse(null);
+        if (a == null) return;
+        if (f.step() != null) {
+            Optional<LogicalSession> s = a.sessionOf(f.step());
+            if (s.isPresent()) {
+                service.select(new Selection.OfStep(a.id(), s.get().id(), f.step()));
+                return;
+            }
+            service.report(new com.nekkora.studio.app.workspace.Notice(com.nekkora.studio.app.workspace.Notice.Kind.INFO, "Etapa não encontrada",
+                    "A etapa deste apontamento não existe mais. Valide a automação novamente."));
+            return;
+        }
+        if (f.session() != null && a.session(f.session()).isPresent()) {
+            service.select(new Selection.OfSession(a.id(), f.session()));
+            return;
+        }
+        service.select(new Selection.OfAutomation(a.id()));
+    }
+
+    /** Abre o editor de etapa EXISTENTE no apontamento (não há editor dentro do painel de validação). */
+    public void editFinding(com.nekkora.studio.validation.Finding f) {
+        Automation a = active().orElse(null);
+        if (a == null || f.step() == null || a.step(f.step()).isEmpty()) {
+            goToFinding(f);
+            return;
+        }
+        goToFinding(f);
+        openStepDetails(f.step());
     }
 
     // ------------------------------------------------------------------ STUDIO-006: projetos

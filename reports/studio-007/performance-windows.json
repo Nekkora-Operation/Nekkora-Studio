@@ -1,0 +1,40 @@
+{
+  "commit": "09083ea",
+  "source": "ValidationPerformanceTest na regressão final (./mvnw clean verify)",
+  "os": "windows",
+  "note": "mediana de 9 execuções depois de 5 de aquecimento; etapas realistas sintéticas (dados fictícios)",
+  "measurements": [
+    {
+      "steps": 10,
+      "medianMs": 0.2,
+      "maxMs": 0.29,
+      "findings": 35,
+      "jsonMs": 0.45,
+      "jsonBytes": 22705
+    },
+    {
+      "steps": 100,
+      "medianMs": 0.83,
+      "maxMs": 0.99,
+      "findings": 351,
+      "jsonMs": 3.14,
+      "jsonBytes": 224699
+    },
+    {
+      "steps": 1000,
+      "medianMs": 5.2,
+      "maxMs": 6.43,
+      "findings": 3494,
+      "jsonMs": 16.03,
+      "jsonBytes": 2236180
+    },
+    {
+      "steps": 5000,
+      "medianMs": 8.08,
+      "maxMs": 9.19,
+      "findings": 17472,
+      "jsonMs": 60.01,
+      "jsonBytes": 11187335
+    }
+  ]
+}

@@ -52,6 +52,26 @@ class Scale150Test {
         }
     }
 
+    @Test
+    @DisplayName("STUDIO-007 a 150%, 1366×768 lógicos: painel de validação aberto com os botões inteiros e a área de trabalho utilizável")
+    void validacao150() {
+        org.junit.jupiter.api.Assumptions.assumeTrue("1.5".equals(System.getProperty("flatlaf.uiScale")),
+                "executado apenas na execução scale-150");
+        fx = new StudioFixture();
+        fx.missionExample();
+        Edt.run(() -> fx.studio.controller().validateActive());
+        int w = Math.round(1366 * 1.5f), h = Math.round(768 * 1.5f);
+        Edt.render(fx.studio.view().component(), w, h);
+        Edt.run(() -> {
+            assertTrue(fx.studio.view().validationVisible());
+            Rectangle screen = new Rectangle(0, 0, w, h);
+            check(fx.studio.view().component(), fx.studio.view().component(), screen);
+            assertTrue(fx.studio.view().validationPanel().getHeight() >= Scale.px(200), "painel baixo demais: " + fx.studio.view().validationPanel().getHeight());
+            assertTrue(fx.studio.view().workArea().getHeight() >= Scale.px(200), "área de trabalho espremida: " + fx.studio.view().workArea().getHeight());
+            assertTrue(fx.studio.view().validationPanel().findingList().getModel().getSize() > 0);
+        });
+    }
+
     /** Botões visíveis precisam estar inteiros dentro da janela e com espaço para o rótulo. */
     private static void check(Component root, Component c, Rectangle screen) {
         if (!c.isVisible() || c instanceof javax.swing.JViewport) return; // conteúdo rolável é alcançado rolando

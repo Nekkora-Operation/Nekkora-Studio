@@ -23,6 +23,11 @@
       <artifactId>nekkora-studio-recorder</artifactId>
     </dependency>
     <dependency>
+      <!-- STUDIO-007: Automation Validation Engine (Java puro) -->
+      <groupId>com.nekkora</groupId>
+      <artifactId>nekkora-studio-validation</artifactId>
+    </dependency>
+    <dependency>
       <groupId>com.nekkora</groupId>
       <artifactId>nekkora-swing-ui</artifactId>
     </dependency>

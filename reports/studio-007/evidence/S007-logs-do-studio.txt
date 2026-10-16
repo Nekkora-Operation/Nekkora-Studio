@@ -1,0 +1,6 @@
+INFO com.nekkora.studio.bridge.BridgeServer Bridge publicado (tcp)
+INFO com.nekkora.studio.app.workspace.ProjectService projeto operacao=salvar resultado=ok duracaoMs=32 bytes=4328 codigo=-
+INFO com.nekkora.studio.app.workspace.ProjectService projeto operacao=descartar-recuperacao resultado=ok duracaoMs=0 bytes=-1 codigo=-
+INFO com.nekkora.studio.app.workspace.ProjectService projeto operacao=abrir resultado=ok duracaoMs=4 bytes=4328 codigo=-
+INFO com.nekkora.studio.app.workspace.ProjectService projeto operacao=abrir resultado=ok duracaoMs=62 bytes=14889 codigo=-
+INFO com.nekkora.studio.app.workspace.ProjectService projeto operacao=abrir resultado=ok duracaoMs=190 bytes=3093187 codigo=-
