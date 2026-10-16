@@ -1,0 +1,87 @@
+Tela: java.awt.Rectangle[x=0,y=0,width=1920,height=1032] · java 21.0.12
+Native Host instalado pelo script oficial (install-host.ps1)
+OK    S006-061 diretório de dados do Studio = NEKKORA_STUDIO_DATA_DIR (isolado da instalação pessoal)
+OK    S006-061 recuperação automática começa DESATIVADA (sem consentimento)
+Chrome for Testing: 155.0.8059.39
+OK    Conexão autenticada Studio ⇄ host ⇄ extensão
+OK    S006-002 novo projeto = 'Alterações não salvas — sem arquivo' e aba com *
+OK    S006-060 Ctrl+S durante a gravação: mensagem exata da missão; nenhum diálogo, nenhum arquivo
+OK    S006-060 salvar NÃO finalizou nem cancelou a gravação
+captura S006-01-salvar-durante-gravacao.png (1920x1000)
+captura S006-02-salvar-como.png (670x390)
+OK    S006-039 Salvar como pelo diálogo do sistema: arquivo .nekkora criado, estado 'Salvo — login-006.nekkora', aba sem *
+  fotografia na EDT: 5 ms (o resto do salvamento roda fora da interface)
+OK    S006-059 tempo da fotografia na EDT < 100 ms
+OK    S006-038 pacote só com as entradas do formato (manifesto, metadados, automação, sessões, etapas, evidências)
+OK    S006-073 valores digitados na página ausentes do arquivo (usuário e senha)
+OK    S006-071 sem executáveis, scripts, imagens, PageMaps ou recursos externos no arquivo
+OK    S006-071 manifesto: formato 1.0.0, PROJECT, nekkora-privacy/2; metadados: não criptografado, com aviso
+OK    S006-010/014/028 leitura independente: mesmas identidades, etapas GRAVADAS, mesmas evidências
+OK    S006-065 Projetos recentes registra o arquivo
+captura S006-03-salvo.png (1920x1000)
+OK    S006-055 edição marca a automação: aba com * e 'Alterações não salvas — login-006.nekkora'
+captura S006-04-alteracoes-nao-salvas.png (1920x1000)
+OK    S006-036 Ctrl+Z / Ctrl+Y reais desfazem e refazem a última edição
+OK    S006-038 Ctrl+S com arquivo associado: salva sem perguntar; aba sem *
+OK    Cenário 2: Fechar projeto salvo — sem perguntas, retirado do Studio
+OK    S006-008/010/032/065 reaberto por Projetos recentes: mesma identidade da automação e das etapas (nenhum ID novo)
+OK    S006-015/024/025 edições preservadas, original intacto (nome capturado 'Clicar no botão Entrar')
+OK    S006-018 parâmetro alterado preservado (variável cliente.usuario), sem valor digitado
+OK    S006-023 localizador manual preservado e ainda NÃO VERIFICADO
+OK    S006-035 histórico de desfazer começa vazio no projeto aberto
+OK    S006-080 abrir não altera o arquivo (mesmo SHA-256) e não executa nada (Recorder livre)
+captura S006-05-reaberto.png (1920x1000)
+OK    S006-027/028/029 mesmas evidências (identidades e ordem) depois de salvar e reabrir
+OK    S006-031 resultado de negócio continua NOT_VALIDATED; texto da página continua ausente (SUPPRESSED/NONE, sem texto)
+OK    S006-033 evidências não se multiplicam: duplicar não copia evidências
+OK    Cenário 3: painel mostra as evidências e 'Não validado' sem o texto da página
+captura S006-06-evidencias-reabertas.png (1920x1000)
+OK    S006-071 elemento capturado declara a política do produtor conhecido (nekkora-privacy/2) depois de reaberto
+OK    S006-052/071/072 politica-v1.nekkora recusado ('política de privacidade'), nada carregado
+OK    S006-052/071/072 dado-da-pagina.nekkora recusado ('nekkora-privacy/2'), nada carregado
+OK    S006-052/071/072 com-script.nekkora recusado ('entrada não permitida'), nada carregado
+captura S006-07-recusa-privacidade.png (1920x1000)
+  aviso: O arquivo ou a pasta é somente leitura. O arquivo anterior foi preservado. As alterações continuam abertas no Studio.
+OK    S006-042 arquivo somente leitura: erro claro, arquivo anterior preservado (mesmo SHA-256), alterações continuam abertas
+OK    S006-042 nenhum temporário deixado na pasta
+captura S006-08-erro-somente-leitura.png (1920x1000)
+  outro programa com o arquivo aberto (FileShare.None): LOCKED
+  aviso: O arquivo está em uso por outro programa. O arquivo anterior foi preservado. As alterações continuam abertas no Studio.
+OK    S006-042 arquivo em uso por outro programa: erro, arquivo anterior preservado, alterações abertas
+captura S006-09-conflito.png (540x203)
+OK    S006-041 conflito detectado antes de sobrescrever: o arquivo externo continua intacto
+OK    S006-041/039 'Salvar com outro nome' preserva as duas versões; o projeto passa a usar o novo arquivo
+OK    S006-068 Sair com alterações: [Salvar todos] [Descartar alterações] [Cancelar], com aviso de arquivo não criptografado
+captura S006-10-sair-com-alteracoes.png (540x220)
+OK    S006-070 Cancelar: o Studio continua aberto com as alterações
+OK    S006-069 Salvar todos com falha: o Studio NÃO encerra
+captura S006-11-sair-falha-nao-encerra.png (1920x1000)
+OK    S006-069 Salvar todos com sucesso: salvo e encerrado
+OK    S006-074 logs do Studio registram as operações de projeto
+OK    S006-074 logs sem valores digitados, nomes do projeto, comentários ou caminhos
+OK    [filho] Cenário 1: nova instância do Studio (outro processo) abre o projeto salvo — 3 etapas GRAVADAS, mesmas identidades e procedência do arquivo
+OK    [filho] Recuperação desativada num diretório de dados novo (consentimento ainda não pedido)
+OK    [filho] S006-061 consentimento informado: local, retenção (3 cópias, 7 dias) e aviso de não criptografado no diálogo
+  [filho] captura S006-12-consentimento-recuperacao.png
+OK    [filho] S006-061 consentimento registrado e recuperação ativa (1 min)
+  [filho] fotografia gravada pelo temporizador 59 s depois da alteração
+OK    [filho] S006-061 fotografia de recuperação gravada sem salvar o projeto (continua 'Alterações não salvas')
+  [filho] captura S006-13-antes-da-queda.png
+OK    S006-061 Studio (processo filho) abriu o projeto, consentiu a recuperação pelo diálogo e gravou a fotografia pelo temporizador
+  processo do Studio encerrado à força (exit 1)
+OK    S006-063 o arquivo do projeto NÃO foi alterado pela recuperação nem pela queda (mesmo SHA-256)
+OK    S006-061 fotografia de recuperação no diretório próprio (1)
+OK    S006-073 fotografia de recuperação sem valores digitados
+OK    [filho] S006-062 oferta explícita ao abrir: projeto, horário e arquivo de origem; nada restaurado antes da escolha
+  [filho] captura S006-14-oferta-de-recuperacao.png
+  [filho] status: Recuperado — alterações não salvas — recuperacao.nekkora
+OK    [filho] S006-062 recuperado continua NÃO salvo ('Recuperado — alterações não salvas', aba com *)
+OK    [filho] S006-062 alterações feitas antes da queda presentes (nome e comentário)
+OK    [filho] S006-063 recuperar não alterou o arquivo do projeto
+  [filho] captura S006-15-recuperado-nao-salvo.png
+OK    [filho] S006-062 Ctrl+S grava no arquivo de origem (conteúdo base conferido): 'Salvo — recuperacao.nekkora'
+  [filho] captura S006-16-recuperado-salvo.png
+OK    S006-062 reinício concluído (oferta, recuperação, salvamento)
+OK    S006-062 depois de salvar o recuperado, o arquivo tem a alteração feita antes da queda
+OK    S006-064 fotografias superadas pelo salvamento confirmado foram apagadas
+RESULTADO: 60 verificações, 0 falha(s)

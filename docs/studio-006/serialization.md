@@ -23,7 +23,7 @@ worker  ZipOutputStream (nível 6, data fixa)      bytes determinísticos para o
 worker  ProjectRepository.save                    temporário → sync → releitura completa → substituição
 ```
 
-A fotografia é o único trabalho na EDT: com 5.000 etapas realistas, 27,8 ms ([performance.md](performance.md)). O
+A fotografia é o único trabalho na EDT: com 5.000 etapas realistas, 20 a 28 ms ([performance.md](performance.md)). O
 worker nunca toca o agregado (o Recorder pode estar mudando outra automação enquanto isso).
 
 ## Releitura antes de confirmar
