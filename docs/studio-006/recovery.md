@@ -32,7 +32,9 @@ Só com consentimento, para cada automação com alterações **ainda não fotog
 - a cada intervalo configurado (temporizador Swing);
 - quando a janela do Studio perde o foco (ponto relevante do ciclo de vida).
 
-Não fotografa durante uma gravação sem quiescência nem durante um salvamento. A fotografia usa o **mesmo formato
+Não fotografa durante uma gravação sem quiescência, durante um salvamento nem durante um recarregamento. Depois que o
+usuário escolhe **Descartar alterações**, as alterações descartadas não são fotografadas de novo (só alterações feitas
+depois da decisão). A fotografia usa o **mesmo formato
 validado** (`kind=RECOVERY`, com `recoveryOf` = arquivo de origem e o tamanho/SHA-256 dele naquele momento), a mesma
 gravação atômica e a mesma releitura completa. Mantém só as 3 mais recentes por automação.
 
@@ -64,6 +66,12 @@ Recuperar não altera esse arquivo; salve depois para confirmar.
 
 Uma automação já aberta não é oferecida. Nada é restaurado em silêncio.
 
+**Fotografia superada** (revisão 1): se o arquivo de origem existe, é um projeto válido da mesma automação, não é o
+conteúdo-base da fotografia e foi salvo **estritamente depois** dela, a fotografia (e as anteriores a ela) é apagada e
+**não é oferecida**: uma recuperação antiga nunca é apresentada como mais recente que o estado confirmado. Na dúvida
+(origem desconhecida, ilegível, de outra automação ou com o mesmo instante), ela continua oferecida — esconder
+alterações mais novas seria pior. Teste: `ProjectRecoveryTest.superadaPorSalvamentoConfirmado`.
+
 ## Depois de recuperar
 
 - Continua **não salvo** até o usuário salvar.
@@ -73,13 +81,38 @@ Uma automação já aberta não é oferecida. Nada é restaurado em silêncio.
 
 ## Quando as fotografias são apagadas
 
-| Evento | Apaga |
-|---|---|
-| salvamento confirmado | as fotografias daquela automação até a geração gravada |
-| Sair → Descartar alterações / Fechar projeto → Descartar | as fotografias da automação descartada |
-| "Apagar agora…" no diálogo | todas |
-| retenção | fotografias com mais de 7 dias, na varredura |
-| mais de 3 por automação | as mais antigas |
+| Evento | Apaga | Quando o resultado é informado |
+|---|---|---|
+| salvamento confirmado | as fotografias daquela automação até a geração gravada | no mesmo trabalho do worker, **antes** de "Projeto salvo"; se falhar, o aviso diz que uma fotografia antiga não pôde ser apagada e o Studio tenta de novo ao sair |
+| Sair → Descartar alterações | as fotografias das automações descartadas | o Studio **só encerra depois** de apagá-las (ver abaixo) |
+| Fechar projeto → Descartar / Recarregar do arquivo | as fotografias da automação | depois do trabalho de disco em andamento; falha = aviso e nova tentativa ao sair |
+| "Apagar agora…" no diálogo | todas | falha = aviso |
+| varredura ao abrir | as superadas por um salvamento confirmado posterior | não são oferecidas |
+| retenção | fotografias com mais de 7 dias, na varredura | — |
+| mais de 3 por automação | as mais antigas | — |
+
+As exclusões passam pelas `FileOps` do repositório e **informam o resultado**: `discard`, `discardAll` e `clear` devolvem
+`true` só se nenhuma fotografia visada restou.
+
+## Encerramento (revisão 1, P1-B)
+
+Sair nunca encerra a JVM com trabalho de disco pendente:
+
+1. com alterações não salvas, o usuário escolhe Salvar todos / Descartar / Cancelar;
+2. o Studio espera — **sem bloquear a EDT** — todo trabalho de disco registrado (salvamentos, fotografias em gravação,
+   limpezas) e então apaga, no worker, as fotografias devidas (descartadas, ou superadas por salvamentos cuja limpeza
+   tinha falhado);
+3. enquanto espera, mostra "Encerrando o Studio"; um segundo pedido de Sair não abre outra pergunta;
+4. só então a aplicação continua o encerramento (guarda da gravação técnica, Bridge, `System.exit`);
+5. se alguma exclusão falhar, o Studio **não** afirma que limpou: pergunta "Fotografias de recuperação não apagadas —
+   Sair mesmo assim?", explicando que elas poderão ser oferecidas na próxima abertura. Cancelar mantém o Studio aberto
+   com as alterações.
+
+Testes com barreira controlada (sem depender de `Thread.sleep`): `ProjectStudioTest.p1bDescartarESair` (uma fotografia
+retida no worker quando o usuário pede Sair; o disco é copiado **no instante** em que o Studio encerraria e outro Studio
+é aberto sobre essa cópia — nada é oferecido), `p1bSalvarESairImediatamente` (a fotografia de outra automação retém o
+worker logo depois do salvamento; a fotografia anterior ao salvamento já não existe quando o sucesso é informado) e
+`p1bFalhaAoApagarRecuperacao`.
 
 ## Homologação real (cenário 5)
 

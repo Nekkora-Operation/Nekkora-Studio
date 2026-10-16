@@ -34,3 +34,18 @@
 | I-S006-07 | Diretório de dados: propriedade `nekkora.studio.dataDir` > `NEKKORA_STUDIO_DATA_DIR` > padrão do sistema | testes e homologação isolados da instalação pessoal; testes sem diretório usam `inMemory` |
 | I-S006-08 | `NekkoraStatusBar` em linha única sem sobreposição | defeito encontrado na homologação: com 870 px (ou 1366×768 a 150%) textos se sobrepunham |
 | I-S006-09 | Item "Navegador" da barra de status logo depois da situação do projeto | em janela estreita saem primeiro os itens menos importantes (tema, recuperação) |
+
+## Decisões da revisão 1 do PR #8
+
+Regra geral: **uma operação de salvamento, descarte ou recarregamento não informa sucesso nem destrói o estado anterior
+antes de concluir as suas garantias de integridade.**
+
+| Id | Decisão | Motivo |
+|---|---|---|
+| R1-01 | Recarregar troca a automação com `AutomationCatalog.replace`, que valida identidade e nome antes de trocar (mesma posição); o estado anterior só é descartado depois da admissão | P1-A: remover antes de admitir fazia a automação sumir quando a substituta era recusada (nome em conflito) |
+| R1-02 | Recarregar é recusado durante salvamento/recarregamento do mesmo projeto; salvar, fechar e recarregar esperam um recarregamento em andamento (`ProjectState.reloading`) | P1-A: operações sobre o mesmo arquivo não se sobrepõem |
+| R1-03 | As fotografias superadas por um salvamento são apagadas no MESMO trabalho do worker, antes de "Projeto salvo"; falha vira aviso e dívida refeita ao sair | P1-B: o processo podia encerrar antes da limpeza agendada |
+| R1-04 | Todo trabalho de disco é registrado; Sair espera por ele (sem bloquear a EDT) e só encerra depois de apagar as fotografias devidas; falha = pergunta "Sair mesmo assim?" | P1-B: Descartar e sair podia deixar fotografias que seriam oferecidas de novo |
+| R1-05 | A varredura não oferece (e apaga) fotografia anterior a um salvamento confirmado posterior do arquivo de origem; comparação estrita do instante, e o conteúdo-base nunca conta como superação | P1-B: defesa adicional quando a limpeza não chegou a acontecer (queda, falha de exclusão); na dúvida, oferecer |
+| R1-06 | Salvar como sobre arquivo existente lê a impressão digital do destino antes da confirmação e a confere antes da troca (`expected`); `overwrite` sem `expected` fica só para arquivos do próprio Studio | P2: alteração externa posterior à confirmação era sobrescrita em silêncio |
+| R1-07 | Formato `.nekkora` **não mudou** (schema e fixtures 1.0.0 intactos) | as correções são de comportamento, não de contrato |

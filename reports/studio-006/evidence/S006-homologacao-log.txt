@@ -10,7 +10,7 @@ OK    S006-060 salvar NÃO finalizou nem cancelou a gravação
 captura S006-01-salvar-durante-gravacao.png (1920x1000)
 captura S006-02-salvar-como.png (670x390)
 OK    S006-039 Salvar como pelo diálogo do sistema: arquivo .nekkora criado, estado 'Salvo — login-006.nekkora', aba sem *
-  fotografia na EDT: 5 ms (o resto do salvamento roda fora da interface)
+  fotografia na EDT: 8 ms (o resto do salvamento roda fora da interface)
 OK    S006-059 tempo da fotografia na EDT < 100 ms
 OK    S006-038 pacote só com as entradas do formato (manifesto, metadados, automação, sessões, etapas, evidências)
 OK    S006-073 valores digitados na página ausentes do arquivo (usuário e senha)
@@ -55,6 +55,7 @@ OK    S006-068 Sair com alterações: [Salvar todos] [Descartar alterações] [C
 captura S006-10-sair-com-alteracoes.png (540x220)
 OK    S006-070 Cancelar: o Studio continua aberto com as alterações
 OK    S006-069 Salvar todos com falha: o Studio NÃO encerra
+OK    Revisão 1: quando o Salvar todos falha, os avisos mostram 'O Studio continua aberto' e nenhum 'Encerrando o Studio'
 captura S006-11-sair-falha-nao-encerra.png (1920x1000)
 OK    S006-069 Salvar todos com sucesso: salvo e encerrado
 OK    S006-074 logs do Studio registram as operações de projeto
@@ -84,4 +85,20 @@ OK    [filho] S006-062 Ctrl+S grava no arquivo de origem (conteúdo base conferi
 OK    S006-062 reinício concluído (oferta, recuperação, salvamento)
 OK    S006-062 depois de salvar o recuperado, o arquivo tem a alteração feita antes da queda
 OK    S006-064 fotografias superadas pelo salvamento confirmado foram apagadas
-RESULTADO: 60 verificações, 0 falha(s)
+Revisão 1 (P1-B) — encerramento real com fotografias de recuperação
+OK    [filho] Revisão 1: alteração não salva com fotografia de recuperação gravada (1)
+  [filho] captura S006-17-sair-descartar.png
+OK    [filho] P1-B cenário A: Sair → Descartar alterações só encerra depois de apagar as fotografias (0 no disco no instante do encerramento)
+OK    P1-B cenário A: Sair → Descartar alterações encerrou o processo do Studio (System.exit, código 0)
+OK    P1-B cenário A: descartar não alterou o arquivo do projeto (mesmo SHA-256)
+OK    P1-B cenário A: nenhuma fotografia no diretório de dados depois do encerramento
+OK    [filho] Revisão 1: alteração não salva com fotografia de recuperação gravada (1)
+OK    [filho] P1-B cenário B: no instante em que o salvamento é informado, a fotografia superada já não existe
+OK    [filho] P1-B cenário B: salvar e sair logo em seguida não deixa fotografia superada (0 no disco no instante do encerramento)
+OK    P1-B cenário B: salvar e sair encerrou o processo do Studio (System.exit, código 0)
+OK    P1-B cenário B: o arquivo tem a alteração salva antes de sair
+OK    P1-B cenário B: nenhuma fotografia no diretório de dados depois do encerramento
+OK    [filho] P1-B: novo processo do Studio não oferece alterações descartadas nem fotografias superadas
+  [filho] captura S006-18-reinicio-sem-oferta.png
+OK    P1-B: novo processo concluído sem oferta de recuperação
+RESULTADO: 74 verificações, 0 falha(s)

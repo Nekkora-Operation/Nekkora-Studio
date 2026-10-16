@@ -8,7 +8,7 @@
 | Branch | `feat/nekkora-studio-006` |
 | Baseline | `3dc6035cb6b9d80de04b48d640d4b868b213491d` (main, PRs #7 da CHROME-SECURITY-001 integrados) |
 | Extensão usada | árvore idêntica à `main` `2c7c06b` (checkout local em `e4a30aa`, `git diff e4a30aa 2c7c06b` vazio); **nenhuma alteração na extensão** |
-| Commit de código testado | `d2e0eec` (ver §17 e §18 para cada resultado) |
+| Commit de código testado | `db0e757` depois da revisão 1 do PR #8 (§22); a entrega original foi testada em `d2e0eec` (§17 e §18) |
 | Dados reais | **não utilizados** (D-S006-18); só páginas fictícias do laboratório local |
 | Merge | **não feito** — PR para revisão independente |
 
@@ -23,7 +23,11 @@ Commits da missão:
 | `cd9134d` | contrato versionado: schema, fixtures válidas congeladas e 18 inválidas |
 | `3ddff58` | barra de status sem sobreposição (defeito da homologação), rótulos "em memória", homologação real, README |
 | `d2e0eec` | teste de somente leitura declara a inaplicabilidade como superusuário (Linux em contêiner roda como root) |
-| (docs) | `docs/studio-006/` e este relatório |
+| `946ec7f` | `docs/studio-006/`, este relatório e as evidências |
+| `a864089` | **revisão 1**: recarregar transacional (P1-A), limpeza da recuperação antes de informar sucesso ou encerrar (P1-B), Salvar como confere o destino confirmado (P2) |
+| `a27f81f` | revisão 1: homologação real do encerramento (Sair → Descartar, salvar e sair, reinício sem oferta) |
+| `db0e757` | revisão 1: aviso "Encerrando o Studio" só quando o encerramento realmente espera (achado da homologação) |
+| (docs) | revisão 1: este relatório (§22), `docs/studio-006/` e evidências atualizados |
 
 ---
 
@@ -152,6 +156,8 @@ arquivo). [performance.md](../docs/studio-006/performance.md).
 
 ## 17. Testes
 
+> Resultados da **entrega original** (`d2e0eec`). Os resultados finais, depois da revisão 1, estão na §22.
+
 ### Regressão
 
 | Execução | Commit | Resultado |
@@ -208,6 +214,9 @@ Os 80 casos, cada um com o teste automatizado e/ou o passo da homologação que 
 
 ## 18. Homologação real
 
+> Execução da **entrega original** (`d2e0eec`, 60 verificações). A execução final, com 74 verificações em `db0e757`,
+> está na §22; as evidências em `reports/studio-006/evidence/` são as dessa execução final.
+
 Execução final: **60 verificações, 0 falhas**, sobre o build de `d2e0eec` (Windows 11, tela 1920×1032, JDK 21.0.12,
 Chrome for Testing 155.0.8059.39, extensão com árvore da `main` `2c7c06b`, Native Host instalado pelo script oficial
 `install-host.ps1`, laboratório local fictício `/lab/studio005/login-erro.html`). Diretório de dados e Bridge isolados
@@ -260,3 +269,88 @@ sem criptografia nem assinatura; textos do usuário podem conter dados pessoais;
 - Itens da SECURITY-RELEASE-001 continuam abertos (dados reais não liberados).
 
 Nenhuma funcionalidade da STUDIO-007 foi iniciada.
+
+## 22. Revisão 1 do PR #8
+
+A revisão técnica aprovou arquitetura, formato, reconstrução, evidências e privacidade e apontou dois P1 e um P2. Regra
+adotada: **uma operação de salvamento, descarte ou recarregamento não informa sucesso nem destrói o estado anterior
+antes de concluir as suas garantias de integridade.** O formato `.nekkora` não mudou (schema e fixtures 1.0.0 intactos).
+
+### Reprodução antes da correção
+
+Os testes novos foram escritos primeiro e executados sobre o código de `d2e0eec` (HEAD `946ec7f`, só documentação
+depois). Todos falharam pelo motivo apontado:
+
+| Ponto | Teste | Falha observada em `d2e0eec` |
+|---|---|---|
+| P1-A | `ProjectStudioTest.p1aRecarregarRecusadoPreservaWorkspace` | "A continua no workspace": esperado `[Consulta de Clientes, Cadastro de Produtos]`, obtido `[Cadastro de Produtos]` |
+| P1-A | `ProjectStudioTest.p1aRecarregarESalvarNaoSeSobrepoem` | recarregar durante um salvamento abriu a pergunta "Recarregar do arquivo?" |
+| P1-B A | `ProjectStudioTest.p1bDescartarESair` | "não encerra enquanto a limpeza não terminou": esperado 0 encerramentos, obtido 1 |
+| P1-B B | `ProjectStudioTest.p1bSalvarESairImediatamente` | sucesso informado com a fotografia superada (`…-g5.nekkora`) ainda no disco |
+| P1-B | `ProjectStudioTest.p1bFalhaAoApagarRecuperacao` | o aviso de sucesso não mencionava a fotografia não apagada |
+| P1-B | `ProjectRecoveryTest.superadaPorSalvamentoConfirmado` | fotografia anterior a um salvamento confirmado posterior foi oferecida |
+| P2 | `ProjectStudioTest.p2SobrescritaAlteradaDepoisDaConfirmacao` | esperado `CONFLICT`, obtido `SAVED`: a versão gravada por outro programa depois da confirmação foi sobrescrita |
+
+As corridas são reproduzidas com **barreiras controladas** nas `FileOps` de teste (gravação, leitura ou exclusão
+retidas por latch, ou exclusão com falha injetada), nunca só com `Thread.sleep`. Nos cenários de encerramento, o
+diretório de dados é copiado **no instante** em que o Studio encerraria a JVM, e outro Studio é aberto sobre essa
+cópia: é exatamente o que um novo processo encontraria.
+
+### Correções
+
+| Ponto | Correção |
+|---|---|
+| P1-A | `AutomationCatalog.replace` valida identidade e nome único **antes** de trocar e troca na mesma posição; `ProjectService.reload` só descarta o estado anterior (aba, histórico, estado, fotografias) depois da admissão. Qualquer recusa preserva automação, alterações não salvas, seleção, histórico, arquivo e recuperação. Recarregar é recusado durante salvamento ou outro recarregamento do mesmo projeto, sem perguntar nada; salvar, fechar e recarregar esperam um recarregamento em andamento (`ProjectState.reloading`) |
+| P1-B | As fotografias superadas por um salvamento são apagadas no **mesmo trabalho do worker**, antes de "Projeto salvo"; uma falha vira aviso honesto e nova tentativa ao sair. Todo trabalho de disco fica registrado; Sair espera por ele **sem bloquear a EDT**, apaga as fotografias devidas e só então encerra; durante a espera aparece "Encerrando o Studio" e um segundo Sair não abre outra pergunta. Se a exclusão falhar, o Studio pergunta "Sair mesmo assim?" e explica que as fotografias poderão ser oferecidas. As alterações descartadas não são fotografadas de novo. `ProjectRecovery.discard/discardAll/clear` informam o resultado e apagam pelas `FileOps`; a varredura não oferece (e apaga) fotografia anterior a um salvamento confirmado posterior do arquivo de origem (comparação estrita; o conteúdo-base nunca conta como superação; na dúvida, oferece) |
+| P2 | Salvar como sobre arquivo existente lê a impressão digital do destino fora da EDT **antes** da confirmação e a passa como `expected`: o repositório a confere antes e de novo imediatamente antes da troca. Alteração, substituição ou remoção depois da confirmação = conflito com a mensagem "foi alterado por outro programa depois da sua confirmação"; nada é sobrescrito. `overwrite` sem `expected` fica só para arquivos do próprio Studio (fotografias de nome único) |
+
+Achado da homologação desta revisão, corrigido em `db0e757`: o aviso "Encerrando o Studio" aparecia também durante um
+"Salvar todos" que acabava falhando, ao lado de "O Studio continua aberto". Agora ele só aparece quando a espera pelo
+trabalho de disco realmente acontece; a homologação confere a ausência dele na falha.
+
+Detalhes: [conflict-handling.md](../docs/studio-006/conflict-handling.md), [recovery.md](../docs/studio-006/recovery.md),
+[decisions.md](../docs/studio-006/decisions.md) (R1-01 a R1-07), [test-plan.md](../docs/studio-006/test-plan.md) e
+[known-limitations.md](../docs/studio-006/known-limitations.md) (L16 a L18).
+
+### Regressão final
+
+| Execução | Commit | Resultado |
+|---|---|---|
+| Testes novos do app (6) repetidos 10 vezes seguidas | `a864089` (antes do commit, mesmo código) | 10/10 rodadas sem falha |
+| Windows 11, `./mvnw clean verify` (Bridge e dados isolados) | `a864089` | 426/426, BUILD SUCCESS |
+| Linux de referência, `tools/golden-linux.sh verify` | `a864089` | 426 executados: 425 aprovados + 1 pulado (superusuário), BUILD SUCCESS |
+| Windows 11, `./mvnw clean verify` | **`db0e757`** | **426/426**, 0 pulados, BUILD SUCCESS |
+| Linux de referência, `tools/golden-linux.sh verify` | **`db0e757`** | **426 executados: 425 aprovados + 1 pulado** (a mesma *assumption* de superusuário da §17), BUILD SUCCESS |
+| Homologação real (Windows, Chrome for Testing 155.0.8059.39, extensão da `main`, Native Host instalado) | `a864089` + roteiro de `a27f81f` | 73/73 |
+| Homologação real | **`db0e757`** | **74/74**, 0 falhas |
+
+Por módulo (`db0e757`, iguais nos dois sistemas): tokens 24, swing-ui 47, showcase 5, domínio 93 (+1), bridge 22,
+recorder 62, persistência 44 (+2), studio-ui 14, app 114 (+6), escala 150% 1. Total 426 = 417 da entrega original + 9
+novos. Nenhum teste anterior foi removido ou afrouxado; o único ajuste em código de teste existente foi na
+infraestrutura (`Ops` com barreiras por filtro e falha de exclusão injetável; gancho no instante do encerramento).
+
+- **Golden screenshots**: 4/4 no Windows e no Linux, **sem regenerar** nenhuma imagem.
+- **Matriz S006**: os 80 casos continuam cobertos e passaram nas execuções acima.
+- **Extensão**: nenhuma alteração (árvore idêntica à `main` `2c7c06b`, sem alterações locais); suítes da extensão não
+  repetidas pelo mesmo motivo da §17; a integração real foi exercitada de novo na homologação.
+
+### Homologação real: o que entrou
+
+Os seis cenários da §18 foram repetidos, mais três processos REAIS do Studio que terminam por `System.exit` (como a
+aplicação), no mesmo diretório de dados do cenário 5:
+
+| Fase | O que foi feito | Resultado |
+|---|---|---|
+| Sair → Descartar | abre o projeto, altera, grava uma fotografia; Arquivo → Sair → **Descartar alterações** no diálogo real (captura `S006-17`) | no instante do encerramento, 0 fotografias no disco; processo terminou com código 0; arquivo do projeto com o mesmo SHA-256 |
+| Salvar e sair | abre, altera, grava uma fotografia; **Ctrl+S** e, assim que o salvamento é informado, Arquivo → Sair | no instante em que o sucesso é informado, a fotografia superada já não existe; 0 no encerramento; o arquivo tem a alteração |
+| Novo processo | abre o Studio no mesmo diretório de dados e espera 10 s (captura `S006-18`) | nenhuma oferta de recuperação; nada aberto |
+| Falha no Salvar todos | (cenário 4) | "O Studio continua aberto" e nenhum "Encerrando o Studio" |
+
+Capturas: as de tela inteira foram recortadas para excluir a faixa inferior da área de trabalho, e as dos processos
+filhos para a área da janela do Studio. Na execução final, essa faixa mostrava conteúdo pessoal de outra janela atrás do
+Studio. Nenhuma outra edição foi feita nas imagens.
+
+### Restrições mantidas
+
+Sem merge. STUDIO-007 não iniciada. Recorder continua sem liberação para dados reais (homologação só com o laboratório
+fictício). Formato `.nekkora` inalterado.

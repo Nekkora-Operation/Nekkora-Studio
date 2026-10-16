@@ -92,6 +92,26 @@ Legenda: **A** automatizado (roda em `./mvnw verify`), **H** homologação real 
 | S006-079 | Integração com extensão | `RecorderStepsStudioTest` S006-060/079; homologação (gravação real, salvar, reabrir) | A H |
 | S006-080 | Nenhuma execução de automação ao carregar | `ProjectStudioTest`; homologação (Recorder livre, SHA igual) | A H |
 
+## Revisão 1 do PR #8 (reproduzir primeiro, corrigir depois)
+
+Cada teste abaixo foi executado **antes** da correção, no código de `d2e0eec` (HEAD `946ec7f`), e falhou pelo motivo
+apontado na revisão; depois da correção (`a864089`) passa. As barreiras são controladas (latch nas `FileOps` de teste:
+gravação, leitura ou exclusão retidas ou com falha), nunca só `Thread.sleep`.
+
+| Item | Teste | Antes da correção (`d2e0eec`) | Depois |
+|---|---|---|---|
+| P1-A | `ProjectStudioTest.p1aRecarregarRecusadoPreservaWorkspace` | A sumiu do workspace (catálogo só com B) | workspace idêntico: mesma automação, alterações, estado, arquivo, seleção, abas e histórico |
+| P1-A | `ProjectStudioTest.p1aRecarregarESalvarNaoSeSobrepoem` | recarregar durante o salvamento perguntou "Recarregar do arquivo?" | `BUSY` sem perguntar; salvar/fechar/recarregar durante a recarga = `BUSY` |
+| P1-A | `AutomationRestorationTest.substituirNoCatalogo` | (método novo) | recusa sem mudar nada; troca na mesma posição |
+| P1-B A | `ProjectStudioTest.p1bDescartarESair` | o Studio encerrou com a fotografia ainda sendo gravada | só encerra depois da limpeza; outro Studio sobre o disco do instante do encerramento não oferece nada |
+| P1-B B | `ProjectStudioTest.p1bSalvarESairImediatamente` | sucesso informado com a fotografia superada ainda no disco | apagada antes do sucesso; nada oferecido depois de sair |
+| P1-B | `ProjectStudioTest.p1bFalhaAoApagarRecuperacao` | aviso de sucesso sem mencionar a falha | aviso honesto; Sair pergunta antes; Cancelar mantém o Studio aberto |
+| P1-B | `ProjectRecoveryTest.superadaPorSalvamentoConfirmado` | fotografia anterior ao salvamento oferecida | não oferecida e apagada; a mais nova que o salvamento continua oferecida |
+| P1-B | `ProjectRecoveryTest.descarteInformaFalha` | (API nova: `discard` devolve o resultado) | `false` enquanto a exclusão falha |
+| P2 | `ProjectStudioTest.p2SobrescritaAlteradaDepoisDaConfirmacao` | `SAVED`: a versão do outro programa foi sobrescrita | `CONFLICT`, nada sobrescrito; sem mudança externa, substitui normalmente |
+
+Estabilidade: os 6 testes novos do app rodaram 10 vezes seguidas sem falha.
+
 ## Contrato do formato
 
 `ProjectFormatContractTest`: schema 1.0.0 igual ao código (vocabulários e constantes); fixtures válidas congeladas
