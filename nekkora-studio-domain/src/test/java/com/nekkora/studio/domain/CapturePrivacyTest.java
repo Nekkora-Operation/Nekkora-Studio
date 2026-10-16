@@ -76,9 +76,7 @@ class CapturePrivacyTest {
     }
 
     private static String lf(String s) {
-        return s.replace("
-", "
-");
+        return s.replace("\r\n", "\n");
     }
 
     @Test
