@@ -354,3 +354,16 @@ Studio. Nenhuma outra edição foi feita nas imagens.
 
 Sem merge. STUDIO-007 não iniciada. Recorder continua sem liberação para dados reais (homologação só com o laboratório
 fictício). Formato `.nekkora` inalterado.
+
+## 23. Higienização da evidência S006-02 (depois da integração)
+
+Pedido da revisão final do PR #8. A captura `S006-02-salvar-como.png` mostrava a pasta Documentos da máquina de
+homologação, com nomes de pastas do ambiente pessoal, num repositório público. Ela foi substituída por uma captura
+NOVA e autêntica do mesmo diálogo real "Salvar projeto como": o Studio real com diretório de dados isolado, uma
+automação nova "Login homologacao 006" e o **Ctrl+S real**, com uma pasta de projetos isolada que contém só nomes
+fictícios como última pasta usada. A captura cobre só o diálogo. Nenhum outro arquivo de evidência mudou e nenhuma
+funcionalidade foi alterada.
+
+A versão anterior da imagem continua no histórico do Git: o histórico **não** foi reescrito (não autorizado; a imagem
+continha nomes de pastas, sem credenciais nem segredos).
+
