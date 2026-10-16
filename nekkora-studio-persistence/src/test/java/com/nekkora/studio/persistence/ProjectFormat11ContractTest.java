@@ -182,15 +182,17 @@ class ProjectFormat11ContractTest {
     }
 
     @Test
-    @DisplayName("sem variáveis o escritor continua produzindo o 1.0.0 congelado, byte a byte")
+    @DisplayName("sem variáveis o escritor continua produzindo o 1.0.0 congelado: mesmas entradas, na mesma ordem, byte a byte")
     void semVariaveisContinua10ByteAByte() throws Exception {
         Automation a = RichAutomation.build(clock);
         ProjectFiles.Snapshot s = ProjectFiles.Snapshot.of(a, UUID.randomUUID().toString());
         Path p = dir.resolve("p.nekkora");
         Files.write(p, files.serialize(s, ProjectFormat.Kind.PROJECT, null, Instant.parse("2026-10-16T13:00:00Z")));
-        byte[] fresh = ProjectFormatContractTest.zip(ProjectFormatContractTest.deterministic(Tamper.entries(p)));
-        byte[] frozen = Files.readAllBytes(ProjectFormatContractTest.VALID.resolve(ProjectFormatContractTest.FIXTURE));
-        assertArrayEquals(frozen, fresh);
+        // o conteúdo DESCOMPACTADO de cada entrada (o contêiner compactado depende do zlib da plataforma; os documentos não)
+        Map<String, byte[]> fresh = ProjectFormatContractTest.deterministic(Tamper.entries(p));
+        Map<String, byte[]> frozen = Tamper.entries(ProjectFormatContractTest.VALID.resolve(ProjectFormatContractTest.FIXTURE));
+        assertEquals(List.copyOf(frozen.keySet()), List.copyOf(fresh.keySet()), "mesmas entradas, na mesma ordem");
+        for (String entry : frozen.keySet()) assertArrayEquals(frozen.get(entry), fresh.get(entry), entry);
     }
 
     @Test
