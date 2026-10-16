@@ -1,0 +1,129 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nekkora.dev/contracts/semantic-contract/1.0.0",
+  "title": "Contrato semântico do Nekkora Studio — 1.0.0",
+  "description": "Descrição determinística, local e sem segredos do que o desenvolvedor DECLAROU sobre os dados de uma automação (variáveis) e do que o Studio DERIVOU do modelo (uso por nome exato, ordem, escopo). Separado do relatório de validação; nunca persistido no projeto. Não contém valores (de execução, fixos, literais), apelidos de credencial, nomes de automação, sessões ou etapas, finalidade em texto livre, nomes de referências não declaradas, conteúdo de páginas, localizadores nem evidências (ver exclusions). Nenhum campo certifica execução: a produtora declarada é sempre UNVERIFIED_AT_RUNTIME.",
+  "$defs": {
+    "Uuid": { "type": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$" },
+    "UuidOrNull": { "anyOf": [ { "$ref": "#/$defs/Uuid" }, { "type": "null" } ] },
+    "Count": { "type": "integer", "minimum": 0 },
+    "DecimalTextOrNull": { "anyOf": [ { "type": "string", "pattern": "^-?[0-9]{1,30}(\\.[0-9]{1,18})?$" }, { "type": "null" } ] },
+    "Contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "version", "automationId", "modelVersion", "dataFlowRules", "summary", "variables", "steps", "uncertainties", "exclusions"],
+      "properties": {
+        "schema": { "const": "nekkora-studio/semantic-contract" },
+        "version": { "const": "1.0.0" },
+        "automationId": { "$ref": "#/$defs/Uuid" },
+        "modelVersion": { "enum": ["1.0.0", "1.1.0"], "description": "Versão do modelo da automação descrita." },
+        "dataFlowRules": { "const": "nekkora-validation-rules/1.1.0", "description": "Regras que definem uso derivado, escopo e ordem." },
+        "summary": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["variables", "steps", "variableReferences", "undeclaredReferences", "uncertainties"],
+          "properties": {
+            "variables": { "$ref": "#/$defs/Count" },
+            "steps": { "$ref": "#/$defs/Count" },
+            "variableReferences": { "$ref": "#/$defs/Count" },
+            "undeclaredReferences": { "$ref": "#/$defs/Count" },
+            "uncertainties": { "$ref": "#/$defs/Count" }
+          }
+        },
+        "variables": { "type": "array", "maxItems": 2000, "items": { "$ref": "#/$defs/Variable" }, "description": "Ordem do catálogo." },
+        "steps": { "type": "array", "items": { "$ref": "#/$defs/Step" }, "description": "Ordem linear: sessões na ordem, etapas na ordem." },
+        "uncertainties": { "type": "array", "items": { "$ref": "#/$defs/Uncertainty" }, "description": "Variáveis (ordem do catálogo) e depois etapas." },
+        "exclusions": {
+          "type": "array",
+          "items": { "enum": ["RUNTIME_VALUES", "CONSTANT_VALUES", "LITERAL_VALUES", "CREDENTIAL_ALIASES", "UNDECLARED_REFERENCE_NAMES", "AUTOMATION_SESSION_AND_STEP_NAMES", "FREE_TEXT_PURPOSE", "PAGE_CONTENT", "LOCATORS", "EVIDENCE"] },
+          "minItems": 10,
+          "maxItems": 10
+        }
+      }
+    },
+    "Variable": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["variableId", "name", "technicalType", "semanticType", "semanticStatus", "sensitivity", "scope", "origin", "constraints", "consumers"],
+      "properties": {
+        "variableId": { "$ref": "#/$defs/Uuid" },
+        "name": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_.-]{0,63}$", "description": "Nome simbólico declarado." },
+        "technicalType": { "enum": ["STRING", "INTEGER", "DECIMAL", "BOOLEAN", "DATE"] },
+        "semanticType": { "enum": ["UNSPECIFIED", "FREE_TEXT", "IDENTIFIER", "BRAZILIAN_CPF", "EMAIL", "CURRENCY", "PERCENTAGE", "DATE_ISO"] },
+        "semanticStatus": { "enum": ["USER_CONFIRMED", "PROPOSED_UNCONFIRMED", "UNSPECIFIED"] },
+        "sensitivity": { "enum": ["PUBLIC", "INTERNAL", "PERSONAL_DATA", "SECRET"] },
+        "scope": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "sessionId"],
+          "properties": { "kind": { "enum": ["AUTOMATION", "SESSION"] }, "sessionId": { "$ref": "#/$defs/UuidOrNull" } }
+        },
+        "origin": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "constantDeclared", "producer"],
+          "properties": {
+            "kind": { "enum": ["INPUT", "CONSTANT", "STEP_OUTPUT", "UNBOUND"] },
+            "constantDeclared": { "type": "boolean", "description": "Existe um valor fixo declarado. O valor em si nunca entra no contrato." },
+            "producer": { "anyOf": [ { "$ref": "#/$defs/Producer" }, { "type": "null" } ] }
+          }
+        },
+        "constraints": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["required", "minLength", "maxLength", "textFormat", "minimum", "maximum", "scale", "currency"],
+          "properties": {
+            "required": { "type": "boolean" },
+            "minLength": { "anyOf": [ { "type": "integer", "minimum": 0 }, { "type": "null" } ] },
+            "maxLength": { "anyOf": [ { "type": "integer", "minimum": 0 }, { "type": "null" } ] },
+            "textFormat": { "enum": ["ANY", "DIGITS", "LETTERS_AND_DIGITS", "EMAIL_SHAPE"] },
+            "minimum": { "$ref": "#/$defs/DecimalTextOrNull" },
+            "maximum": { "$ref": "#/$defs/DecimalTextOrNull" },
+            "scale": { "anyOf": [ { "type": "integer", "minimum": 0, "maximum": 18 }, { "type": "null" } ] },
+            "currency": { "anyOf": [ { "type": "string", "pattern": "^[A-Z]{3}$" }, { "type": "null" } ] }
+          }
+        },
+        "consumers": { "type": "array", "items": { "$ref": "#/$defs/Uuid" }, "description": "Etapas que referenciam o nome exato (uso derivado), na ordem." }
+      }
+    },
+    "Producer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["stepId", "status", "runtimeVerification"],
+      "properties": {
+        "stepId": { "$ref": "#/$defs/Uuid" },
+        "status": { "enum": ["DECLARED", "STATICALLY_CONSISTENT", "INVALID"] },
+        "runtimeVerification": { "const": "UNVERIFIED_AT_RUNTIME", "description": "O Studio não executa nada: nenhuma produtora é verificada." }
+      }
+    },
+    "Step": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["stepId", "sessionId", "position", "actionType", "value", "reference", "variableId"],
+      "properties": {
+        "stepId": { "$ref": "#/$defs/Uuid" },
+        "sessionId": { "$ref": "#/$defs/Uuid" },
+        "position": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["session", "step"],
+          "properties": { "session": { "type": "integer", "minimum": 1 }, "step": { "type": "integer", "minimum": 1 } }
+        },
+        "actionType": { "enum": ["CLICK", "FILL", "SELECT_OPTION", "CHECK", "UNCHECK", "PRESS_KEY", "NAVIGATE", "WAIT_FOR", "OBSERVE", "UNKNOWN"] },
+        "value": { "enum": ["NONE", "LITERAL", "VARIABLE", "CREDENTIAL"], "description": "Só o tipo da origem do valor; nunca o conteúdo." },
+        "reference": { "anyOf": [ { "enum": ["DECLARED", "UNDECLARED"] }, { "type": "null" } ] },
+        "variableId": { "$ref": "#/$defs/UuidOrNull" }
+      }
+    },
+    "Uncertainty": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "variableId", "stepId"],
+      "properties": {
+        "code": { "enum": ["INPUT_VALUE_UNKNOWN", "STEP_OUTPUT_UNVERIFIED", "ORIGIN_UNBOUND", "SEMANTIC_UNCONFIRMED", "SEMANTIC_UNSPECIFIED", "UNDECLARED_REFERENCE", "OUT_OF_SCOPE_REFERENCE", "CREDENTIAL_UNRESOLVED"] },
+        "variableId": { "$ref": "#/$defs/UuidOrNull" },
+        "stepId": { "$ref": "#/$defs/UuidOrNull" }
+      }
+    }
+  }
+}
