@@ -9,6 +9,12 @@ import com.nekkora.studio.domain.evidence.ObservedEvidence;
 import com.nekkora.studio.domain.origin.RecordingObservation;
 import com.nekkora.studio.domain.origin.StepOrigin;
 import com.nekkora.studio.domain.origin.StepProvenance;
+import com.nekkora.studio.domain.variable.VariableDefinition;
+import com.nekkora.studio.domain.variable.VariableDraft;
+import com.nekkora.studio.domain.variable.VariableId;
+import com.nekkora.studio.domain.variable.VariableOrigin;
+import com.nekkora.studio.domain.variable.VariableRules;
+import com.nekkora.studio.domain.variable.VariableScope;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -36,12 +42,23 @@ public final class AutomationRestoration {
 
     private AutomationRestoration() {}
 
-    /** Estado completo de uma automação. */
+    /**
+     * Estado completo de uma automação. {@code variables} (STUDIO-008) só existe no modelo 1.1.0; no modelo 1.0.0 a lista
+     * é vazia.
+     */
     public record AutomationData(AutomationId id, String name, String description, AutomationStatus status, Instant createdAt, Instant updatedAt,
-                                 String modelVersion, long revision, List<SessionData> sessions, List<ObservedEvidence> unattributedEvidence) {
+                                 String modelVersion, long revision, List<SessionData> sessions, List<ObservedEvidence> unattributedEvidence,
+                                 List<VariableDefinition> variables) {
         public AutomationData {
             sessions = List.copyOf(sessions);
             unattributedEvidence = List.copyOf(unattributedEvidence);
+            variables = List.copyOf(variables);
+        }
+
+        /** Estado do modelo 1.0.0 (sem variáveis). */
+        public AutomationData(AutomationId id, String name, String description, AutomationStatus status, Instant createdAt, Instant updatedAt,
+                String modelVersion, long revision, List<SessionData> sessions, List<ObservedEvidence> unattributedEvidence) {
+            this(id, name, description, status, createdAt, updatedAt, modelVersion, revision, sessions, unattributedEvidence, List.of());
         }
     }
 
@@ -111,7 +128,9 @@ public final class AutomationRestoration {
         Objects.requireNonNull(clock, "clock");
         String where = "automation";
         check(d.id() != null, "ID_REQUIRED", where + ".id");
-        check(ModelVersion.CURRENT.equals(d.modelVersion()), "MODEL_VERSION_UNSUPPORTED", where + ".modelVersion");
+        check(ModelVersion.supported(d.modelVersion()), "MODEL_VERSION_UNSUPPORTED", where + ".modelVersion");
+        // STUDIO-008: o modelo 1.0.0 não tem variáveis; o 1.1.0 tem o catálogo (a versão é a menor que representa o conteúdo)
+        check(!ModelVersion.CURRENT.equals(d.modelVersion()) || d.variables().isEmpty(), "MODEL_VERSION_UNSUPPORTED", where + ".variables");
         check(d.status() == AutomationStatus.DRAFT, "STATUS_UNSUPPORTED", where + ".status");
         check(d.createdAt() != null && d.updatedAt() != null && !d.updatedAt().isBefore(d.createdAt()), "TIMESTAMPS_INVALID", where + ".updatedAt");
         check(d.revision() >= 0, "REVISION_INVALID", where + ".revision");
@@ -151,7 +170,38 @@ public final class AutomationRestoration {
             check(evidenceIds.add(e.evidenceId()), "DUPLICATE_ID", ew + ".evidenceId");
             a.adoptUnattributed(e);
         }
+        variables(d, a, sessionIds);
         return a;
+    }
+
+    /** STUDIO-008: as MESMAS regras da declaração ({@link VariableRules}), identidade e nome únicos, escopo e produtora. */
+    private static void variables(AutomationData d, Automation a, Set<SessionId> sessionIds) {
+        check(d.variables().size() <= VariableRules.MAX_VARIABLES, "VARIABLE_LIMIT", "variables");
+        Set<VariableId> ids = new HashSet<>();
+        Set<String> names = new HashSet<>();
+        for (int i = 0; i < d.variables().size(); i++) {
+            VariableDefinition v = d.variables().get(i);
+            String vw = "variables[" + i + "]";
+            check(v != null, "ID_REQUIRED", vw);
+            check(ids.add(v.id()), "DUPLICATE_ID", vw + ".id");
+            VariableDraft checked;
+            try {
+                checked = VariableRules.check(v.draft());
+            } catch (DomainValidationException e) {
+                throw new RestoreException(e.problem().name(), vw);
+            }
+            check(checked.equals(v.draft()), "TEXT_NOT_NORMALIZED", vw); // finalidade e constante já na forma canônica
+            check(names.add(v.name().toLowerCase(java.util.Locale.ROOT)), "VARIABLE_NAME_IN_USE", vw + ".name");
+            check(!v.updatedAt().isBefore(v.createdAt()), "TIMESTAMPS_INVALID", vw + ".updatedAt");
+            VariableScope scope = v.scope();
+            check(scope.kind() != VariableScope.Kind.SESSION || sessionIds.contains(scope.session()), "VARIABLE_SCOPE_SESSION_NOT_FOUND", vw + ".scope");
+            if (v.origin().kind() == VariableOrigin.Kind.STEP_OUTPUT) {
+                SessionId owner = a.sessionOf(v.origin().producer()).map(LogicalSession::id).orElse(null);
+                check(owner != null, "VARIABLE_PRODUCER_NOT_FOUND", vw + ".origin.producer");
+                check(scope.visibleIn(owner), "VARIABLE_PRODUCER_OUT_OF_SCOPE", vw + ".origin.producer");
+            }
+            a.adoptVariable(v);
+        }
     }
 
     private static AutomationStep step(StepData st, String where, Set<String> evidenceIds, Set<EventKey> events) {

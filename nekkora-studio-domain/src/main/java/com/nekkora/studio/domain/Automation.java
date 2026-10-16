@@ -5,6 +5,12 @@ import com.nekkora.studio.domain.action.ActionType;
 import com.nekkora.studio.domain.action.ValueSource;
 import com.nekkora.studio.domain.element.ElementReference;
 import com.nekkora.studio.domain.element.ManualLocator;
+import com.nekkora.studio.domain.variable.VariableDefinition;
+import com.nekkora.studio.domain.variable.VariableDraft;
+import com.nekkora.studio.domain.variable.VariableId;
+import com.nekkora.studio.domain.variable.VariableOrigin;
+import com.nekkora.studio.domain.variable.VariableRules;
+import com.nekkora.studio.domain.variable.VariableScope;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -32,12 +38,14 @@ public final class Automation {
     private final List<LogicalSession> view = Collections.unmodifiableList(sessions);
     private final Instant createdAt;
     private Instant updatedAt;
-    private final String modelVersion = ModelVersion.CURRENT;
     private final Clock clock;
     private long revision;
     /** STUDIO-005: evidências observadas que não puderam ser atribuídas a uma etapa (ambíguas), por ordem de chegada. */
     private final List<com.nekkora.studio.domain.evidence.ObservedEvidence> unattributed = new ArrayList<>();
     private final List<com.nekkora.studio.domain.evidence.ObservedEvidence> unattributedView = Collections.unmodifiableList(unattributed);
+    /** STUDIO-008: catálogo de variáveis declaradas, na ordem de declaração (definições imutáveis). */
+    private final List<VariableDefinition> variables = new ArrayList<>();
+    private final List<VariableDefinition> variablesView = Collections.unmodifiableList(variables);
 
     /** Evidências por etapa (limite de proteção; o excesso é recusado, nunca descartado em silêncio). */
     public static final int MAX_EVIDENCE_PER_STEP = 100;
@@ -77,6 +85,11 @@ public final class Automation {
     /** Reconstrução: acrescenta uma evidência não atribuída já validada, na ordem guardada. */
     void adoptUnattributed(com.nekkora.studio.domain.evidence.ObservedEvidence e) {
         unattributed.add(e);
+    }
+
+    /** Reconstrução: acrescenta uma variável já validada, na ordem guardada. */
+    void adoptVariable(VariableDefinition v) {
+        variables.add(v);
     }
 
     /** Cria um rascunho vazio. Nome obrigatório; descrição opcional. */
@@ -157,9 +170,12 @@ public final class Automation {
         return updatedAt;
     }
 
-    /** Versão do modelo com que esta automação foi criada ({@link ModelVersion}). */
+    /**
+     * Versão do modelo necessária para representar esta automação ({@link ModelVersion}): a base 1.0.0 sem variáveis, ou
+     * 1.1.0 com o catálogo de variáveis (STUDIO-008, D-S008-06).
+     */
     public String modelVersion() {
-        return modelVersion;
+        return variables.isEmpty() ? ModelVersion.CURRENT : ModelVersion.V1_1;
     }
 
     /** Contador de alterações — muda a cada operação bem-sucedida. */
@@ -546,6 +562,153 @@ public final class Automation {
         return editStep(stepId, e);
     }
 
+    // ------------------------------------------------------------------ STUDIO-008: variáveis declaradas
+
+    /** Variáveis declaradas, na ordem de declaração (somente leitura). */
+    public List<VariableDefinition> variables() {
+        return variablesView;
+    }
+
+    public Optional<VariableDefinition> variable(VariableId id) {
+        return variables.stream().filter(v -> v.id().equals(id)).findFirst();
+    }
+
+    /** Declaração com EXATAMENTE este nome (resolução de {@code VariableReference}; nada é inferido por semelhança). */
+    public Optional<VariableDefinition> variableNamed(String name) {
+        return variables.stream().filter(v -> v.name().equals(name)).findFirst();
+    }
+
+    /**
+     * Etapas cujo valor EFETIVO referencia a variável pelo nome (qualquer sessão, dentro ou fora do escopo — a análise
+     * de escopo é do diagnóstico). O original capturado não conta: ele nunca é alterado.
+     */
+    public List<StepId> consumersOf(VariableId id) {
+        VariableDefinition v = requireVariable(id);
+        return consumersOfName(v.name());
+    }
+
+    private List<StepId> consumersOfName(String name) {
+        List<StepId> out = new ArrayList<>();
+        for (LogicalSession s : sessions) {
+            for (AutomationStep st : s.steps()) {
+                if (st.parameters().value().orElse(null) instanceof ValueSource.VariableReference r && r.name().equals(name)) out.add(st.id());
+            }
+        }
+        return out;
+    }
+
+    /**
+     * Declara uma variável. Tudo é conferido antes ({@link VariableRules}, nome único na automação sem distinção de
+     * maiúsculas, sessão do escopo e etapa produtora existentes, produtora dentro do escopo).
+     */
+    public VariableDefinition declareVariable(VariableDraft draft) {
+        if (variables.size() >= VariableRules.MAX_VARIABLES) throw new DomainValidationException(ValidationProblem.VARIABLE_LIMIT_REACHED);
+        VariableDraft d = checkVariable(draft, null);
+        Instant now = clock.instant();
+        VariableDefinition v = new VariableDefinition(VariableId.newId(), d.name(), d.type(), d.semantic(), d.authority(), d.purpose(), d.scope(),
+                d.origin(), d.sensitivity(), d.constraints(), now, now);
+        variables.add(v);
+        touch();
+        return v;
+    }
+
+    /**
+     * Edita uma variável numa única operação. Se o nome mudar, é uma RENOMEAÇÃO: todas as referências efetivas são
+     * atualizadas na mesma operação (ver {@link #renameVariable}). Sem diferença, sem revisão.
+     *
+     * @return {@code false} se nada mudou
+     */
+    public boolean updateVariable(VariableId id, VariableDraft draft) {
+        VariableDefinition current = requireVariable(id);
+        VariableDraft d = checkVariable(draft, id);
+        if (d.equals(current.draft())) return false;
+        Instant now = clock.instant();
+        List<StepId> consumers = d.name().equals(current.name()) ? List.of() : consumersOfName(current.name());
+        retarget(consumers, d.name(), now);
+        variables.set(variables.indexOf(current), current.with(d, now));
+        touch();
+        return true;
+    }
+
+    /**
+     * Renomeia a variável e atualiza, na MESMA operação, todas as etapas que a referenciam pelo nome antigo (valor
+     * efetivo). O original capturado e a procedência de cada etapa não mudam. Ou tudo muda, ou nada muda.
+     *
+     * @return quantas etapas tiveram a referência atualizada
+     */
+    public int renameVariable(VariableId id, String newName) {
+        VariableDefinition current = requireVariable(id);
+        VariableDraft d = checkVariable(current.draft().withName(newName), id);
+        if (d.name().equals(current.name())) return 0;
+        List<StepId> consumers = consumersOfName(current.name());
+        Instant now = clock.instant();
+        retarget(consumers, d.name(), now);
+        variables.set(variables.indexOf(current), current.renamed(d.name(), now));
+        touch();
+        return consumers.size();
+    }
+
+    /**
+     * Exclui a variável. Se houver etapas que a usam, só com {@code detachConsumers}: os vínculos são descartados (as
+     * etapas ficam sem valor) — nunca convertidos em literais, nunca etapas excluídas.
+     *
+     * @return quantas etapas perderam o vínculo
+     * @throws DomainValidationException {@link ValidationProblem#VARIABLE_IN_USE} se há consumidores e não foi confirmado
+     */
+    public int removeVariable(VariableId id, boolean detachConsumers) {
+        VariableDefinition current = requireVariable(id);
+        List<StepId> consumers = consumersOfName(current.name());
+        if (!consumers.isEmpty() && !detachConsumers) throw new DomainValidationException(ValidationProblem.VARIABLE_IN_USE);
+        Instant now = clock.instant();
+        for (StepId s : consumers) {
+            AutomationStep st = requireStep(s);
+            AutomationStep.State before = st.state();
+            st.edit(new AutomationStep.State(before.name(), before.description(), before.actionType(), ActionParameters.none(), before.element(),
+                    before.manualLocators(), before.comments(), before.edits(), before.lastManualChange()), now);
+        }
+        variables.remove(current);
+        touch();
+        return consumers.size();
+    }
+
+    /** Troca a referência das etapas para o novo nome (já conferido), validando todas antes de alterar qualquer uma. */
+    private void retarget(List<StepId> consumers, String newName, Instant now) {
+        ActionParameters target = ActionParameters.withValue(new ValueSource.VariableReference(newName));
+        List<AutomationStep> steps = new ArrayList<>();
+        for (StepId s : consumers) {
+            AutomationStep st = requireStep(s);
+            checkParameters(st.actionType(), target, st.element().orElse(null));
+            steps.add(st);
+        }
+        for (AutomationStep st : steps) {
+            AutomationStep.State before = st.state();
+            st.edit(new AutomationStep.State(before.name(), before.description(), before.actionType(), target, before.element(), before.manualLocators(),
+                    before.comments(), before.edits(), before.lastManualChange()), now);
+        }
+    }
+
+    private VariableDraft checkVariable(VariableDraft draft, VariableId except) {
+        Objects.requireNonNull(draft, "draft");
+        VariableDraft d = VariableRules.check(draft);
+        for (VariableDefinition v : variables) {
+            if (!v.id().equals(except) && v.name().equalsIgnoreCase(d.name())) throw new DomainValidationException(ValidationProblem.VARIABLE_NAME_IN_USE);
+        }
+        VariableScope scope = d.scope();
+        if (scope.kind() == VariableScope.Kind.SESSION && session(scope.session()).isEmpty()) {
+            throw new DomainValidationException(ValidationProblem.VARIABLE_SCOPE_SESSION_NOT_FOUND);
+        }
+        if (d.origin().kind() == VariableOrigin.Kind.STEP_OUTPUT) {
+            StepId producer = d.origin().producer();
+            LogicalSession owner = sessionOf(producer).orElseThrow(() -> new DomainValidationException(ValidationProblem.VARIABLE_PRODUCER_NOT_FOUND));
+            if (!scope.visibleIn(owner.id())) throw new DomainValidationException(ValidationProblem.VARIABLE_PRODUCER_OUT_OF_SCOPE);
+        }
+        return d;
+    }
+
+    private VariableDefinition requireVariable(VariableId id) {
+        return variable(id).orElseThrow(() -> new DomainValidationException(ValidationProblem.VARIABLE_NOT_FOUND));
+    }
+
     // ------------------------------------------------------------------ STUDIO-004: histórico em memória
 
     /**
@@ -563,7 +726,7 @@ public final class Automation {
             for (int i = 0; i < states.length; i++) states[i] = st.steps().get(i).state(); // compartilhado enquanto a etapa não muda
             stepStates.add(states);
         }
-        return new Snapshot(this, revision, name, description, List.copyOf(sessions), sessionStates, stepStates);
+        return new Snapshot(this, revision, name, description, List.copyOf(sessions), sessionStates, stepStates, List.copyOf(variables));
     }
 
     /**
@@ -584,6 +747,8 @@ public final class Automation {
             AutomationStep.State[] states = snapshot.stepStates.get(i);
             for (int j = 0; j < states.length; j++) st.steps().get(j).apply(states[j]);
         }
+        variables.clear();
+        variables.addAll(snapshot.variables); // STUDIO-008: definições imutáveis, mesmas identidades
         touch();
     }
 
@@ -596,9 +761,10 @@ public final class Automation {
         private final List<LogicalSession> sessions;
         private final List<LogicalSession.State> sessionStates;
         private final List<AutomationStep.State[]> stepStates;
+        private final List<VariableDefinition> variables;
 
         private Snapshot(Automation owner, long revision, String name, String description, List<LogicalSession> sessions,
-                List<LogicalSession.State> sessionStates, List<AutomationStep.State[]> stepStates) {
+                List<LogicalSession.State> sessionStates, List<AutomationStep.State[]> stepStates, List<VariableDefinition> variables) {
             this.owner = owner;
             this.revision = revision;
             this.name = name;
@@ -606,6 +772,7 @@ public final class Automation {
             this.sessions = sessions;
             this.sessionStates = sessionStates;
             this.stepStates = stepStates;
+            this.variables = variables;
         }
 
         /** Revisão da automação no instante da fotografia. */
