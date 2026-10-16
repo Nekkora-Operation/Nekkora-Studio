@@ -147,6 +147,7 @@ class RecordedStepsTest {
         assertEquals("Selecionar opção no campo Estado", s.name());
         assertTrue(s.parameters().option().isEmpty());
         assertTrue(parsedSel.notes().contains("OPTION_WITHHELD"), parsedSel.notes().toString());
+        assertTrue(s.element().stabilityNotes().stream().anyMatch(n -> n.contains("configure a opção no Studio")), "limitação visível ao usuário");
 
         Map<String, Object> radio = step("rec-1", 2, "route-1", "CHECK", element("RADIO", "Pessoa física", "input", "pf", false), "CAPTURE_AND_INTERACT");
         assertEquals(named("Marcar opção", "Pessoa física", "Marcar opção"), RecordedStepDrafts.draft(parse(radio)).name());

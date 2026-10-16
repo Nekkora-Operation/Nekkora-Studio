@@ -181,7 +181,7 @@ public final class Sec001Homologation {
 
         // ================================================================ Cenário 1 — Processo completo
         selectSession(a, auth);
-        startRecordingOn(":" + LAB_PORT, RecordingMode.CAPTURE_AND_INTERACT);
+        startRecordingOn("127.0.0.1", RecordingMode.CAPTURE_AND_INTERACT);
         FloatingRecorderPanel fp = edt(() -> window.studio().recorderPresenter().panel());
         moveFloatingAway();
         String tabTitle = edt(() -> window.studio().recorder().snapshot().tabTitle());
@@ -226,7 +226,7 @@ public final class Sec001Homologation {
         }));
         check("Cenário 1: opção escolhida não veio da extensão (OPTION_WITHHELD); a escolha é configurada no Studio", edt(() -> {
             AutomationStep sel = consulta.steps().get(2);
-            return sel.parameters().option().isEmpty() && sel.element().map(e -> e.stabilityNotes().toString().contains("OPTION_WITHHELD")).orElse(false);
+            return sel.parameters().option().isEmpty() && sel.element().map(e -> e.stabilityNotes().toString().contains("Opção escolhida não registrada")).orElse(false);
         }));
         selectStep(a, consulta, edt(() -> consulta.steps().get(2)));
         captureStudio("01-processo-completo");
@@ -432,7 +432,7 @@ public final class Sec001Homologation {
         LogicalSession s = a.sessions().get(0);
         selectSession(a, s);
         navigate(SEC + "elementos.html");
-        startRecordingOn(":" + LAB_PORT, RecordingMode.CAPTURE_AND_INTERACT);
+        startRecordingOn("127.0.0.1", RecordingMode.CAPTURE_AND_INTERACT);
         FloatingRecorderPanel fp = edt(() -> window.studio().recorderPresenter().panel());
         moveFloatingAway();
         clickInPage("document.getElementById('consultar')");
