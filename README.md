@@ -21,6 +21,7 @@ nekkora-studio-domain   → modelo de automações: Automação → Sessões ló
 nekkora-studio-bridge   → Studio Bridge nekkora-bridge/1: canal local autenticado com o Native Host (Java puro)
 nekkora-studio-recorder → RecorderController: gravação técnica confirmada pela extensão (Java puro)
 nekkora-studio-persistence → projeto .nekkora: formato versionado, validação, reconstrução e gravação atômica (Java puro)
+nekkora-studio-validation → Automation Validation Engine: diagnóstico estrutural, sem execução (Java puro)
 nekkora-studio-ui       → peças visuais do Studio (navegação, automação, sessões, etapas, propriedades, diálogos,
                           Floating Recorder)
 nekkora-studio-app      → a aplicação Nekkora Studio (jar executável)
@@ -74,6 +75,18 @@ evidências (com o resultado de negócio "Não validado"). O desfazer/refazer co
   (`NEKKORA_STUDIO_DATA_DIR` a substitui), até 3 cópias por projeto, 7 dias.
 
 Veja [docs/studio-006](docs/studio-006/architecture.md) e o [relatório](reports/studio-006-final-report.md).
+
+**STUDIO-007 — validação estrutural.** Menu **Automação → Validar automação** (Ctrl+Shift+V): o Studio aponta, sem
+executar nada e sem consultar o navegador, o que ainda falta configurar — parâmetros obrigatórios, elementos e
+localizadores, dependências de variáveis e credenciais que não podem ser comprovadas, limites da captura e o que foi
+observado. Cada apontamento tem severidade (× bloqueio, ! aviso, i informação), explicação, orientação e os botões
+**Ir para etapa** e **Editar etapa**. O resultado fica marcado como desatualizado assim que a automação muda.
+
+- "Sem bloqueios estáticos" **não** significa pronta para execução: localizadores foram validados só na captura e
+  variáveis/credenciais ainda não têm resolução no Studio.
+- Validar não altera a automação, o histórico de desfazer nem o arquivo `.nekkora`.
+
+Veja [docs/studio-007](docs/studio-007/architecture.md) e o [relatório](reports/studio-007-final-report.md).
 
 Camadas: **Tokens → Temas → Primitivas → Componentes → Padrões → Studio**. Detalhes em
 [docs/ARQUITETURA.md](docs/ARQUITETURA.md).

@@ -1,0 +1,48 @@
+Tela: java.awt.Rectangle[x=0,y=0,width=1920,height=1032] · java 21.0.12
+Native Host instalado pelo script oficial (install-host.ps1)
+Chrome for Testing: 155.0.8059.39
+OK    Conexão autenticada Studio ⇄ host ⇄ extensão
+OK    Menu Automação com Nova sessão, Nova etapa e Validar automação; botão Validar automação na barra
+OK    S007-044 painel aberto pelo menu real com o relatório da automação ativa (6 apontamentos)
+OK    S007-006/010/015/016 apontamentos: valor obrigatório, opção, endereço de navegação, condição de espera não modelada
+OK    Severidade em texto e símbolo (não só cor): linha '× Bloqueio · Sessão 1 · Etapa 01 — Abrir portal'
+OK    Observação 'não executou nenhuma etapa e não consultou o navegador' visível no painel
+OK    S007-039/040 validar não marcou alteração (mesma geração) nem entrou no desfazer
+captura S007-01-automacao-incompleta.png (1008x991)
+captura S007-01-tema-sakura-dark.png (1008x991)
+captura S007-01-tema-midnight-dark.png (1008x991)
+captura S007-01-tema-porcelain-light.png (1008x991)
+captura S007-01-tema-sage-light.png (1008x991)
+OK    S007-048 painel nos quatro temas (troca real por Ctrl+Shift+T) sem erro
+OK    S007-045 selecionar o apontamento e 'Ir para etapa' (mouse real) seleciona a etapa no Studio
+captura S007-02-editor-de-etapa-existente.png (760x701)
+OK    S007-046 depois da edição o painel declara 'Resultado desatualizado' (nunca o antigo como atual)
+captura S007-02-resultado-desatualizado.png (1008x991)
+OK    S007-034 validar de novo (Ctrl+Shift+V real): o bloqueio de valor some; a variável vira dependência não comprovada
+captura S007-02-corrigido.png (1008x991)
+OK    S007-035 Ctrl+Z real: relatório anterior desatualizado
+OK    S007-035 validar depois do Ctrl+Z: o bloqueio REAPARECE
+captura S007-03-depois-do-desfazer.png (1008x991)
+OK    S007-036 Ctrl+Y real e validar: o bloqueio some de novo
+OK    S007-039 validar o projeto salvo: continua 'Salvo', aba sem *
+OK    S007-039 fechar depois de validar: nenhum pedido de salvamento
+OK    S007-037 projeto reaberto valida com os MESMOS apontamentos e ids
+OK    S007-038 o arquivo não mudou (SHA-256) e nenhum arquivo de validação foi gravado ao lado
+  projeto da STUDIO-006: Summary[sessions=3, steps=9, blockers=1, warnings=11, infos=19, stepsWithoutFindings=0, stepsWithBlockers=1] estado INCOMPLETE
+OK    S007-037 projeto .nekkora 1.0.0 da STUDIO-006 (fixture congelada) aberto pelo diálogo real e validado: 9 etapas
+captura S007-04-projeto-studio-006-validado.png (1008x991)
+OK    S007-038/039 fechar o projeto da STUDIO-006 depois de validar: sem perguntas, arquivo intacto (SHA-256)
+OK    Validar DURANTE a gravação é permitido (consulta) e não interfere: continua gravando
+OK    S007-047 etapa recebida do Recorder depois da validação: resultado desatualizado
+  Entrar: [LOCATOR_VALIDATED_AT_CAPTURE, OBSERVATION_ERROR_INDICATOR, OBSERVATION_SIGNALS]
+OK    S007-028 evidência real observada vira INFORMAÇÃO (sinais e indicador de erro), nunca bloqueio nem aviso
+OK    S007-030 o diagnóstico não inventa resultado de negócio: NOT_VALIDATED; texto 'não conclui que a operação falhou, nem que foi validada'
+OK    Evidência não resolve bloqueio: os campos gravados continuam sem valor (o Recorder nunca guarda o que foi digitado)
+OK    S007-026/027 nada da página nem do que foi digitado no painel ou no relatório
+captura S007-05-evidencias-validadas.png (1008x991)
+  5.000 etapas: motor 11 ms; maior espera da EDT durante Validar (atalho real, painel com 6000 linhas) 35 ms; atalho→painel 1360 ms
+OK    S007 §18 projeto extenso (5.000 etapas sintéticas, sem dados reais) validado; interface responsiva (maior espera da EDT 35 ms < 1000 ms)
+OK    Lista de 5.000 etapas navegável com o mouse
+captura S007-06-projeto-extenso.png (1008x991)
+OK    Logs do Studio sem conteúdo do projeto
+RESULTADO: 29 verificações, 0 falha(s)

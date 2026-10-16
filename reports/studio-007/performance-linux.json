@@ -1,0 +1,40 @@
+{
+  "commit": "09083ea",
+  "source": "ValidationPerformanceTest na regressão final (tools/golden-linux.sh verify)",
+  "os": "linux",
+  "note": "mediana de 9 execuções depois de 5 de aquecimento; etapas realistas sintéticas (dados fictícios)",
+  "measurements": [
+    {
+      "steps": 10,
+      "medianMs": 0.46,
+      "maxMs": 0.67,
+      "findings": 35,
+      "jsonMs": 6.29,
+      "jsonBytes": 22705
+    },
+    {
+      "steps": 100,
+      "medianMs": 0.62,
+      "maxMs": 0.9,
+      "findings": 351,
+      "jsonMs": 7.81,
+      "jsonBytes": 224699
+    },
+    {
+      "steps": 1000,
+      "medianMs": 4.56,
+      "maxMs": 10.79,
+      "findings": 3494,
+      "jsonMs": 19.81,
+      "jsonBytes": 2236180
+    },
+    {
+      "steps": 5000,
+      "medianMs": 7.65,
+      "maxMs": 21.2,
+      "findings": 17472,
+      "jsonMs": 65.04,
+      "jsonBytes": 11187335
+    }
+  ]
+}
