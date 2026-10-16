@@ -228,7 +228,7 @@ class ValidationStudioTest {
         assertTrue(Edt.call(() -> studio.view().validationVisible()), "o painel aparece ao validar");
         assertEquals(r.findings().size(), Edt.call(() -> panel().findingList().getModel().getSize()));
         assertTrue(StudioFixture.texts(panel()).contains("Estado: " + ValidationStatus.INCOMPLETE.label()));
-        assertTrue(Edt.call(() -> panel().counts().getText()).startsWith("✕ 2 bloqueios"), Edt.call(() -> panel().counts().getText()));
+        assertTrue(Edt.call(() -> panel().counts().getText()).startsWith("× 2 bloqueios"), Edt.call(() -> panel().counts().getText()));
         assertTrue(StudioFixture.texts(panel()).contains(ValidationPanel.NO_EXECUTION));
         Edt.run(() -> panel().filter().setSelectedItem(ValidationPanel.Filter.BLOCKERS));
         assertEquals(2, (int) Edt.call(() -> panel().findingList().getModel().getSize()));
@@ -324,7 +324,7 @@ class ValidationStudioTest {
             list.getCellRenderer().getListCellRendererComponent(list, list.getModel().getElementAt(0), 0, false, false);
             return list.getAccessibleContext().getAccessibleChild(0).getAccessibleContext().getAccessibleName();
         });
-        assertTrue(row.startsWith("✕  Bloqueio · Sessão 1 · Etapa 01"), "linha lida por tecnologia assistiva com símbolo e nome da severidade: " + row);
+        assertTrue(row.startsWith("×  Bloqueio · Sessão 1 · Etapa 01"), "linha lida por tecnologia assistiva com símbolo e nome da severidade: " + row);
         assertTrue(row.contains("Valor obrigatório não configurado."), row);
         assertEquals("Apontamentos da validação", Edt.call(() -> panel().findingList().getAccessibleContext().getAccessibleName()));
         assertEquals(ValidationPanel.TITLE, Edt.call(() -> panel().getAccessibleContext().getAccessibleName()));

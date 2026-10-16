@@ -6,7 +6,7 @@ package com.nekkora.studio.validation;
  */
 public enum Severity {
     /** Falta uma informação obrigatória para a configuração da ação. */
-    BLOCKER("Bloqueio", "✕", "bloqueio", "bloqueios"),
+    BLOCKER("Bloqueio", "×", "bloqueio", "bloqueios"),
     /** Limitação ou risco técnico conhecido. */
     WARNING("Aviso", "!", "aviso", "avisos"),
     /** Informação relevante, sem comprovação de problema. */
@@ -28,7 +28,10 @@ public enum Severity {
         return label;
     }
 
-    /** Símbolo textual (✕ ! i): acompanha a cor, nunca é substituído por ela. */
+    /**
+     * Símbolo textual (× ! i): acompanha a cor, nunca é substituído por ela. "×" (U+00D7, Latin-1) e não "✕" (U+2715):
+     * a fonte do design system não tem o segundo, que apareceria como um quadrado vazio.
+     */
     public String symbol() {
         return symbol;
     }

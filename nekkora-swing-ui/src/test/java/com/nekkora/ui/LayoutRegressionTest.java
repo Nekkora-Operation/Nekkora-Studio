@@ -161,10 +161,10 @@ class LayoutRegressionTest {
         TestSupport.theme(NekkoraThemes.SAKURA_DARK);
         String name = TestSupport.onEdt(() -> {
             com.nekkora.ui.data.NekkoraList<String> list = new com.nekkora.ui.data.NekkoraList<>(java.util.List.of("um", "dois"));
-            list.withLabel(s -> "✕ Bloqueio · " + s).withSecondary(s -> "Explicação " + s, true);
+            list.withLabel(s -> "× Bloqueio · " + s).withSecondary(s -> "Explicação " + s, true);
             TestSupport.render(list, 300, 120);
             return list.getAccessibleContext().getAccessibleChild(1).getAccessibleContext().getAccessibleName();
         });
-        assertEquals("✕ Bloqueio · dois. Explicação dois", name);
+        assertEquals("× Bloqueio · dois. Explicação dois", name);
     }
 }

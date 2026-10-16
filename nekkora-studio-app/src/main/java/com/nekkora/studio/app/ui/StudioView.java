@@ -448,7 +448,7 @@ public final class StudioView {
             center.removeAll();
             workArea.setMinimumSize(new java.awt.Dimension(0, com.nekkora.ui.theme.Scale.px(160)));
             validationSplit = com.nekkora.ui.container.NekkoraSplitPane.vertical(workArea, validationPanel);
-            validationSplit.setResizeWeight(0.6); // a área de trabalho fica com 60% da altura (e com o que sobrar ao redimensionar)
+            validationSplit.setResizeWeight(0.55); // a área de trabalho fica com 55% da altura (e com o que sobrar ao redimensionar)
             center.add(validationSplit, java.awt.BorderLayout.CENTER);
             validationVisible = true;
             placeDivider(validationSplit);
@@ -459,12 +459,12 @@ public final class StudioView {
         SwingUtilities.invokeLater(() -> validationPanel.findingList().requestFocusInWindow());
     }
 
-    /** Divisor em 60% da altura real — já, se a altura é conhecida, ou na primeira vez que o painel ganhar tamanho. */
+    /** Divisor em 55% da altura real — já, se a altura é conhecida, ou na primeira vez que o painel ganhar tamanho. */
     private static void placeDivider(com.nekkora.ui.container.NekkoraSplitPane split) {
         java.awt.Container parent = split.getParent();
         int h = parent == null ? 0 : parent.getHeight();
         if (h > 0) {
-            split.setDividerLocation((int) Math.round(h * 0.6));
+            split.setDividerLocation((int) Math.round(h * 0.55));
             return;
         }
         split.addComponentListener(new java.awt.event.ComponentAdapter() {
@@ -472,7 +472,7 @@ public final class StudioView {
             public void componentResized(java.awt.event.ComponentEvent e) {
                 if (split.getHeight() <= 0) return;
                 split.removeComponentListener(this);
-                split.setDividerLocation((int) Math.round(split.getHeight() * 0.6));
+                split.setDividerLocation((int) Math.round(split.getHeight() * 0.55));
             }
         });
     }

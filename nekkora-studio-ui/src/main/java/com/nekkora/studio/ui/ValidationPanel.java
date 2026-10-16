@@ -10,6 +10,7 @@ import com.nekkora.tokens.ControlSize;
 import com.nekkora.tokens.Spacing;
 import com.nekkora.ui.button.NekkoraButton;
 import com.nekkora.ui.button.NekkoraIconButton;
+import com.nekkora.ui.container.Background;
 import com.nekkora.ui.container.NekkoraPanel;
 import com.nekkora.ui.container.NekkoraScrollPane;
 import com.nekkora.ui.container.NekkoraStack;
@@ -17,13 +18,16 @@ import com.nekkora.ui.data.NekkoraList;
 import com.nekkora.ui.feedback.NekkoraInlineAlert;
 import com.nekkora.ui.icon.IconName;
 import com.nekkora.ui.input.NekkoraComboBox;
-import com.nekkora.ui.typography.NekkoraParagraph;
+import com.nekkora.ui.theme.Scale;
 import com.nekkora.ui.typography.NekkoraText;
 import com.nekkora.ui.typography.TextTone;
 import java.awt.BorderLayout;
+import java.awt.Dimension;
+import java.awt.Insets;
 import java.awt.event.KeyEvent;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import javax.swing.JComponent;
 import javax.swing.KeyStroke;
@@ -33,8 +37,11 @@ import javax.swing.KeyStroke;
  * automação: navegar até o apontamento e abrir o editor de etapa EXISTENTE são pedidos ao Studio ({@link Actions}).
  *
  * <p>Nunca apresenta um resultado antigo como atual: quando a automação muda depois da validação, o painel mostra
- * "Resultado desatualizado" em destaque (título, aviso e nome acessível) até o usuário validar de novo. A severidade
- * nunca depende só da cor: cada linha começa com símbolo e nome (✕ Bloqueio, ! Aviso, i Informação).
+ * "Resultado desatualizado" em destaque (título do estado, aviso e descrição acessível) até o usuário validar de novo. A
+ * severidade nunca depende só da cor: cada linha começa com símbolo e nome (× Bloqueio, ! Aviso, i Informação).
+ *
+ * <p>Layout compacto para a coluna central em janelas estreitas ou baixas: linhas únicas com reticências (texto completo
+ * na dica e no nome acessível) e altura mínima que nunca sobrepõe cabeçalho e rodapé.
  */
 public final class ValidationPanel extends NekkoraPanel {
 
@@ -90,18 +97,19 @@ public final class ValidationPanel extends NekkoraPanel {
     public static final String STALE_MESSAGE = "A automação mudou depois desta validação. Valide novamente para ver o diagnóstico atual.";
 
     private final Actions actions;
-    private final NekkoraText subject = new NekkoraText("");
+    private final NekkoraStack head = NekkoraStack.vertical(Spacing.SPACE_3);
+    private final NekkoraStack foot = NekkoraStack.vertical(Spacing.SPACE_3);
     private final NekkoraInlineAlert status = new NekkoraInlineAlert(com.nekkora.ui.core.Severity.INFO, "", "");
     private final NekkoraInlineAlert stale = new NekkoraInlineAlert(com.nekkora.ui.core.Severity.WARNING, STALE_TITLE, STALE_MESSAGE);
     private final NekkoraText counts = new NekkoraText("");
-    private final NekkoraText note = new NekkoraText(NO_EXECUTION, TextTone.MUTED);
     private final NekkoraComboBox<Filter> filter = new NekkoraComboBox<>(Filter.values());
     private final NekkoraList<Item> list = new NekkoraList<>();
     private final NekkoraText empty = new NekkoraText("Nenhum apontamento nesta seleção.", TextTone.MUTED);
-    private final NekkoraParagraph guidance = new NekkoraParagraph("", TextTone.SECONDARY);
+    private final NekkoraText guidance = new NekkoraText("", TextTone.SECONDARY);
     private final NekkoraButton goTo = NekkoraButton.secondary("Ir para etapa").withIcon(IconName.ARROW_RIGHT).withSize(ControlSize.SMALL);
     private final NekkoraButton edit = NekkoraButton.secondary("Editar etapa").withIcon(IconName.EDIT).withSize(ControlSize.SMALL);
-    private final NekkoraButton again = NekkoraButton.primary("Validar novamente").withIcon(IconName.REFRESH).withSize(ControlSize.SMALL);
+    private final NekkoraIconButton again = new NekkoraIconButton(IconName.REFRESH, "Validar novamente (Ctrl+Shift+V)");
+    private String subject = "";
     private List<Item> items = List.of();
     private ValidationReport report;
     private boolean current;
@@ -109,35 +117,35 @@ public final class ValidationPanel extends NekkoraPanel {
     public ValidationPanel(Actions actions) {
         super(new BorderLayout());
         this.actions = Objects.requireNonNull(actions);
-        setSurface(com.nekkora.ui.container.Background.SURFACE);
+        setSurface(Background.SURFACE);
         setPadding(Spacing.SPACE_5, Spacing.SPACE_6);
         getAccessibleContext().setAccessibleName(TITLE);
 
-        NekkoraStack head = NekkoraStack.vertical(Spacing.SPACE_3);
         NekkoraStack titleRow = NekkoraStack.horizontal(Spacing.SPACE_4).align(NekkoraStack.Align.CENTER);
-        NekkoraText title = new NekkoraText(TITLE, NekkoraText.Size.LARGE, TextTone.PRIMARY);
-        titleRow.add(title);
-        titleRow.add(subject);
+        titleRow.add(new NekkoraText(TITLE, NekkoraText.Size.LARGE, TextTone.PRIMARY));
         titleRow.addGlue();
+        again.getAccessibleContext().setAccessibleName("Validar novamente");
+        again.addActionListener(e -> actions.revalidate());
+        titleRow.add(again);
         NekkoraIconButton close = new NekkoraIconButton(IconName.CLOSE, "Fechar a validação (Esc)");
+        close.getAccessibleContext().setAccessibleName("Fechar a validação");
         close.addActionListener(e -> actions.close());
         titleRow.add(close);
         head.add(titleRow);
-        head.add(status);
+        head.add(status); // estado + explicação + "não executou nenhuma etapa" (sempre visível)
         stale.addAction("Validar novamente", actions::revalidate);
         stale.setVisible(false);
         head.add(stale);
-        head.add(note);
-        // totais e filtro na mesma linha: o cabeçalho cabe em janelas baixas (1366×768 a 150%)
-        NekkoraStack filterRow = NekkoraStack.horizontal(Spacing.SPACE_4).align(NekkoraStack.Align.CENTER);
         counts.getAccessibleContext().setAccessibleName("Totais da validação");
-        filterRow.add(counts);
-        filterRow.addGlue();
+        head.add(counts);
+        // filtro em linha própria: na coluna central estreita ele nunca é empurrado para fora
+        NekkoraStack filterRow = NekkoraStack.horizontal(Spacing.SPACE_4).align(NekkoraStack.Align.CENTER);
         filterRow.add(new NekkoraText("Mostrar:"));
         filter.setLabelProvider(f -> f == null ? "" : f.label());
         filter.getAccessibleContext().setAccessibleName("Mostrar apontamentos");
         filter.addActionListener(e -> applyFilter());
         filterRow.add(filter);
+        filterRow.addGlue();
         head.add(filterRow);
         add(head, BorderLayout.NORTH);
 
@@ -153,25 +161,22 @@ public final class ValidationPanel extends NekkoraPanel {
         list.addListSelectionListener(e -> {
             if (!e.getValueIsAdjusting()) refreshSelection();
         });
-        NekkoraPanel center = new NekkoraPanel(new BorderLayout());
-        center.add(new NekkoraScrollPane(list), BorderLayout.CENTER);
+        NekkoraPanel middle = new NekkoraPanel(new BorderLayout());
+        middle.add(new NekkoraScrollPane(list), BorderLayout.CENTER);
         empty.setVisible(false);
-        center.add(empty, BorderLayout.NORTH);
-        add(center, BorderLayout.CENTER);
+        middle.add(empty, BorderLayout.NORTH);
+        add(middle, BorderLayout.CENTER);
 
-        NekkoraStack foot = NekkoraStack.vertical(Spacing.SPACE_3);
         guidance.getAccessibleContext().setAccessibleName("Como corrigir");
         foot.add(guidance);
         NekkoraStack buttons = NekkoraStack.horizontal(Spacing.SPACE_4);
         goTo.onClick(e -> selected().ifPresent(i -> actions.goTo(i.finding())));
         edit.onClick(e -> selected().ifPresent(i -> actions.edit(i.finding())));
-        again.onClick(e -> actions.revalidate());
         goTo.getAccessibleContext().setAccessibleDescription("Seleciona no Studio o lugar do apontamento.");
         edit.getAccessibleContext().setAccessibleDescription("Abre o editor da etapa para corrigir o apontamento.");
         buttons.add(goTo);
         buttons.add(edit);
         buttons.addGlue();
-        buttons.add(again);
         foot.add(buttons);
         add(foot, BorderLayout.SOUTH);
 
@@ -183,7 +188,14 @@ public final class ValidationPanel extends NekkoraPanel {
             }
         });
         refreshSelection();
-        setMinimumSize(new java.awt.Dimension(0, com.nekkora.ui.theme.Scale.px(160)));
+    }
+
+    /** Altura mínima: cabeçalho + rodapé + uma linha da lista — cabeçalho e rodapé nunca se sobrepõem. */
+    @Override
+    public Dimension getMinimumSize() {
+        Insets in = getInsets();
+        int h = head.getPreferredSize().height + foot.getPreferredSize().height + Scale.px(56) + in.top + in.bottom;
+        return new Dimension(Scale.px(200), h);
     }
 
     /**
@@ -197,18 +209,20 @@ public final class ValidationPanel extends NekkoraPanel {
         Finding keep = selected().map(Item::finding).orElse(null);
         this.report = Objects.requireNonNull(report);
         this.items = List.copyOf(items);
-        subject.setText(automationName);
-        ValidationStatus st = report.status();
-        status.setSeverity(switch (st) {
+        this.subject = automationName == null ? "" : automationName;
+        status.setSeverity(switch (report.status()) {
             case INCOMPLETE -> com.nekkora.ui.core.Severity.ERROR;
             case NOT_FULLY_ASSESSABLE -> com.nekkora.ui.core.Severity.WARNING;
             case NO_STATIC_BLOCKERS -> com.nekkora.ui.core.Severity.INFO; // nunca "sucesso": não é pronta para executar
         });
         ValidationReport.Summary s = report.summary();
-        counts.setText(Severity.BLOCKER.symbol() + " " + Severity.BLOCKER.count(s.blockers()) + "   " + Severity.WARNING.symbol() + " "
-                + Severity.WARNING.count(s.warnings()) + "   " + Severity.INFO.symbol() + " " + Severity.INFO.count(s.infos()) + "   ·   "
-                + StudioText.steps(s.steps()) + " " + (s.steps() == 1 ? "analisada" : "analisadas") + ", " + s.stepsWithoutFindings() + " sem apontamentos");
-        note.setText(NO_EXECUTION + " Regras " + report.rulesVersion() + ".");
+        String line = Severity.BLOCKER.symbol() + " " + Severity.BLOCKER.count(s.blockers()) + "   " + Severity.WARNING.symbol() + " "
+                + Severity.WARNING.count(s.warnings()) + "   " + Severity.INFO.symbol() + " " + Severity.INFO.count(s.infos());
+        String full = line + " · " + StudioText.steps(s.steps()) + " " + (s.steps() == 1 ? "analisada" : "analisadas") + ", "
+                + s.stepsWithoutFindings() + " sem apontamentos · regras " + report.rulesVersion();
+        counts.setText(line);
+        counts.setToolTipText(full);
+        counts.getAccessibleContext().setAccessibleDescription(full);
         setCurrent(current);
         applyFilter();
         if (keep != null) {
@@ -225,12 +239,13 @@ public final class ValidationPanel extends NekkoraPanel {
     public void showNotValidated(String automationName) {
         this.report = null;
         this.items = List.of();
-        subject.setText(automationName == null ? "" : automationName);
+        this.subject = automationName == null ? "" : automationName;
         status.setSeverity(com.nekkora.ui.core.Severity.INFO);
-        status.setTitle(automationName == null || automationName.isEmpty() ? "Nenhuma automação ativa" : "Automação ainda não validada");
-        status.setMessage("Use Validar automação (Ctrl+Shift+V) para o diagnóstico estrutural do estado atual.");
+        status.setTitle(subject.isEmpty() ? "Nenhuma automação ativa" : "Automação ainda não validada");
+        status.setMessage((subject.isEmpty() ? "" : subject + ": ") + "use Validar automação (Ctrl+Shift+V) para o diagnóstico estrutural do estado atual.");
         stale.setVisible(false);
         counts.setText("");
+        counts.setToolTipText(null);
         current = false;
         getAccessibleContext().setAccessibleDescription("Sem validação");
         list.setItems(List.of());
@@ -246,7 +261,7 @@ public final class ValidationPanel extends NekkoraPanel {
         if (report == null) return;
         ValidationStatus st = report.status();
         status.setTitle(current ? "Estado: " + st.label() : STALE_TITLE + " — último estado: " + st.label());
-        status.setMessage(current ? st.explanation() : STALE_MESSAGE);
+        status.setMessage((subject.isEmpty() ? "" : subject + ": ") + (current ? st.explanation() : STALE_MESSAGE) + " " + NO_EXECUTION);
         stale.setVisible(!current);
         getAccessibleContext().setAccessibleDescription(current ? st.label() : STALE_TITLE);
         revalidate();
@@ -266,13 +281,16 @@ public final class ValidationPanel extends NekkoraPanel {
         refreshSelection();
     }
 
-    private java.util.Optional<Item> selected() {
-        return java.util.Optional.ofNullable(list.getSelectedValue());
+    private Optional<Item> selected() {
+        return Optional.ofNullable(list.getSelectedValue());
     }
 
     private void refreshSelection() {
         Item i = list.getSelectedValue();
-        guidance.setText(i == null ? "" : "Como corrigir: " + i.finding().guidance());
+        String how = i == null ? "" : "Como corrigir: " + i.finding().guidance();
+        guidance.setText(how);
+        guidance.setToolTipText(how.isEmpty() ? null : how);
+        guidance.getAccessibleContext().setAccessibleDescription(how);
         goTo.setEnabled(i != null);
         goTo.setText(i == null || i.finding().scope() == FindingScope.STEP ? "Ir para etapa" : i.finding().scope() == FindingScope.SESSION
                 ? "Ir para sessão" : "Ir para automação");
@@ -301,6 +319,10 @@ public final class ValidationPanel extends NekkoraPanel {
         return counts;
     }
 
+    public NekkoraText guidance() {
+        return guidance;
+    }
+
     public NekkoraButton goToButton() {
         return goTo;
     }
@@ -309,11 +331,11 @@ public final class ValidationPanel extends NekkoraPanel {
         return edit;
     }
 
-    public NekkoraButton revalidateButton() {
+    public NekkoraIconButton revalidateButton() {
         return again;
     }
 
-    public java.util.Optional<ValidationReport> report() {
-        return java.util.Optional.ofNullable(report);
+    public Optional<ValidationReport> report() {
+        return Optional.ofNullable(report);
     }
 }
