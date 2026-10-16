@@ -23,5 +23,7 @@ public enum StudioChange {
     /** Uma automação passou a estar (ou deixou de estar) bloqueada para edição por uma gravação (STUDIO-004). */
     EDIT_LOCK,
     /** Evidências observadas chegaram para etapas de uma automação (STUDIO-005) — não é edição nem conteúdo editável. */
-    EVIDENCE
+    EVIDENCE,
+    /** Estado de persistência de uma automação (STUDIO-006): arquivo, salvando, salvo, erro, conflito. */
+    PROJECT
 }

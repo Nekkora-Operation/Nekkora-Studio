@@ -1,0 +1,16 @@
+{
+  "description": "Localizador preferencial aponta para posição inexistente (regra semântica, não estrutural).",
+  "base": "consulta-clientes.nekkora",
+  "changes": [
+    {
+      "entry": "step:0",
+      "op": "set",
+      "pointer": "/effective/preferredLocator",
+      "value": 7
+    }
+  ],
+  "addEntries": {},
+  "rehash": true,
+  "expectedError": "INTEGRITY",
+  "schemaRejects": false
+}

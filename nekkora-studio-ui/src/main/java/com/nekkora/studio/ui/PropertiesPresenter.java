@@ -108,7 +108,7 @@ public final class PropertiesPresenter {
         NekkoraPropertiesGroup general = inspector.addGroup("Geral");
         general.addRow("Nome", value(a.name()));
         general.addRow("Descrição", paragraph(a.description()));
-        general.addRow("Estado", value(a.status().label() + " em memória — não salvo"));
+        general.addRow("Estado", value(a.status().label()));
         NekkoraPropertiesGroup structure = inspector.addGroup("Estrutura");
         structure.addRow("Sessões", value(Integer.toString(a.sessions().size())));
         structure.addRow("Etapas", value(Integer.toString(a.stepCount())));

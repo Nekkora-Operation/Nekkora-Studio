@@ -1,0 +1,15 @@
+{
+  "description": "automation.json sem revision.",
+  "base": "consulta-clientes.nekkora",
+  "changes": [
+    {
+      "entry": "automation.json",
+      "op": "remove",
+      "pointer": "/revision"
+    }
+  ],
+  "addEntries": {},
+  "rehash": true,
+  "expectedError": "INVALID_CONTENT",
+  "schemaRejects": true
+}

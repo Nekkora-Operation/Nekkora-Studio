@@ -53,6 +53,32 @@ public final class Automation {
         this.updatedAt = createdAt;
     }
 
+    /** Reconstrução (STUDIO-006): identidade, instantes e revisão preservados. Só {@link AutomationRestoration} usa. */
+    private Automation(AutomationId id, String name, String description, Instant createdAt, Instant updatedAt, long revision, Clock clock) {
+        this.id = id;
+        this.name = name;
+        this.description = description;
+        this.clock = clock;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
+        this.revision = revision;
+    }
+
+    /** Fábrica restrita ao pacote para {@link AutomationRestoration} (que valida tudo antes). */
+    static Automation restored(AutomationId id, String name, String description, Instant createdAt, Instant updatedAt, long revision, Clock clock) {
+        return new Automation(id, name, description, createdAt, updatedAt, revision, clock);
+    }
+
+    /** Reconstrução: acrescenta uma sessão já validada, sem contar revisão nem mudar instantes. */
+    void adoptSession(LogicalSession session) {
+        sessions.add(session);
+    }
+
+    /** Reconstrução: acrescenta uma evidência não atribuída já validada, na ordem guardada. */
+    void adoptUnattributed(com.nekkora.studio.domain.evidence.ObservedEvidence e) {
+        unattributed.add(e);
+    }
+
     /** Cria um rascunho vazio. Nome obrigatório; descrição opcional. */
     public static Automation create(String name, String description, Clock clock) {
         Objects.requireNonNull(clock, "clock");
@@ -641,7 +667,7 @@ public final class Automation {
         }
     }
 
-    private static void checkParameters(ActionType type, ActionParameters params, ElementReference element) {
+    static void checkParameters(ActionType type, ActionParameters params, ElementReference element) {
         if (params.value().isPresent() && !type.acceptsValue()) throw new DomainValidationException(ValidationProblem.VALUE_NOT_ACCEPTED);
         if (params.option().isPresent() && !type.acceptsOption()) throw new DomainValidationException(ValidationProblem.OPTION_NOT_ACCEPTED);
         if (element != null && element.sensitive() && params.value().orElse(null) instanceof ValueSource.LiteralValue) {

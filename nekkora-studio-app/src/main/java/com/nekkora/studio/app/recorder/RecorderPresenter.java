@@ -181,6 +181,18 @@ public final class RecorderPresenter {
      * gravação, pausa, interrupção, encerramento ou reconciliação com resultado desconhecido) e enquanto houver etapas
      * recebidas ainda não entregues ao domínio.
      */
+    /**
+     * STUDIO-006 (§22): a automação NÃO está quiescente para um salvamento definitivo — gravação ativa (inclusive
+     * degradada: a simples desconexão do navegador não confirma o encerramento), etapas ou evidências pendentes, ou
+     * entregas já emitidas pela extensão que ainda não chegaram.
+     */
+    public static boolean busyForSave(RecorderSnapshot s, com.nekkora.studio.domain.AutomationId automation) {
+        if (s == null || s.automation() == null || !s.automation().equals(automation)) {
+            return false;
+        }
+        return s.state().active() || s.steps().pending() > 0 || s.steps().waiting() || s.evidence().pending() > 0 || s.evidence().waiting();
+    }
+
     public static boolean locks(RecorderSnapshot s, com.nekkora.studio.domain.AutomationId automation) {
         if (s == null || s.automation() == null || !s.automation().equals(automation)) {
             return false;

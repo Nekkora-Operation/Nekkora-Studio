@@ -20,6 +20,7 @@ nekkora-swing-showcase  → "Nekkora Design System Showcase" + tela Studio fict�
 nekkora-studio-domain   → modelo de automações: Automação → Sessões lógicas → Etapas (Java puro)
 nekkora-studio-bridge   → Studio Bridge nekkora-bridge/1: canal local autenticado com o Native Host (Java puro)
 nekkora-studio-recorder → RecorderController: gravação técnica confirmada pela extensão (Java puro)
+nekkora-studio-persistence → projeto .nekkora: formato versionado, validação, reconstrução e gravação atômica (Java puro)
 nekkora-studio-ui       → peças visuais do Studio (navegação, automação, sessões, etapas, propriedades, diálogos,
                           Floating Recorder)
 nekkora-studio-app      → a aplicação Nekkora Studio (jar executável)
@@ -58,6 +59,21 @@ perder o que foi observado.
 A etapa gravada continua "Gravada", com o valor original ao lado do atual. Durante uma gravação, a automação gravada
 fica protegida contra edições. Veja [docs/studio-004](docs/studio-004/architecture.md) e o
 [relatório](reports/studio-004-final-report.md).
+
+**STUDIO-006 — projetos salvos e recuperação.** Cada automação vira um projeto `.nekkora` (menu **Arquivo**: Novo
+projeto, Abrir projeto… Ctrl+O, Salvar Ctrl+S, Salvar como… Ctrl+Shift+S, Projetos recentes, Fechar projeto, Sair).
+Salvar, fechar e abrir de novo preserva identidades, ordem, procedência, valores capturados, edições manuais e
+evidências (com o resultado de negócio "Não validado"). O desfazer/refazer continua só na sessão de edição.
+
+- O arquivo é **local, não criptografado** e legível por ferramentas comuns: não guarde segredos nele. Credenciais
+  aparecem só pelo apelido; valores digitados nas páginas nunca são gravados.
+- Gravação atômica e verificada: uma falha nunca destrói o arquivo anterior. Alteração externa é detectada.
+- A aba mostra `*` enquanto há alterações não salvas; durante uma gravação o salvamento espera a gravação terminar.
+- **Recuperação automática** (só depois do seu consentimento, em Arquivo → Recuperação automática…): cópias locais
+  das alterações não salvas, oferecidas ao abrir o Studio depois de um encerramento inesperado. Pasta própria
+  (`NEKKORA_STUDIO_DATA_DIR` a substitui), até 3 cópias por projeto, 7 dias.
+
+Veja [docs/studio-006](docs/studio-006/architecture.md) e o [relatório](reports/studio-006-final-report.md).
 
 Camadas: **Tokens → Temas → Primitivas → Componentes → Padrões → Studio**. Detalhes em
 [docs/ARQUITETURA.md](docs/ARQUITETURA.md).

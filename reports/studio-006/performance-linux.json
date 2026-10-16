@@ -1,0 +1,11 @@
+{
+  "generatedBy": "ProjectPerformanceTest",
+  "java": "21.0.12.1",
+  "os": "Linux",
+  "results": [
+    {"etapas": 10, "sessoes": 1, "evidencias": 12, "arquivoBytes": 17393, "fotografiaEdtMs": 1.33, "serializacaoMs": 3.71, "salvarComReleituraMs": 20.52, "leituraPacoteMs": 2.92, "abrirCompletoMs": 11.4, "validacaoEReconstrucaoMs": 8.48, "memoriaProjetoAbertoMB": 0.0361328125, "recuperacaoGravarMs": 16.6, "recuperacaoVarrerMs": 10.4},
+    {"etapas": 100, "sessoes": 4, "evidencias": 102, "arquivoBytes": 154531, "fotografiaEdtMs": 3.21, "serializacaoMs": 8.0, "salvarComReleituraMs": 56.87, "leituraPacoteMs": 5.85, "abrirCompletoMs": 17.81, "validacaoEReconstrucaoMs": 11.96, "memoriaProjetoAbertoMB": 0.34765625, "recuperacaoGravarMs": 40.06, "recuperacaoVarrerMs": 27.31},
+    {"etapas": 1000, "sessoes": 40, "evidencias": 1002, "arquivoBytes": 1534584, "fotografiaEdtMs": 7.92, "serializacaoMs": 88.63, "salvarComReleituraMs": 235.89, "leituraPacoteMs": 41.01, "abrirCompletoMs": 130.42, "validacaoEReconstrucaoMs": 89.41, "memoriaProjetoAbertoMB": 3.4833984375, "recuperacaoGravarMs": 212.91, "recuperacaoVarrerMs": 233.03},
+    {"etapas": 5000, "sessoes": 200, "evidencias": 5001, "arquivoBytes": 7663027, "fotografiaEdtMs": 19.9, "serializacaoMs": 399.13, "salvarComReleituraMs": 876.41, "leituraPacoteMs": 169.29, "abrirCompletoMs": 567.21, "validacaoEReconstrucaoMs": 397.92, "memoriaProjetoAbertoMB": 17.4169921875, "recuperacaoGravarMs": 1023.26, "recuperacaoVarrerMs": 735.18}
+  ]
+}

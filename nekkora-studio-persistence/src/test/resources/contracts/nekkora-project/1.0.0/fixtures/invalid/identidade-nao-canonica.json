@@ -1,0 +1,16 @@
+{
+  "description": "UUID em maiúsculas: identidades só na forma canônica.",
+  "base": "consulta-clientes.nekkora",
+  "changes": [
+    {
+      "entry": "automation.json",
+      "op": "set",
+      "pointer": "/automationId",
+      "value": "AAAAAAAA-0000-4000-8000-000000000001"
+    }
+  ],
+  "addEntries": {},
+  "rehash": true,
+  "expectedError": "INVALID_CONTENT",
+  "schemaRejects": true
+}

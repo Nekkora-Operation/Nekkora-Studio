@@ -148,9 +148,22 @@ class RecorderStudioTest {
             Edt.run(offline::dispose);
         }
         browser.setStatus(LinkStatus.of(LinkStatus.State.WAITING, null));
-        Edt.flush();
-        String waiting = Edt.call(() -> studio.recorderPresenter().statusItem().getText());
-        assertEquals("Navegador: aguardando conexão com a extensão", waiting);
+        // a fotografia do Recorder chega à EDT por invokeLater depois de passar pelo RecorderController: espera-se a
+        // propagação (até 5 s) em vez de ler no mesmo instante (condição de corrida do teste, vista na STUDIO-006)
+        String expected = "Navegador: aguardando conexão com a extensão";
+        String waiting = "";
+        for (long end = System.nanoTime() + 5_000_000_000L; System.nanoTime() < end; ) {
+            Edt.flush();
+            waiting = Edt.call(() -> studio.recorderPresenter().statusItem().getText());
+            if (waiting.equals(expected)) break;
+            try {
+                Thread.sleep(20);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                break;
+            }
+        }
+        assertEquals(expected, waiting);
     }
 
     @Test

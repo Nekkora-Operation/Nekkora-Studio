@@ -1,0 +1,16 @@
+{
+  "description": "Localizador manual declarado como verificado: não existe nesta fase.",
+  "base": "consulta-clientes.nekkora",
+  "changes": [
+    {
+      "entry": "step:0",
+      "op": "set",
+      "pointer": "/effective/manualLocators/0/verification",
+      "value": "VERIFIED"
+    }
+  ],
+  "addEntries": {},
+  "rehash": true,
+  "expectedError": "INVALID_CONTENT",
+  "schemaRejects": true
+}

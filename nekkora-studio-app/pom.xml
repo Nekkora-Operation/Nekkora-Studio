@@ -32,6 +32,10 @@
     </dependency>
     <dependency>
       <groupId>com.nekkora</groupId>
+      <artifactId>nekkora-studio-persistence</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.nekkora</groupId>
       <artifactId>nekkora-studio-bridge</artifactId>
     </dependency>
     <dependency>

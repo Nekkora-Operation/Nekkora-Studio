@@ -1,0 +1,17 @@
+INFO com.nekkora.studio.bridge.BridgeServer Bridge publicado (tcp)
+INFO com.nekkora.studio.app.workspace.ProjectService projeto operacao=salvar resultado=ok duracaoMs=44 bytes=8674 codigo=-
+INFO com.nekkora.studio.app.workspace.ProjectService projeto operacao=descartar-recuperacao resultado=ok duracaoMs=0 bytes=-1 codigo=-
+INFO com.nekkora.studio.app.workspace.ProjectService projeto operacao=salvar resultado=ok duracaoMs=16 bytes=8875 codigo=-
+INFO com.nekkora.studio.app.workspace.ProjectService projeto operacao=descartar-recuperacao resultado=ok duracaoMs=0 bytes=-1 codigo=-
+INFO com.nekkora.studio.app.workspace.ProjectService projeto operacao=abrir resultado=ok duracaoMs=5 bytes=8875 codigo=-
+INFO com.nekkora.studio.app.workspace.ProjectService projeto operacao=abrir resultado=erro duracaoMs=1 bytes=-1 codigo=PRIVACY_POLICY_UNSUPPORTED
+INFO com.nekkora.studio.app.workspace.ProjectService projeto operacao=abrir resultado=erro duracaoMs=3 bytes=-1 codigo=PRIVACY_VIOLATION
+INFO com.nekkora.studio.app.workspace.ProjectService projeto operacao=abrir resultado=erro duracaoMs=1 bytes=-1 codigo=UNSAFE_ENTRY
+INFO com.nekkora.studio.app.workspace.ProjectService projeto operacao=salvar resultado=erro duracaoMs=2 bytes=-1 codigo=READ_ONLY
+INFO com.nekkora.studio.app.workspace.ProjectService projeto operacao=salvar resultado=erro duracaoMs=3 bytes=-1 codigo=IN_USE
+INFO com.nekkora.studio.app.workspace.ProjectService projeto operacao=salvar resultado=erro duracaoMs=2 bytes=-1 codigo=CONFLICT
+INFO com.nekkora.studio.app.workspace.ProjectService projeto operacao=salvar resultado=ok duracaoMs=11 bytes=8888 codigo=-
+INFO com.nekkora.studio.app.workspace.ProjectService projeto operacao=descartar-recuperacao resultado=ok duracaoMs=0 bytes=-1 codigo=-
+INFO com.nekkora.studio.app.workspace.ProjectService projeto operacao=salvar resultado=erro duracaoMs=1 bytes=-1 codigo=READ_ONLY
+INFO com.nekkora.studio.app.workspace.ProjectService projeto operacao=salvar resultado=ok duracaoMs=15 bytes=8916 codigo=-
+INFO com.nekkora.studio.app.workspace.ProjectService projeto operacao=descartar-recuperacao resultado=ok duracaoMs=0 bytes=-1 codigo=-

@@ -1,0 +1,15 @@
+{
+  "description": "Etapa presente no pacote mas não referenciada por nenhuma sessão.",
+  "base": "consulta-clientes.nekkora",
+  "changes": [
+    {
+      "entry": "sessions.json",
+      "op": "remove",
+      "pointer": "/sessions/0/steps/0"
+    }
+  ],
+  "addEntries": {},
+  "rehash": true,
+  "expectedError": "INTEGRITY",
+  "schemaRejects": false
+}

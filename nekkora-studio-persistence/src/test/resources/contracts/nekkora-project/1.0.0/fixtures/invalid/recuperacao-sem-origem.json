@@ -1,0 +1,16 @@
+{
+  "description": "kind=RECOVERY sem recoveryOf: incoerente.",
+  "base": "consulta-clientes.nekkora",
+  "changes": [
+    {
+      "entry": "manifest.json",
+      "op": "set",
+      "pointer": "/kind",
+      "value": "RECOVERY"
+    }
+  ],
+  "addEntries": {},
+  "rehash": true,
+  "expectedError": "INVALID_CONTENT",
+  "schemaRejects": false
+}

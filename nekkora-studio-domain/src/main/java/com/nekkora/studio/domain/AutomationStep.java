@@ -81,6 +81,24 @@ public final class AutomationStep {
                 : null;
     }
 
+    /**
+     * Reconstrução (STUDIO-006): original e efetivo exatamente como persistidos — o original NÃO é recalculado a partir
+     * do estado efetivo. Só {@link AutomationRestoration} usa, depois de validar tudo.
+     */
+    AutomationStep(StepId id, StepProvenance provenance, ElementReference capturedElement, StepContext context, String observedOutcome, Instant createdAt,
+            CapturedBaseline baseline, StepId derivedFrom, State effective, List<com.nekkora.studio.domain.evidence.ObservedEvidence> evidence) {
+        this.id = id;
+        this.provenance = provenance;
+        this.capturedElement = capturedElement;
+        this.context = context;
+        this.observedOutcome = observedOutcome == null ? "" : observedOutcome.strip();
+        this.createdAt = createdAt;
+        this.baseline = baseline;
+        this.derivedFrom = derivedFrom;
+        apply(effective);
+        this.evidence.addAll(evidence);
+    }
+
     public StepId id() {
         return id;
     }
@@ -172,6 +190,11 @@ public final class AutomationStep {
         if (fields.isEmpty() && manualLocators.isEmpty() && comments.isEmpty()) return Optional.empty();
         return Optional.of(new ManualRevision(fields, !manualLocators.isEmpty(), !comments.isEmpty(),
                 lastManualChange == null ? createdAt : lastManualChange));
+    }
+
+    /** Última alteração manual registrada no estado efetivo, se houve (persistência — STUDIO-006). */
+    public Optional<Instant> lastManualChange() {
+        return Optional.ofNullable(lastManualChange);
     }
 
     /** Quando o campo foi alterado manualmente pela última vez, se foi. */

@@ -1,0 +1,16 @@
+{
+  "description": "Comentário com padrão de documento pessoal: recusado pelas regras do domínio.",
+  "base": "consulta-clientes.nekkora",
+  "changes": [
+    {
+      "entry": "step:2",
+      "op": "set",
+      "pointer": "/effective/comments/0/text",
+      "value": "CPF 123.456.789-09"
+    }
+  ],
+  "addEntries": {},
+  "rehash": true,
+  "expectedError": "INVALID_CONTENT",
+  "schemaRejects": false
+}

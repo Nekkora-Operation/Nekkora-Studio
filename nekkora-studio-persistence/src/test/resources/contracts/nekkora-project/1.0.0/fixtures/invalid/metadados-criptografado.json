@@ -1,0 +1,16 @@
+{
+  "description": "metadata.encrypted=true: o formato 1.0.0 não é criptografado; o leitor recusa em vez de tentar interpretar.",
+  "base": "consulta-clientes.nekkora",
+  "changes": [
+    {
+      "entry": "metadata.json",
+      "op": "set",
+      "pointer": "/encrypted",
+      "value": true
+    }
+  ],
+  "addEntries": {},
+  "rehash": true,
+  "expectedError": "UNSUPPORTED_VERSION",
+  "schemaRejects": true
+}
