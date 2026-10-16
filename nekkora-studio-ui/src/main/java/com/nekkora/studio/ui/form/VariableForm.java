@@ -171,7 +171,7 @@ public final class VariableForm extends StudioForm<VariableForm.Values> {
         purposeField = new NekkoraFormField("Finalidade", purpose.scrollable()).optional()
                 .helper("Contexto para quem revisa. Até " + Texts.DESCRIPTION_MAX + " caracteres; não escreva dados reais.");
         sensitivityField = new NekkoraFormField("Sensibilidade", sensitivity).required()
-                .helper("CPF e e-mail exigem no mínimo Dado pessoal. Dados pessoais e segredos não podem ter valor fixo.");
+                .helper("CPF e e-mail exigem no mínimo Dados pessoais. Dados pessoais e segredos não podem ter valor fixo.");
         NekkoraStack declaration = NekkoraStack.vertical(Spacing.SPACE_5);
         declaration.add(nameField);
         declaration.add(typeField);
