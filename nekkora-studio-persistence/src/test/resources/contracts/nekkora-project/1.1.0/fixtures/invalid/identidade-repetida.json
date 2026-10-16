@@ -1,0 +1,17 @@
+{
+  "description": "Duas variáveis com a mesma identidade.",
+  "base": "consulta-clientes-variaveis.nekkora",
+  "changes": [
+    {
+      "entry": "variables.json",
+      "op": "set",
+      "pointer": "/variables/7/variableId",
+      "value": "00000000-0000-4000-8000-000000000015"
+    }
+  ],
+  "removeEntries": [],
+  "addEntries": {},
+  "rehash": true,
+  "expectedError": "INTEGRITY",
+  "schemaRejects": false
+}

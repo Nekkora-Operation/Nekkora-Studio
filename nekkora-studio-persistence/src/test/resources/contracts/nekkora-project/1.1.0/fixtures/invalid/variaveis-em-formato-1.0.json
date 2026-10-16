@@ -1,0 +1,28 @@
+{
+  "description": "Manifesto 1.0.0 (modelo 1.0.0) com variables.json: o leitor 1.0 é estrito e não ignora a entrada.",
+  "base": "consulta-clientes-variaveis.nekkora",
+  "changes": [
+    {
+      "entry": "manifest.json",
+      "op": "set",
+      "pointer": "/formatVersion",
+      "value": "1.0.0"
+    },
+    {
+      "entry": "manifest.json",
+      "op": "set",
+      "pointer": "/automationModel/version",
+      "value": "1.0.0"
+    },
+    {
+      "entry": "automation.json",
+      "op": "set",
+      "pointer": "/modelVersion",
+      "value": "1.0.0"
+    }
+  ],
+  "removeEntries": [],
+  "addEntries": {},
+  "rehash": true,
+  "expectedError": "UNEXPECTED_ENTRY"
+}

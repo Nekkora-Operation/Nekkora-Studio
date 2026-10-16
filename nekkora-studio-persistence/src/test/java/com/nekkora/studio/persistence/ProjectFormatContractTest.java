@@ -150,7 +150,7 @@ class ProjectFormatContractTest {
     private static final Pattern UUID_TEXT = Pattern.compile("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}");
 
     /** Troca as identidades aleatórias por identidades fixas (na ordem em que aparecem), nos nomes e no conteúdo. */
-    private static Map<String, byte[]> deterministic(Map<String, byte[]> entries) {
+    static Map<String, byte[]> deterministic(Map<String, byte[]> entries) {
         Map<String, String> ids = new LinkedHashMap<>();
         java.util.function.UnaryOperator<String> remap = text -> {
             Matcher m = UUID_TEXT.matcher(text);
@@ -272,7 +272,7 @@ class ProjectFormatContractTest {
 
     /** {@code step:N} / {@code evidence:N}: N-ésima etapa (ordem das sessões) / N-ésimo documento de evidências de etapa. */
     @SuppressWarnings("unchecked")
-    private static String resolve(Map<String, byte[]> entries, String entry) {
+    static String resolve(Map<String, byte[]> entries, String entry) {
         if (!entry.contains(":")) return entry;
         int n = Integer.parseInt(entry.substring(entry.indexOf(':') + 1));
         Map<String, Object> sessions = (Map<String, Object>) Json.parse(new String(entries.get(ProjectFormat.SESSIONS), StandardCharsets.UTF_8));

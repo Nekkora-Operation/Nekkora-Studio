@@ -1,0 +1,11 @@
+{
+  "description": "Formato 1.1.0 sem variables.json: a entrada é obrigatória (nada é tratado como catálogo vazio em silêncio).",
+  "base": "consulta-clientes-variaveis.nekkora",
+  "changes": [],
+  "removeEntries": [
+    "variables.json"
+  ],
+  "addEntries": {},
+  "rehash": true,
+  "expectedError": "MISSING_ENTRY"
+}

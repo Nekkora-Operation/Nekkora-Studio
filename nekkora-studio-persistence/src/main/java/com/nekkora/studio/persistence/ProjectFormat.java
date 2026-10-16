@@ -14,13 +14,22 @@ import java.util.regex.Pattern;
  * Mudar uma classe Java não muda o formato: os documentos são escritos e lidos por código próprio
  * ({@link ProjectCodec}), nunca por serialização automática dos objetos do domínio.
  *
+ * <p><b>STUDIO-008</b>: o formato 1.1.0 acrescenta UMA entrada, {@link #VARIABLES} (catálogo de variáveis, modelo
+ * 1.1.0). O escritor grava a MENOR versão capaz de representar o conteúdo ({@link #versionFor}): uma automação sem
+ * variáveis continua sendo escrita em 1.0.0, byte a byte como antes. O leitor aceita 1.0.x (sem {@code variables.json},
+ * modelo 1.0.0) e 1.1.x (com {@code variables.json}, modelo 1.1.0); qualquer versão mais nova é recusada.
+ *
  * <p>Os limites abaixo são os do LEITOR: o arquivo declara os limites com que foi escrito, mas o leitor nunca confia
  * nisso.
  */
 public final class ProjectFormat {
     public static final String FORMAT = "nekkora-studio/project";
-    /** Versão do formato do pacote (SemVer). Esta versão do Studio lê e escreve exatamente 1.0.x. */
+    /** Versão base do formato do pacote (SemVer) — a de um projeto sem variáveis. */
     public static final String FORMAT_VERSION = "1.0.0";
+    /** Formato com catálogo de variáveis (STUDIO-008). */
+    public static final String FORMAT_VERSION_1_1 = "1.1.0";
+    /** Versão mais nova que esta versão do Studio lê e escreve. */
+    public static final String LATEST_FORMAT_VERSION = FORMAT_VERSION_1_1;
     public static final String PRIVACY_POLICY = CapturePrivacy.VERSION;
     public static final String EXTENSION = "nekkora";
     public static final String SUFFIX = "." + EXTENSION;
@@ -32,10 +41,12 @@ public final class ProjectFormat {
     public static final String STEPS_DIR = "steps/";
     public static final String EVIDENCE_DIR = "evidence/";
     public static final String UNATTRIBUTED = EVIDENCE_DIR + "unattributed.json";
+    /** Catálogo de variáveis (só no formato 1.1.x). */
+    public static final String VARIABLES = "variables.json";
 
     private static final String UUID = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
     /** Única forma de nome de entrada aceita: impede caminhos absolutos, {@code ..}, profundidade e nomes arbitrários. */
-    static final Pattern ENTRY_NAME = Pattern.compile("(manifest|metadata|automation|sessions)\\.json|steps/" + UUID + "\\.json|evidence/(" + UUID
+    static final Pattern ENTRY_NAME = Pattern.compile("(manifest|metadata|automation|sessions|variables)\\.json|steps/" + UUID + "\\.json|evidence/(" + UUID
             + "|unattributed)\\.json");
     static final Pattern STEP_ENTRY = Pattern.compile("steps/(" + UUID + ")\\.json");
     static final Pattern EVIDENCE_ENTRY = Pattern.compile("evidence/(" + UUID + ")\\.json");
@@ -50,26 +61,45 @@ public final class ProjectFormat {
     public static final int MAX_STEPS = 20_000;
     /** Sessões por projeto aceitas pelo leitor. */
     public static final int MAX_SESSIONS = 2_000;
-    /** Entradas no pacote: 4 documentos fixos + uma por etapa + evidências por etapa + não atribuídas. */
-    public static final int MAX_ENTRIES = 5 + 2 * MAX_STEPS;
+    /** Entradas no pacote: 5 documentos fixos (com o catálogo de variáveis) + uma por etapa + evidências por etapa + não atribuídas. */
+    public static final int MAX_ENTRIES = 6 + 2 * MAX_STEPS;
 
     /** Tipo do pacote: projeto confirmado pelo usuário ou fotografia de recuperação (D-S006-14). */
     public enum Kind { PROJECT, RECOVERY }
 
     private ProjectFormat() {}
 
-    /** A versão do formato é lida por esta versão do Studio (mesmo MAJOR e MINOR; o PATCH não muda a estrutura). */
+    /**
+     * A versão do formato é lida por esta versão do Studio: MAJOR 1 e MINOR 0 ou 1 (o PATCH não muda a estrutura). Mais
+     * nova que a {@link #LATEST_FORMAT_VERSION} é {@code NEWER} — nunca lida em parte.
+     */
     static Compatibility compatibility(String version) {
         if (version == null || !version.matches("\\d{1,4}\\.\\d{1,4}\\.\\d{1,4}")) return Compatibility.INVALID;
         String[] p = version.split("\\.");
-        String[] c = FORMAT_VERSION.split("\\.");
+        String[] c = LATEST_FORMAT_VERSION.split("\\.");
+        String[] base = FORMAT_VERSION.split("\\.");
         int major = Integer.parseInt(p[0]);
         int minor = Integer.parseInt(p[1]);
         int cMajor = Integer.parseInt(c[0]);
         int cMinor = Integer.parseInt(c[1]);
         if (major > cMajor || (major == cMajor && minor > cMinor)) return Compatibility.NEWER;
-        if (major < cMajor || minor < cMinor) return Compatibility.OLDER;
+        if (major < Integer.parseInt(base[0]) || (major == Integer.parseInt(base[0]) && minor < Integer.parseInt(base[1]))) return Compatibility.OLDER;
         return Compatibility.SUPPORTED;
+    }
+
+    /** O formato 1.1.x (com catálogo de variáveis)? Só para versões {@code SUPPORTED}. */
+    static boolean hasVariables(String supportedVersion) {
+        return !supportedVersion.split("\\.")[1].equals("0");
+    }
+
+    /** Versão do modelo de automação exigida por uma versão de formato suportada. */
+    static String modelFor(String supportedVersion) {
+        return hasVariables(supportedVersion) ? ModelVersion.V1_1 : ModelVersion.CURRENT;
+    }
+
+    /** Menor versão do formato capaz de representar os documentos (D-S008-06). */
+    public static String versionFor(java.util.Map<String, ?> documents) {
+        return documents.containsKey(VARIABLES) ? FORMAT_VERSION_1_1 : FORMAT_VERSION;
     }
 
     enum Compatibility { SUPPORTED, NEWER, OLDER, INVALID }

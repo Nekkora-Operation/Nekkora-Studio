@@ -1,0 +1,17 @@
+{
+  "description": "Escopo de sessão apontando para uma sessão que não existe.",
+  "base": "consulta-clientes-variaveis.nekkora",
+  "changes": [
+    {
+      "entry": "variables.json",
+      "op": "set",
+      "pointer": "/variables/2/scope/sessionId",
+      "value": "00000000-0000-4000-8000-999999999999"
+    }
+  ],
+  "removeEntries": [],
+  "addEntries": {},
+  "rehash": true,
+  "expectedError": "INTEGRITY",
+  "schemaRejects": false
+}

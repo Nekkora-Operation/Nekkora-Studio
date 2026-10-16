@@ -1,0 +1,17 @@
+{
+  "description": "Formato 1.1.0 declarando modelo 1.0.0: cada versão do formato tem exatamente um modelo.",
+  "base": "consulta-clientes-variaveis.nekkora",
+  "changes": [
+    {
+      "entry": "manifest.json",
+      "op": "set",
+      "pointer": "/automationModel/version",
+      "value": "1.0.0"
+    }
+  ],
+  "removeEntries": [],
+  "addEntries": {},
+  "rehash": true,
+  "expectedError": "UNSUPPORTED_VERSION",
+  "schemaRejects": true
+}

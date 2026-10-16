@@ -115,7 +115,7 @@ class ProjectValidationTest {
     void s006049Versao() throws Exception {
         assertEquals(ProjectException.Error.NEWER_VERSION, edited(ProjectFormat.MANIFEST, m -> m.put("formatVersion", "2.0.0")));
         assertEquals(ProjectException.Error.NEWER_VERSION, edited(ProjectFormat.MANIFEST, m -> {
-            m.put("formatVersion", "1.1.0");
+            m.put("formatVersion", "1.2.0"); // STUDIO-008: 1.1.0 passou a ser suportado (ajuste autorizado)
             m.put("campoDoFuturo", true); // um formato mais novo pode ter campos novos: recusado ANTES, sem descartar nada
         }));
         assertEquals(ProjectException.Error.UNSUPPORTED_VERSION, edited(ProjectFormat.MANIFEST, m -> m.put("formatVersion", "0.9.0")));

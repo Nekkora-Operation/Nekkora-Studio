@@ -1,0 +1,17 @@
+{
+  "description": "automation.json com modelVersion 1.0.0 num pacote 1.1.0 com catálogo.",
+  "base": "consulta-clientes-variaveis.nekkora",
+  "changes": [
+    {
+      "entry": "automation.json",
+      "op": "set",
+      "pointer": "/modelVersion",
+      "value": "1.0.0"
+    }
+  ],
+  "removeEntries": [],
+  "addEntries": {},
+  "rehash": true,
+  "expectedError": "UNSUPPORTED_VERSION",
+  "schemaRejects": true
+}

@@ -1,0 +1,17 @@
+{
+  "description": "E-mail/CPF exigem no mínimo PERSONAL_DATA; PUBLIC é recusado (não é reclassificado automaticamente).",
+  "base": "consulta-clientes-variaveis.nekkora",
+  "changes": [
+    {
+      "entry": "variables.json",
+      "op": "set",
+      "pointer": "/variables/1/sensitivity",
+      "value": "PUBLIC"
+    }
+  ],
+  "removeEntries": [],
+  "addEntries": {},
+  "rehash": true,
+  "expectedError": "INVALID_CONTENT",
+  "schemaRejects": false
+}

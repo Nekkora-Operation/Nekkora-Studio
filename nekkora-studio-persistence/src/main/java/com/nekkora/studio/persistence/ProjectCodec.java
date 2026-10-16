@@ -33,6 +33,18 @@ import com.nekkora.studio.domain.evidence.ObservedEvidence;
 import com.nekkora.studio.domain.origin.RecordingObservation;
 import com.nekkora.studio.domain.origin.StepOrigin;
 import com.nekkora.studio.domain.origin.StepProvenance;
+import com.nekkora.studio.domain.variable.SemanticAuthority;
+import com.nekkora.studio.domain.variable.SemanticType;
+import com.nekkora.studio.domain.variable.Sensitivity;
+import com.nekkora.studio.domain.variable.TextFormat;
+import com.nekkora.studio.domain.variable.VariableConstraints;
+import com.nekkora.studio.domain.variable.VariableDefinition;
+import com.nekkora.studio.domain.variable.VariableId;
+import com.nekkora.studio.domain.variable.VariableOrigin;
+import com.nekkora.studio.domain.variable.VariableRules;
+import com.nekkora.studio.domain.variable.VariableScope;
+import com.nekkora.studio.domain.variable.VariableType;
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.EnumMap;
@@ -50,6 +62,10 @@ import java.util.UUID;
  * <p>Separação mantida em cada etapa: {@code original} (procedência, elemento capturado, contexto, resultado observado,
  * valores capturados, vínculo de duplicação) e {@code effective} (o que o usuário editou). O efetivo nunca substitui o
  * original.
+ *
+ * <p>STUDIO-008: o catálogo de variáveis vai em {@link ProjectFormat#VARIABLES} — só quando existe (modelo 1.1.0). Uma
+ * automação sem variáveis produz exatamente os mesmos documentos de antes (modelo 1.0.0). Uma constante só existe para
+ * variáveis não sensíveis (regra do domínio, reaplicada na leitura); nenhum valor de entrada ou de execução é gravado.
  */
 public final class ProjectCodec {
     static final int MAX_LIST = 1_000;
@@ -90,6 +106,11 @@ public final class ProjectCodec {
         automation.put("sessions", order);
         docs.put(ProjectFormat.AUTOMATION, automation);
         docs.put(ProjectFormat.SESSIONS, single("sessions", sessions));
+        if (!a.variables().isEmpty()) {
+            List<Object> vars = new ArrayList<>();
+            for (VariableDefinition v : a.variables()) vars.add(variable(v));
+            docs.put(ProjectFormat.VARIABLES, single("variables", vars));
+        }
         for (LogicalSession s : a.sessions()) {
             for (AutomationStep st : s.steps()) docs.put(ProjectFormat.STEPS_DIR + st.id().value() + ".json", step(st));
         }
@@ -104,6 +125,41 @@ public final class ProjectCodec {
         }
         docs.put(ProjectFormat.UNATTRIBUTED, single("evidence", evidenceList(a.unattributedEvidence())));
         return docs;
+    }
+
+    private static Map<String, Object> variable(VariableDefinition v) {
+        Map<String, Object> d = new LinkedHashMap<>();
+        d.put("variableId", v.id().value().toString());
+        d.put("name", v.name());
+        d.put("technicalType", v.type().name());
+        d.put("semanticType", v.semantic().name());
+        d.put("authority", v.authority().name());
+        d.put("purpose", v.purpose());
+        Map<String, Object> scope = new LinkedHashMap<>();
+        scope.put("kind", v.scope().kind().name());
+        scope.put("sessionId", v.scope().sessionId().map(s -> s.value().toString()).orElse(null));
+        d.put("scope", nulls(scope));
+        Map<String, Object> origin = new LinkedHashMap<>();
+        origin.put("kind", v.origin().kind().name());
+        origin.put("constant", v.origin().constant());
+        origin.put("producerStepId", v.origin().producerStep().map(s -> s.value().toString()).orElse(null));
+        d.put("origin", nulls(origin));
+        d.put("sensitivity", v.sensitivity().name());
+        VariableConstraints c = v.constraints();
+        Map<String, Object> cd = new LinkedHashMap<>();
+        cd.put("required", c.required());
+        cd.put("minLength", c.minLength() == null ? null : (Object) c.minLength().longValue());
+        cd.put("maxLength", c.maxLength() == null ? null : (Object) c.maxLength().longValue());
+        cd.put("textFormat", c.textFormat().name());
+        // decimais como TEXTO na forma escrita (sem passar por ponto flutuante)
+        cd.put("minimum", c.minimum() == null ? null : c.minimum().toPlainString());
+        cd.put("maximum", c.maximum() == null ? null : c.maximum().toPlainString());
+        cd.put("scale", c.scale() == null ? null : (Object) c.scale().longValue());
+        cd.put("currency", c.currency());
+        d.put("constraints", nulls(cd));
+        d.put("createdAt", v.createdAt().toString());
+        d.put("updatedAt", v.updatedAt().toString());
+        return d;
     }
 
     private static Map<String, Object> single(String key, Object value) {
@@ -350,7 +406,9 @@ public final class ProjectCodec {
         Doc a = Doc.of(docs.get(ProjectFormat.AUTOMATION), "automation.json", "schema", "modelVersion", "automationId", "name", "description", "status",
                 "createdAt", "updatedAt", "revision", "sessions");
         if (!ModelVersion.SCHEMA.equals(a.str("schema"))) throw new ProjectException(ProjectException.Error.UNSUPPORTED_VERSION, a.at("schema"));
-        if (!ModelVersion.CURRENT.equals(a.str("modelVersion"))) {
+        // o modelo acompanha o catálogo: 1.0.0 sem variables.json, 1.1.0 com ele (o pacote já conferiu formato ↔ entrada)
+        boolean hasVariables = docs.containsKey(ProjectFormat.VARIABLES);
+        if (!(hasVariables ? ModelVersion.V1_1 : ModelVersion.CURRENT).equals(a.str("modelVersion"))) {
             throw new ProjectException(ProjectException.Error.UNSUPPORTED_VERSION, a.at("modelVersion"));
         }
         AutomationId id = new AutomationId(uuid(a.str("automationId"), a.at("automationId")));
@@ -396,8 +454,56 @@ public final class ProjectCodec {
         }
         Doc u = Doc.of(docs.get(ProjectFormat.UNATTRIBUTED), ProjectFormat.UNATTRIBUTED, "evidence");
         List<ObservedEvidence> unattributed = u.each("evidence", com.nekkora.studio.domain.Automation.MAX_UNATTRIBUTED, ProjectCodec::evidence);
+        List<VariableDefinition> variables = List.of();
+        if (hasVariables) {
+            Doc vd = Doc.of(docs.get(ProjectFormat.VARIABLES), ProjectFormat.VARIABLES, "variables");
+            variables = vd.each("variables", VariableRules.MAX_VARIABLES, ProjectCodec::variable);
+            // o escritor nunca produz catálogo vazio (sem variáveis o projeto é 1.0.0): nada de forma alternativa aceita
+            if (variables.isEmpty()) throw Doc.invalid(vd.at("variables"), "catálogo vazio no formato 1.1");
+        }
         return new AutomationRestoration.AutomationData(id, a.str("name"), a.str("description"), a.enumValue("status", AutomationStatus.class),
-                a.instant("createdAt"), a.instant("updatedAt"), a.str("modelVersion"), a.lng("revision"), sessions, unattributed);
+                a.instant("createdAt"), a.instant("updatedAt"), a.str("modelVersion"), a.lng("revision"), sessions, unattributed, variables);
+    }
+
+    private static final java.util.regex.Pattern DECIMAL_TEXT = java.util.regex.Pattern.compile("-?[0-9]{1,30}(\\.[0-9]{1,18})?");
+
+    /** Uma variável: campos exatos; as regras de coerência (nome, significado, constante...) são as do domínio, na reconstrução. */
+    private static VariableDefinition variable(Object value, String where) throws ProjectException {
+        Doc d = Doc.of(value, where, "variableId", "name", "technicalType", "semanticType", "authority", "purpose", "scope", "origin", "sensitivity",
+                "constraints", "createdAt", "updatedAt");
+        VariableId id = new VariableId(uuid(d.str("variableId"), d.at("variableId")));
+        Doc s = d.obj("scope", "kind", "sessionId");
+        VariableScope.Kind scopeKind = s.enumValue("kind", VariableScope.Kind.class);
+        SessionId session = s.isNull("sessionId") ? null : new SessionId(uuid(s.str("sessionId"), s.at("sessionId")));
+        VariableScope scope = Doc.domain(s.where(), x -> new VariableScope(scopeKind, session));
+        Doc o = d.obj("origin", "kind", "constant", "producerStepId");
+        VariableOrigin.Kind originKind = o.enumValue("kind", VariableOrigin.Kind.class);
+        String constant = o.strOrNull("constant");
+        StepId producer = o.isNull("producerStepId") ? null : new StepId(uuid(o.str("producerStepId"), o.at("producerStepId")));
+        VariableOrigin origin = Doc.domain(o.where(), x -> new VariableOrigin(originKind, constant, producer));
+        Doc c = d.obj("constraints", "required", "minLength", "maxLength", "textFormat", "minimum", "maximum", "scale", "currency");
+        VariableConstraints constraints = new VariableConstraints(c.bool("required"),
+                c.isNull("minLength") ? null : c.integer("minLength", 0, VariableRules.MAX_DECLARED_LENGTH),
+                c.isNull("maxLength") ? null : c.integer("maxLength", 0, VariableRules.MAX_DECLARED_LENGTH), c.enumValue("textFormat", TextFormat.class),
+                decimal(c, "minimum"), decimal(c, "maximum"), c.isNull("scale") ? null : c.integer("scale", 0, VariableRules.MAX_SCALE),
+                c.strOrNull("currency"));
+        String name = d.str("name");
+        VariableType type = d.enumValue("technicalType", VariableType.class);
+        SemanticType semantic = d.enumValue("semanticType", SemanticType.class);
+        SemanticAuthority authority = d.enumValue("authority", SemanticAuthority.class);
+        String purpose = d.str("purpose");
+        Sensitivity sensitivity = d.enumValue("sensitivity", Sensitivity.class);
+        Instant created = d.instant("createdAt");
+        Instant updated = d.instant("updatedAt");
+        return Doc.domain(where, x -> new VariableDefinition(id, name, type, semantic, authority, purpose, scope, origin, sensitivity, constraints, created,
+                updated));
+    }
+
+    private static BigDecimal decimal(Doc c, String field) throws ProjectException {
+        if (c.isNull(field)) return null;
+        String text = c.str(field);
+        if (!DECIMAL_TEXT.matcher(text).matches()) throw Doc.invalid(c.at(field), "decimal fora da forma canônica");
+        return new BigDecimal(text);
     }
 
     private static AutomationRestoration.StepData step(Object value, String path, String expectedId, Object evidenceDoc) throws ProjectException {
