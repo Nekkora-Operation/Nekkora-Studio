@@ -399,6 +399,38 @@ public final class Sec001Homologation {
         captureStudio("07-elementos-dificeis");
         privacyCheck("Cenário 7", a, List.of());
 
+        // ================================================================ Cenário 9 — D7: continuidade técnica × identidade lógica
+        navigateByUser(SEC + "continuidade.html");
+        Object sel = harness.eval("window.nekkora.call('page.select', {tabId: " + labTab + ", css: '#virtual tr:first-child .ver'}).then(r => JSON.stringify(r))");
+        Map<String, Object> selJson = Json.parseObject(String.valueOf(sel));
+        String targetId = String.valueOf(Json.object(Json.object(selJson, "result"), "identity").get("targetId"));
+        clickInPage("document.getElementById('rolar')"); // a lista virtual reaproveita a MESMA linha para outro registro
+        sleep(1500);
+        Map<String, Object> res = null;
+        for (int i = 0; i < 10; i++) {
+            Object r9 = harness.eval("window.nekkora.call('target.resolve', {tabId: " + labTab + ", targetId: '" + targetId + "'}).then(r => JSON.stringify(r))");
+            res = Json.object(Json.object(Json.parseObject(String.valueOf(r9)), "result"), "result"); // { ok, result: { result } }
+            if (String.valueOf(Json.object(res, "continuity")).contains("ROW_CONTENT_CHANGED")) {
+                break;
+            }
+            sleep(700);
+        }
+        String resText = Json.write(res);
+        log("  resolvedNodeId=" + Json.write(res.get("resolvedNodeId")) + " updatedLocators=" + Json.write(res.get("updatedLocators"))
+                + " updatedIdentity=" + Json.write(res.get("updatedIdentity")));
+        log("  resolução depois da virtualização: status=" + res.get("status") + " continuidade=" + Json.write(Json.object(res, "continuity")));
+        check("Cenário 9 (D7): mesmo objeto DOM — LIVE_NODE_CONTINUITY com ROW_CONTENT_CHANGED (mudança observada por contadores, sem texto)",
+                "LIVE_NODE_CONTINUITY".equals(String.valueOf(Json.object(res, "continuity").get("status"))) && resText.contains("ROW_CONTENT_CHANGED"));
+        check("Cenário 9 (D7): nenhum texto ou identificador da linha no resultado", !resText.contains("Registro") && leaks(resText).isEmpty());
+        check("Cenário 9 (D7): continuidade não autoriza uso — identidade lógica não confirmada, sem nó resolvido nem localizador novo",
+                !"RESOLVED".equals(String.valueOf(res.get("status"))) && jsonNull(res.get("resolvedNodeId")) && jsonNull(res.get("updatedLocators"))
+                        && jsonNull(res.get("updatedIdentity")));
+        Object diag = harness.eval("window.nekkora.call('page.diagnostics', {tabId: " + labTab + "}).then(r => JSON.stringify(r))");
+        Map<String, Object> sel9 = Json.object(Json.object(Json.object(Json.parseObject(String.valueOf(diag)), "result"), "highlight"), "boxes");
+        check("Cenário 9 (D7): nenhum destaque de alvo confirmado", sel9 == null || Json.object(sel9, "selection") == null
+                || !Boolean.TRUE.equals(Json.object(sel9, "selection").get("visible")));
+        captureStudio("09-continuidade");
+
         // ---- encerra a gravação
         click(edt(fp::finishButton));
         waitState(RecorderState.COMPLETED);
@@ -409,7 +441,7 @@ public final class Sec001Homologation {
 
         // ---- verificação final (domínio, tela, armazenamento da extensão, logs e arquivos do host)
         privacyCheck("Final", a, List.of(USER, PASSWORD, SEARCH, PHONE, RECOVERY));
-        captureStudio("09-automacao-final");
+        captureStudio("10-automacao-final");
         log("Automação final:");
         for (LogicalSession s : edt(a::sessions)) {
             log("  Sessão " + s.name() + ": " + names(s));
@@ -543,6 +575,19 @@ public final class Sec001Homologation {
         return b.toString();
     }
 
+    /**
+     * Diretório de dados do Native Host desta execução (NEKKORA_DATA_DIR): isola a homologação dos dados reais do usuário
+     * e de arquivos de versões anteriores — a varredura de privacidade examina só o que ESTA execução produziu.
+     */
+    private Path hostDataDir() {
+        return out.toPath().resolve("host-data").toAbsolutePath();
+    }
+
+    /** null do JSON chega como Json.NULL (ou ausente). */
+    private static boolean jsonNull(Object o) {
+        return o == null || o == Json.NULL;
+    }
+
     private String serviceWorkerId() throws Exception {
         return cdp.targets().stream().filter(t -> "service_worker".equals(t.type()) && t.url().startsWith("chrome-extension://" + extId))
                 .map(Cdp.Target::id).findFirst().orElse("(nenhum ativo)");
@@ -551,7 +596,7 @@ public final class Sec001Homologation {
     /** Arquivos do diretório de dados do host (exportações, registros de alvos, logs): conteúdo concatenado. */
     private String hostData() throws IOException {
         StringBuilder b = new StringBuilder();
-        Path dir = Path.of(System.getenv("LOCALAPPDATA"), "Nekkora", "ExtensionChrome");
+        Path dir = hostDataDir(); // diretório de dados PRÓPRIO desta homologação (nunca o do usuário)
         if (Files.isDirectory(dir)) {
             try (Stream<Path> s = Files.walk(dir)) {
                 for (Path f : s.filter(Files::isRegularFile).toList()) {
@@ -817,11 +862,14 @@ public final class Sec001Homologation {
         try (java.net.ServerSocket free = new java.net.ServerSocket(0, 1, java.net.InetAddress.getLoopbackAddress())) {
             cdpPort = free.getLocalPort();
         }
-        chrome = new ProcessBuilder(chromeExe.toString(), "--remote-debugging-port=" + cdpPort, "--user-data-dir=" + profile,
+        Files.createDirectories(hostDataDir());
+        ProcessBuilder chromeBuilder = new ProcessBuilder(chromeExe.toString(), "--remote-debugging-port=" + cdpPort, "--user-data-dir=" + profile,
                 "--disable-features=NetworkServiceSandbox", "--load-extension=" + testExtension, "--no-first-run", "--no-default-browser-check",
                 "--disable-search-engine-choice-screen", "--lang=pt-BR", "--window-position=" + CHROME_X + ",0", "--window-size=1040,1000",
                 "--host-resolver-rules=MAP site-a.nekkora.test 127.0.0.1,MAP site-x.nekkora.test 127.0.0.1", "about:blank")
-                .redirectErrorStream(true).redirectOutput(new File(out, "chrome.log")).start();
+                .redirectErrorStream(true).redirectOutput(new File(out, "chrome.log"));
+        chromeBuilder.environment().put("NEKKORA_DATA_DIR", hostDataDir().toString()); // herdado pelo Native Host
+        chrome = chromeBuilder.start();
         cdp = new Cdp(cdpPort);
         waitFor("Chrome com DevTools", 30, () -> {
             try {
@@ -853,7 +901,7 @@ public final class Sec001Homologation {
 
     private String hostLogs() throws IOException {
         StringBuilder b = new StringBuilder();
-        Path dir = Path.of(System.getenv("LOCALAPPDATA"), "Nekkora", "ExtensionChrome", "logs");
+        Path dir = hostDataDir().resolve("logs");
         if (Files.isDirectory(dir)) {
             try (Stream<Path> s = Files.list(dir)) {
                 for (Path f : s.filter(p -> p.toString().endsWith(".log")).toList()) {
