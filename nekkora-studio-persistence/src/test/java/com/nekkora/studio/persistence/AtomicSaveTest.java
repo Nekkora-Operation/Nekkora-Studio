@@ -219,6 +219,11 @@ class AtomicSaveTest {
         ProjectRepository.Saved first = firstSave(file);
         assertTrue(file.toFile().setWritable(false));
         try {
+            // Superusuário (ex.: o contêiner Linux de referência roda como root) ignora a permissão: o próprio sistema
+            // considera o arquivo gravável e o Studio segue o sistema. A recusa só pode ser exercitada sem esse privilégio
+            // (Windows e usuário comum; a homologação real cobre o somente leitura do Windows).
+            org.junit.jupiter.api.Assumptions.assumeFalse(Files.isWritable(file),
+                    "arquivo somente leitura continua gravável para este usuário (superusuário): parte não aplicável");
             assertEquals(ProjectException.Error.READ_ONLY,
                     assertThrows(ProjectException.class, () -> f.save(file, edited(), first.fingerprint(), false, Instant.now(), clock)).error());
         } finally {
