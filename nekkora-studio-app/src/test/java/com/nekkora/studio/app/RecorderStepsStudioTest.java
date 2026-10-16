@@ -329,6 +329,70 @@ class RecorderStepsStudioTest {
         assertTrue(summary.contains("O PageMap não foi exportado"), summary);
     }
 
+    // ------------------------------------------------------------- STUDIO-006: projeto × gravação
+
+    @org.junit.jupiter.api.io.TempDir
+    java.nio.file.Path projectDir;
+
+    @Test
+    @DisplayName("S006-060/079 — durante a gravação o salvamento definitivo é recusado com o motivo; depois de finalizar, salva e reabre com as etapas GRAVADAS")
+    void s006060e079ProjetoComGravacao() throws Exception {
+        Automation a = automation();
+        LogicalSession auth = a.sessions().get(0);
+        String rid = startRecording(auth.id());
+        String r = route("studio.recording.start");
+        step(rid, 1, r, "FILL", element("TEXT_INPUT", "Usuário", "input", "usuario", false), null);
+        step(rid, 2, r, "CLICK", element("BUTTON", "Entrar", "button", "entrar", false), null);
+        await(() -> studio.recorder().snapshot().steps().accepted() == 2, "2 registradas");
+        java.nio.file.Path file = projectDir.resolve("gravacao.nekkora");
+        assertEquals(com.nekkora.studio.app.workspace.ProjectService.Outcome.RECORDING, Edt.call(() -> studio.projects().save(a.id()).get()));
+        assertEquals(com.nekkora.studio.app.workspace.ProjectService.RECORDING_MESSAGE, studio.state().lastNotice().orElseThrow().message());
+        assertFalse(java.nio.file.Files.exists(file), "nada gravado durante a gravação");
+        assertEquals(RecorderState.RECORDING, studio.recorder().snapshot().state(), "salvar não finaliza nem cancela a gravação");
+        Edt.run(() -> studio.recorderPresenter().panel().finishButton().doClick());
+        long deadline = System.currentTimeMillis() + 5000;
+        while (System.currentTimeMillis() < deadline && studio.recorder().snapshot().state() != RecorderState.COMPLETED) Thread.sleep(15);
+        Edt.flush();
+        prompts.thenSaveAs(file);
+        assertEquals(com.nekkora.studio.app.workspace.ProjectService.Outcome.SAVED,
+                Edt.call(() -> studio.projects().save(a.id())).get(15, java.util.concurrent.TimeUnit.SECONDS));
+        Edt.flush();
+        var back = new com.nekkora.studio.persistence.ProjectFiles(new com.nekkora.studio.persistence.ProjectRepository(), "t")
+                .load(file, StudioFixture.CLOCK).automation();
+        LogicalSession bAuth = back.sessions().get(0);
+        assertEquals(List.of("Abrir o sistema", "Preencher campo Usuário", "Clicar no botão Entrar"), bAuth.steps().stream().map(AutomationStep::name).toList());
+        AutomationStep entrar = bAuth.steps().get(2);
+        assertEquals(StepOrigin.RECORDED, entrar.provenance().origin(), "gravada continua gravada");
+        AutomationStep original = Edt.call(() -> auth.steps().get(2));
+        assertEquals(original.id(), entrar.id());
+        assertEquals(original.provenance(), entrar.provenance(), "procedência e correlação preservadas");
+        assertEquals(original.baseline(), entrar.baseline());
+        assertEquals(original.capturedElement().orElseThrow().locators(), entrar.capturedElement().orElseThrow().locators());
+        assertEquals(com.nekkora.studio.domain.privacy.DisplaySafety.KNOWN_PRODUCER_POLICY, entrar.capturedElement().orElseThrow().privacyPolicy().orElseThrow());
+    }
+
+    @Test
+    @DisplayName("S006-060 — quiescência: gravação ativa, degradada, etapas ou evidências pendentes/aguardando bloqueiam; concluída libera")
+    void s006060Quiescencia() {
+        com.nekkora.studio.domain.AutomationId id = com.nekkora.studio.domain.AutomationId.newId();
+        java.util.function.BiFunction<RecorderState, int[], RecorderSnapshot> snap = (st, p) -> new RecorderSnapshot(st, null, null, id, null, null, null, null,
+                null, null, null, null, new com.nekkora.studio.recorder.StepProgress(true, 0, p[0], 0, 0, p[1] == 1),
+                null, new com.nekkora.studio.recorder.EvidenceProgress(true, 0, 0, 0, 0, p[2], 0, 0, p[3] == 1, null));
+        java.util.function.BiPredicate<RecorderState, int[]> busy = (st, p) -> com.nekkora.studio.app.recorder.RecorderPresenter.busyForSave(snap.apply(st, p), id);
+        assertTrue(busy.test(RecorderState.RECORDING, new int[] {0, 0, 0, 0}));
+        assertTrue(busy.test(RecorderState.PAUSED, new int[] {0, 0, 0, 0}));
+        assertTrue(busy.test(RecorderState.DEGRADED, new int[] {0, 0, 0, 0}), "desconexão não confirma o encerramento");
+        assertTrue(busy.test(RecorderState.FINALIZING, new int[] {0, 0, 0, 0}));
+        assertTrue(busy.test(RecorderState.COMPLETED, new int[] {1, 0, 0, 0}), "etapa pendente");
+        assertTrue(busy.test(RecorderState.COMPLETED, new int[] {0, 1, 0, 0}), "etapa emitida que não chegou");
+        assertTrue(busy.test(RecorderState.COMPLETED, new int[] {0, 0, 1, 0}), "evidência pendente");
+        assertTrue(busy.test(RecorderState.COMPLETED, new int[] {0, 0, 0, 1}), "evidência emitida que não chegou");
+        assertFalse(busy.test(RecorderState.COMPLETED, new int[] {0, 0, 0, 0}));
+        assertFalse(busy.test(RecorderState.CANCELLED, new int[] {0, 0, 0, 0}));
+        assertFalse(com.nekkora.studio.app.recorder.RecorderPresenter.busyForSave(snap.apply(RecorderState.RECORDING, new int[4]),
+                com.nekkora.studio.domain.AutomationId.newId()), "outra automação não é afetada");
+    }
+
     // ------------------------------------------------------------- STUDIO-004: edição × gravação ativa
 
     @Test

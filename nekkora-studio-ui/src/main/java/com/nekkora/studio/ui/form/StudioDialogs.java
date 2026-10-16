@@ -72,6 +72,88 @@ public final class StudioDialogs {
         return problem.isEmpty();
     }
 
+    /** Botão de uma escolha (STUDIO-006). */
+    public record Choice(String label, Kind kind) {
+        /** Aparência do botão. */
+        public enum Kind { PRIMARY, SECONDARY, DANGER }
+    }
+
+    /**
+     * Escolha entre várias ações (STUDIO-006: alterações não salvas, conflito, recuperação). Esc e "Cancelar" devolvem
+     * -1; Enter não escolhe uma ação destrutiva.
+     *
+     * @return índice da escolha ou -1
+     */
+    public static int choose(Component parent, String title, String message, boolean warning, java.util.List<Choice> choices) {
+        NekkoraDialog d = new NekkoraDialog(parent, title);
+        d.setDialogSize(NekkoraDialog.Size.MEDIUM);
+        if (warning) d.setMarker(com.nekkora.ui.icon.IconName.ALERT, Tone.WARNING);
+        d.setDescription(message);
+        int[] chosen = {-1};
+        com.nekkora.ui.button.NekkoraButton cancel = d.addSecondary("Cancelar");
+        com.nekkora.ui.button.NekkoraButton primary = null;
+        for (int i = 0; i < choices.size(); i++) {
+            Choice c = choices.get(i);
+            com.nekkora.ui.button.NekkoraButton b = switch (c.kind()) {
+                case PRIMARY -> com.nekkora.ui.button.NekkoraButton.primary(c.label());
+                case DANGER -> com.nekkora.ui.button.NekkoraButton.danger(c.label());
+                case SECONDARY -> com.nekkora.ui.button.NekkoraButton.secondary(c.label());
+            };
+            int index = i;
+            b.addActionListener(e -> {
+                chosen[0] = index;
+                d.confirm();
+            });
+            d.getPanel().addFooterButton(b);
+            if (c.kind() == Choice.Kind.PRIMARY) primary = b;
+        }
+        d.getRootPane().setDefaultButton(primary);
+        com.nekkora.ui.button.NekkoraButton focus = primary != null ? primary : cancel;
+        d.addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowOpened(WindowEvent e) {
+                focus.requestFocusInWindow();
+            }
+        });
+        return d.showDialog() == NekkoraDialog.Result.CONFIRMED ? chosen[0] : -1;
+    }
+
+    /** Decisão do diálogo de recuperação automática. */
+    public record RecoveryDecision(boolean enabled, int intervalSeconds, boolean clear) {}
+
+    /**
+     * Recuperação automática (STUDIO-006, §23): explica o que é guardado, onde, por quanto tempo, e pede o consentimento.
+     */
+    public static Optional<RecoveryDecision> recoverySettings(Component parent, boolean enabled, int interval, java.util.List<Integer> intervals,
+            String explanation) {
+        NekkoraDialog d = new NekkoraDialog(parent, "Recuperação automática");
+        d.setDialogSize(NekkoraDialog.Size.MEDIUM);
+        d.setMarker(com.nekkora.ui.icon.IconName.SAVE, Tone.ACCENT);
+        d.setDescription(explanation);
+        com.nekkora.ui.input.NekkoraCheckBox on = new com.nekkora.ui.input.NekkoraCheckBox("Ativar a recuperação automática neste computador", enabled);
+        com.nekkora.ui.input.NekkoraComboBox<Integer> every = new com.nekkora.ui.input.NekkoraComboBox<>(intervals);
+        every.setLabelProvider(i -> i < 60 ? i + " s" : (i / 60) + " min");
+        every.setSelectedItem(interval);
+        every.getAccessibleContext().setAccessibleName("Intervalo entre fotografias de recuperação");
+        com.nekkora.ui.input.NekkoraCheckBox clear = new com.nekkora.ui.input.NekkoraCheckBox("Apagar agora os arquivos de recuperação guardados", false);
+        com.nekkora.ui.container.NekkoraStack stack = com.nekkora.ui.container.NekkoraStack.vertical(com.nekkora.tokens.Spacing.SPACE_4);
+        stack.add(on);
+        stack.add(new com.nekkora.ui.input.NekkoraFormField("Intervalo", every));
+        stack.add(clear);
+        d.setContent(stack);
+        d.addSecondary("Cancelar");
+        d.addPrimary("Aplicar");
+        d.addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowOpened(WindowEvent e) {
+                on.requestFocusInWindow();
+            }
+        });
+        if (d.showDialog() != NekkoraDialog.Result.CONFIRMED) return Optional.empty();
+        Integer chosen = every.getSelectedValue();
+        return Optional.of(new RecoveryDecision(on.isSelected(), chosen == null ? interval : chosen, clear.isSelected()));
+    }
+
     /** Confirmação de descarte das alterações em memória ao fechar o Studio. */
     public static boolean confirmDiscardOnExit(Component parent, String message) {
         return NekkoraConfirmationDialog.confirmDanger(parent, "Fechar sem salvar?", message, "Fechar e descartar");

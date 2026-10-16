@@ -95,8 +95,8 @@ public final class WorkspaceService implements StepIntake, EvidenceIntake {
         state.open(a.id());
         state.activate(a.id());
         state.select(a.id(), new Selection.OfAutomation(a.id()));
-        state.markUnsaved();
-        state.notice(new Notice(Notice.Kind.SUCCESS, "Automação criada", a.name() + " — rascunho em memória."));
+        state.markChanged(a.id());
+        state.notice(new Notice(Notice.Kind.SUCCESS, "Automação criada", a.name() + " — ainda não salva."));
         state.fire(a.id(), StudioChange.CATALOG, StudioChange.OPEN_AUTOMATIONS, StudioChange.ACTIVE_AUTOMATION,
                 StudioChange.SELECTION, StudioChange.UNSAVED_CHANGES, StudioChange.NOTICE);
         return a;
@@ -228,7 +228,7 @@ public final class WorkspaceService implements StepIntake, EvidenceIntake {
             Set<SessionId> sessions = evidence.attributed()
                     ? a.recordedStep(evidence.recordingId(), evidence.eventId()).flatMap(st -> a.sessionOf(st.id())).map(s -> Set.of(s.id())).orElse(Set.of())
                     : Set.of();
-            state.markUnsaved();
+            state.markChanged(a.id()); // S006-056: evidência também precisa ser salva (sem contar revisão de edição)
             state.fireFor(a.id(), sessions, StudioChange.EVIDENCE, StudioChange.UNSAVED_CHANGES);
         }
         return added;
@@ -387,7 +387,7 @@ public final class WorkspaceService implements StepIntake, EvidenceIntake {
         else history.redone(id, a.revision());
         Selection wanted = back ? e.selectionBefore() : e.selectionAfter();
         state.select(id, valid(a, wanted) ? wanted : new Selection.OfAutomation(id));
-        state.markUnsaved();
+        state.markChanged(id);
         state.fire(id, StudioChange.CONTENT, StudioChange.CATALOG, StudioChange.UNSAVED_CHANGES, StudioChange.SELECTION, StudioChange.HISTORY);
     }
 
@@ -488,7 +488,7 @@ public final class WorkspaceService implements StepIntake, EvidenceIntake {
         if (c.selection != null) state.select(id, c.selection);
         else if (!valid(a, state.selectionOf(id))) state.select(id, new Selection.OfAutomation(id));
         history.record(id, new EditHistory.Entry(label, before, a.snapshot(), selectionBefore, state.selectionOf(id)));
-        state.markUnsaved();
+        state.markChanged(id);
         boolean selectionChanged = !state.selectionOf(id).equals(selectionBefore);
         Set<SessionId> affected = c.structure || c.header ? Set.of() : c.sessions;
         if (selectionChanged) {
@@ -514,7 +514,7 @@ public final class WorkspaceService implements StepIntake, EvidenceIntake {
     }
 
     private void changed(Automation a, Set<SessionId> sessions, boolean selectionChanged) {
-        state.markUnsaved();
+        state.markChanged(a.id());
         if (selectionChanged) state.fireFor(a.id(), sessions, StudioChange.CONTENT, StudioChange.CATALOG, StudioChange.UNSAVED_CHANGES, StudioChange.SELECTION);
         else state.fireFor(a.id(), sessions, StudioChange.CONTENT, StudioChange.CATALOG, StudioChange.UNSAVED_CHANGES);
     }

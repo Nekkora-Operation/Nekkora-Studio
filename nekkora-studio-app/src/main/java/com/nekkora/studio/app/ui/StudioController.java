@@ -24,23 +24,59 @@ import java.util.function.Function;
  * de negócio nem estado próprio.
  */
 public final class StudioController {
-    /** Aviso ao fechar com alterações em memória (seção 17). */
-    public static final String EXIT_MESSAGE = "As automações deste Studio existem apenas na memória. Ao fechar, todas as "
-            + "automações, sessões e etapas criadas serão perdidas — o salvamento ainda não está disponível nesta versão.";
-
     private final WorkspaceService service;
+    private final com.nekkora.studio.app.workspace.ProjectService projects;
     private final StudioPrompts prompts;
     private final Runnable exitAction;
     private java.util.function.Consumer<Runnable> exitGuard = Runnable::run;
 
-    public StudioController(WorkspaceService service, StudioPrompts prompts, Runnable exitAction) {
+    public StudioController(WorkspaceService service, com.nekkora.studio.app.workspace.ProjectService projects, StudioPrompts prompts,
+            Runnable exitAction) {
         this.service = Objects.requireNonNull(service);
+        this.projects = Objects.requireNonNull(projects);
         this.prompts = Objects.requireNonNull(prompts);
         this.exitAction = Objects.requireNonNull(exitAction);
     }
 
     public WorkspaceService service() {
         return service;
+    }
+
+    /** Casos de uso de projeto (STUDIO-006). */
+    public com.nekkora.studio.app.workspace.ProjectService projects() {
+        return projects;
+    }
+
+    // ------------------------------------------------------------------ STUDIO-006: projetos
+
+    /** Arquivo → Abrir projeto (Ctrl+O). */
+    public void openProject() {
+        projects.open();
+    }
+
+    /** Projetos recentes: abre (ou ativa, se já aberto). Arquivo removido: indisponível, nada é carregado. */
+    public void openRecent(java.nio.file.Path path) {
+        projects.open(path);
+    }
+
+    /** Arquivo → Salvar (Ctrl+S): a automação ativa. */
+    public void saveActive() {
+        active().ifPresent(a -> projects.save(a.id()));
+    }
+
+    /** Arquivo → Salvar como (Ctrl+Shift+S). */
+    public void saveActiveAs() {
+        active().ifPresent(a -> projects.saveAs(a.id()));
+    }
+
+    /** Arquivo → Fechar projeto: retira do Studio, perguntando se há alterações não salvas. */
+    public void closeActiveProject() {
+        active().ifPresent(a -> projects.closeProject(a.id()));
+    }
+
+    /** Arquivo → Recuperação automática. */
+    public void configureRecovery() {
+        projects.configureRecovery();
     }
 
     // ------------------------------------------------------------------ criação
@@ -277,20 +313,14 @@ public final class StudioController {
         this.exitGuard = Objects.requireNonNull(guard);
     }
 
-    /** Fecha o Studio, avisando antes se houver alterações que só existem em memória. */
+    /**
+     * Fecha o Studio (§29): com alterações não salvas, pergunta Salvar todos / Descartar / Cancelar. Se algum salvamento
+     * falhar, o Studio continua aberto. Depois, a guarda de saída da gravação técnica (STUDIO-002) decide.
+     */
     public void requestExit() {
-        if (!service.state().hasUnsavedChanges()) {
-            exitGuard.accept(exitAction);
-            return;
-        }
-        if (!service.beginOperation(StudioOperation.EXIT)) return;
-        boolean discard;
-        try {
-            discard = prompts.confirmExit(EXIT_MESSAGE);
-        } finally {
-            service.endOperation();
-        }
-        if (discard) exitGuard.accept(exitAction);
+        projects.confirmExit().thenAccept(ok -> {
+            if (ok) exitGuard.accept(exitAction);
+        });
     }
 
     // ------------------------------------------------------------------ apoio

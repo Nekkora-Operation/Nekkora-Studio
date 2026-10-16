@@ -26,7 +26,8 @@ public final class StudioState {
     private final Map<AutomationId, Selection> selections = new HashMap<>();
     private final List<Consumer<StudioEvent>> listeners = new CopyOnWriteArrayList<>();
     private AutomationId active;
-    private boolean unsavedChanges;
+    /** STUDIO-006: estado de persistência POR automação (D-S006-13). */
+    private final Map<AutomationId, ProjectState> projects = new HashMap<>();
     private Notice lastNotice;
     private StudioOperation operation;
 
@@ -67,9 +68,19 @@ public final class StudioState {
         return selections.getOrDefault(id, new Selection.OfAutomation(id));
     }
 
-    /** Há alterações apenas em memória (nesta versão nunca são persistidas). */
+    /** Alguma automação tem alterações que ainda não estão num arquivo confirmado. */
     public boolean hasUnsavedChanges() {
-        return unsavedChanges;
+        return projects.values().stream().anyMatch(ProjectState::dirty);
+    }
+
+    /** Estado de persistência da automação (STUDIO-006). */
+    public Optional<ProjectState> project(AutomationId id) {
+        return Optional.ofNullable(projects.get(id));
+    }
+
+    /** Automações com alterações não salvas, na ordem do catálogo. */
+    public List<Automation> unsavedAutomations() {
+        return catalog.all().stream().filter(a -> project(a.id()).map(ProjectState::dirty).orElse(false)).toList();
     }
 
     public Optional<Notice> lastNotice() {
@@ -113,8 +124,18 @@ public final class StudioState {
         selections.put(automation, selection);
     }
 
-    void markUnsaved() {
-        unsavedChanges = true;
+    /** Uma alteração que precisa ser salva aconteceu nesta automação (nova geração de persistência). */
+    void markChanged(AutomationId id) {
+        projects.computeIfAbsent(id, k -> new ProjectState(0)).changed();
+    }
+
+    void putProject(AutomationId id, ProjectState p) {
+        projects.put(id, p);
+    }
+
+    void forgetProject(AutomationId id) {
+        projects.remove(id);
+        selections.remove(id);
     }
 
     void notice(Notice notice) {

@@ -53,7 +53,7 @@ public final class ProjectFiles {
     }
 
     /** Bytes do pacote para a fotografia. */
-    public byte[] serialize(Snapshot s, ProjectFormat.Kind kind, String recoveryOf, Instant savedAt) throws ProjectException {
+    public byte[] serialize(Snapshot s, ProjectFormat.Kind kind, ProjectPackage.RecoveryOrigin recoveryOf, Instant savedAt) throws ProjectException {
         return ProjectPackage.write(kind, s.projectId(), s.automationId().value().toString(), s.createdAt(), savedAt, producerVersion, recoveryOf,
                 s.documents());
     }
@@ -82,6 +82,11 @@ public final class ProjectFiles {
         ProjectRepository.Fingerprint after = repository.fingerprintOf(file);
         if (!before.equals(after)) throw new ProjectException(ProjectException.Error.CONFLICT, "arquivo alterado durante a leitura");
         return new Loaded(loaded.automation(), loaded.manifest(), after);
+    }
+
+    /** Leitura completa sem a conferência de alteração durante a leitura (arquivos do próprio Studio: temporário, recuperação). */
+    Loaded loadRecoveryUnchecked(Path file, Clock clock) throws ProjectException {
+        return read(file, clock);
     }
 
     private static Loaded read(Path file, Clock clock) throws ProjectException {

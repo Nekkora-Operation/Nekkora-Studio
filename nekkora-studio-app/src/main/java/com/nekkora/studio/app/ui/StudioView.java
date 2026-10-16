@@ -66,8 +66,12 @@ public final class StudioView {
     private final Map<AutomationId, AutomationOverview> overviews = new LinkedHashMap<>();
     private final Map<AutomationId, String> tabKeys = new HashMap<>();
     private final NekkoraBreadcrumb breadcrumb = new NekkoraBreadcrumb();
-    private final NekkoraCaption draftStatus = NekkoraStatusBar.status(Status.DRAFT, "Rascunho em memória");
+    /** STUDIO-006: situação do projeto ATIVO (salvo, alterações não salvas, salvando, erro, conflito, recuperado). */
+    private final NekkoraCaption projectStatus = NekkoraStatusBar.status(Status.DRAFT, "Nenhum projeto aberto");
     private final NekkoraCaption unsavedStatus = NekkoraStatusBar.item(IconName.ALERT, "Alterações não salvas");
+    private final NekkoraCaption recoveryStatus = NekkoraStatusBar.item(IconName.HISTORY, "");
+    private javax.swing.JMenuBar menuBar;
+    private com.nekkora.ui.navigation.NekkoraMenu recentMenu;
     private final NekkoraCaption countStatus = NekkoraStatusBar.item(IconName.WORKFLOW, "");
     private final NekkoraCaption themeStatus = NekkoraStatusBar.item(IconName.SUN, "");
     private final java.util.List<JComponent> extraStatus = new java.util.ArrayList<>();
@@ -90,8 +94,9 @@ public final class StudioView {
             focusOverview();
         });
         NekkoraEmptyState empty = new NekkoraEmptyState(IconName.WORKFLOW, "Nenhuma automação aberta",
-                "Crie uma automação para organizar o processo em sessões e etapas. Tudo fica em um rascunho em memória.");
+                "Crie uma automação para organizar o processo em sessões e etapas, ou abra um projeto .nekkora salvo.");
         empty.addAction(NekkoraButton.primary("Nova automação").withIcon(IconName.PLUS).onClick(e -> controller.newAutomation()));
+        empty.addAction(NekkoraButton.secondary("Abrir projeto…").withIcon(IconName.FOLDER_OPEN).onClick(e -> controller.openProject()));
         workArea = new NekkoraWorkArea(empty);
         workArea.setCanClose(this::onTabClosing);
         workArea.getTabs().addChangeListener(e -> onTabSelected());
@@ -214,6 +219,7 @@ public final class StudioView {
         NekkoraToolbarButton record = new NekkoraToolbarButton(actions.get(StudioActions.RECORD), true);
         record.getAccessibleContext().setAccessibleDescription("Gravação técnica numa aba autorizada do Chrome; mostra o Recorder quando há gravação.");
         tb.add(record);
+        tb.add(new NekkoraToolbarButton(actions.get(StudioActions.SAVE), true));
         for (String id : StudioActions.FUTURE) {
             NekkoraToolbarButton b = new NekkoraToolbarButton(actions.get(id), false);
             NekkoraTooltips.install(b, actions.get(id).getValue(javax.swing.Action.NAME) + " — "
@@ -249,13 +255,92 @@ public final class StudioView {
 
     private JComponent statusBar() {
         NekkoraStatusBar bar = new NekkoraStatusBar();
-        draftStatus.setToolTipText("As automações ficam apenas na memória: o salvamento chega em uma versão futura.");
-        bar.addLeft(draftStatus);
+        bar.addLeft(projectStatus);
         bar.addLeft(unsavedStatus);
         bar.addLeft(countStatus);
+        bar.addRight(recoveryStatus);
         bar.addRight(themeStatus);
         statusBar = bar;
         return bar;
+    }
+
+    /**
+     * STUDIO-006: barra de menus "Arquivo" (a janela real a instala; testes a inspecionam sem janela). Os atalhos são os
+     * das ações (Ctrl+O, Ctrl+S, Ctrl+Shift+S), sem conflito com os existentes.
+     */
+    public javax.swing.JMenuBar menuBar() {
+        if (menuBar != null) return menuBar;
+        com.nekkora.ui.navigation.NekkoraMenu file = new com.nekkora.ui.navigation.NekkoraMenu("Arquivo");
+        file.setMnemonic(KeyEvent.VK_A);
+        file.add(new com.nekkora.ui.navigation.NekkoraMenuItem("Novo projeto", IconName.PLUS, actions.get(StudioActions.NEW_AUTOMATION).shortcutKey()) {
+            {
+                addActionListener(e -> controller.newAutomation());
+            }
+        });
+        file.item(actions.get(StudioActions.OPEN));
+        file.separator();
+        file.item(actions.get(StudioActions.SAVE));
+        file.item(actions.get(StudioActions.SAVE_AS));
+        file.separator();
+        recentMenu = new com.nekkora.ui.navigation.NekkoraMenu("Projetos recentes");
+        recentMenu.addMenuListener(new javax.swing.event.MenuListener() {
+            @Override
+            public void menuSelected(javax.swing.event.MenuEvent e) {
+                rebuildRecent();
+            }
+
+            @Override
+            public void menuDeselected(javax.swing.event.MenuEvent e) {
+            }
+
+            @Override
+            public void menuCanceled(javax.swing.event.MenuEvent e) {
+            }
+        });
+        rebuildRecent();
+        file.add(recentMenu);
+        file.separator();
+        file.item(actions.get(StudioActions.CLOSE_PROJECT));
+        file.item(actions.get(StudioActions.RECOVERY));
+        file.separator();
+        file.item(actions.get(StudioActions.EXIT));
+        menuBar = new javax.swing.JMenuBar();
+        menuBar.add(file);
+        menuBar.getAccessibleContext().setAccessibleName("Menu do Nekkora Studio");
+        return menuBar;
+    }
+
+    /** Projetos recentes: disponíveis abrem; removidos aparecem indisponíveis, com a opção de retirar da lista. */
+    void rebuildRecent() {
+        if (recentMenu == null) return;
+        recentMenu.removeAll();
+        java.util.List<com.nekkora.studio.app.project.RecentProjects.Entry> entries = controller.projects().recents().entries();
+        if (entries.isEmpty()) {
+            javax.swing.JMenuItem none = new javax.swing.JMenuItem("Nenhum projeto recente");
+            none.setEnabled(false);
+            recentMenu.add(none);
+            return;
+        }
+        for (com.nekkora.studio.app.project.RecentProjects.Entry en : entries) {
+            String name = en.path().getFileName().toString();
+            if (en.available()) {
+                com.nekkora.ui.navigation.NekkoraMenuItem item = new com.nekkora.ui.navigation.NekkoraMenuItem(name, IconName.FILE, null);
+                item.setToolTipText(en.path().toString());
+                item.addActionListener(e -> controller.openRecent(en.path()));
+                recentMenu.add(item);
+            } else {
+                com.nekkora.ui.navigation.NekkoraMenuItem item = new com.nekkora.ui.navigation.NekkoraMenuItem(name + " (indisponível) — retirar da lista",
+                        IconName.X_CIRCLE, null);
+                item.setToolTipText("O arquivo não existe mais: " + en.path());
+                item.addActionListener(e -> controller.projects().recents().remove(en.path()));
+                recentMenu.add(item);
+            }
+        }
+    }
+
+    public com.nekkora.ui.navigation.NekkoraMenu recentMenu() {
+        menuBar();
+        return recentMenu;
     }
 
     // ------------------------------------------------------------------ estado → tela
@@ -297,7 +382,11 @@ public final class StudioView {
         if (e.has(StudioChange.SELECTION) || e.has(StudioChange.ACTIVE_AUTOMATION) || e.has(StudioChange.CONTENT)) {
             refreshSelection();
         }
-        if (e.has(StudioChange.UNSAVED_CHANGES) || e.has(StudioChange.CATALOG)) refreshStatus();
+        if (e.has(StudioChange.UNSAVED_CHANGES) || e.has(StudioChange.CATALOG) || e.has(StudioChange.PROJECT)) {
+            refreshStatus();
+            refreshTabTitles();
+            refreshToolbar();
+        }
         if (e.has(StudioChange.NOTICE)) state.lastNotice().ifPresent(this::toast);
     }
 
@@ -325,6 +414,9 @@ public final class StudioView {
         actions.get(StudioActions.NEW_STEP).setEnabled(a.map(x -> !x.sessions().isEmpty()).orElse(false));
         actions.get(StudioActions.RENAME_SESSION).setEnabled(a.map(x -> !x.sessions().isEmpty()).orElse(false));
         actions.get(StudioActions.EDIT).setEnabled(a.isPresent());
+        actions.get(StudioActions.SAVE).setEnabled(a.isPresent());
+        actions.get(StudioActions.SAVE_AS).setEnabled(a.isPresent());
+        actions.get(StudioActions.CLOSE_PROJECT).setEnabled(a.isPresent());
         boolean canUndo = a.map(x -> controller.service().canUndo(x.id())).orElse(false);
         boolean canRedo = a.map(x -> controller.service().canRedo(x.id())).orElse(false);
         actions.get(StudioActions.UNDO).setEnabled(canUndo);
@@ -342,7 +434,7 @@ public final class StudioView {
     private void refreshTabTitles() {
         for (Map.Entry<AutomationId, AutomationOverview> en : overviews.entrySet()) {
             int i = workArea.getTabs().indexOfComponent(en.getValue());
-            if (i >= 0) workArea.getTabs().setTitleAt(i, en.getValue().automation().name());
+            if (i >= 0) workArea.getTabs().setTitleAt(i, tabTitle(en.getKey()));
         }
     }
 
@@ -353,9 +445,32 @@ public final class StudioView {
         }
     }
 
+    /** STUDIO-006: o asterisco indica alterações ainda não salvas no arquivo. */
+    private String tabTitle(AutomationId id) {
+        String name = state.catalog().find(id).map(Automation::name).orElse("");
+        return state.project(id).map(com.nekkora.studio.app.workspace.ProjectState::dirty).orElse(false) ? name + " *" : name;
+    }
+
     private void refreshStatus() {
         unsavedStatus.setVisible(state.hasUnsavedChanges());
-        countStatus.setText(StudioText.automations(state.automations().size()) + " em memória");
+        countStatus.setText(StudioText.automations(state.automations().size()) + " no Studio");
+        Optional<com.nekkora.studio.app.workspace.ProjectState> p = state.activeId().flatMap(state::project);
+        if (state.activeId().isEmpty()) {
+            projectStatus.setText("Nenhum projeto aberto");
+            projectStatus.setToolTipText(null);
+        } else {
+            com.nekkora.studio.app.workspace.ProjectState.Status st = p.map(com.nekkora.studio.app.workspace.ProjectState::status)
+                    .orElse(com.nekkora.studio.app.workspace.ProjectState.Status.UNSAVED);
+            String file = p.flatMap(com.nekkora.studio.app.workspace.ProjectState::path).map(x -> x.getFileName().toString()).orElse(null);
+            projectStatus.setText(file == null && st != com.nekkora.studio.app.workspace.ProjectState.Status.SAVING ? st.label() + " — sem arquivo"
+                    : st.label() + (file == null ? "" : " — " + file));
+            projectStatus.setToolTipText(p.flatMap(com.nekkora.studio.app.workspace.ProjectState::lastError).map(err -> err.message())
+                    .orElse("Projetos são arquivos locais .nekkora, não criptografados. Não guarde segredos neles."));
+        }
+        boolean recovery = controller.projects().settings().recoveryEnabled() && controller.projects().recovery().isPresent();
+        recoveryStatus.setText(recovery ? "Recuperação automática ativa" : "Recuperação automática desativada");
+        recoveryStatus.setToolTipText(controller.projects().recovery().isEmpty() ? "Sem diretório de dados local nesta sessão."
+                : "Arquivo → Recuperação automática… (cópias locais das alterações não salvas)");
     }
 
     private void updateTheme() {
@@ -403,10 +518,19 @@ public final class StudioView {
                     closingTab = false;
                 }
             }
+            // STUDIO-006: projeto fechado (retirado do catálogo) ou recarregado — a visão antiga não é reaproveitada
+            for (java.util.Iterator<Map.Entry<AutomationId, AutomationOverview>> it = overviews.entrySet().iterator(); it.hasNext(); ) {
+                Map.Entry<AutomationId, AutomationOverview> en = it.next();
+                boolean gone = state.catalog().find(en.getKey()).map(a -> a != en.getValue().automation()).orElse(true);
+                if (gone && !state.openAutomations().contains(en.getKey())) {
+                    it.remove();
+                    tabKeys.remove(en.getKey());
+                }
+            }
             for (AutomationId id : state.openAutomations()) {
                 AutomationOverview o = overviews.computeIfAbsent(id, this::createOverview);
                 String key = tabKeys.computeIfAbsent(id, k -> k.value().toString());
-                if (!workArea.isOpen(key)) workArea.openTab(key, o.automation().name(), IconName.WORKFLOW, o);
+                if (!workArea.isOpen(key)) workArea.openTab(key, tabTitle(id), IconName.WORKFLOW, o);
             }
             state.activeId().ifPresent(id -> {
                 AutomationOverview o = overviews.get(id);
@@ -570,7 +694,7 @@ public final class StudioView {
     }
 
     public List<NekkoraCaption> statusItems() {
-        return List.of(draftStatus, unsavedStatus, countStatus, themeStatus);
+        return List.of(projectStatus, unsavedStatus, countStatus, themeStatus, recoveryStatus);
     }
 
     /** Item adicional da barra de status (ex.: conexão com o navegador, STUDIO-002). */

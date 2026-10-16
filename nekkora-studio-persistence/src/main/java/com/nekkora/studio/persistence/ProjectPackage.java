@@ -43,9 +43,16 @@ public final class ProjectPackage {
     /** Data fixa das entradas do contêiner (o ZIP exige uma; nenhuma vem do relógio local). */
     private static final long ENTRY_TIME = 315_532_800_000L; // 1980-01-01T00:00:00Z
 
-    /** Manifesto lido e conferido. */
+    /** Manifesto lido e conferido. {@code recoveryOf} só existe numa fotografia de recuperação. */
     public record Manifest(ProjectFormat.Kind kind, String formatVersion, String privacyPolicy, String projectId, String automationId, Instant createdAt,
-                           Instant savedAt, String recoveryOf) {}
+                           Instant savedAt, RecoveryOrigin recoveryOf) {}
+
+    /**
+     * Origem de uma fotografia de recuperação: o projeto confirmado do qual derivam as alterações não salvas (ou nenhum,
+     * se nunca foi salvo) e o conteúdo dele naquele momento — para que salvar a recuperação no arquivo original detecte
+     * uma alteração externa feita depois.
+     */
+    public record RecoveryOrigin(String projectPath, ProjectRepository.Fingerprint base) {}
 
     /** Pacote lido: manifesto + documentos JSON já interpretados (ainda não validados como projeto). */
     public record Contents(Manifest manifest, Map<String, Object> documents) {}
@@ -58,10 +65,11 @@ public final class ProjectPackage {
      * Bytes do pacote.
      *
      * @param documents  documentos de conteúdo ({@link ProjectCodec#documents})
-     * @param recoveryOf caminho do projeto do qual esta fotografia de recuperação deriva (só {@link ProjectFormat.Kind#RECOVERY}), ou null
+     * @param recoveryOf origem da fotografia de recuperação (obrigatória em {@link ProjectFormat.Kind#RECOVERY}; nula em projeto)
      */
     static byte[] write(ProjectFormat.Kind kind, String projectId, String automationId, Instant createdAt, Instant savedAt, String producerVersion,
-            String recoveryOf, Map<String, Object> documents) throws ProjectException {
+            RecoveryOrigin recoveryOf, Map<String, Object> documents) throws ProjectException {
+        if ((kind == ProjectFormat.Kind.RECOVERY) != (recoveryOf != null)) throw new IllegalArgumentException("origem da recuperação");
         Map<String, byte[]> entries = new LinkedHashMap<>();
         Map<String, Object> metadata = new LinkedHashMap<>();
         Map<String, Object> producer = new LinkedHashMap<>();
@@ -99,7 +107,15 @@ public final class ProjectPackage {
         manifest.put("automationId", automationId);
         manifest.put("createdAt", createdAt.toString());
         manifest.put("savedAt", savedAt.toString());
-        manifest.put("recoveryOf", recoveryOf == null ? Json.NULL : recoveryOf);
+        if (recoveryOf == null) {
+            manifest.put("recoveryOf", Json.NULL);
+        } else {
+            Map<String, Object> r = new LinkedHashMap<>();
+            r.put("projectPath", recoveryOf.projectPath() == null ? Json.NULL : recoveryOf.projectPath());
+            r.put("baseSize", recoveryOf.base() == null ? Json.NULL : (Object) recoveryOf.base().size());
+            r.put("baseSha256", recoveryOf.base() == null ? Json.NULL : recoveryOf.base().sha256());
+            manifest.put("recoveryOf", r);
+        }
         Map<String, Object> limits = new LinkedHashMap<>();
         limits.put("maxEntryBytes", (long) ProjectFormat.MAX_ENTRY_BYTES);
         limits.put("maxTotalBytes", ProjectFormat.MAX_TOTAL_BYTES);
@@ -208,8 +224,16 @@ public final class ProjectPackage {
         }
         m.obj("limits", "maxEntryBytes", "maxTotalBytes", "maxSteps"); // informativo: o leitor usa os PRÓPRIOS limites
         ProjectFormat.Kind kind = m.enumValue("kind", ProjectFormat.Kind.class);
-        String recoveryOf = m.strOrNull("recoveryOf");
-        if (kind == ProjectFormat.Kind.PROJECT && recoveryOf != null) throw Doc.invalid(m.at("recoveryOf"), "projeto com origem de recuperação");
+        RecoveryOrigin recoveryOf = null;
+        if (!m.isNull("recoveryOf")) {
+            Doc r = m.obj("recoveryOf", "projectPath", "baseSize", "baseSha256");
+            if (r.isNull("baseSize") != r.isNull("baseSha256") || (r.isNull("projectPath") && !r.isNull("baseSha256"))) {
+                throw Doc.invalid(r.where(), "origem incompleta");
+            }
+            ProjectRepository.Fingerprint base = r.isNull("baseSha256") ? null : new ProjectRepository.Fingerprint(r.lng("baseSize"), r.str("baseSha256"));
+            recoveryOf = new RecoveryOrigin(r.strOrNull("projectPath"), base);
+        }
+        if ((kind == ProjectFormat.Kind.RECOVERY) != (recoveryOf != null)) throw Doc.invalid(m.at("recoveryOf"), "origem de recuperação incoerente");
         String projectId = ProjectCodec.uuid(m.str("projectId"), m.at("projectId")).toString();
         String automationId = ProjectCodec.uuid(m.str("automationId"), m.at("automationId")).toString();
         Set<String> declared = new java.util.LinkedHashSet<>();

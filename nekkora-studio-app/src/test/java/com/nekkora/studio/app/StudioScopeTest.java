@@ -82,16 +82,18 @@ class StudioScopeTest {
     }
 
     @Test
-    @DisplayName("S001-020 executar e salvar existem apenas desabilitados e sem efeito (gravar é real desde a STUDIO-002)")
+    @DisplayName("S001-020 executar existe apenas desabilitado e sem efeito (gravar é real desde a STUDIO-002; salvar, desde a STUDIO-006)")
     void futurasDesabilitadas() {
         StudioActions actions = fx.studio.view().actions();
-        assertEquals(List.of(StudioActions.RUN, StudioActions.SAVE), StudioActions.FUTURE);
+        // STUDIO-006: "Salvar" deixou de ser futura (§28); sem automação ativa, fica desabilitada — sem efeito, sem aviso fictício
+        assertEquals(List.of(StudioActions.RUN), StudioActions.FUTURE);
+        assertFalse(Edt.call(() -> actions.get(StudioActions.SAVE).isEnabled()), "sem automação ativa não há o que salvar");
         for (String id : StudioActions.FUTURE) assertFalse(Edt.call(() -> actions.get(id).isEnabled()), id);
         assertFalse(Edt.call(() -> actions.get(StudioActions.RECORD).isEnabled()), "sem automação/sessão de destino não há o que gravar");
         assertEquals("Gravar", Edt.call(() -> actions.get(StudioActions.RECORD).getValue(javax.swing.Action.NAME)));
         List<NekkoraToolbarButton> future = new ArrayList<>();
         Edt.run(() -> collect(fx.studio.view().component(), future));
-        assertEquals(2, future.size(), "executar e salvar na toolbar");
+        assertEquals(1, future.size(), "executar na toolbar");
         for (NekkoraToolbarButton b : future) {
             assertFalse(Edt.call(b::isEnabled));
             assertTrue(Edt.call(b::getToolTipText).contains("próxima versão") || Edt.call(b::getToolTipText).contains("não está disponível"));
@@ -119,6 +121,9 @@ class StudioScopeTest {
         // de ações está ativa (verificado em RecorderStepsStudioTest).
         String confirmedLabel = "case RECORDING -> \"Gravando\";";
         String confirmedStepsLabel = "private static final String CONFIRMED_RECORDING_LABEL = \"Gravando\";";
+        // STUDIO-006: "Salvo" é real — ProjectState só devolve SAVED quando a geração em memória é a gravada por um salvamento
+        // CONFIRMADO (verificado em ProjectStudioTest); antes da STUDIO-006, salvar não existia e o texto só poderia ser fictício
+        String confirmedSavedLabel = "SAVED(\"Salvo\"),";
         List<String> v = new ArrayList<>();
         for (String module : List.of("nekkora-studio-domain", "nekkora-studio-ui", "nekkora-studio-app", "nekkora-studio-bridge", "nekkora-studio-recorder")) {
             try (Stream<Path> files = Files.walk(ROOT.resolve(module).resolve("src/main/java"))) {
@@ -132,7 +137,8 @@ class StudioScopeTest {
                         String l = lines.get(i).strip();
                         if (l.startsWith("*") || l.startsWith("//") || l.startsWith("/**")) continue; // documentação pode citar o escopo futuro
                         if (fake.matcher(l).find() && !(f.getFileName().toString().equals("RecorderPresenter.java") && l.equals(confirmedLabel))
-                                && !(f.getFileName().toString().equals("RecorderText.java") && l.equals(confirmedStepsLabel))) {
+                                && !(f.getFileName().toString().equals("RecorderText.java") && l.equals(confirmedStepsLabel))
+                                && !(f.getFileName().toString().equals("ProjectState.java") && l.equals(confirmedSavedLabel))) {
                             v.add(f.getFileName() + ":" + (i + 1) + "  " + l);
                         }
                     }
@@ -143,13 +149,13 @@ class StudioScopeTest {
     }
 
     @Test
-    @DisplayName("S001-021 ao fechar com alterações em memória, avisa; cancelar mantém o Studio aberto")
+    @DisplayName("S001-021/S006-068/070 ao fechar com alterações não salvas, avisa quais projetos; cancelar mantém o Studio aberto")
     void encerramentoComAlteracoes() {
         fx.newAutomation("A", null);
         fx.prompts.thenExit(false);
         Edt.run(() -> fx.studio.controller().requestExit());
-        assertEquals(List.of(StudioController.EXIT_MESSAGE), fx.prompts.exitMessages);
-        assertTrue(StudioController.EXIT_MESSAGE.contains("memória") && StudioController.EXIT_MESSAGE.contains("perdidas"));
+        // STUDIO-006 (§29): o aviso lista os projetos com alterações e oferece Salvar todos / Descartar / Cancelar
+        assertEquals(List.of(List.of("A")), fx.prompts.unsavedAsked);
         assertEquals(0, fx.exits.get(), "cancelar não fecha");
         fx.prompts.thenExit(true);
         Edt.run(() -> fx.studio.controller().requestExit());
@@ -165,12 +171,13 @@ class StudioScopeTest {
     }
 
     @Test
-    @DisplayName("barra de status informa rascunho em memória e alterações não salvas")
+    @DisplayName("barra de status informa a situação do projeto ativo e alterações não salvas (STUDIO-006)")
     void barraDeStatus() {
-        assertTrue(Edt.call(() -> fx.studio.view().statusItems().get(0).getText()).equals("Rascunho em memória"));
+        assertEquals("Nenhum projeto aberto", Edt.call(() -> fx.studio.view().statusItems().get(0).getText()));
         assertFalse(Edt.call(() -> fx.studio.view().statusItems().get(1).isVisible()));
         fx.newAutomation("A", null);
+        assertEquals("Alterações não salvas — sem arquivo", Edt.call(() -> fx.studio.view().statusItems().get(0).getText()));
         assertTrue(Edt.call(() -> fx.studio.view().statusItems().get(1).isVisible()));
-        assertEquals("1 automação em memória", Edt.call(() -> fx.studio.view().statusItems().get(2).getText()));
+        assertEquals("1 automação no Studio", Edt.call(() -> fx.studio.view().statusItems().get(2).getText()));
     }
 }

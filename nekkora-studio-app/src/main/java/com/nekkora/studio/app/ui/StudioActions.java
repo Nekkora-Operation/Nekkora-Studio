@@ -14,8 +14,8 @@ import javax.swing.KeyStroke;
 
 /**
  * Ações do Studio (rótulo, ícone, atalho) registradas no {@link NekkoraActionRegistry} do design system.
- * As ações futuras (executar, salvar) existem apenas <b>desabilitadas</b>: não têm efeito e não produzem nenhum
- * resultado fictício. "Gravar" é real desde a STUDIO-002 (gravação técnica controlada pelo Recorder).
+ * A ação futura (executar) existe apenas <b>desabilitada</b>: não tem efeito e não produz nenhum resultado fictício.
+ * "Gravar" é real desde a STUDIO-002; abrir, salvar, salvar como e fechar projeto, desde a STUDIO-006.
  */
 public final class StudioActions {
     public static final String NEW_AUTOMATION = "studio.automation.new";
@@ -29,10 +29,16 @@ public final class StudioActions {
     public static final String NEXT_THEME = "studio.view.theme";
     public static final String RECORD = "studio.recorder.record";
     public static final String RUN = "studio.future.run";
-    public static final String SAVE = "studio.future.save";
+    /** STUDIO-006: projetos. */
+    public static final String SAVE = "studio.project.save";
+    public static final String SAVE_AS = "studio.project.saveAs";
+    public static final String OPEN = "studio.project.open";
+    public static final String CLOSE_PROJECT = "studio.project.close";
+    public static final String RECOVERY = "studio.project.recovery";
+    public static final String EXIT = "studio.exit";
 
     /** Ações que dependem de missões futuras e permanecem desabilitadas. */
-    public static final List<String> FUTURE = List.of(RUN, SAVE);
+    public static final List<String> FUTURE = List.of(RUN);
     /** Rótulo do botão de gravação (muda só com a confirmação da extensão). */
     public static final String RECORD_LABEL = "Gravar";
 
@@ -66,9 +72,22 @@ public final class StudioActions {
         registry.register(NekkoraAction.of(RECORD, RECORD_LABEL, () -> recordHandler.run()).icon(IconName.PLAY_CIRCLE)
                 .shortcut(NekkoraKeys.shortcut(KeyEvent.VK_R, InputEvent.SHIFT_DOWN_MASK)).category("Gravação")
                 .description("Iniciar uma gravação técnica numa aba autorizada do Chrome."));
+        registry.register(NekkoraAction.of(OPEN, "Abrir projeto…", controller::openProject).icon(IconName.FOLDER_OPEN)
+                .shortcut(NekkoraKeys.shortcut(KeyEvent.VK_O)).category("Arquivo").description("Abrir um projeto .nekkora salvo neste computador."));
+        registry.register(NekkoraAction.of(SAVE, "Salvar", controller::saveActive).icon(IconName.SAVE)
+                .shortcut(NekkoraKeys.shortcut(KeyEvent.VK_S)).category("Arquivo")
+                .description("Salvar a automação ativa no arquivo do projeto (arquivo local, não criptografado)."));
+        registry.register(NekkoraAction.of(SAVE_AS, "Salvar como…", controller::saveActiveAs).icon(IconName.SAVE)
+                .shortcut(NekkoraKeys.shortcut(KeyEvent.VK_S, InputEvent.SHIFT_DOWN_MASK)).category("Arquivo")
+                .description("Salvar a automação ativa em outro arquivo, mantendo a mesma identidade."));
+        registry.register(NekkoraAction.of(CLOSE_PROJECT, "Fechar projeto", controller::closeActiveProject).icon(IconName.CLOSE).category("Arquivo")
+                .description("Fechar o projeto ativo (pergunta antes se houver alterações não salvas)."));
+        registry.register(NekkoraAction.of(RECOVERY, "Recuperação automática…", controller::configureRecovery).icon(IconName.HISTORY).category("Arquivo")
+                .description("Ativar, desativar ou limpar as cópias de recuperação das alterações não salvas."));
+        registry.register(NekkoraAction.of(EXIT, "Sair", controller::requestExit).icon(IconName.X_CIRCLE).category("Arquivo")
+                .description("Fechar o Nekkora Studio."));
         future(RUN, "Executar", IconName.PLAY, "A execução de automações chega em uma próxima versão do Studio.");
-        future(SAVE, "Salvar", IconName.SAVE, "O salvamento ainda não está disponível: as automações ficam apenas na memória.");
-        for (String id : List.of(NEW_SESSION, NEW_STEP, RENAME_SESSION, RECORD, EDIT, UNDO, REDO)) get(id).setEnabled(false);
+        for (String id : List.of(NEW_SESSION, NEW_STEP, RENAME_SESSION, RECORD, EDIT, UNDO, REDO, SAVE, SAVE_AS, CLOSE_PROJECT)) get(id).setEnabled(false);
     }
 
     /** Liga o botão Gravar ao Recorder (STUDIO-002). */

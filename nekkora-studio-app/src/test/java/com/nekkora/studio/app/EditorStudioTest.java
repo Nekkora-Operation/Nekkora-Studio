@@ -179,7 +179,8 @@ class EditorStudioTest {
         assertEquals(steps, a.stepCount());
         assertTrue(fx.navigator().items().contains(a));
         int tab = Edt.call(() -> fx.studio.view().workArea().getTabs().indexOfComponent(fx.overview()));
-        assertEquals("Consulta de clientes PF", Edt.call(() -> fx.studio.view().workArea().getTabs().getTitleAt(tab)), "aba renomeada");
+        // STUDIO-006 (§28): o asterisco indica alterações ainda não salvas no arquivo
+        assertEquals("Consulta de clientes PF *", Edt.call(() -> fx.studio.view().workArea().getTabs().getTitleAt(tab)), "aba renomeada");
         assertEquals(2, fx.studio.state().automations().size(), "nenhuma automação nova para simular a renomeação");
         assertNotEquals(outra.id(), a.id());
     }
