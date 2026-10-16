@@ -116,6 +116,8 @@ public final class BridgeServer implements BrowserLink, AutoCloseable {
         volatile boolean ready;
         volatile long lastInbound = System.currentTimeMillis();
         volatile String disconnectReason;
+        /** Política de privacidade declarada no hello (null = anterior à nekkora-privacy/2). */
+        volatile String privacy;
         ScheduledFuture<?> heartbeat;
 
         Connection(SocketChannel channel) {
@@ -337,8 +339,10 @@ public final class BridgeServer implements BrowserLink, AutoCloseable {
                     .put("payload", Json.obj().put("proof", BridgeAuth.serverProof(secret, instanceId, serverNonce, clientNonce))
                             .put("heartbeatMs", options.heartbeat().toMillis()).put("maxFrameBytes", BridgeFrames.MAX_FRAME_BYTES).build()).build());
             done.set(true);
-            Map<String, Object> ext = Json.object(Json.object(p, "client"), "extension");
-            attach(c, new LinkStatus.ExtensionInfo(Json.string(ext, "version"), Json.string(ext, "buildMode")));
+            Map<String, Object> client = Json.object(p, "client");
+            Map<String, Object> ext = Json.object(client, "extension");
+            c.privacy = Json.string(client, "privacy");
+            attach(c, new LinkStatus.ExtensionInfo(Json.string(ext, "version"), Json.string(ext, "buildMode"), c.privacy));
             reservedByMe = false; // a partir daqui o leitor libera a reserva ao terminar
         } catch (IOException | RuntimeException e) {
             LOG.fine("Bridge: handshake encerrado: " + e.getMessage());
@@ -448,7 +452,7 @@ public final class BridgeServer implements BrowserLink, AutoCloseable {
             case "bridge.connected" -> {
                 Map<String, Object> ext = Json.object(payload, "extension");
                 setStatus(new LinkStatus(LinkStatus.State.CONNECTED, null,
-                        new LinkStatus.ExtensionInfo(Json.string(ext, "version"), Json.string(ext, "buildMode"))));
+                        new LinkStatus.ExtensionInfo(Json.string(ext, "version"), Json.string(ext, "buildMode"), c.privacy)));
             }
             case "bridge.disconnected" -> c.disconnectReason = Json.string(payload, "reason");
             default -> {

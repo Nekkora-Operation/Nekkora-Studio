@@ -20,8 +20,22 @@ public record LinkStatus(State state, String detail, ExtensionInfo extension) {
         UNAVAILABLE
     }
 
-    /** Versão e modo de construção da extensão conectada. */
-    public record ExtensionInfo(String version, String buildMode) {
+    /**
+     * Versão, modo de construção e política de privacidade declarada pela extensão conectada. CHROME-SECURITY-001:
+     * {@code privacy} ausente = extensão anterior à {@code nekkora-privacy/2} — o Studio revalida tudo o que recebe.
+     */
+    public record ExtensionInfo(String version, String buildMode, String privacy) {
+
+        public static final String CURRENT_POLICY = "nekkora-privacy/2";
+
+        public ExtensionInfo(String version, String buildMode) {
+            this(version, buildMode, null);
+        }
+
+        /** A extensão declarou a política vigente nesta conexão. */
+        public boolean currentPolicy() {
+            return CURRENT_POLICY.equals(privacy);
+        }
     }
 
     public static LinkStatus of(State state, String detail) {

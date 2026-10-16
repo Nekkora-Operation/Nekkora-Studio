@@ -177,7 +177,9 @@ class RecorderStudioTest {
         assertEquals("Gravando", recordLabel());
         assertEquals("Captura técnica ativa", Edt.call(() -> studio.recorderPresenter().panel().badge().getText()));
         String panel = StudioFixture.texts(studio.recorderPresenter().panel());
-        assertTrue(panel.contains("Consulta de clientes") && panel.contains("Sistema de testes"), panel);
+        // CHROME-SECURITY-001 (D4): o título da aba só aparece se for do vocabulário; "Sistema de testes" não é — a aba é
+        // identificada pelo host
+        assertTrue(panel.contains("Consulta de clientes") && panel.contains("127.0.0.1") && !panel.contains("Sistema de testes"), panel);
         assertEquals("Autenticação", Edt.call(() -> studio.recorderPresenter().panel().sessionCombo().getSelectedValue().name()));
         assertFalse(panel.contains("Em execução"), "o estado da gravação não fala em execução de automações");
         // STUDIO-003: este navegador simulado não anuncia a entrega de etapas (extensão anterior): gravação só técnica.

@@ -47,7 +47,10 @@ public final class RecorderText {
             case STARTING -> "Navegador: preparando a conexão local…";
             case WAITING -> "Navegador: " + WAITING_LINK.toLowerCase(java.util.Locale.ROOT);
             case CONNECTED -> "Navegador: conectado" + (l.extension() != null && l.extension().version() != null
-                    ? " (Nekkora Extension " + l.extension().version() + ")" : "");
+                    ? " (Nekkora Extension " + l.extension().version() + ")" : "")
+                    // CHROME-SECURITY-001: conexão sem a política vigente não é aceita em silêncio
+                    + (l.extension() != null && !l.extension().currentPolicy()
+                    ? " — extensão sem a política de privacidade atual; o Studio revalida nomes, localizadores e endereços" : "");
             case UNAVAILABLE -> "Navegador: indisponível" + switch (String.valueOf(l.detail())) {
                 case "OTHER_INSTANCE" -> " (outra janela do Studio controla a gravação)";
                 case "INSECURE_DIRECTORY" -> " (não foi possível proteger a conexão local)";

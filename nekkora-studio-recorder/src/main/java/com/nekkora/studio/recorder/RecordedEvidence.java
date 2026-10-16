@@ -63,7 +63,7 @@ public final class RecordedEvidence {
                 return Optional.empty();
             }
             ObservedEvidence.DocumentContext document = new ObservedEvidence.DocumentContext("FRAME".equals(frame), Json.bool(doc, "inShadow", false),
-                    Json.string(doc, "title"), Json.string(doc, "url"));
+                    Json.string(doc, "title"), com.nekkora.studio.domain.privacy.CapturePrivacy.urlTemplate(Json.string(doc, "url")));
             List<Limitation> limitations = new ArrayList<>();
             for (Object o : Json.array(p, "limitations")) {
                 limitations.add(Limitation.valueOf(String.valueOf(o)));
@@ -90,7 +90,8 @@ public final class RecordedEvidence {
                 if (!"SAME_DOCUMENT".equals(kind) && !"NEW_DOCUMENT".equals(kind)) {
                     return Optional.empty();
                 }
-                navigation = new ObservedEvidence.Navigation("NEW_DOCUMENT".equals(kind), Json.string(nav, "url"));
+                navigation = new ObservedEvidence.Navigation("NEW_DOCUMENT".equals(kind),
+                        com.nekkora.studio.domain.privacy.CapturePrivacy.urlTemplate(Json.string(nav, "url")));
             }
             List<Signal> signals = new ArrayList<>();
             for (Object o : Json.array(det, "signals")) {

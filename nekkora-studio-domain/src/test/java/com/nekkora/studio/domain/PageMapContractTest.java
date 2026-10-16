@@ -74,7 +74,9 @@ class PageMapContractTest {
         Path schema = Path.of("..", "..", "Nekkora-Extension-Chrome", "contracts", "page-map.schema.json");
         Assumptions.assumeTrue(Files.exists(schema), "Nekkora-Extension-Chrome não está ao lado deste repositório");
         Map<String, Object> s = obj(MiniJson.parse(Files.readString(schema)));
-        Assumptions.assumeTrue("https://nekkora.dev/contracts/page-map/0.2.0".equals(s.get("$id")),
+        // CHROME-SECURITY-001: a 0.3.0 só acrescenta privacy/text.suppressed — as enumerações verificadas aqui são as mesmas
+        Assumptions.assumeTrue(java.util.Set.of("https://nekkora.dev/contracts/page-map/0.2.0", "https://nekkora.dev/contracts/page-map/0.3.0")
+                .contains(s.get("$id")),
                 "o contrato vivo já é outra versão — atualize o fixture em uma missão de integração");
         Map<String, Object> defs = obj(s.get("$defs"));
         Map<String, Object> e = resource("enums.json");
@@ -102,8 +104,11 @@ class PageMapContractTest {
         assertTrue(strings(enums.get("contextRelationType")).containsAll(ref.context().stream().map(ContextAnchor::relation).toList()));
         assertEquals(LocatorStrategy.ID, ref.preferredLocator().orElseThrow().strategy());
         assertEquals(3, ref.locators().size());
-        assertEquals("estado", ref.displayableHtmlId().orElseThrow());
-        assertEquals("uf", ref.displayableHtmlName().orElseThrow());
+        // CHROME-SECURITY-001 (D5): a fixture 0.2.0 vem marcada com nekkora-privacy/1 — a referência é lida, mas id e name
+        // não são mais exibidos como seguros (só a política vigente, nekkora-privacy/2, é reconhecida)
+        assertEquals("estado", ref.htmlId().orElseThrow());
+        assertEquals("uf", ref.htmlName().orElseThrow());
+        assertTrue(ref.displayableHtmlId().isEmpty() && ref.displayableHtmlName().isEmpty());
         assertEquals("cap-lab-0001", ref.correlation().get(CorrelationKeys.Key.CAPTURE_ID).orElseThrow());
 
         Map<String, Object> chosen = arr(obj(fx.get("optionSet")).get("options")).stream().map(MiniJson::obj)

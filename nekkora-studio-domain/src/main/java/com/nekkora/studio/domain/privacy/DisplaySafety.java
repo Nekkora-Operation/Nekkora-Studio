@@ -5,13 +5,17 @@ import java.util.regex.Pattern;
 
 /**
  * Barreira de apresentação do Studio. A sanitização principal de dados capturados pertence ao produtor
- * (a Chrome Extension aplica a política {@code nekkora-privacy/1} antes de exportar) — este utilitário
+ * (a Chrome Extension aplica a política {@code nekkora-privacy/2} antes de enviar; o Studio a reaplica em {@link CapturePrivacy}) — este utilitário
  * <b>não</b> duplica aquele motor: apenas impede que identificadores internos ou textos com aparência de
  * dado sensível cheguem a rótulos, diálogos e painéis, e que valores literais sensíveis entrem no modelo.
  */
 public final class DisplaySafety {
-    /** Política de privacidade reconhecida para dados vindos da Chrome Extension. */
-    public static final String KNOWN_PRODUCER_POLICY = "nekkora-privacy/1";
+    /**
+     * Política de privacidade reconhecida para dados vindos da Chrome Extension. CHROME-SECURITY-001: só a
+     * {@code nekkora-privacy/2} — dados marcados com a política anterior não são mais tratados como seguros para exibir
+     * (a 4ª barreira, {@link CapturePrivacy}, reaplica a v2 a tudo o que chega antes de marcar a referência).
+     */
+    public static final String KNOWN_PRODUCER_POLICY = CapturePrivacy.VERSION;
 
     /** UUID em qualquer posição do texto. */
     public static final Pattern UUID = Pattern.compile(

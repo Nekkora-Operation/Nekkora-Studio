@@ -1,5 +1,7 @@
 # STUDIO-001 — Decisões
 
+> **CHROME-SECURITY-001:** a política reconhecida passou a ser `nekkora-privacy/2`, e o Studio a **reaplica** a tudo o que recebe (`CapturePrivacy`, `RecordedStep.guard`). Referências marcadas com a `nekkora-privacy/1` não são exibidas como seguras. Ver o relatório `reports/chrome-security-001-final-report.md` no repositório da extensão.
+
 Formato: decisão · justificativa · alternativas consideradas.
 
 **DS001-01 — Três módulos novos com os nomes propostos** (`nekkora-studio-domain`, `nekkora-studio-ui`,

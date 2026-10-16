@@ -196,6 +196,11 @@ public final class RecordedStepDrafts {
                 case "ACCESS_RESTRICTED" -> b.addObstacle(new ObservedObstacle("ACCESS_RESTRICTED", ObservedObstacle.Severity.MEDIUM,
                         "A trajetória até o elemento passa por um documento com acesso restrito."));
                 case "NO_UNIQUE_LOCATOR" -> b.addStabilityNote("Nenhum localizador único na captura");
+                // CHROME-SECURITY-001: limitações de privacidade declaradas ao usuário (nada é inventado para compensar)
+                case "OPTION_WITHHELD" -> b.addStabilityNote("Opção escolhida não registrada (privacidade): configure a opção no Studio");
+                case "LOCATORS_WITHHELD" -> b.addStabilityNote("Localizadores com texto da página descartados (privacidade)");
+                case "SAFE_LOCATOR_UNAVAILABLE" -> b.addStabilityNote(
+                        "Elemento identificado parcialmente: não foi possível produzir um localizador seguro e único");
                 case "LIVE_CHECK_UNAVAILABLE" -> b.addStabilityNote("Verificação na página real indisponível (o documento mudou)");
                 default -> {
                 }
