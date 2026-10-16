@@ -431,6 +431,51 @@ public final class Sec001Homologation {
                 || !Boolean.TRUE.equals(Json.object(sel9, "selection").get("visible")));
         captureStudio("09-continuidade");
 
+        // ================================================================ Cenário 10 — 2ª revisão dos PRs #7: nomes de componente
+        LogicalSession comp = newSession("Componentes");
+        edt(() -> {
+            fp.sessionCombo().setSelectedItem(comp);
+            return null;
+        });
+        waitFor("sessão Componentes associada", 10, () -> edt(() -> comp.id().equals(window.studio().recorder().snapshot().session())));
+        navigateByUser(SEC + "componentes.html");
+        clickInPage("document.getElementById('consultar-ficha')");
+        waitFor("etapa no componente do DOM claro", 30, () -> edt(comp::stepCount) == 1);
+        clickInPage("document.getElementById('acao')");
+        waitFor("etapa no próprio componente", 30, () -> edt(comp::stepCount) == 2);
+        clickInPage("document.getElementById('cartao').shadowRoot.getElementById('no-cartao')");
+        waitFor("etapa no Shadow DOM do componente", 30, () -> edt(comp::stepCount) == 3);
+        clickInPage("document.getElementById('no-painel')");
+        waitFor("etapa no componente do vocabulário", 30, () -> edt(comp::stepCount) == 4);
+        sleep(QUIET_MS);
+        List<String> labels10 = List.of("botão em <ficha-cliente-teodolinda>", "<acao-teodolinda-ramos role=button>", "botão no Shadow DOM de <cartao-teodolinda-viana>",
+                "botão em <painel-cliente>");
+        for (int i = 0; i < 4; i++) {
+            int k = i;
+            log("  " + labels10.get(k) + ": " + edt(() -> describe(comp.steps().get(k))));
+        }
+        String compSteps = edt(() -> comp.steps().stream().map(st -> st.name() + " " + st.element().map(Object::toString).orElse("")).reduce("", String::concat));
+        check("Cenário 10: nomes de componente fictícios ('teodolinda') não chegam ao Studio — nem na tag, nem em localizadores ou trajetórias",
+                leaks(compSteps).isEmpty());
+        check("Cenário 10: o componente clicado aparece com o marcador neutro (custom-element), sem o nome real",
+                edt(() -> comp.steps().get(1).element().map(e -> "custom-element".equals(e.tag())).orElse(false)));
+        check("Cenário 10: Shadow DOM de componente com nome retido → trajetória com SHADOW_ROOT preservada", edt(() ->
+                comp.steps().get(2).element().map(e -> e.accessPath().stream().anyMatch(st -> st.toString().contains("SHADOW"))).orElse(false)));
+        Object insp = harness.eval("Promise.all(['#ficha', '#acao', '#desconhecido', '#cartao', '#painel'].map(c => window.nekkora.call('page.select', {tabId: "
+                + labTab + ", css: c}))).then(r => JSON.stringify(r))");
+        String inspText = String.valueOf(insp);
+        check("Cenário 10: motor (inspeção, identidade, localizadores) sem os nomes fictícios; componente do vocabulário ('painel-cliente') mantido",
+                leaks(inspText).isEmpty() && inspText.contains("custom-element") && inspText.contains("painel-cliente"));
+        check("Cenário 10: localizador do hospedeiro do Shadow DOM sem o nome, pela posição real entre os irmãos (:nth-child)",
+                inspText.contains(":nth-child(") && !norm(inspText).contains("cartao teodolinda"));
+        Object pm10 = harness.eval("window.nekkora.call('pagemap.export', {tabId: " + labTab + "}).then(r => JSON.stringify(r))");
+        check("Cenário 10: PageMap exportado e arquivos do host sem os nomes fictícios", leaks(String.valueOf(pm10)).isEmpty() && leaks(hostLogs() + hostData()).isEmpty());
+        Object ni = harness.eval("window.nekkora.call('page.idFor', {tabId: " + labTab + ", css: '#ficha'}).then(r => window.nekkora.call('page.nodeInfo', {tabId: "
+                + labTab + ", nodeId: r.result.nodeIds[0]})).then(r => JSON.stringify(r))");
+        check("Cenário 10: consulta de nó (page.nodeInfo) sem texto nem nome da página", leaks(String.valueOf(ni)).isEmpty() && !String.valueOf(ni).contains("\"text\""));
+        privacyCheck("Cenário 10", a, List.of());
+        captureStudio("10-componentes");
+
         // ---- encerra a gravação
         click(edt(fp::finishButton));
         waitState(RecorderState.COMPLETED);
@@ -441,7 +486,7 @@ public final class Sec001Homologation {
 
         // ---- verificação final (domínio, tela, armazenamento da extensão, logs e arquivos do host)
         privacyCheck("Final", a, List.of(USER, PASSWORD, SEARCH, PHONE, RECOVERY));
-        captureStudio("10-automacao-final");
+        captureStudio("11-automacao-final");
         log("Automação final:");
         for (LogicalSession s : edt(a::sessions)) {
             log("  Sessão " + s.name() + ": " + names(s));
