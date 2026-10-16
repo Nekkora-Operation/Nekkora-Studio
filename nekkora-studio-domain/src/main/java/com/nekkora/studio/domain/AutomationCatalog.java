@@ -31,6 +31,22 @@ public final class AutomationCatalog {
         return automation;
     }
 
+    /**
+     * Acrescenta uma automação RECONSTRUÍDA (STUDIO-006: projeto aberto). A identidade não pode existir no catálogo e o
+     * nome precisa ser único — nada é renomeado nem substituído em silêncio.
+     */
+    public void adopt(Automation automation) {
+        Objects.requireNonNull(automation, "automation");
+        if (find(automation.id()).isPresent()) throw new DomainValidationException(ValidationProblem.AUTOMATION_ALREADY_OPEN);
+        requireUniqueName(automation.name(), null);
+        automations.add(automation);
+    }
+
+    /** Retira uma automação do catálogo (STUDIO-006: fechar projeto). */
+    public boolean remove(AutomationId id) {
+        return automations.removeIf(a -> a.id().equals(id));
+    }
+
     /** Renomeia/descreve uma automação mantendo a unicidade de nomes. */
     public void updateDetails(AutomationId id, String name, String description) {
         Automation automation = require(id);

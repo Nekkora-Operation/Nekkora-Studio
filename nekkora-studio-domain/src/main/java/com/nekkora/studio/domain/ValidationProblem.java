@@ -12,6 +12,7 @@ public enum ValidationProblem {
     SESSION_NAME_IN_USE(Field.NAME, "Já existe uma sessão com este nome nesta automação."),
     DESCRIPTION_TOO_LONG(Field.DESCRIPTION, "Use no máximo " + Texts.DESCRIPTION_MAX + " caracteres na descrição."),
     AUTOMATION_NOT_FOUND(Field.NONE, "A automação não está mais disponível."),
+    AUTOMATION_ALREADY_OPEN(Field.NONE, "Esta automação já está aberta no Studio."),
     SESSION_REQUIRED(Field.SESSION, "Escolha a sessão à qual a etapa pertence."),
     SESSION_NOT_FOUND(Field.SESSION, "A sessão escolhida não existe nesta automação."),
     STEP_NOT_FOUND(Field.NONE, "A etapa não existe nesta automação."),
