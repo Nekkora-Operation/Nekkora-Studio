@@ -505,14 +505,18 @@ public final class ProjectService {
             };
         }
         if (decided.isDone()) return decided;
-        exiting = true; // estado temporário de encerramento
-        workspace.report(new Notice(Notice.Kind.INFO, "Encerrando o Studio", "Concluindo as gravações e a limpeza da recuperação…"));
+        exiting = true; // estado temporário de encerramento: um novo pedido de Sair não abre outra pergunta
         return decided.whenComplete((ok, e) -> exiting = false);
     }
 
     /** Espera o trabalho de disco em andamento e refaz as limpezas devidas; se alguma falhar, o usuário decide. */
     private CompletableFuture<Boolean> finishExit() {
-        return settle().thenCompose(v -> retryCleanup()).thenApply(failed -> {
+        CompletableFuture<List<String>> cleanup = settle().thenCompose(v -> retryCleanup());
+        if (!cleanup.isDone()) {
+            // só aparece quando o encerramento realmente espera (nunca durante um Salvar todos que ainda pode falhar)
+            workspace.report(new Notice(Notice.Kind.INFO, "Encerrando o Studio", "Concluindo as gravações e a limpeza da recuperação…"));
+        }
+        return cleanup.thenApply(failed -> {
             if (failed.isEmpty()) return true;
             boolean leave = confirm(new StudioPrompts.Confirmation("Fotografias de recuperação não apagadas", "As fotografias de recuperação de "
                     + String.join(", ", failed.stream().map(n -> "\"" + n + "\"").toList()) + " não puderam ser apagadas (o arquivo pode estar em uso "

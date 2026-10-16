@@ -884,6 +884,9 @@ class ProjectStudioTest {
         Edt.flush();
         assertEquals(0, exits.get(), "não encerra enquanto a limpeza não terminou");
         assertEquals(1, (int) Edt.call(() -> 1), "a EDT continua livre durante o encerramento");
+        assertEquals("Encerrando o Studio", studio.state().lastNotice().orElseThrow().title(), "estado temporário de encerramento visível");
+        Edt.run(() -> studio.controller().requestExit());
+        assertTrue(prompts.unsavedAsked.size() == 1, "um segundo Sair durante a espera não abre outra pergunta");
         ops.hold.countDown();
         waitUntil(() -> exits.get() == 1);
         assertEquals(1, exits.get(), "encerra depois da limpeza");

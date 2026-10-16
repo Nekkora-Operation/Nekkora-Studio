@@ -405,6 +405,9 @@ public final class Studio006Homologation {
         waitFor("aviso 'O Studio continua aberto'", 30, () -> edt(() -> window.studio().state().lastNotice().map(n -> n.title()).orElse(""))
                 .equals("O Studio continua aberto"));
         check("S006-069 Salvar todos com falha: o Studio NÃO encerra", !exited && edt(() -> window.frame().isShowing()));
+        String toasts = edt(() -> texts(window.frame().getLayeredPane()));
+        check("Revisão 1: quando o Salvar todos falha, os avisos mostram 'O Studio continua aberto' e nenhum 'Encerrando o Studio'",
+                toasts.contains("O Studio continua aberto") && !toasts.contains("Encerrando o Studio"));
         captureStudio("11-sair-falha-nao-encerra");
         Files.setAttribute(copy, "dos:readonly", false);
         menu("Arquivo", "Sair");
