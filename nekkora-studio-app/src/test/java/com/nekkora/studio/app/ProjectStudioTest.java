@@ -4,14 +4,17 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.nekkora.studio.app.recorder.RecorderPrompts;
 import com.nekkora.studio.app.recorder.RecorderWindowHost;
 import com.nekkora.studio.app.ui.StudioActions;
 import com.nekkora.studio.app.ui.StudioPrompts;
+import com.nekkora.studio.app.workspace.Notice;
 import com.nekkora.studio.app.workspace.ProjectService;
 import com.nekkora.studio.app.workspace.ProjectState;
+import com.nekkora.studio.app.workspace.Selection;
 import com.nekkora.studio.bridge.BrowserLink;
 import com.nekkora.studio.domain.Automation;
 import com.nekkora.studio.domain.AutomationId;
@@ -65,11 +68,15 @@ class ProjectStudioTest {
     private final AtomicInteger exits = new AtomicInteger();
     private final List<Studio> started = new ArrayList<>();
     private Studio studio;
+    /** Executado no instante em que o Studio encerraria a JVM (o que estiver no disco nesse momento é o que sobra). */
+    private volatile Runnable atExit = () -> { };
 
     private Studio start(StudioEnvironment env, BrowserLink link) {
         Edt.theme(NekkoraThemes.SAKURA_DARK);
-        Studio s = Edt.call(() -> Studio.create(StudioFixture.CLOCK, prompts, exits::incrementAndGet, link, RecorderPrompts.none(),
-                p -> RecorderWindowHost.headless(), env));
+        Studio s = Edt.call(() -> Studio.create(StudioFixture.CLOCK, prompts, () -> {
+            atExit.run();
+            exits.incrementAndGet();
+        }, link, RecorderPrompts.none(), p -> RecorderWindowHost.headless(), env));
         Edt.render(s.view().component(), 1440, 900);
         started.add(s);
         studio = s;
@@ -285,6 +292,15 @@ class ProjectStudioTest {
         volatile IOException failWrite;
         volatile CountDownLatch hold;
         final CountDownLatch writing = new CountDownLatch(1);
+        /** Barreira controlada: só as gravações cujo arquivo satisfaz o filtro esperam por {@link #hold}. */
+        volatile java.util.function.Predicate<Path> holdIf = p -> true;
+        final CountDownLatch held = new CountDownLatch(1);
+        /** Barreira na leitura (ex.: recarregar em andamento). */
+        volatile CountDownLatch holdRead;
+        volatile java.util.function.Predicate<Path> holdReadIf = p -> false;
+        final CountDownLatch reading = new CountDownLatch(1);
+        /** Exclusões que falham (ex.: arquivo de recuperação bloqueado por outro programa). */
+        volatile java.util.function.Predicate<Path> failDeleteIf = p -> false;
 
         @Override
         public Path createTemp(Path d, String prefix, String suffix) throws IOException {
@@ -294,15 +310,20 @@ class ProjectStudioTest {
         @Override
         public void writeAndSync(Path file, byte[] data) throws IOException {
             writing.countDown();
-            if (hold != null) {
-                try {
-                    hold.await(20, TimeUnit.SECONDS);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                }
+            if (hold != null && holdIf.test(file)) {
+                held.countDown();
+                await(hold);
             }
             if (failWrite != null) throw failWrite;
             real.writeAndSync(file, data);
+        }
+
+        private static void await(CountDownLatch l) {
+            try {
+                l.await(20, TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
         }
 
         @Override
@@ -312,11 +333,16 @@ class ProjectStudioTest {
 
         @Override
         public void deleteIfExists(Path file) throws IOException {
+            if (failDeleteIf.test(file)) throw new FileSystemException(file.toString(), null, "being used by another process");
             real.deleteIfExists(file);
         }
 
         @Override
         public byte[] readAll(Path file) throws IOException {
+            if (holdRead != null && holdReadIf.test(file)) {
+                reading.countDown();
+                await(holdRead);
+            }
             return real.readAll(file);
         }
 
@@ -710,5 +736,261 @@ class ProjectStudioTest {
         try (Stream<Path> s = Files.list(dir)) {
             assertEquals(List.of("limpo.nekkora"), s.map(p -> p.getFileName().toString()).toList());
         }
+    }
+
+    // ================================================================================================ revisão 1 (PR #8)
+
+    private void enableRecovery() {
+        prompts.thenRecoverySettings(new StudioPrompts.RecoveryPreferences(true, 60, false));
+        Edt.run(() -> studio.controller().configureRecovery());
+    }
+
+    /** Fotografias de recuperação (e temporários) guardadas no diretório de dados. */
+    private static List<String> recoveryFiles(Path data) throws IOException {
+        Path r = data.resolve("recovery");
+        if (!Files.isDirectory(r)) return List.of();
+        try (Stream<Path> s = Files.walk(r)) {
+            return s.filter(Files::isRegularFile).map(p -> r.relativize(p).toString()).sorted().toList();
+        }
+    }
+
+    /** Cópia do diretório de dados no instante do encerramento: é o que outro processo encontraria. */
+    private static void copyTree(Path from, Path to) {
+        try (Stream<Path> s = Files.walk(from)) {
+            for (Path p : s.toList()) {
+                Path t = to.resolve(from.relativize(p).toString());
+                if (Files.isDirectory(p)) Files.createDirectories(t);
+                else Files.copy(p, t);
+            }
+        } catch (IOException e) {
+            throw new java.io.UncheckedIOException(e);
+        }
+    }
+
+    private static void waitUntil(java.util.function.BooleanSupplier condition) throws Exception {
+        long end = System.currentTimeMillis() + 15_000;
+        while (!condition.getAsBoolean() && System.currentTimeMillis() < end) {
+            Thread.sleep(10);
+            Edt.flush();
+        }
+    }
+
+    @Test
+    @DisplayName("P1-A — Recarregar recusado (nome em conflito com outro projeto aberto) deixa o workspace exatamente como estava")
+    void p1aRecarregarRecusadoPreservaWorkspace() throws Exception {
+        start();
+        Automation a = automation("Consulta de Clientes");
+        Path fa = firstSave(a, "clientes");
+        Automation b = automation("Cadastro de Produtos");
+        Path fb = firstSave(b, "produtos");
+        // outro programa grava clientes.nekkora: arquivo válido, MESMO AutomationId, mas com o nome do projeto B
+        ProjectFiles other = new ProjectFiles(new ProjectRepository(), "outro");
+        ProjectFiles.Loaded l = other.load(fa, StudioFixture.CLOCK);
+        l.automation().updateDetails("Cadastro de Produtos", "");
+        other.save(fa, ProjectFiles.Snapshot.of(l.automation(), l.manifest().projectId()), l.fingerprint(), false, Instant.now(), StudioFixture.CLOCK);
+        byte[] external = Files.readAllBytes(fa);
+        // alterações locais, histórico e seleção no projeto A
+        Edt.run(() -> studio.service().openAutomation(a.id()));
+        Edt.run(() -> studio.service().renameSession(a.id(), a.sessions().get(0).id(), "Entrada"));
+        Selection chosen = new Selection.OfStep(a.id(), a.sessions().get(1).id(), a.sessions().get(1).steps().get(0).id());
+        Edt.run(() -> studio.service().select(chosen));
+        ProjectState before = state(a.id());
+        long generation = before.generation();
+        ProjectRepository.Fingerprint fingerprint = before.fingerprint().orElseThrow();
+        List<Automation> catalog = Edt.call(() -> List.copyOf(studio.state().automations()));
+        List<AutomationId> open = Edt.call(() -> List.copyOf(studio.state().openAutomations()));
+        assertEquals("Consulta de Clientes *", tab(a));
+
+        prompts.thenConfirm(true);
+        assertEquals(ProjectService.Outcome.FAILED, await(Edt.call(() -> projects().reload(a.id()))));
+
+        assertEquals(catalog, Edt.call(() -> List.copyOf(studio.state().automations())), "A continua no workspace, na mesma posição");
+        assertSame(a, Edt.call(() -> studio.state().catalog().require(a.id())), "a MESMA automação, não a do arquivo");
+        assertEquals("Entrada", a.sessions().get(0).name(), "alterações locais preservadas");
+        assertSame(before, state(a.id()), "mesmo estado de projeto");
+        assertEquals(generation, state(a.id()).generation());
+        assertTrue(state(a.id()).dirty(), "continua com alterações não salvas");
+        assertEquals(fa, state(a.id()).path().orElseThrow(), "associação com o arquivo");
+        assertEquals(fingerprint, state(a.id()).fingerprint().orElseThrow());
+        assertEquals(open, Edt.call(() -> List.copyOf(studio.state().openAutomations())));
+        assertEquals(a.id(), Edt.call(() -> studio.state().activeId().orElseThrow()));
+        assertEquals(chosen, Edt.call(() -> studio.state().selection()), "seleção preservada");
+        assertEquals("Consulta de Clientes *", tab(a));
+        assertEquals(fb, state(b.id()).path().orElseThrow(), "B intacto");
+        assertArrayEquals(external, Files.readAllBytes(fa), "o arquivo não foi tocado");
+        Notice n = studio.state().lastNotice().orElseThrow();
+        assertEquals("Não foi possível recarregar", n.title());
+        assertTrue(n.message().contains("O projeto aberto não mudou"), n.message());
+        assertTrue(Edt.call(() -> studio.service().canUndo(a.id())), "histórico de edição preservado");
+        Edt.run(() -> studio.service().undo(a.id()));
+        assertEquals("Autenticação", a.sessions().get(0).name());
+    }
+
+    @Test
+    @DisplayName("P1-A — recarregar e salvar não se sobrepõem: recarregar durante um salvamento (e o contrário) é recusado sem perguntar nada")
+    void p1aRecarregarESalvarNaoSeSobrepoem() throws Exception {
+        Ops ops = new Ops();
+        start(StudioEnvironment.inMemory().withFileOps(ops));
+        Automation a = automation("Consulta");
+        Path file = firstSave(a, "concorrente");
+        Edt.run(() -> studio.service().renameSession(a.id(), a.sessions().get(0).id(), "Entrada"));
+        ops.hold = new CountDownLatch(1);
+        CompletableFuture<ProjectService.Outcome> saving = Edt.call(() -> projects().save(a.id()));
+        assertTrue(ops.held.await(10, TimeUnit.SECONDS), "salvamento retido no worker");
+        assertEquals(ProjectService.Outcome.BUSY, await(Edt.call(() -> projects().reload(a.id()))));
+        assertTrue(prompts.confirmations.isEmpty(), "nem pergunta: há um salvamento em andamento");
+        ops.hold.countDown();
+        assertEquals(ProjectService.Outcome.SAVED, await(saving));
+        ops.hold = null;
+        // recarregar em andamento (leitura retida): salvar e fechar não começam
+        Edt.run(() -> studio.service().renameSession(a.id(), a.sessions().get(0).id(), "Descartável"));
+        ops.holdReadIf = p -> p.getFileName().toString().equals("concorrente.nekkora");
+        ops.holdRead = new CountDownLatch(1);
+        prompts.thenConfirm(true);
+        CompletableFuture<ProjectService.Outcome> reloading = Edt.call(() -> projects().reload(a.id()));
+        assertTrue(ops.reading.await(10, TimeUnit.SECONDS), "recarga retida no worker");
+        assertEquals(ProjectService.Outcome.BUSY, await(Edt.call(() -> projects().save(a.id()))));
+        assertEquals(ProjectService.Outcome.BUSY, await(Edt.call(() -> projects().closeProject(a.id()))));
+        assertEquals(ProjectService.Outcome.BUSY, await(Edt.call(() -> projects().reload(a.id()))));
+        ops.holdRead.countDown();
+        assertEquals(ProjectService.Outcome.RELOADED, await(reloading));
+        Automation now = Edt.call(() -> studio.state().catalog().require(a.id()));
+        assertEquals("Entrada", now.sessions().get(0).name(), "conteúdo do arquivo");
+        assertFalse(state(a.id()).dirty());
+        assertEquals(file, state(a.id()).path().orElseThrow());
+    }
+
+    @Test
+    @DisplayName("P1-B cenário A — Descartar e sair: o Studio só encerra depois de apagar as fotografias; outro processo não as oferece")
+    void p1bDescartarESair() throws Exception {
+        Ops ops = new Ops();
+        Path data = dir.resolve("dados");
+        start(StudioEnvironment.at(data).withFileOps(ops));
+        Automation a = automation("Consulta");
+        firstSave(a, "descartar");
+        enableRecovery();
+        Edt.run(() -> studio.service().renameSession(a.id(), a.sessions().get(0).id(), "Entrada"));
+        assertEquals(1, await(Edt.call(() -> projects().checkpoint())));
+        Edt.run(() -> studio.service().renameSession(a.id(), a.sessions().get(0).id(), "Descartada"));
+        // barreira controlada: uma fotografia está sendo gravada no worker quando o usuário pede Sair
+        ops.holdIf = p -> p.startsWith(data);
+        ops.hold = new CountDownLatch(1);
+        CompletableFuture<Integer> inFlight = Edt.call(() -> projects().checkpoint());
+        assertTrue(ops.held.await(10, TimeUnit.SECONDS), "fotografia retida no worker");
+        Path disk = dir.resolve("disco-ao-encerrar");
+        atExit = () -> copyTree(data, disk);
+        prompts.thenUnsaved(StudioPrompts.UnsavedChoice.DISCARD);
+        Edt.run(() -> studio.controller().requestExit());
+        Edt.flush();
+        assertEquals(0, exits.get(), "não encerra enquanto a limpeza não terminou");
+        assertEquals(1, (int) Edt.call(() -> 1), "a EDT continua livre durante o encerramento");
+        ops.hold.countDown();
+        waitUntil(() -> exits.get() == 1);
+        assertEquals(1, exits.get(), "encerra depois da limpeza");
+        await(inFlight);
+        assertEquals(List.of(), recoveryFiles(disk), "nenhuma fotografia no disco no instante do encerramento");
+        // outro processo, com o disco exatamente como estava quando o Studio encerrou
+        start(StudioEnvironment.at(disk));
+        assertEquals(0, await(Edt.call(() -> studio.projects().offerRecoveries())));
+        assertTrue(prompts.recoveryOffers.isEmpty(), "as alterações descartadas não são oferecidas de novo");
+    }
+
+    @Test
+    @DisplayName("P1-B cenário B — salvar e sair logo em seguida: a fotografia anterior ao salvamento confirmado não volta como recuperação pendente")
+    void p1bSalvarESairImediatamente() throws Exception {
+        Ops ops = new Ops();
+        Path data = dir.resolve("dados");
+        start(StudioEnvironment.at(data).withFileOps(ops));
+        Automation a = automation("A");
+        firstSave(a, "a");
+        enableRecovery();
+        Edt.run(() -> studio.service().renameSession(a.id(), a.sessions().get(0).id(), "Entrada"));
+        assertEquals(1, await(Edt.call(() -> projects().checkpoint())), "fotografia de A anterior ao salvamento");
+        String folderA = a.id().value().toString();
+        Automation b = automation("B");
+        // barreira controlada: logo depois do salvamento de A, a fotografia de B fica retida no worker
+        ops.holdIf = p -> p.startsWith(data.resolve("recovery").resolve(b.id().value().toString()));
+        ops.hold = new CountDownLatch(1);
+        CompletableFuture<ProjectService.Outcome> saved = Edt.call(() -> {
+            CompletableFuture<ProjectService.Outcome> f = projects().save(a.id());
+            projects().checkpoint();
+            return f;
+        });
+        assertEquals(ProjectService.Outcome.SAVED, saved.get(15, TimeUnit.SECONDS));
+        assertTrue(ops.held.await(10, TimeUnit.SECONDS));
+        assertTrue(recoveryFiles(data).stream().noneMatch(f -> f.startsWith(folderA)),
+                "o salvamento só é informado depois de apagar as fotografias que ele supera: " + recoveryFiles(data));
+        Path disk = dir.resolve("disco-ao-encerrar");
+        atExit = () -> copyTree(data, disk);
+        prompts.thenUnsaved(StudioPrompts.UnsavedChoice.DISCARD); // B
+        Edt.run(() -> studio.controller().requestExit());
+        ops.hold.countDown();
+        waitUntil(() -> exits.get() == 1);
+        assertEquals(1, exits.get());
+        assertTrue(recoveryFiles(disk).stream().noneMatch(f -> f.startsWith(folderA)), recoveryFiles(disk).toString());
+        start(StudioEnvironment.at(disk));
+        assertEquals(0, await(Edt.call(() -> studio.projects().offerRecoveries())));
+        assertTrue(prompts.recoveryOffers.isEmpty(), "nada superado é oferecido");
+    }
+
+    @Test
+    @DisplayName("P1-B — falha ao apagar fotografias: o Studio avisa, não afirma que limpou e só sai com a decisão do usuário")
+    void p1bFalhaAoApagarRecuperacao() throws Exception {
+        Ops ops = new Ops();
+        Path data = dir.resolve("dados");
+        start(StudioEnvironment.at(data).withFileOps(ops));
+        Automation a = automation("Consulta");
+        firstSave(a, "bloqueada");
+        enableRecovery();
+        ops.failDeleteIf = p -> p.startsWith(data.resolve("recovery"));
+        Edt.run(() -> studio.service().renameSession(a.id(), a.sessions().get(0).id(), "Entrada"));
+        assertEquals(1, await(Edt.call(() -> projects().checkpoint())));
+        assertEquals(ProjectService.Outcome.SAVED, save(a.id()));
+        Notice saved = studio.state().lastNotice().orElseThrow();
+        assertEquals("Projeto salvo", saved.title());
+        assertTrue(saved.message().contains("não pôde ser apagada"), saved.message());
+        assertEquals(1, recoveryFiles(data).size());
+        Edt.run(() -> studio.service().renameSession(a.id(), a.sessions().get(0).id(), "Descartada"));
+        prompts.thenUnsaved(StudioPrompts.UnsavedChoice.DISCARD).thenConfirm(false);
+        Edt.run(() -> studio.controller().requestExit());
+        waitUntil(() -> !prompts.confirmations.isEmpty());
+        assertEquals(0, exits.get(), "não sai sem a decisão do usuário");
+        StudioPrompts.Confirmation c = prompts.confirmations.get(0);
+        assertTrue(c.message().contains("não puderam ser apagadas"), c.message());
+        assertFalse(recoveryFiles(data).isEmpty(), "de fato não foram apagadas");
+        assertTrue(state(a.id()).dirty(), "nada foi descartado: o Studio continua aberto com as alterações");
+        prompts.thenUnsaved(StudioPrompts.UnsavedChoice.DISCARD).thenConfirm(true);
+        Edt.run(() -> studio.controller().requestExit());
+        waitUntil(() -> exits.get() == 1);
+        assertEquals(1, exits.get(), "sai com a decisão informada");
+    }
+
+    @Test
+    @DisplayName("P2 — Salvar como: alteração externa no destino DEPOIS da confirmação de sobrescrita é conflito; nada é sobrescrito")
+    void p2SobrescritaAlteradaDepoisDaConfirmacao() throws Exception {
+        Ops ops = new Ops();
+        start(StudioEnvironment.inMemory().withFileOps(ops));
+        Automation a = automation("Consulta");
+        Path existing = Files.writeString(dir.resolve("existente.nekkora"), "conteúdo que o usuário autorizou substituir");
+        prompts.thenSaveAs(existing).thenConfirm(true);
+        // barreira controlada entre a confirmação e a substituição: o temporário está sendo gravado
+        ops.holdIf = p -> p.getFileName().toString().startsWith(".existente.nekkora.");
+        ops.hold = new CountDownLatch(1);
+        CompletableFuture<ProjectService.Outcome> f = Edt.call(() -> projects().save(a.id()));
+        assertTrue(ops.held.await(10, TimeUnit.SECONDS));
+        assertEquals(1, prompts.confirmations.size(), "a sobrescrita foi confirmada");
+        Files.writeString(existing, "versão gravada por outro programa depois da confirmação");
+        ops.hold.countDown();
+        assertEquals(ProjectService.Outcome.CONFLICT, await(f));
+        assertEquals("versão gravada por outro programa depois da confirmação", Files.readString(existing), "não sobrescreve");
+        assertTrue(state(a.id()).dirty(), "as alterações continuam abertas");
+        assertTrue(state(a.id()).path().isEmpty(), "o projeto não foi associado ao arquivo");
+        Notice n = studio.state().lastNotice().orElseThrow();
+        assertTrue(n.message().contains("depois da sua confirmação"), n.message());
+        // conteúdo inalterado depois da confirmação: substitui normalmente
+        prompts.thenSaveAs(existing).thenConfirm(true);
+        ops.hold = null;
+        assertEquals(ProjectService.Outcome.SAVED, save(a.id()));
+        assertEquals(a.id(), new ProjectFiles(new ProjectRepository(), "t").load(existing, StudioFixture.CLOCK).automation().id());
     }
 }

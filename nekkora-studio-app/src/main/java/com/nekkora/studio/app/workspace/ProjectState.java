@@ -45,6 +45,7 @@ public final class ProjectState {
     private long recoveryGeneration;
     private Instant lastSavedAt;
     private boolean saving;
+    private boolean reloading;
     private ProjectException.Error lastError;
     private boolean recovered;
 
@@ -88,6 +89,11 @@ public final class ProjectState {
 
     public boolean saving() {
         return saving;
+    }
+
+    /** Um recarregamento do arquivo está em andamento (salvar, fechar e recarregar de novo esperam). */
+    public boolean reloading() {
+        return reloading;
     }
 
     public Optional<ProjectException.Error> lastError() {
@@ -141,6 +147,19 @@ public final class ProjectState {
     void failed(ProjectException.Error error) {
         saving = false;
         lastError = error;
+    }
+
+    void reloadingStarted() {
+        reloading = true;
+    }
+
+    void reloadingEnded() {
+        reloading = false;
+    }
+
+    /** O usuário descartou as alterações atuais: nenhuma fotografia nova delas (só de alterações posteriores). */
+    void recoveryDiscarded() {
+        recoveryGeneration = Math.max(recoveryGeneration, generation);
     }
 
     void clearError() {

@@ -122,4 +122,25 @@ class AutomationRestorationTest {
         assertEquals("COMMENT_LOOKS_SENSITIVE", refused(one(with(ok, ok.provenance(), b, ok.capturedElement(), -1, ActionType.CLICK, ActionParameters.none(),
                 List.of(new StepComment("CPF 123.456.789-09", T)), List.of(), null))));
     }
+
+    @Test
+    @DisplayName("substituir no catálogo (recarregar): mesma posição; nome em uso por OUTRA automação ou identidade ausente = nada muda")
+    void substituirNoCatalogo() {
+        AutomationCatalog catalog = new AutomationCatalog(clock);
+        AutomationRestoration.AutomationData d = automation(List.of(), ModelVersion.CURRENT);
+        Automation original = AutomationRestoration.restore(d, clock);
+        catalog.adopt(original);
+        Automation other = catalog.create("Cadastro de Produtos", "");
+        AutomationRestoration.AutomationData renamed = new AutomationRestoration.AutomationData(d.id(), "Cadastro de Produtos", "", d.status(), d.createdAt(),
+                d.updatedAt(), d.modelVersion(), d.revision(), d.sessions(), d.unattributedEvidence());
+        DomainValidationException e = assertThrows(DomainValidationException.class, () -> catalog.replace(AutomationRestoration.restore(renamed, clock)));
+        assertEquals(ValidationProblem.AUTOMATION_NAME_IN_USE, e.problem());
+        assertEquals(List.of(original, other), catalog.all(), "nada mudou");
+        Automation stranger = AutomationRestoration.restore(automation(List.of(), ModelVersion.CURRENT), clock);
+        assertEquals(ValidationProblem.AUTOMATION_NOT_FOUND, assertThrows(DomainValidationException.class, () -> catalog.replace(stranger)).problem());
+        assertEquals(List.of(original, other), catalog.all());
+        Automation reloaded = AutomationRestoration.restore(d, clock);
+        assertEquals(original, catalog.replace(reloaded), "devolve a substituída");
+        assertEquals(List.of(reloaded, other), catalog.all(), "mesma posição");
+    }
 }

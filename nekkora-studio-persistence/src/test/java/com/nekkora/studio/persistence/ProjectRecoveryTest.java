@@ -77,6 +77,74 @@ class ProjectRecoveryTest {
     }
 
     @Test
+    @DisplayName("fotografia superada por um salvamento confirmado POSTERIOR não é oferecida (e é apagada); a mais nova que o salvamento é")
+    void superadaPorSalvamentoConfirmado() throws Exception {
+        ProjectRecovery r = new ProjectRecovery(dir.resolve("recovery"), files);
+        Automation a = RichAutomation.build(clock);
+        String pid = UUID.randomUUID().toString();
+        Path project = dir.resolve("consulta.nekkora");
+        ProjectRepository.Saved first = files.save(project, ProjectFiles.Snapshot.of(a, pid), null, false, Instant.parse("2026-10-16T12:00:00Z"), clock);
+        a.addComment(RichAutomation.id(a, "Abrir Clientes"), "ainda não salvo");
+        ProjectPackage.RecoveryOrigin origin = new ProjectPackage.RecoveryOrigin(project.toString(), first.fingerprint());
+        r.write(ProjectFiles.Snapshot.of(a, pid), 1, origin, Instant.parse("2026-10-16T12:00:05Z"), clock);
+        RichAutomation.TickClock later = new RichAutomation.TickClock("2026-10-16T12:10:00Z");
+        assertEquals(1, r.scan(later).size(), "mais nova que o projeto confirmado: oferecida");
+        // salvamento confirmado DEPOIS da fotografia (em outra sessão, ou a limpeza não chegou a terminar)
+        files.save(project, ProjectFiles.Snapshot.of(a, pid), first.fingerprint(), false, Instant.parse("2026-10-16T12:00:10Z"), clock);
+        assertTrue(r.scan(later).isEmpty(), "superada pelo estado confirmado: não é oferecida");
+        assertEquals(0, r.count(), "e é apagada");
+        // outro arquivo no mesmo caminho (outra automação) não supera nada
+        Automation b = RichAutomation.build(clock);
+        r.write(ProjectFiles.Snapshot.of(a, pid), 2, origin, Instant.parse("2026-10-16T12:00:20Z"), clock);
+        files.save(project, ProjectFiles.Snapshot.of(b, UUID.randomUUID().toString()), null, true, Instant.parse("2026-10-16T12:00:30Z"), clock);
+        assertEquals(1, r.scan(later).size(), "o arquivo agora é de outra automação: a fotografia continua oferecida");
+    }
+
+    @Test
+    @DisplayName("descarte informa quando uma fotografia não pôde ser apagada (nunca afirma uma limpeza que não aconteceu)")
+    void descarteInformaFalha() throws Exception {
+        java.util.concurrent.atomic.AtomicBoolean fail = new java.util.concurrent.atomic.AtomicBoolean();
+        ProjectRepository.FileOps real = ProjectRepository.FileOps.system();
+        ProjectRepository.FileOps ops = new ProjectRepository.FileOps() {
+            public Path createTemp(Path d, String prefix, String suffix) throws java.io.IOException {
+                return real.createTemp(d, prefix, suffix);
+            }
+
+            public void writeAndSync(Path file, byte[] data) throws java.io.IOException {
+                real.writeAndSync(file, data);
+            }
+
+            public void move(Path from, Path to, java.nio.file.CopyOption... options) throws java.io.IOException {
+                real.move(from, to, options);
+            }
+
+            public void deleteIfExists(Path file) throws java.io.IOException {
+                if (fail.get()) throw new java.nio.file.FileSystemException(file.toString(), null, "being used by another process");
+                real.deleteIfExists(file);
+            }
+
+            public byte[] readAll(Path file) throws java.io.IOException {
+                return real.readAll(file);
+            }
+
+            public void syncDirectory(Path d) {
+                real.syncDirectory(d);
+            }
+        };
+        ProjectRecovery r = new ProjectRecovery(dir.resolve("recovery"), new ProjectFiles(new ProjectRepository(ops), "teste"));
+        Automation a = RichAutomation.build(clock);
+        String pid = UUID.randomUUID().toString();
+        r.write(ProjectFiles.Snapshot.of(a, pid), 1, new ProjectPackage.RecoveryOrigin(null, null), Instant.parse("2026-10-16T12:00:01Z"), clock);
+        fail.set(true);
+        assertFalse(r.discardAll(a.id()), "falhou: não afirma que limpou");
+        assertEquals(1, r.count());
+        fail.set(false);
+        assertTrue(r.discardAll(a.id()));
+        assertEquals(0, r.count());
+        assertTrue(r.discardAll(a.id()), "nada a apagar também é sucesso");
+    }
+
+    @Test
     @DisplayName("um arquivo de PROJETO colocado na pasta de recuperação não é oferecido como recuperação")
     void projetoNaoERecuperacao() throws Exception {
         ProjectRecovery r = new ProjectRecovery(dir.resolve("recovery"), files);

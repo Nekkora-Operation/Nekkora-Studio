@@ -23,7 +23,11 @@ import java.util.stream.Stream;
  *
  * <p>Retenção documentada: até {@value #MAX_VERSIONS} fotografias por automação e {@link #RETENTION} de idade. Uma
  * fotografia só é apagada por um salvamento confirmado que a supera, por descarte autorizado pelo usuário, ou por
- * vencer a retenção.
+ * vencer a retenção. Uma fotografia ANTERIOR ao estado confirmado do seu arquivo de origem (salvamento posterior a ela,
+ * mesmo que a limpeza daquele salvamento não tenha terminado) nunca é oferecida como recuperação pendente.
+ *
+ * <p>As exclusões passam pelas {@link ProjectRepository.FileOps} do repositório e informam o resultado: o Studio nunca
+ * afirma uma limpeza que não aconteceu.
  *
  * <p>Arquivos: {@code <dir>/<automationId>/<instante>-g<geração>.nekkora}.
  */
@@ -84,24 +88,33 @@ public final class ProjectRecovery {
                 for (Path f : versions(folder)) {
                     try {
                         if (Files.getLastModifiedTime(f).toInstant().isBefore(limit)) {
-                            Files.deleteIfExists(f);
+                            delete(f);
                             continue;
                         }
                     } catch (IOException e) {
                         continue;
                     }
                 }
-                for (Path f : versions(folder)) {
+                List<Path> all = versions(folder);
+                for (int i = 0; i < all.size(); i++) {
+                    Path f = all.get(i);
                     Matcher m = FILE.matcher(f.getFileName().toString());
                     if (!m.matches()) continue;
+                    Candidate c;
                     try {
                         ProjectFiles.Loaded l = files.load(f, clock);
                         if (l.manifest().kind() != ProjectFormat.Kind.RECOVERY || !l.automation().id().equals(id)) continue;
-                        out.add(new Candidate(f, l.manifest().savedAt(), Long.parseLong(m.group(2)), l));
-                        break; // a mais recente válida
+                        c = new Candidate(f, l.manifest().savedAt(), Long.parseLong(m.group(2)), l);
                     } catch (ProjectException | RuntimeException e) {
-                        // inválida: não é oferecida; fica até vencer a retenção
+                        continue; // inválida: não é oferecida; fica até vencer a retenção
                     }
+                    if (superseded(c, clock)) {
+                        // esta e as anteriores a ela são mais antigas que o estado confirmado: apagadas, nunca oferecidas
+                        for (Path older : all.subList(i, all.size())) delete(older);
+                    } else {
+                        out.add(c);
+                    }
+                    break; // só a mais recente válida importa
                 }
                 deleteIfEmpty(folder);
             }
@@ -112,32 +125,67 @@ public final class ProjectRecovery {
         return out;
     }
 
-    /** Descarta as fotografias da automação até a geração informada (salvamento confirmado que as supera). */
-    public void discard(AutomationId id, long upToGeneration) {
+    /**
+     * A fotografia é ANTERIOR ao estado confirmado do seu arquivo de origem: o arquivo existe, é um projeto válido da
+     * MESMA automação, não é o conteúdo-base da fotografia e foi salvo estritamente depois dela. Na dúvida (origem
+     * desconhecida, ilegível, de outra automação ou com o mesmo instante), nada comprova a superação e a fotografia
+     * continua oferecida: esconder alterações mais novas seria pior do que oferecer uma antiga.
+     */
+    private boolean superseded(Candidate c, Clock clock) {
+        ProjectPackage.RecoveryOrigin o = c.loaded().manifest().recoveryOf();
+        if (o == null || o.projectPath() == null) return false;
+        try {
+            Path project = Path.of(o.projectPath());
+            if (!Files.isRegularFile(project)) return false;
+            ProjectFiles.Loaded p = files.load(project, clock);
+            return p.manifest().kind() == ProjectFormat.Kind.PROJECT && p.automation().id().equals(c.loaded().automation().id())
+                    && !p.fingerprint().equals(o.base()) && p.manifest().savedAt().isAfter(c.savedAt());
+        } catch (ProjectException | RuntimeException e) {
+            return false;
+        }
+    }
+
+    /**
+     * Descarta as fotografias da automação até a geração informada (salvamento confirmado que as supera).
+     *
+     * @return {@code true} só se todas as fotografias visadas deixaram de existir
+     */
+    public boolean discard(AutomationId id, long upToGeneration) {
         Path folder = folder(id);
-        for (Path f : versions(folder)) {
+        if (!Files.exists(folder)) return true;
+        List<Path> found;
+        try (Stream<Path> s = Files.list(folder)) {
+            found = s.toList();
+        } catch (IOException e) {
+            return false;
+        }
+        boolean ok = true;
+        for (Path f : found) {
             Matcher m = FILE.matcher(f.getFileName().toString());
-            if (m.matches() && Long.parseLong(m.group(2)) <= upToGeneration) delete(f);
+            if (m.matches() && Long.parseLong(m.group(2)) <= upToGeneration) ok &= delete(f);
         }
         deleteIfEmpty(folder);
+        return ok;
     }
 
-    /** Descarte autorizado de todas as fotografias de uma automação. */
-    public void discardAll(AutomationId id) {
-        discard(id, Long.MAX_VALUE);
+    /** Descarte autorizado de todas as fotografias de uma automação; {@code true} só se nenhuma restou. */
+    public boolean discardAll(AutomationId id) {
+        return discard(id, Long.MAX_VALUE);
     }
 
-    /** Limpa TODAS as fotografias (pedido explícito do usuário). */
-    public void clear() {
-        if (!Files.isDirectory(dir)) return;
+    /** Limpa TODAS as fotografias (pedido explícito do usuário); {@code true} só se nenhuma restou. */
+    public boolean clear() {
+        if (!Files.isDirectory(dir)) return true;
+        boolean ok = true;
         try (Stream<Path> folders = Files.list(dir)) {
             for (Path folder : (Iterable<Path>) folders::iterator) {
                 AutomationId id = automation(folder);
-                if (id != null) discardAll(id);
+                if (id != null) ok &= discardAll(id);
             }
         } catch (IOException e) {
-            // melhor esforço; o que sobrar continua listado no diálogo
+            return false;
         }
+        return ok;
     }
 
     /** Quantidade de fotografias guardadas. */
@@ -183,16 +231,18 @@ public final class ProjectRecovery {
         }
     }
 
-    private static void prune(Path folder) {
+    private void prune(Path folder) {
         List<Path> all = versions(folder);
         for (int i = MAX_VERSIONS; i < all.size(); i++) delete(all.get(i));
     }
 
-    private static void delete(Path f) {
+    /** @return {@code true} se o arquivo não existe mais (o que falhar fica para a próxima limpeza ou para a retenção) */
+    private boolean delete(Path f) {
         try {
-            Files.deleteIfExists(f);
+            files.repository().ops().deleteIfExists(f);
+            return !Files.exists(f);
         } catch (IOException e) {
-            // fica para a próxima limpeza (retenção)
+            return false;
         }
     }
 

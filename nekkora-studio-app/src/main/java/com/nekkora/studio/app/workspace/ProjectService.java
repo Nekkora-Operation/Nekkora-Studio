@@ -17,14 +17,17 @@ import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 import java.util.logging.Logger;
 import javax.swing.SwingUtilities;
 
@@ -36,6 +39,13 @@ import javax.swing.SwingUtilities;
  * ({@link ProjectFiles.Snapshot}) e marca o estado —, o trabalho de disco (compactar, gravar, reler, validar,
  * reconstruir) roda no {@code worker}, e o resultado volta à EDT, onde o workspace é alterado. Um projeto aberto só
  * entra no catálogo depois de TODAS as verificações (D-S006-07); nada parcial.
+ *
+ * <p>Integridade (revisão 1 do PR #8): nenhuma operação informa sucesso nem destrói o estado anterior antes de concluir
+ * as suas garantias. Recarregar só retira a automação atual depois que a substituta foi admitida pelo catálogo; salvar
+ * só é informado depois de apagar as fotografias de recuperação que ele supera; descartar e sair só encerra depois de
+ * apagá-las (ou com a decisão informada do usuário, se a exclusão falhar); Salvar como confere, antes da troca, o conteúdo
+ * do destino que o usuário autorizou substituir. Todo trabalho de disco fica registrado até terminar, e o encerramento o
+ * espera sem bloquear a EDT.
  *
  * <p>Sem execução: abrir um projeto não executa ação, seletor nem navegador (D-S006-15). Sem rede (D-S006-17). Logs só
  * técnicos — operação, resultado, duração, tamanho, código — nunca conteúdo nem caminho (§32).
@@ -63,6 +73,15 @@ public final class ProjectService {
     private Predicate<AutomationId> busy = id -> false;
     private javax.swing.Timer recoveryTimer;
     private volatile long lastSnapshotNanos;
+    /** Trabalho de disco em andamento no worker (o encerramento espera por ele). Confinado à EDT. */
+    private final List<CompletableFuture<?>> pending = new ArrayList<>();
+    /** Fotografias que deveriam ter sido apagadas e não foram: refeitas ao sair. Confinado à EDT. */
+    private final Map<AutomationId, Debt> cleanupDebt = new LinkedHashMap<>();
+    /** Encerramento aguardando gravações ou limpezas. */
+    private boolean exiting;
+
+    /** Limpeza de recuperação pendente: nome (para o aviso) e até qual geração apagar. */
+    private record Debt(String name, long upTo) {}
 
     public ProjectService(WorkspaceService workspace, StudioPrompts prompts, ProjectFiles files, Executor worker, Clock clock, RecentProjects recents,
             StudioSettings settings, ProjectRecovery recovery) {
@@ -129,15 +148,44 @@ public final class ProjectService {
                     "O arquivo escolhido já é o projeto aberto \"" + other.get().name() + "\". Escolha outro nome."));
             return done(Outcome.FAILED);
         }
-        boolean overwrite = false;
-        if (Files.exists(target)) {
-            if (!confirm(new StudioPrompts.Confirmation("Substituir arquivo?", "Já existe \"" + target.getFileName() + "\" nesta pasta. Substituí-lo pelo projeto \""
-                    + a.name() + "\"? O conteúdo atual desse arquivo será perdido.", "Substituir", true))) {
-                return done(Outcome.CANCELLED);
-            }
-            overwrite = true;
+        if (!Files.exists(target)) return write(a, p, target, null, false);
+        // a confirmação vale para o conteúdo que existe AGORA no destino: a impressão digital dele é lida fora da EDT antes
+        // da pergunta e conferida de novo imediatamente antes da troca — o que mudar depois da confirmação é conflito
+        return background(() -> current(target)).thenCompose(c -> overwrite(id, target, c));
+    }
+
+    /** Conteúdo atual de um destino (ou o erro ao lê-lo). */
+    private record Current(ProjectRepository.Fingerprint fingerprint, ProjectException error) {}
+
+    private Current current(Path target) {
+        try {
+            return new Current(files.repository().fingerprintOf(target), null);
+        } catch (ProjectException e) {
+            return new Current(null, e);
+        } catch (RuntimeException e) {
+            return new Current(null, new ProjectException(ProjectException.Error.CORRUPTED, "", e));
         }
-        return write(a, p, target, null, overwrite);
+    }
+
+    private CompletableFuture<Outcome> overwrite(AutomationId id, Path target, Current current) {
+        Automation a = state.catalog().find(id).orElse(null);
+        if (a == null) return done(Outcome.FAILED);
+        ProjectState p = project(id);
+        Outcome blocked = blocked(id, p);
+        if (blocked != null) return done(blocked);
+        if (current.error() != null) {
+            workspace.report(new Notice(Notice.Kind.ERROR, "Erro ao salvar", current.error().error().message()
+                    + " Nada foi sobrescrito. As alterações continuam abertas no Studio."));
+            return done(Outcome.FAILED);
+        }
+        if (current.fingerprint() == null) return write(a, p, target, null, false); // removido nesse meio-tempo: arquivo novo
+        if (!confirm(new StudioPrompts.Confirmation("Substituir arquivo?", "Já existe \"" + target.getFileName() + "\" nesta pasta. Substituí-lo pelo projeto \""
+                + a.name() + "\"? O conteúdo atual desse arquivo será perdido.", "Substituir", true))) {
+            return done(Outcome.CANCELLED);
+        }
+        blocked = blocked(id, p);
+        if (blocked != null) return done(blocked);
+        return write(a, p, target, current.fingerprint(), false);
     }
 
     /** Salva, em sequência, as automações informadas; {@code true} só se TODAS ficaram salvas. */
@@ -159,6 +207,10 @@ public final class ProjectService {
             workspace.report(new Notice(Notice.Kind.INFO, "Salvamento em andamento", "Aguarde o salvamento anterior deste projeto terminar."));
             return Outcome.BUSY;
         }
+        if (p.reloading()) {
+            workspace.report(new Notice(Notice.Kind.INFO, "Recarregamento em andamento", "Aguarde o recarregamento deste projeto terminar."));
+            return Outcome.BUSY;
+        }
         if (busy.test(id)) {
             workspace.report(new Notice(Notice.Kind.WARNING, "Salvamento indisponível durante a gravação", RECORDING_MESSAGE));
             return Outcome.RECORDING;
@@ -178,41 +230,50 @@ public final class ProjectService {
         state.fire(id, StudioChange.PROJECT);
         Instant at = clock.instant();
         Clock domainClock = state.catalog().clock();
-        CompletableFuture<Outcome> result = new CompletableFuture<>();
-        worker.execute(() -> {
+        boolean confirmedOverwrite = expected != null && !p.path().map(target::equals).orElse(false);
+        return background(() -> {
             long w0 = System.nanoTime();
             try {
                 ProjectRepository.Saved saved = files.save(target, snapshot, expected, overwrite, at, domainClock);
                 log("salvar", "ok", w0, saved.fingerprint().size(), null);
-                SwingUtilities.invokeLater(() -> result.complete(onSaved(id, p, saved, projectId, generation, at)));
+                // as fotografias superadas por este salvamento são apagadas ANTES de o sucesso ser informado
+                return new Written(saved, discardOnWorker(id, generation), null);
             } catch (ProjectException e) {
                 log("salvar", "erro", w0, -1, e.error());
-                SwingUtilities.invokeLater(() -> result.complete(onSaveFailed(id, p, e, target)));
+                return new Written(null, false, e);
             } catch (RuntimeException e) {
                 log("salvar", "erro", w0, -1, ProjectException.Error.WRITE_FAILED);
-                SwingUtilities.invokeLater(() -> result.complete(onSaveFailed(id, p, new ProjectException(ProjectException.Error.WRITE_FAILED, "", e), target)));
+                return new Written(null, false, new ProjectException(ProjectException.Error.WRITE_FAILED, "", e));
             }
-        });
-        return result;
+        }).thenApply(w -> w.error() == null ? onSaved(id, p, w.saved(), projectId, generation, at, w.cleaned())
+                : onSaveFailed(id, p, w.error(), target, confirmedOverwrite));
     }
 
-    private Outcome onSaved(AutomationId id, ProjectState p, ProjectRepository.Saved saved, String projectId, long generation, Instant at) {
+    /** Resultado do trabalho de disco de um salvamento. */
+    private record Written(ProjectRepository.Saved saved, boolean cleaned, ProjectException error) {}
+
+    private Outcome onSaved(AutomationId id, ProjectState p, ProjectRepository.Saved saved, String projectId, long generation, Instant at, boolean cleaned) {
         p.saved(saved.path(), projectId, saved.fingerprint(), generation, at);
         recents.touch(saved.path(), at, ProjectFormat.FORMAT_VERSION);
-        if (recovery != null) worker.execute(() -> recovery.discard(id, generation)); // superadas pelo salvamento confirmado
         String name = state.catalog().find(id).map(Automation::name).orElse("Projeto");
+        if (cleaned) settleDebt(id, generation);
+        else owe(id, name, generation);
         String pending = p.dirty() ? " Há alterações feitas durante o salvamento que ainda não foram salvas." : "";
-        workspace.report(new Notice(Notice.Kind.SUCCESS, "Projeto salvo", name + " — " + saved.path().getFileName() + "." + pending
-                + (saved.atomic() ? "" : " (substituição com cópia de segurança: o sistema de arquivos não oferece troca atômica)")));
+        String cleanup = cleaned ? "" : " Uma fotografia de recuperação antiga deste projeto não pôde ser apagada; o Studio tentará de novo ao sair.";
+        workspace.report(new Notice(cleaned ? Notice.Kind.SUCCESS : Notice.Kind.WARNING, "Projeto salvo", name + " — " + saved.path().getFileName() + "."
+                + pending + (saved.atomic() ? "" : " (substituição com cópia de segurança: o sistema de arquivos não oferece troca atômica)") + cleanup));
         state.fire(id, StudioChange.PROJECT, StudioChange.UNSAVED_CHANGES);
         return Outcome.SAVED;
     }
 
-    private Outcome onSaveFailed(AutomationId id, ProjectState p, ProjectException e, Path target) {
-        p.failed(e.error());
+    private Outcome onSaveFailed(AutomationId id, ProjectState p, ProjectException e, Path target, boolean confirmedOverwrite) {
+        boolean ownFile = p.path().map(target::equals).orElse(false);
+        boolean conflict = e.error() == ProjectException.Error.CONFLICT;
+        // conflito no destino ESCOLHIDO (não no arquivo do projeto): o projeto não está em conflito, o salvamento falhou
+        p.failed(conflict && !ownFile ? ProjectException.Error.WRITE_FAILED : e.error());
         state.fire(id, StudioChange.PROJECT, StudioChange.UNSAVED_CHANGES);
         String name = state.catalog().find(id).map(Automation::name).orElse("Projeto");
-        if (e.error() == ProjectException.Error.CONFLICT && p.path().map(target::equals).orElse(false)) {
+        if (conflict && ownFile) {
             switch (prompts.resolveConflict(name)) {
                 case SAVE_AS -> saveAs(id);
                 case RELOAD -> reload(id);
@@ -220,10 +281,17 @@ public final class ProjectService {
             }
             return Outcome.CONFLICT;
         }
+        if (conflict) {
+            workspace.report(new Notice(Notice.Kind.ERROR, "Erro ao salvar", (confirmedOverwrite
+                    ? "O arquivo \"" + target.getFileName() + "\" foi alterado por outro programa depois da sua confirmação de substituição."
+                    : "O arquivo \"" + target.getFileName() + "\" passou a existir enquanto o projeto era gravado.")
+                    + " Nada foi sobrescrito: use Salvar como de novo para decidir sobre o conteúdo atual. As alterações continuam abertas no Studio."));
+            return Outcome.CONFLICT;
+        }
         boolean existed = Files.exists(target);
         workspace.report(new Notice(Notice.Kind.ERROR, "Erro ao salvar", e.error().message() + (existed ? " O arquivo anterior foi preservado." : "")
                 + " As alterações continuam abertas no Studio."));
-        return e.error() == ProjectException.Error.CONFLICT ? Outcome.CONFLICT : Outcome.FAILED;
+        return Outcome.FAILED;
     }
 
     // ================================================================================================== abrir
@@ -245,29 +313,31 @@ public final class ProjectService {
             return done(Outcome.ACTIVATED);
         }
         Clock domainClock = state.catalog().clock();
-        CompletableFuture<Outcome> result = new CompletableFuture<>();
-        worker.execute(() -> {
-            long w0 = System.nanoTime();
-            try {
-                ProjectFiles.Loaded l = files.load(file, domainClock);
-                if (l.manifest().kind() != ProjectFormat.Kind.PROJECT) throw new ProjectException(ProjectException.Error.NOT_A_PROJECT, "recuperação");
-                log("abrir", "ok", w0, l.fingerprint().size(), null);
-                SwingUtilities.invokeLater(() -> result.complete(adoptOpened(file, l)));
-            } catch (ProjectException e) {
-                log("abrir", "erro", w0, -1, e.error());
-                SwingUtilities.invokeLater(() -> {
-                    workspace.report(new Notice(Notice.Kind.ERROR, "Não foi possível abrir o projeto", e.error().message() + " Nada foi carregado."));
-                    result.complete(Outcome.FAILED);
-                });
-            } catch (RuntimeException e) {
-                log("abrir", "erro", w0, -1, ProjectException.Error.CORRUPTED);
-                SwingUtilities.invokeLater(() -> {
-                    workspace.report(new Notice(Notice.Kind.ERROR, "Não foi possível abrir o projeto", ProjectException.Error.CORRUPTED.message()));
-                    result.complete(Outcome.FAILED);
-                });
-            }
+        return background(() -> read("abrir", file, domainClock, null)).thenApply(r -> {
+            if (r.error() == null) return adoptOpened(file, r.loaded());
+            workspace.report(new Notice(Notice.Kind.ERROR, "Não foi possível abrir o projeto", r.error().error().message() + " Nada foi carregado."));
+            return Outcome.FAILED;
         });
-        return result;
+    }
+
+    /** Leitura completa de um projeto no worker (ou o erro); {@code expected}, se informado, é a identidade exigida. */
+    private record Read(ProjectFiles.Loaded loaded, ProjectException error) {}
+
+    private Read read(String operation, Path file, Clock domainClock, AutomationId expected) {
+        long w0 = System.nanoTime();
+        try {
+            ProjectFiles.Loaded l = files.load(file, domainClock);
+            if (l.manifest().kind() != ProjectFormat.Kind.PROJECT) throw new ProjectException(ProjectException.Error.NOT_A_PROJECT, "recuperação");
+            if (expected != null && !l.automation().id().equals(expected)) throw new ProjectException(ProjectException.Error.INTEGRITY, "outra automação");
+            log(operation, "ok", w0, l.fingerprint().size(), null);
+            return new Read(l, null);
+        } catch (ProjectException e) {
+            log(operation, "erro", w0, -1, e.error());
+            return new Read(null, e);
+        } catch (RuntimeException e) {
+            log(operation, "erro", w0, -1, ProjectException.Error.CORRUPTED);
+            return new Read(null, new ProjectException(ProjectException.Error.CORRUPTED, "", e));
+        }
     }
 
     private Outcome adoptOpened(Path file, ProjectFiles.Loaded l) {
@@ -296,36 +366,81 @@ public final class ProjectService {
         return Outcome.OPENED;
     }
 
-    /** Recarrega do arquivo, DESCARTANDO as alterações locais — só com confirmação (conflito). */
+    /**
+     * Recarrega do arquivo, DESCARTANDO as alterações locais — só com confirmação (conflito). Transacional do ponto de
+     * vista do workspace: a automação atual só é trocada depois que a substituta foi lida, validada e ADMITIDA pelo
+     * catálogo (identidade e nome únicos); qualquer recusa deixa automação, alterações não salvas, seleção, histórico,
+     * arquivo e recuperação exatamente como estavam. Não começa durante um salvamento ou outro recarregamento do mesmo
+     * projeto, e salvar ou fechar esperam o recarregamento terminar.
+     */
     public CompletableFuture<Outcome> reload(AutomationId id) {
         requireEdt();
         ProjectState p = project(id);
         Path file = p.path().orElse(null);
-        if (file == null || busy.test(id)) return done(Outcome.FAILED);
+        if (file == null) return done(Outcome.FAILED);
+        Outcome blocked = reloadBlocked(id, p);
+        if (blocked != null) return done(blocked);
         if (!confirm(new StudioPrompts.Confirmation("Recarregar do arquivo?", "As alterações deste projeto que existem só no Studio serão "
                 + "descartadas e o conteúdo atual do arquivo será aberto.", "Descartar e recarregar", true))) {
             return done(Outcome.CANCELLED);
         }
+        blocked = reloadBlocked(id, p);
+        if (blocked != null) return done(blocked);
+        p.reloadingStarted();
+        state.fire(id, StudioChange.PROJECT);
         Clock domainClock = state.catalog().clock();
-        CompletableFuture<Outcome> result = new CompletableFuture<>();
-        worker.execute(() -> {
-            try {
-                ProjectFiles.Loaded l = files.load(file, domainClock);
-                if (!l.automation().id().equals(id) || l.manifest().kind() != ProjectFormat.Kind.PROJECT) {
-                    throw new ProjectException(ProjectException.Error.INTEGRITY, "outra automação");
-                }
-                SwingUtilities.invokeLater(() -> {
-                    remove(id, false);
-                    result.complete(adoptOpened(file, l) == Outcome.OPENED ? Outcome.RELOADED : Outcome.FAILED);
-                });
-            } catch (ProjectException e) {
-                SwingUtilities.invokeLater(() -> {
-                    workspace.report(new Notice(Notice.Kind.ERROR, "Não foi possível recarregar", e.error().message() + " O projeto aberto não mudou."));
-                    result.complete(Outcome.FAILED);
-                });
+        return background(() -> read("recarregar", file, domainClock, id)).thenCompose(r -> {
+            p.reloadingEnded();
+            state.fire(id, StudioChange.PROJECT);
+            if (r.error() != null) {
+                workspace.report(new Notice(Notice.Kind.ERROR, "Não foi possível recarregar", r.error().error().message() + " O projeto aberto não mudou."));
+                return done(Outcome.FAILED);
             }
+            return adoptReloaded(id, p, file, r.loaded());
         });
-        return result;
+    }
+
+    private Outcome reloadBlocked(AutomationId id, ProjectState p) {
+        if (p.saving() || p.reloading()) {
+            workspace.report(new Notice(Notice.Kind.INFO, "Operação em andamento", "Aguarde o salvamento ou o recarregamento deste projeto terminar."));
+            return Outcome.BUSY;
+        }
+        if (busy.test(id)) {
+            workspace.report(new Notice(Notice.Kind.WARNING, "Recarregar indisponível durante a gravação",
+                    "Finalize a gravação e aguarde a confirmação das etapas antes de recarregar o projeto."));
+            return Outcome.RECORDING;
+        }
+        return null;
+    }
+
+    private CompletableFuture<Outcome> adoptReloaded(AutomationId id, ProjectState p, Path file, ProjectFiles.Loaded l) {
+        if (state.catalog().find(id).isEmpty() || state.project(id).orElse(null) != p) {
+            workspace.report(new Notice(Notice.Kind.ERROR, "Não foi possível recarregar", "O projeto foi fechado durante a leitura; nada foi aberto."));
+            return done(Outcome.FAILED);
+        }
+        if (busy.test(id)) {
+            workspace.report(new Notice(Notice.Kind.WARNING, "Recarregar indisponível durante a gravação",
+                    "Uma gravação começou durante a leitura. O projeto aberto não mudou."));
+            return done(Outcome.RECORDING);
+        }
+        try {
+            state.catalog().replace(l.automation()); // única etapa que pode recusar: valida tudo antes de trocar
+        } catch (DomainValidationException e) {
+            workspace.report(new Notice(Notice.Kind.ERROR, "Não foi possível recarregar", e.problem().message()
+                    + " O projeto aberto não mudou; feche ou renomeie a outra automação para recarregar este arquivo."));
+            return done(Outcome.FAILED);
+        }
+        // a substituta foi admitida: daqui em diante nada falha
+        Automation a = l.automation();
+        workspace.closeAutomation(id);
+        workspace.history().clear(id); // D-S006-09: o histórico começa vazio
+        state.putProject(id, ProjectState.opened(file, l.manifest().projectId(), l.fingerprint(), l.manifest().savedAt()));
+        recents.touch(file, clock.instant(), l.manifest().formatVersion());
+        show(id);
+        workspace.report(new Notice(Notice.Kind.SUCCESS, "Projeto recarregado", a.name() + " — " + file.getFileName()
+                + ". As alterações que existiam só no Studio foram descartadas."));
+        // as fotografias de recuperação guardavam justamente as alterações descartadas
+        return cleanRecovery(id, a.name(), Long.MAX_VALUE).thenApply(ok -> Outcome.RELOADED);
     }
 
     // ================================================================================================== fechar e sair
@@ -340,35 +455,73 @@ public final class ProjectService {
             return done(Outcome.RECORDING);
         }
         ProjectState p = project(id);
-        if (p.saving()) return done(Outcome.BUSY);
-        if (!p.dirty()) return done(remove(id, false));
+        if (p.saving() || p.reloading()) return done(Outcome.BUSY);
+        if (!p.dirty()) return done(remove(id));
         return switch (ask(List.of(a.name()), false)) {
             case CANCEL -> done(Outcome.CANCELLED);
-            case DISCARD -> done(remove(id, true));
-            case SAVE -> save(id).thenApply(o -> o == Outcome.SAVED && !project(id).dirty() ? remove(id, false) : o);
+            case DISCARD -> {
+                remove(id);
+                yield cleanRecovery(id, a.name(), Long.MAX_VALUE).thenApply(ok -> Outcome.CLOSED);
+            }
+            case SAVE -> save(id).thenApply(o -> o == Outcome.SAVED && !project(id).dirty() ? remove(id) : o);
         };
     }
 
     /**
      * Encerramento: {@code true} se o Studio pode fechar. Com alterações não salvas: Salvar todos (só fecha se TODOS
      * ficarem salvos), Descartar (descarte autorizado, inclusive das fotografias de recuperação) ou Cancelar.
+     *
+     * <p>Em qualquer caminho, o Studio só fecha depois que o trabalho de disco em andamento terminou e que as fotografias
+     * a apagar (descartadas ou superadas por salvamentos) deixaram de existir. A espera não bloqueia a EDT. Se alguma
+     * exclusão falhar, o usuário é informado e decide se sai mesmo assim — o Studio nunca afirma uma limpeza que não
+     * aconteceu.
      */
     public CompletableFuture<Boolean> confirmExit() {
         requireEdt();
+        if (exiting) {
+            workspace.report(new Notice(Notice.Kind.INFO, "Encerrando o Studio", "Aguarde: o Studio está concluindo as gravações e a limpeza da recuperação."));
+            return CompletableFuture.completedFuture(false);
+        }
         List<Automation> dirty = state.unsavedAutomations();
-        if (dirty.isEmpty()) return CompletableFuture.completedFuture(true);
-        return switch (ask(dirty.stream().map(Automation::name).toList(), true)) {
-            case CANCEL -> CompletableFuture.completedFuture(false);
-            case DISCARD -> {
-                if (recovery != null) for (Automation a : dirty) worker.execute(() -> recovery.discardAll(a.id()));
-                yield CompletableFuture.completedFuture(true);
-            }
-            case SAVE -> saveAll(dirty.stream().map(Automation::id).toList()).thenApply(ok -> {
-                if (!ok) workspace.report(new Notice(Notice.Kind.WARNING, "O Studio continua aberto",
-                        "Nem todos os projetos foram salvos. Revise os avisos e tente novamente."));
-                return ok;
-            });
-        };
+        CompletableFuture<Boolean> decided;
+        if (dirty.isEmpty()) {
+            decided = finishExit();
+        } else {
+            decided = switch (ask(dirty.stream().map(Automation::name).toList(), true)) {
+                case CANCEL -> CompletableFuture.completedFuture(false);
+                case DISCARD -> {
+                    for (Automation a : dirty) {
+                        project(a.id()).recoveryDiscarded(); // nenhuma fotografia nova das alterações descartadas
+                        owe(a.id(), a.name(), Long.MAX_VALUE);
+                    }
+                    yield finishExit();
+                }
+                case SAVE -> saveAll(dirty.stream().map(Automation::id).toList()).thenCompose(ok -> {
+                    if (ok) return finishExit();
+                    workspace.report(new Notice(Notice.Kind.WARNING, "O Studio continua aberto",
+                            "Nem todos os projetos foram salvos. Revise os avisos e tente novamente."));
+                    return CompletableFuture.completedFuture(false);
+                });
+            };
+        }
+        if (decided.isDone()) return decided;
+        exiting = true; // estado temporário de encerramento
+        workspace.report(new Notice(Notice.Kind.INFO, "Encerrando o Studio", "Concluindo as gravações e a limpeza da recuperação…"));
+        return decided.whenComplete((ok, e) -> exiting = false);
+    }
+
+    /** Espera o trabalho de disco em andamento e refaz as limpezas devidas; se alguma falhar, o usuário decide. */
+    private CompletableFuture<Boolean> finishExit() {
+        return settle().thenCompose(v -> retryCleanup()).thenApply(failed -> {
+            if (failed.isEmpty()) return true;
+            boolean leave = confirm(new StudioPrompts.Confirmation("Fotografias de recuperação não apagadas", "As fotografias de recuperação de "
+                    + String.join(", ", failed.stream().map(n -> "\"" + n + "\"").toList()) + " não puderam ser apagadas (o arquivo pode estar em uso "
+                    + "por outro programa). Se você sair agora, elas continuarão no disco e poderão ser oferecidas na próxima abertura do Studio; "
+                    + "nesse caso, escolha Ignorar. Sair mesmo assim?", "Sair mesmo assim", true));
+            if (!leave) workspace.report(new Notice(Notice.Kind.WARNING, "O Studio continua aberto",
+                    "As fotografias de recuperação não foram apagadas. Tente sair de novo ou apague-as em Recuperação automática."));
+            return leave;
+        });
     }
 
     private StudioPrompts.UnsavedChoice ask(List<String> names, boolean exit) {
@@ -380,12 +533,11 @@ public final class ProjectService {
         }
     }
 
-    private Outcome remove(AutomationId id, boolean discardRecovery) {
+    private Outcome remove(AutomationId id) {
         workspace.closeAutomation(id);
         state.catalog().remove(id);
         state.forgetProject(id);
         workspace.history().clear(id);
-        if (discardRecovery && recovery != null) worker.execute(() -> recovery.discardAll(id));
         state.fire(id, StudioChange.CATALOG, StudioChange.OPEN_AUTOMATIONS, StudioChange.ACTIVE_AUTOMATION, StudioChange.SELECTION,
                 StudioChange.UNSAVED_CHANGES, StudioChange.PROJECT, StudioChange.HISTORY);
         return Outcome.CLOSED;
@@ -416,7 +568,16 @@ public final class ProjectService {
     public void applyRecovery(boolean enabled, int intervalSeconds, boolean clear) {
         requireEdt();
         settings.setRecovery(enabled, intervalSeconds);
-        if (clear && recovery != null) worker.execute(recovery::clear);
+        if (clear && recovery != null) {
+            background(recovery::clear).thenAccept(ok -> {
+                if (ok) {
+                    cleanupDebt.clear();
+                } else {
+                    workspace.report(new Notice(Notice.Kind.WARNING, "Fotografias de recuperação não apagadas",
+                            "Algumas fotografias não puderam ser apagadas (o arquivo pode estar em uso por outro programa). Tente de novo mais tarde."));
+                }
+            });
+        }
         restartRecoveryTimer();
         workspace.report(new Notice(Notice.Kind.SUCCESS, "Recuperação automática " + (enabled ? "ativada" : "desativada"),
                 enabled ? "Fotografias das alterações não salvas a cada " + (settings.recoveryIntervalSeconds() / 60) + " min." : "Nenhuma fotografia nova será criada."
@@ -457,29 +618,27 @@ public final class ProjectService {
         Clock domainClock = state.catalog().clock();
         for (Automation a : state.catalog().all()) {
             ProjectState p = project(a.id());
-            if (!p.dirty() || p.generation() == p.recoveryGeneration() || p.saving() || busy.test(a.id())) continue;
+            if (!p.dirty() || p.generation() == p.recoveryGeneration() || p.saving() || p.reloading() || busy.test(a.id())) continue;
             String projectId = p.projectId().orElseGet(() -> UUID.randomUUID().toString());
             long generation = p.generation();
             ProjectFiles.Snapshot s = ProjectFiles.Snapshot.of(a, projectId);
             ProjectPackage.RecoveryOrigin origin = new ProjectPackage.RecoveryOrigin(p.path().map(Path::toString).orElse(null),
                     p.path().isPresent() ? p.fingerprint().orElse(null) : null);
-            CompletableFuture<Boolean> f = new CompletableFuture<>();
-            all.add(f);
             Instant at = clock.instant();
-            worker.execute(() -> {
+            all.add(background(() -> {
                 long w0 = System.nanoTime();
                 try {
                     recovery.write(s, generation, origin, at, domainClock);
                     log("recuperacao", "ok", w0, -1, null);
-                    SwingUtilities.invokeLater(() -> {
-                        p.recoveryWritten(generation);
-                        f.complete(true);
-                    });
+                    return true;
                 } catch (ProjectException | RuntimeException e) {
                     log("recuperacao", "erro", w0, -1, e instanceof ProjectException pe ? pe.error() : ProjectException.Error.WRITE_FAILED);
-                    SwingUtilities.invokeLater(() -> f.complete(false));
+                    return false;
                 }
-            });
+            }).thenApply(ok -> {
+                if (ok) p.recoveryWritten(generation);
+                return ok;
+            }));
         }
         return CompletableFuture.allOf(all.toArray(CompletableFuture[]::new))
                 .thenApply(v -> (int) all.stream().filter(CompletableFuture::join).count());
@@ -495,25 +654,20 @@ public final class ProjectService {
         requireEdt();
         if (recovery == null) return CompletableFuture.completedFuture(0);
         Clock domainClock = state.catalog().clock();
-        CompletableFuture<Integer> result = new CompletableFuture<>();
-        worker.execute(() -> {
-            List<ProjectRecovery.Candidate> found = recovery.scan(domainClock);
-            SwingUtilities.invokeLater(() -> {
-                int recovered = 0;
-                for (ProjectRecovery.Candidate c : found) {
-                    Automation a = c.loaded().automation();
-                    if (state.catalog().find(a.id()).isPresent()) continue;
-                    ProjectPackage.RecoveryOrigin o = c.loaded().manifest().recoveryOf();
-                    String origin = o == null || o.projectPath() == null ? null : Path.of(o.projectPath()).getFileName().toString();
-                    StudioPrompts.RecoveryChoice choice = prompts.offerRecovery(new StudioPrompts.RecoveryOffer(a.name(), c.savedAt(), origin));
-                    if (choice == StudioPrompts.RecoveryChoice.CANCEL) break;
-                    if (choice == StudioPrompts.RecoveryChoice.IGNORE) continue;
-                    if (adoptRecovered(c)) recovered++;
-                }
-                result.complete(recovered);
-            });
+        return background(() -> recovery.scan(domainClock)).thenApply(found -> {
+            int recovered = 0;
+            for (ProjectRecovery.Candidate c : found) {
+                Automation a = c.loaded().automation();
+                if (state.catalog().find(a.id()).isPresent()) continue;
+                ProjectPackage.RecoveryOrigin o = c.loaded().manifest().recoveryOf();
+                String origin = o == null || o.projectPath() == null ? null : Path.of(o.projectPath()).getFileName().toString();
+                StudioPrompts.RecoveryChoice choice = prompts.offerRecovery(new StudioPrompts.RecoveryOffer(a.name(), c.savedAt(), origin));
+                if (choice == StudioPrompts.RecoveryChoice.CANCEL) break;
+                if (choice == StudioPrompts.RecoveryChoice.IGNORE) continue;
+                if (adoptRecovered(c)) recovered++;
+            }
+            return recovered;
         });
-        return result;
     }
 
     private boolean adoptRecovered(ProjectRecovery.Candidate c) {
@@ -538,6 +692,103 @@ public final class ProjectService {
 
     public void dispose() {
         if (recoveryTimer != null) recoveryTimer.stop();
+    }
+
+    // ================================================================================================== trabalho de disco
+
+    /**
+     * Executa {@code task} no worker. O futuro devolvido completa NA EDT; até o trabalho terminar ele fica registrado em
+     * {@link #pending}, e o encerramento espera por ele.
+     */
+    private <T> CompletableFuture<T> background(Supplier<T> task) {
+        CompletableFuture<T> onWorker = new CompletableFuture<>();
+        pending.removeIf(CompletableFuture::isDone);
+        pending.add(onWorker);
+        worker.execute(() -> {
+            try {
+                onWorker.complete(task.get());
+            } catch (RuntimeException | Error e) {
+                onWorker.completeExceptionally(e);
+            }
+        });
+        CompletableFuture<T> onEdt = new CompletableFuture<>();
+        onWorker.whenComplete((v, e) -> SwingUtilities.invokeLater(() -> {
+            if (e != null) onEdt.completeExceptionally(e);
+            else onEdt.complete(v);
+        }));
+        return onEdt;
+    }
+
+    /** Completa (na EDT) quando todo o trabalho de disco registrado até agora terminou; já completo se não há nenhum. */
+    private CompletableFuture<Void> settle() {
+        pending.removeIf(CompletableFuture::isDone);
+        if (pending.isEmpty()) return CompletableFuture.completedFuture(null);
+        CompletableFuture<Void> all = CompletableFuture.allOf(pending.toArray(CompletableFuture[]::new));
+        CompletableFuture<Void> onEdt = new CompletableFuture<>();
+        all.whenComplete((v, e) -> SwingUtilities.invokeLater(() -> onEdt.complete(null)));
+        return onEdt;
+    }
+
+    /** No worker: apaga as fotografias da automação até a geração; {@code true} se nenhuma delas restou. */
+    private boolean discardOnWorker(AutomationId id, long upTo) {
+        if (recovery == null) return true;
+        long w0 = System.nanoTime();
+        boolean ok;
+        try {
+            ok = recovery.discard(id, upTo);
+        } catch (RuntimeException e) {
+            ok = false;
+        }
+        log("descartar-recuperacao", ok ? "ok" : "erro", w0, -1, null);
+        return ok;
+    }
+
+    /**
+     * Apaga as fotografias (descarte decidido pelo usuário) depois do trabalho de disco em andamento — uma fotografia que
+     * estava sendo gravada também é apagada. O resultado volta na EDT; uma falha é avisada e refeita ao sair.
+     */
+    private CompletableFuture<Boolean> cleanRecovery(AutomationId id, String name, long upTo) {
+        if (recovery == null) return CompletableFuture.completedFuture(true);
+        owe(id, name, upTo);
+        return settle().thenCompose(v -> background(() -> discardOnWorker(id, upTo))).thenApply(ok -> {
+            if (ok) {
+                settleDebt(id, upTo);
+            } else {
+                workspace.report(new Notice(Notice.Kind.WARNING, "Fotografias de recuperação não apagadas", "As fotografias de recuperação de \"" + name
+                        + "\" não puderam ser apagadas (o arquivo pode estar em uso por outro programa). O Studio tentará de novo ao sair."));
+            }
+            return ok;
+        });
+    }
+
+    /** Refaz (no worker) as limpezas devidas; devolve, na EDT, os nomes dos projetos cujas fotografias ainda restam. */
+    private CompletableFuture<List<String>> retryCleanup() {
+        if (recovery == null || cleanupDebt.isEmpty()) return CompletableFuture.completedFuture(List.of());
+        Map<AutomationId, Debt> owed = new LinkedHashMap<>(cleanupDebt);
+        return background(() -> {
+            List<AutomationId> cleaned = new ArrayList<>();
+            owed.forEach((id, d) -> {
+                if (discardOnWorker(id, d.upTo())) cleaned.add(id);
+            });
+            return cleaned;
+        }).thenApply(cleaned -> {
+            List<String> failed = new ArrayList<>();
+            owed.forEach((id, d) -> {
+                if (cleaned.contains(id)) settleDebt(id, d.upTo());
+                else failed.add(d.name());
+            });
+            return failed;
+        });
+    }
+
+    private void owe(AutomationId id, String name, long upTo) {
+        if (recovery == null) return;
+        cleanupDebt.merge(id, new Debt(name, upTo), (old, now) -> new Debt(now.name(), Math.max(old.upTo(), now.upTo())));
+    }
+
+    private void settleDebt(AutomationId id, long upTo) {
+        Debt d = cleanupDebt.get(id);
+        if (d != null && d.upTo() <= upTo) cleanupDebt.remove(id);
     }
 
     // ================================================================================================== apoio

@@ -79,12 +79,20 @@ public final class ProjectRepository {
         this.ops = Objects.requireNonNull(ops, "ops");
     }
 
+    /** Operações de arquivo em uso (a recuperação apaga as fotografias pelas mesmas operações). */
+    FileOps ops() {
+        return ops;
+    }
+
     /**
      * Grava {@code bytes} em {@code target}.
      *
-     * @param expected  conteúdo que o Studio conhece no destino (última leitura/gravação); {@code null} = o destino não deveria
-     *                  existir, a não ser que {@code overwrite} tenha sido confirmado pelo usuário
-     * @param overwrite o usuário confirmou substituir um arquivo que o Studio não conhece (Salvar como)
+     * @param expected  conteúdo que o Studio conhece no destino — última leitura/gravação ou, em Salvar como sobre um arquivo
+     *                  existente, o conteúdo lido ANTES da confirmação de sobrescrita; conferido de novo imediatamente antes
+     *                  da troca (diferente = conflito). {@code null} = o destino não deveria existir, a não ser que
+     *                  {@code overwrite}
+     * @param overwrite substituir sem conferir o conteúdo do destino — só para arquivos do próprio Studio (fotografias de
+     *                  recuperação, de nome único); arquivos do usuário sempre usam {@code expected}
      */
     public Saved save(Path target, byte[] bytes, Fingerprint expected, boolean overwrite, Verifier verifier) throws ProjectException {
         Objects.requireNonNull(target, "target");

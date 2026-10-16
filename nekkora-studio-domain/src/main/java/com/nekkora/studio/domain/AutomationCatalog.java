@@ -42,6 +42,22 @@ public final class AutomationCatalog {
         automations.add(automation);
     }
 
+    /**
+     * Substitui, NA MESMA POSIÇÃO, a automação de mesma identidade por uma versão RECONSTRUÍDA (STUDIO-006: recarregar do
+     * arquivo). Tudo é validado antes da troca: se a identidade não está no catálogo ou o nome da substituta já pertence a
+     * outra automação, nada muda. Devolve a automação substituída.
+     */
+    public Automation replace(Automation replacement) {
+        Objects.requireNonNull(replacement, "replacement");
+        int index = -1;
+        for (int i = 0; i < automations.size(); i++) {
+            if (automations.get(i).id().equals(replacement.id())) index = i;
+        }
+        if (index < 0) throw new DomainValidationException(ValidationProblem.AUTOMATION_NOT_FOUND);
+        requireUniqueName(replacement.name(), replacement.id());
+        return automations.set(index, replacement);
+    }
+
     /** Retira uma automação do catálogo (STUDIO-006: fechar projeto). */
     public boolean remove(AutomationId id) {
         return automations.removeIf(a -> a.id().equals(id));
