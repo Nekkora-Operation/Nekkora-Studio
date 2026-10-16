@@ -141,7 +141,7 @@ public class NekkoraList<E> extends JList<E> {
         super.paintComponent(g);
     }
 
-    private final class Renderer extends JComponent implements ListCellRenderer<E> {
+    private final class Renderer extends JComponent implements ListCellRenderer<E>, javax.accessibility.Accessible {
         private E value;
         private boolean selected;
         private boolean hover;
@@ -152,7 +152,31 @@ public class NekkoraList<E> extends JList<E> {
             this.value = value;
             this.selected = selected;
             this.hover = index == hoverIndex;
+            // tecnologias assistivas leem o item pelo nome acessível do renderizador (ele só pinta o texto)
+            String main = value == null ? "" : label.apply(value);
+            String sec = secondary != null && value != null ? secondary.apply(value) : null;
+            accessibleText = sec == null || sec.isBlank() ? main : main + ". " + sec;
             return this;
+        }
+
+        private String accessibleText = "";
+
+        @Override
+        public javax.accessibility.AccessibleContext getAccessibleContext() {
+            if (accessibleContext == null) {
+                accessibleContext = new AccessibleJComponent() {
+                    @Override
+                    public String getAccessibleName() {
+                        return accessibleText;
+                    }
+
+                    @Override
+                    public javax.accessibility.AccessibleRole getAccessibleRole() {
+                        return javax.accessibility.AccessibleRole.LABEL;
+                    }
+                };
+            }
+            return accessibleContext;
         }
 
         @Override

@@ -25,5 +25,7 @@ public enum StudioChange {
     /** Evidências observadas chegaram para etapas de uma automação (STUDIO-005) — não é edição nem conteúdo editável. */
     EVIDENCE,
     /** Estado de persistência de uma automação (STUDIO-006): arquivo, salvando, salvo, erro, conflito. */
-    PROJECT
+    PROJECT,
+    /** Relatório de validação estrutural de uma automação (STUDIO-007): novo resultado; não é edição nem alteração a salvar. */
+    VALIDATION
 }
