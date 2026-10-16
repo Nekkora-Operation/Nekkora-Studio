@@ -38,6 +38,8 @@ public final class StudioActions {
     public static final String EXIT = "studio.exit";
     /** STUDIO-007: validação estrutural da automação ativa (não executa nada). */
     public static final String VALIDATE = "studio.automation.validate";
+    /** STUDIO-008: variáveis declaradas e dependências da automação ativa. */
+    public static final String VARIABLES = "studio.automation.variables";
 
     /** Ações que dependem de missões futuras e permanecem desabilitadas. */
     public static final List<String> FUTURE = List.of(RUN);
@@ -91,8 +93,13 @@ public final class StudioActions {
         registry.register(NekkoraAction.of(VALIDATE, "Validar automação", controller::validateActive).icon(IconName.CHECK_CIRCLE)
                 .shortcut(NekkoraKeys.shortcut(KeyEvent.VK_V, InputEvent.SHIFT_DOWN_MASK)).category("Automação")
                 .description("Diagnóstico estrutural da automação ativa: parâmetros, elementos, localizadores e dependências. Não executa nenhuma etapa."));
+        registry.register(NekkoraAction.of(VARIABLES, "Variáveis e dependências…", controller::showVariables).icon(IconName.BRACES)
+                .shortcut(NekkoraKeys.shortcut(KeyEvent.VK_B, InputEvent.SHIFT_DOWN_MASK)).category("Automação")
+                .description("Declarar e revisar as variáveis do processo e as etapas que as usam. Nenhum valor de execução é guardado."));
         future(RUN, "Executar", IconName.PLAY, "A execução de automações chega em uma próxima versão do Studio.");
-        for (String id : List.of(NEW_SESSION, NEW_STEP, RENAME_SESSION, RECORD, EDIT, UNDO, REDO, SAVE, SAVE_AS, CLOSE_PROJECT, VALIDATE)) get(id).setEnabled(false);
+        for (String id : List.of(NEW_SESSION, NEW_STEP, RENAME_SESSION, RECORD, EDIT, UNDO, REDO, SAVE, SAVE_AS, CLOSE_PROJECT, VALIDATE, VARIABLES)) {
+            get(id).setEnabled(false);
+        }
     }
 
     /** Liga o botão Gravar ao Recorder (STUDIO-002). */

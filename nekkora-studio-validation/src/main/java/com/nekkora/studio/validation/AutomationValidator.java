@@ -3,6 +3,8 @@ package com.nekkora.studio.validation;
 import com.nekkora.studio.domain.Automation;
 import com.nekkora.studio.domain.AutomationStep;
 import com.nekkora.studio.domain.LogicalSession;
+import com.nekkora.studio.domain.SessionId;
+import com.nekkora.studio.domain.ValidationProblem;
 import com.nekkora.studio.domain.action.ActionParameters;
 import com.nekkora.studio.domain.action.ActionType;
 import com.nekkora.studio.domain.action.TargetRequirement;
@@ -15,11 +17,20 @@ import com.nekkora.studio.domain.element.ManualLocator;
 import com.nekkora.studio.domain.element.ObservedObstacle;
 import com.nekkora.studio.domain.evidence.ObservationSummary;
 import com.nekkora.studio.domain.origin.RecordingObservation;
+import com.nekkora.studio.domain.variable.SemanticStatus;
+import com.nekkora.studio.domain.variable.SemanticType;
+import com.nekkora.studio.domain.variable.VariableDefinition;
+import com.nekkora.studio.domain.variable.VariableId;
+import com.nekkora.studio.domain.variable.VariableOrigin;
+import com.nekkora.studio.domain.variable.VariableRules;
+import com.nekkora.studio.domain.variable.VariableType;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -36,12 +47,35 @@ import java.util.Set;
  * de um nó não significa o mesmo alvo funcional; nome ou localizador omitido pela privacidade não é defeito; evidência não
  * é resultado de negócio e não resolve bloqueios; referência de variável ou credencial não comprova resolução.
  *
- * <p>Uso: {@code ValidationReport report = new AutomationValidator().validate(automation);} — na thread que é dona da
- * automação (no Studio, a EDT). O validador não guarda estado: pode ser reutilizado.
+ * <p>Regras 1.1.0 (STUDIO-008, {@link RuleSet#V1_1}): com o catálogo de variáveis, uma referência deixa de ser
+ * "resolução indisponível" e passa a ser conferida contra a DECLARAÇÃO — nome exato, escopo, tipo técnico compatível com
+ * a ação, origem declarada e, para saída de etapa, a ordem da produtora declarada ({@link DataFlowAnalysis}). O Studio
+ * nunca comprova que um valor existirá: entrada e saída de etapa ficam como limitação da avaliação, não como garantia.
+ *
+ * <p>Uso: {@code ValidationReport report = new AutomationValidator(RuleSet.LATEST).validate(automation);} — na thread que
+ * é dona da automação (no Studio, a EDT). {@code new AutomationValidator()} usa as regras 1.0.0 (contrato congelado). O
+ * validador não guarda estado: pode ser reutilizado.
  */
 public final class AutomationValidator {
-    /** Versão das regras (vai no relatório). */
+    /** Versão das regras 1.0.0 (vai no relatório). */
     public static final String RULES_VERSION = "nekkora-validation-rules/1.0.0";
+    /** Versão das regras 1.1.0 (STUDIO-008). */
+    public static final String RULES_VERSION_1_1 = "nekkora-validation-rules/1.1.0";
+
+    private final RuleSet rules;
+
+    /** Regras 1.0.0 (o relatório 1.0.0 congelado). */
+    public AutomationValidator() {
+        this(RuleSet.V1_0);
+    }
+
+    public AutomationValidator(RuleSet rules) {
+        this.rules = java.util.Objects.requireNonNull(rules, "rules");
+    }
+
+    public RuleSet rules() {
+        return rules;
+    }
 
     /** Teclas reconhecidas para {@link ActionType#PRESS_KEY} (nomes de {@code KeyboardEvent.key}). */
     static final Set<String> KNOWN_KEYS = Set.of("Enter", "Tab", "Escape", "Backspace", "Delete", "Insert", "Space", " ", "ArrowUp", "ArrowDown",
@@ -61,6 +95,8 @@ public final class AutomationValidator {
             out.add(new Finding(id(FindingCode.UNATTRIBUTED_EVIDENCE, aid, null), FindingCode.UNATTRIBUTED_EVIDENCE, FindingScope.AUTOMATION,
                     null, null, 0, 0, null));
         }
+        DataFlowAnalysis flow = rules.includes(RuleSet.V1_1) ? DataFlowAnalysis.of(automation) : null;
+        if (flow != null) variables(automation, flow, out);
         int steps = 0;
         List<LogicalSession> sessions = automation.sessions();
         for (int s = 0; s < sessions.size(); s++) {
@@ -72,33 +108,72 @@ public final class AutomationValidator {
             List<AutomationStep> list = session.steps();
             for (int i = 0; i < list.size(); i++) {
                 steps++;
-                out.addAll(step(session, s + 1, list.get(i), i + 1));
+                out.addAll(step(session, s + 1, list.get(i), i + 1, flow));
             }
         }
-        return new ValidationReport(automation.id(), RULES_VERSION, sessions.size(), steps, out);
+        return new ValidationReport(automation.id(), rules, sessions.size(), steps, out);
+    }
+
+    // ------------------------------------------------------------------ variável (regras 1.1.0)
+
+    /** Apontamentos de cada variável declarada, na ordem do catálogo (depois da automação, antes das sessões). */
+    private static void variables(Automation automation, DataFlowAnalysis flow, List<Finding> out) {
+        Map<SessionId, Integer> numbers = new HashMap<>();
+        for (int s = 0; s < automation.sessions().size(); s++) numbers.put(automation.sessions().get(s).id(), s + 1);
+        for (VariableDefinition v : automation.variables()) {
+            List<FindingCode> codes = new ArrayList<>();
+            if (!flow.scopeExists(v)) codes.add(FindingCode.VARIABLE_SCOPE_SESSION_MISSING);
+            switch (flow.producer(v)) {
+                case MISSING -> codes.add(FindingCode.VARIABLE_PRODUCER_MISSING);
+                case OUT_OF_SCOPE -> codes.add(FindingCode.VARIABLE_PRODUCER_OUT_OF_SCOPE);
+                default -> {
+                }
+            }
+            ValidationProblem problem = VariableRules.problem(v).orElse(null);
+            boolean sensitiveConstant = problem == ValidationProblem.VARIABLE_CONSTANT_FORBIDDEN || problem == ValidationProblem.VARIABLE_CONSTANT_LOOKS_SENSITIVE;
+            if (sensitiveConstant) codes.add(FindingCode.SENSITIVE_CONSTANT_FORBIDDEN);
+            else if (problem != null) codes.add(FindingCode.VARIABLE_DECLARATION_INCONSISTENT);
+            if (v.authority() == SemanticStatus.PROPOSED_UNCONFIRMED) codes.add(FindingCode.VARIABLE_SEMANTIC_UNCONFIRMED);
+            if (v.semantic() == SemanticType.UNSPECIFIED) codes.add(FindingCode.VARIABLE_SEMANTIC_UNSPECIFIED);
+            if (v.origin().kind() == VariableOrigin.Kind.CONSTANT && !sensitiveConstant) codes.add(FindingCode.CONSTANT_STORED_UNENCRYPTED);
+            if (flow.consumersOf(v.id()).isEmpty()) codes.add(FindingCode.VARIABLE_UNUSED);
+            SessionId session = v.scope().sessionId().filter(numbers::containsKey).orElse(null);
+            int sessionNumber = session == null ? 0 : numbers.get(session);
+            String vid = v.id().value().toString();
+            codes.stream().sorted(Comparator.comparing(FindingCode::ordinal)).forEach(c -> out.add(new Finding(id(c, vid, null), c, FindingScope.VARIABLE,
+                    session, null, sessionNumber, 0, null, v.id())));
+        }
     }
 
     // ------------------------------------------------------------------ etapa
 
-    private List<Finding> step(LogicalSession session, int sessionNumber, AutomationStep step, int stepNumber) {
+    private List<Finding> step(LogicalSession session, int sessionNumber, AutomationStep step, int stepNumber, DataFlowAnalysis flow) {
         Set<Hit> hits = new LinkedHashSet<>();
         ActionType type = step.actionType();
         action(type, hits);
-        parameters(step, type, hits);
+        parameters(step, session, type, flow, hits);
         element(step, type, hits);
         recorderLimitations(step, type, hits);
         observation(step, hits);
         String sid = step.id().value().toString();
         return hits.stream().sorted(Comparator.comparing((Hit h) -> h.code().ordinal()).thenComparing(h -> h.detail() == null ? "" : h.detail()))
                 .map(h -> new Finding(id(h.code(), sid, h.detail()), h.code(), FindingScope.STEP, session.id(), step.id(), sessionNumber, stepNumber,
-                        h.detail()))
+                        h.detail(), h.variable()))
                 .toList();
     }
 
-    /** Achado de uma regra sobre a etapa (antes da ordenação). */
-    private record Hit(FindingCode code, String detail) {
+    /** Achado de uma regra sobre a etapa (antes da ordenação); {@code variable}: a variável declarada envolvida (1.1.0). */
+    private record Hit(FindingCode code, String detail, VariableId variable) {
         Hit(FindingCode code) {
-            this(code, null);
+            this(code, null, null);
+        }
+
+        Hit(FindingCode code, String detail) {
+            this(code, detail, null);
+        }
+
+        Hit(FindingCode code, VariableId variable) {
+            this(code, null, variable);
         }
     }
 
@@ -112,7 +187,7 @@ public final class AutomationValidator {
         }
     }
 
-    private static void parameters(AutomationStep step, ActionType type, Set<Hit> hits) {
+    private static void parameters(AutomationStep step, LogicalSession session, ActionType type, DataFlowAnalysis flow, Set<Hit> hits) {
         ActionParameters p = step.parameters();
         ValueSource value = p.value().orElse(null);
         if ((value != null && !type.acceptsValue()) || (p.option().isPresent() && !type.acceptsOption())) {
@@ -142,11 +217,61 @@ public final class AutomationValidator {
         }
         // dependências: a referência existe, a resolução não pode ser comprovada (nada é consultado nem inventado)
         if (value instanceof ValueSource.VariableReference) {
-            hits.add(new Hit(FindingCode.VARIABLE_RESOLUTION_UNAVAILABLE));
+            if (flow == null) hits.add(new Hit(FindingCode.VARIABLE_RESOLUTION_UNAVAILABLE));
+            else variableUse(step, session, type, flow, hits);
             if (step.element().map(ElementReference::sensitive).orElse(false)) hits.add(new Hit(FindingCode.SENSITIVE_FIELD_WITHOUT_CREDENTIAL));
         } else if (value instanceof ValueSource.CredentialReference) {
             hits.add(new Hit(FindingCode.CREDENTIAL_RESOLUTION_UNAVAILABLE));
         }
+    }
+
+    /**
+     * Regras 1.1.0: a referência conferida contra a declaração. Nome exato (sem aproximação), escopo, tipo, origem
+     * declarada e — para saída de etapa — a posição da produtora DECLARADA na ordem linear.
+     */
+    private static void variableUse(AutomationStep step, LogicalSession session, ActionType type, DataFlowAnalysis flow, Set<Hit> hits) {
+        DataFlowAnalysis.Consumption c = flow.consumptionAt(step.id()).orElseThrow();
+        VariableDefinition v = c.variable();
+        if (v == null) {
+            hits.add(new Hit(FindingCode.VARIABLE_NOT_DECLARED));
+            return;
+        }
+        VariableId id = v.id();
+        if (!v.scope().visibleIn(session.id())) hits.add(new Hit(FindingCode.VARIABLE_OUT_OF_SCOPE, id));
+        if (!accepts(type, v.type())) hits.add(new Hit(FindingCode.VARIABLE_TYPE_INCOMPATIBLE, id));
+        switch (v.origin().kind()) {
+            case UNBOUND -> hits.add(new Hit(FindingCode.VARIABLE_ORIGIN_UNBOUND, id));
+            case INPUT -> hits.add(new Hit(FindingCode.INPUT_VALUE_NOT_AVAILABLE, id));
+            case CONSTANT -> {
+                // valor fixo declarado (não sensível, conferido pelo domínio): nada a apontar na etapa
+            }
+            case STEP_OUTPUT -> {
+                if (flow.producer(v) != DataFlowAnalysis.ProducerState.PRESENT) {
+                    hits.add(new Hit(FindingCode.DECLARED_PRODUCER_MISSING, id));
+                    return;
+                }
+                int producer = flow.order(v.origin().producer());
+                if (producer == c.order()) {
+                    hits.add(new Hit(FindingCode.STEP_OUTPUT_SELF_CONSUMED, id));
+                    return;
+                }
+                if (producer > c.order()) hits.add(new Hit(FindingCode.DECLARED_PRODUCER_AFTER_CONSUMER, id));
+                else hits.add(new Hit(FindingCode.STEP_OUTPUT_NOT_PROVEN, id));
+                if (flow.cycleSteps().contains(step.id())) hits.add(new Hit(FindingCode.DATA_DEPENDENCY_CYCLE, id));
+            }
+        }
+    }
+
+    /**
+     * Tipo técnico aceito pelo valor da ação: preencher aceita texto, número e data (o valor é digitado); navegar e
+     * pressionar tecla, só texto. Ações que não usam valor já recebem {@link FindingCode#PARAMETER_NOT_APPLICABLE}.
+     */
+    static boolean accepts(ActionType action, VariableType type) {
+        return switch (action) {
+            case FILL -> type != VariableType.BOOLEAN;
+            case NAVIGATE, PRESS_KEY -> type == VariableType.STRING;
+            default -> true;
+        };
     }
 
     private static void element(AutomationStep step, ActionType type, Set<Hit> hits) {

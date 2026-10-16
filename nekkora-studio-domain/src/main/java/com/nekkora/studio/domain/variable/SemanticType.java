@@ -6,7 +6,7 @@ import java.util.Set;
 /**
  * Significado de uma variável (STUDIO-008) — vocabulário FECHADO e versionado com o modelo. Nunca é inferido pelo nome:
  * só existe quando o desenvolvedor o declara, e só vale como especificação quando ele o confirma
- * ({@link SemanticAuthority#USER_CONFIRMED}).
+ * ({@link SemanticStatus#USER_CONFIRMED}).
  *
  * <p>Cada significado declara os tipos técnicos compatíveis e a sensibilidade MÍNIMA (regra conservadora: um CPF ou um
  * e-mail é dado pessoal — logo nunca pode ser uma constante gravada no projeto).

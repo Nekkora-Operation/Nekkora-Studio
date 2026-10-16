@@ -19,7 +19,7 @@ import com.nekkora.studio.domain.ValidationProblem;
 import com.nekkora.studio.domain.action.ActionParameters;
 import com.nekkora.studio.domain.action.ActionType;
 import com.nekkora.studio.domain.action.ValueSource;
-import com.nekkora.studio.domain.variable.SemanticAuthority;
+import com.nekkora.studio.domain.variable.SemanticStatus;
 import com.nekkora.studio.domain.variable.SemanticType;
 import com.nekkora.studio.domain.variable.Sensitivity;
 import com.nekkora.studio.domain.variable.TextFormat;
@@ -95,7 +95,7 @@ class VariableStudioTest {
     }
 
     private static VariableDraft cpf() {
-        return VariableDraft.of("cliente.cpf", VariableType.STRING).withSemantic(SemanticType.BRAZILIAN_CPF, SemanticAuthority.USER_CONFIRMED)
+        return VariableDraft.of("cliente.cpf", VariableType.STRING).withSemantic(SemanticType.BRAZILIAN_CPF, SemanticStatus.USER_CONFIRMED)
                 .withSensitivity(Sensitivity.PERSONAL_DATA).withOrigin(VariableOrigin.input())
                 .withConstraints(new VariableConstraints(true, 11, 11, TextFormat.DIGITS, null, null, null, null));
     }

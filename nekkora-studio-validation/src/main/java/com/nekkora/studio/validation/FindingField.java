@@ -7,7 +7,9 @@ public enum FindingField {
     PARAMETERS("Parâmetros"),
     ELEMENT("Elemento"),
     LOCATORS("Localizadores"),
-    OBSERVATION("Observação");
+    OBSERVATION("Observação"),
+    /** STUDIO-008 (regras 1.1.0): a declaração da variável. */
+    VARIABLE("Variável");
 
     private final String label;
 
@@ -17,5 +19,10 @@ public enum FindingField {
 
     public String label() {
         return label;
+    }
+
+    /** Campos de uma versão das regras. */
+    public static java.util.List<FindingField> of(RuleSet rules) {
+        return java.util.Arrays.stream(values()).filter(f -> f != VARIABLE || rules.includes(RuleSet.V1_1)).toList();
     }
 }

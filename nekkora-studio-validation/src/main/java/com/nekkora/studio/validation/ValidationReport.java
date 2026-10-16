@@ -6,7 +6,8 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Relatório da validação estrutural de UMA automação (STUDIO-007, contrato {@value #SCHEMA} {@value #VERSION}).
+ * Relatório da validação estrutural de UMA automação (STUDIO-007, contrato {@value #SCHEMA} {@value #VERSION}; STUDIO-008,
+ * {@value #VERSION_1_1} para as regras 1.1.0 — com o escopo VARIABLE e a identidade da variável em cada apontamento).
  *
  * <p>Imutável e determinístico: o mesmo estado da automação, com a mesma versão das regras, produz o mesmo relatório —
  * sem instantes, sem identificadores gerados. Derivado (pode ser recalculado a qualquer momento) e por isso NÃO é
@@ -15,6 +16,8 @@ import java.util.Objects;
 public final class ValidationReport {
     public static final String SCHEMA = "nekkora-studio/validation-report";
     public static final String VERSION = "1.0.0";
+    /** Contrato do relatório das regras 1.1.0 (STUDIO-008). */
+    public static final String VERSION_1_1 = "1.1.0";
 
     /** Totais do relatório. */
     public record Summary(int sessions, int steps, int blockers, int warnings, int infos, int stepsWithoutFindings, int stepsWithBlockers) {
@@ -30,13 +33,15 @@ public final class ValidationReport {
 
     private final AutomationId automationId;
     private final String rulesVersion;
+    private final String version;
     private final ValidationStatus status;
     private final Summary summary;
     private final List<Finding> findings;
 
-    ValidationReport(AutomationId automationId, String rulesVersion, int sessions, int steps, List<Finding> findings) {
+    ValidationReport(AutomationId automationId, RuleSet rules, int sessions, int steps, List<Finding> findings) {
         this.automationId = Objects.requireNonNull(automationId, "automationId");
-        this.rulesVersion = Objects.requireNonNull(rulesVersion, "rulesVersion");
+        this.rulesVersion = rules.version();
+        this.version = rules.reportVersion();
         this.findings = List.copyOf(findings);
         int blockers = 0;
         int warnings = 0;
@@ -64,6 +69,16 @@ public final class ValidationReport {
         return automationId;
     }
 
+    /** Versão do contrato do relatório ({@value #VERSION} ou {@value #VERSION_1_1}). */
+    public String version() {
+        return version;
+    }
+
+    /** Apontamentos de uma variável declarada (escopo VARIABLE), na ordem das regras. */
+    public List<Finding> forVariable(com.nekkora.studio.domain.variable.VariableId variable) {
+        return findings.stream().filter(f -> f.scope() == FindingScope.VARIABLE && variable.equals(f.variable())).toList();
+    }
+
     /** Versão das regras que produziram o relatório. */
     public String rulesVersion() {
         return rulesVersion;
@@ -87,7 +102,7 @@ public final class ValidationReport {
         return findings.stream().filter(f -> step.equals(f.step())).toList();
     }
 
-    /** Serialização JSON canônica (contrato {@value #SCHEMA} {@value #VERSION}). */
+    /** Serialização JSON canônica (contrato {@value #SCHEMA} na {@link #version()} do relatório). */
     public String toJson() {
         return ValidationReportJson.write(this);
     }

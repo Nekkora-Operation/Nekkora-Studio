@@ -53,7 +53,7 @@ public final class VariableRules {
         if (DisplaySafety.looksSensitive(purpose)) fail(ValidationProblem.VARIABLE_PURPOSE_LOOKS_SENSITIVE);
         if (!d.semantic().accepts(d.type())) fail(ValidationProblem.VARIABLE_SEMANTIC_INCOMPATIBLE);
         boolean unspecified = d.semantic() == SemanticType.UNSPECIFIED;
-        if (unspecified != (d.authority() == SemanticAuthority.UNSPECIFIED)) fail(ValidationProblem.VARIABLE_AUTHORITY_INVALID);
+        if (unspecified != (d.authority() == SemanticStatus.UNSPECIFIED)) fail(ValidationProblem.VARIABLE_AUTHORITY_INVALID);
         if (!d.sensitivity().atLeast(d.semantic().minimumSensitivity())) fail(ValidationProblem.VARIABLE_SENSITIVITY_TOO_LOW);
         checkConstraints(d.type(), d.semantic(), d.constraints());
         VariableOrigin origin = d.origin();

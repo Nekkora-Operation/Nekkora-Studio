@@ -86,7 +86,10 @@ public final class StudioView {
     private final com.nekkora.studio.ui.ValidationPanel validationPanel;
     private final com.nekkora.ui.container.NekkoraPanel center = new com.nekkora.ui.container.NekkoraPanel(new java.awt.BorderLayout());
     private com.nekkora.ui.container.NekkoraSplitPane validationSplit;
-    private boolean validationVisible;
+    /** STUDIO-008: o painel inferior tem duas abas — Validação e Variáveis. */
+    private final com.nekkora.ui.navigation.NekkoraTabs bottomTabs = new com.nekkora.ui.navigation.NekkoraTabs();
+    private final com.nekkora.studio.ui.VariablesPanel variablesPanel;
+    private boolean bottomVisible;
     private com.nekkora.studio.validation.ValidationReport shownReport;
 
     public StudioView(StudioState state, StudioController controller) {
@@ -195,6 +198,45 @@ public final class StudioView {
             }
         });
         controller.onValidationShown(this::showValidation);
+        variablesPanel = new com.nekkora.studio.ui.VariablesPanel(new com.nekkora.studio.ui.VariablesPanel.Actions() {
+            @Override
+            public void create() {
+                controller.newVariable();
+            }
+
+            @Override
+            public void edit(com.nekkora.studio.domain.variable.VariableId variable) {
+                controller.editVariable(variable);
+            }
+
+            @Override
+            public void rename(com.nekkora.studio.domain.variable.VariableId variable) {
+                controller.renameVariable(variable);
+            }
+
+            @Override
+            public void delete(com.nekkora.studio.domain.variable.VariableId variable) {
+                controller.deleteVariable(variable);
+            }
+
+            @Override
+            public void goToStep(StepId step) {
+                controller.goToStep(step);
+            }
+
+            @Override
+            public void close() {
+                hideValidation();
+            }
+        });
+        controller.onVariablesShown(this::showVariables);
+        bottomTabs.addTab("Validação", com.nekkora.ui.icon.IconName.CHECK_CIRCLE, validationPanel);
+        bottomTabs.addTab("Variáveis", com.nekkora.ui.icon.IconName.BRACES, variablesPanel);
+        bottomTabs.getAccessibleContext().setAccessibleName("Painel inferior: validação e variáveis");
+        bottomTabs.addChangeListener(e -> {
+            if (variablesVisible()) refreshVariables();
+            else refreshValidation(true);
+        });
         center.add(workArea, java.awt.BorderLayout.CENTER);
 
         workbench.setSidebar(sidebar());
@@ -253,6 +295,13 @@ public final class StudioView {
         NekkoraToolbarButton validate = new NekkoraToolbarButton(actions.get(StudioActions.VALIDATE), true);
         validate.getAccessibleContext().setAccessibleDescription(String.valueOf(actions.get(StudioActions.VALIDATE).getValue(javax.swing.Action.SHORT_DESCRIPTION)));
         tb.add(validate);
+        // STUDIO-008: variáveis e dependências (só ícone; nome e atalho na dica e no nome acessível)
+        NekkoraToolbarButton variables = new NekkoraToolbarButton(actions.get(StudioActions.VARIABLES), false);
+        NekkoraTooltips.install(variables, "Variáveis e dependências (" + com.nekkora.ui.action.NekkoraKeys.format(actions.get(StudioActions.VARIABLES)
+                .shortcutKey()) + ")", null);
+        variables.getAccessibleContext().setAccessibleName("Variáveis e dependências");
+        variables.getAccessibleContext().setAccessibleDescription(String.valueOf(actions.get(StudioActions.VARIABLES).getValue(javax.swing.Action.SHORT_DESCRIPTION)));
+        tb.add(variables);
         for (String id : StudioActions.FUTURE) {
             NekkoraToolbarButton b = new NekkoraToolbarButton(actions.get(id), false);
             NekkoraTooltips.install(b, actions.get(id).getValue(javax.swing.Action.NAME) + " — "
@@ -438,25 +487,60 @@ public final class StudioView {
                 || e.has(StudioChange.EVIDENCE) || e.has(StudioChange.UNSAVED_CHANGES) || e.has(StudioChange.PROJECT) || e.has(StudioChange.EDIT_LOCK)) {
             refreshValidation(e.has(StudioChange.VALIDATION) || e.has(StudioChange.ACTIVE_AUTOMATION) || e.has(StudioChange.EDIT_LOCK));
         }
+        if (e.has(StudioChange.ACTIVE_AUTOMATION) || e.has(StudioChange.CATALOG) || e.has(StudioChange.CONTENT) || e.has(StudioChange.EDIT_LOCK)) {
+            refreshVariables();
+        }
     }
 
     // ------------------------------------------------------------------ STUDIO-007: validação
 
-    /** Mostra o painel de validação abaixo da área de trabalho. */
+    /** Mostra o painel de validação abaixo da área de trabalho (aba Validação do painel inferior). */
     public void showValidation() {
-        if (!validationVisible) {
-            center.removeAll();
-            workArea.setMinimumSize(new java.awt.Dimension(0, com.nekkora.ui.theme.Scale.px(160)));
-            validationSplit = com.nekkora.ui.container.NekkoraSplitPane.vertical(workArea, validationPanel);
-            validationSplit.setResizeWeight(0.55); // a área de trabalho fica com 55% da altura (e com o que sobrar ao redimensionar)
-            center.add(validationSplit, java.awt.BorderLayout.CENTER);
-            validationVisible = true;
-            placeDivider(validationSplit);
-            center.revalidate();
-            center.repaint();
-        }
+        showBottom();
+        bottomTabs.setSelectedComponent(validationPanel);
         refreshValidation(true);
         SwingUtilities.invokeLater(() -> validationPanel.findingList().requestFocusInWindow());
+    }
+
+    /** STUDIO-008: mostra a aba Variáveis (e seleciona a variável, se não for nula). */
+    public void showVariables(com.nekkora.studio.domain.variable.VariableId select) {
+        showBottom();
+        bottomTabs.setSelectedComponent(variablesPanel);
+        refreshVariables();
+        if (select != null) variablesPanel.select(select);
+        SwingUtilities.invokeLater(() -> variablesPanel.variableList().requestFocusInWindow());
+    }
+
+    private void showBottom() {
+        if (bottomVisible) return;
+        center.removeAll();
+        workArea.setMinimumSize(new java.awt.Dimension(0, com.nekkora.ui.theme.Scale.px(160)));
+        validationSplit = com.nekkora.ui.container.NekkoraSplitPane.vertical(workArea, bottomTabs);
+        validationSplit.setResizeWeight(0.55); // a área de trabalho fica com 55% da altura (e com o que sobrar ao redimensionar)
+        center.add(validationSplit, java.awt.BorderLayout.CENTER);
+        bottomVisible = true;
+        placeDivider(validationSplit);
+        center.revalidate();
+        center.repaint();
+    }
+
+    private void refreshVariables() {
+        if (!variablesVisible()) return;
+        Optional<Automation> active = state.activeAutomation();
+        if (active.isEmpty()) variablesPanel.showNothing();
+        else variablesPanel.show(active.get(), !controller.service().isLocked(active.get().id()));
+    }
+
+    public boolean variablesVisible() {
+        return bottomVisible && bottomTabs.getSelectedComponent() == variablesPanel;
+    }
+
+    public com.nekkora.studio.ui.VariablesPanel variablesPanel() {
+        return variablesPanel;
+    }
+
+    public com.nekkora.ui.navigation.NekkoraTabs bottomTabs() {
+        return bottomTabs;
     }
 
     /** Divisor em 55% da altura real — já, se a altura é conhecida, ou na primeira vez que o painel ganhar tamanho. */
@@ -479,17 +563,17 @@ public final class StudioView {
 
     /** Fecha o painel (o relatório continua guardado e pode ser reaberto validando de novo). */
     public void hideValidation() {
-        if (!validationVisible) return;
+        if (!bottomVisible) return;
         center.removeAll();
         center.add(workArea, java.awt.BorderLayout.CENTER);
-        validationVisible = false;
+        bottomVisible = false;
         center.revalidate();
         center.repaint();
         focusOverview();
     }
 
     public boolean validationVisible() {
-        return validationVisible;
+        return bottomVisible && bottomTabs.getSelectedComponent() == validationPanel;
     }
 
     public com.nekkora.studio.ui.ValidationPanel validationPanel() {
@@ -501,7 +585,7 @@ public final class StudioView {
      * automação só a atualidade muda — o painel passa a dizer "Resultado desatualizado" sem refazer milhares de linhas.
      */
     private void refreshValidation(boolean rebuild) {
-        if (!validationVisible) return;
+        if (!validationVisible()) return;
         Optional<Automation> active = state.activeAutomation();
         Optional<com.nekkora.studio.app.workspace.ValidationService.Result> r = active.flatMap(a -> controller.validation().result(a.id()));
         if (active.isEmpty() || r.isEmpty()) {
@@ -539,6 +623,12 @@ public final class StudioView {
                 case SESSION -> {
                     com.nekkora.studio.domain.LogicalSession s = sessions.get(f.session());
                     place = "Sessão " + f.sessionNumber() + (s == null ? " (removida)" : " — " + s.name());
+                }
+                case VARIABLE -> {
+                    // o relatório só tem a identidade; o nome vem do catálogo ATUAL (local, na tela)
+                    String name = a.variable(f.variable()).map(com.nekkora.studio.domain.variable.VariableDefinition::name).orElse(null);
+                    exists = name != null;
+                    place = "Variável" + (name == null ? " (removida)" : " — " + name);
                 }
                 default -> {
                     com.nekkora.studio.domain.AutomationStep st = steps.get(f.step());
@@ -580,6 +670,7 @@ public final class StudioView {
         actions.get(StudioActions.SAVE_AS).setEnabled(a.isPresent());
         actions.get(StudioActions.CLOSE_PROJECT).setEnabled(a.isPresent());
         actions.get(StudioActions.VALIDATE).setEnabled(a.isPresent());
+        actions.get(StudioActions.VARIABLES).setEnabled(a.isPresent());
         boolean canUndo = a.map(x -> controller.service().canUndo(x.id())).orElse(false);
         boolean canRedo = a.map(x -> controller.service().canRedo(x.id())).orElse(false);
         actions.get(StudioActions.UNDO).setEnabled(canUndo);

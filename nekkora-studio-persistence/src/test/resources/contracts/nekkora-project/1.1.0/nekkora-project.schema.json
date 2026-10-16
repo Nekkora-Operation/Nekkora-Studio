@@ -138,7 +138,7 @@
         "name": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_.-]{0,63}$", "description": "Nome simbólico (o ponto faz parte do nome). Único sem distinção de maiúsculas (regra do leitor)." },
         "technicalType": { "$ref": "#/$defs/VariableType" },
         "semanticType": { "$ref": "#/$defs/SemanticType" },
-        "authority": { "$ref": "#/$defs/SemanticAuthority" },
+        "authority": { "$ref": "#/$defs/SemanticStatus" },
         "purpose": { "type": "string", "maxLength": 2000, "description": "Contexto para pessoas; não é fonte de verdade executável." },
         "scope": {
           "type": "object",
@@ -525,7 +525,7 @@
     "MessageAvailability": { "enum": ["NONE", "AVAILABLE", "SUPPRESSED"] },
     "VariableType": { "enum": ["STRING", "INTEGER", "DECIMAL", "BOOLEAN", "DATE"] },
     "SemanticType": { "enum": ["UNSPECIFIED", "FREE_TEXT", "IDENTIFIER", "BRAZILIAN_CPF", "EMAIL", "CURRENCY", "PERCENTAGE", "DATE_ISO"] },
-    "SemanticAuthority": { "enum": ["USER_CONFIRMED", "PROPOSED_UNCONFIRMED", "UNSPECIFIED"] },
+    "SemanticStatus": { "enum": ["USER_CONFIRMED", "PROPOSED_UNCONFIRMED", "UNSPECIFIED"] },
     "Sensitivity": { "enum": ["PUBLIC", "INTERNAL", "PERSONAL_DATA", "SECRET"] },
     "VariableScopeKind": { "enum": ["AUTOMATION", "SESSION"] },
     "VariableOriginKind": { "enum": ["INPUT", "CONSTANT", "STEP_OUTPUT", "UNBOUND"] },

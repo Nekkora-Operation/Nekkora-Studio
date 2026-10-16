@@ -33,7 +33,7 @@ import com.nekkora.studio.domain.evidence.ObservedEvidence;
 import com.nekkora.studio.domain.origin.RecordingObservation;
 import com.nekkora.studio.domain.origin.StepOrigin;
 import com.nekkora.studio.domain.origin.StepProvenance;
-import com.nekkora.studio.domain.variable.SemanticAuthority;
+import com.nekkora.studio.domain.variable.SemanticStatus;
 import com.nekkora.studio.domain.variable.SemanticType;
 import com.nekkora.studio.domain.variable.Sensitivity;
 import com.nekkora.studio.domain.variable.TextFormat;
@@ -490,7 +490,7 @@ public final class ProjectCodec {
         String name = d.str("name");
         VariableType type = d.enumValue("technicalType", VariableType.class);
         SemanticType semantic = d.enumValue("semanticType", SemanticType.class);
-        SemanticAuthority authority = d.enumValue("authority", SemanticAuthority.class);
+        SemanticStatus authority = d.enumValue("authority", SemanticStatus.class);
         String purpose = d.str("purpose");
         Sensitivity sensitivity = d.enumValue("sensitivity", Sensitivity.class);
         Instant created = d.instant("createdAt");

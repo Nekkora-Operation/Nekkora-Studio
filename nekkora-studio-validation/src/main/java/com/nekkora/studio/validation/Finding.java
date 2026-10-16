@@ -2,6 +2,7 @@ package com.nekkora.studio.validation;
 
 import com.nekkora.studio.domain.SessionId;
 import com.nekkora.studio.domain.StepId;
+import com.nekkora.studio.domain.variable.VariableId;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -17,17 +18,29 @@ import java.util.Optional;
  * @param sessionNumber posição da sessão, a partir de 1 (0 no escopo AUTOMATION)
  * @param stepNumber    posição da etapa DENTRO da sessão, a partir de 1 (0 fora do escopo STEP)
  * @param detail        detalhe do vocabulário fechado ({@link FindingDetails}), ou {@code null}
+ * @param variable      (regras 1.1.0) a variável declarada envolvida — obrigatória no escopo VARIABLE; numa etapa, a
+ *                      variável declarada que ela usa (nula se o nome não está declarado). Só a identidade, nunca o nome.
  */
 public record Finding(String id, FindingCode code, FindingScope scope, SessionId session, StepId step, int sessionNumber, int stepNumber,
-                      String detail) {
+                      String detail, VariableId variable) {
 
     public Finding {
         Objects.requireNonNull(id, "id");
         Objects.requireNonNull(code, "code");
         Objects.requireNonNull(scope, "scope");
-        if (scope != FindingScope.AUTOMATION && session == null) throw new IllegalArgumentException("sessão obrigatória");
+        if ((scope == FindingScope.SESSION || scope == FindingScope.STEP) && session == null) throw new IllegalArgumentException("sessão obrigatória");
         if (scope == FindingScope.STEP && step == null) throw new IllegalArgumentException("etapa obrigatória");
+        if (scope == FindingScope.VARIABLE && (variable == null || step != null)) throw new IllegalArgumentException("variável obrigatória");
         if (detail != null && !FindingDetails.all().contains(detail)) throw new IllegalArgumentException("detalhe fora do vocabulário");
+    }
+
+    /** Apontamento das regras 1.0.0 (sem variável). */
+    public Finding(String id, FindingCode code, FindingScope scope, SessionId session, StepId step, int sessionNumber, int stepNumber, String detail) {
+        this(id, code, scope, session, step, sessionNumber, stepNumber, detail, null);
+    }
+
+    public Optional<VariableId> variableId() {
+        return Optional.ofNullable(variable);
     }
 
     public Severity severity() {

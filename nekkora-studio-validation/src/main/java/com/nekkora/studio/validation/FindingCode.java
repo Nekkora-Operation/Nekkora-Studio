@@ -8,6 +8,9 @@ package com.nekkora.studio.validation;
  * conteúdo da página, expressões de localizadores nem mensagens do navegador. A ordem de declaração é a ordem das regras
  * dentro de um mesmo escopo (determinismo do relatório). Códigos nunca são renomeados: uma mudança de significado é um
  * código novo numa nova versão das regras.
+ *
+ * <p>STUDIO-008: os códigos das regras {@code 1.1.0} foram ACRESCENTADOS ao fim ({@link #since()}); os de {@code 1.0.0}
+ * ficam intactos e na mesma ordem. Uma versão das regras só emite os códigos que já existiam nela ({@link #of(RuleSet)}).
  */
 public enum FindingCode {
     // ------------------------------------------------------------------ automação
@@ -143,20 +146,117 @@ public enum FindingCode {
             "Nada a corrigir na configuração."),
     OBSERVATION_IN_PROGRESS(Severity.INFO, FindingField.OBSERVATION, false,
             "A janela de observação desta etapa ainda não terminou.",
-            "Valide de novo depois que a gravação terminar.");
+            "Valide de novo depois que a gravação terminar."),
+
+    // ================================================================== regras 1.1.0 (STUDIO-008): variáveis e fluxo de dados
+    // ------------------------------------------------------------------ etapa: uso de variável
+    VARIABLE_NOT_DECLARED(Severity.BLOCKER, FindingField.PARAMETERS, false,
+            "A etapa usa uma variável que não está declarada no catálogo de variáveis.",
+            "Declare a variável em Variáveis e dependências ou escolha uma variável declarada na etapa. Nomes parecidos não são associados.",
+            RuleSet.V1_1),
+    VARIABLE_OUT_OF_SCOPE(Severity.BLOCKER, FindingField.PARAMETERS, false,
+            "A variável usada está declarada para outra sessão e não é visível nesta etapa.",
+            "Mude o escopo da variável para a automação ou para a sessão desta etapa, ou use outra variável.",
+            RuleSet.V1_1),
+    VARIABLE_TYPE_INCOMPATIBLE(Severity.BLOCKER, FindingField.PARAMETERS, false,
+            "O tipo técnico da variável não é aceito por esta ação.",
+            "Use uma variável de tipo compatível (preencher aceita texto, número e data; navegar e pressionar tecla aceitam texto).",
+            RuleSet.V1_1),
+    VARIABLE_ORIGIN_UNBOUND(Severity.BLOCKER, FindingField.PARAMETERS, false,
+            "A variável usada não tem origem declarada: não se sabe de onde virá o valor.",
+            "Declare a origem da variável: entrada, valor fixo não sensível ou saída de uma etapa anterior.",
+            RuleSet.V1_1),
+    DECLARED_PRODUCER_MISSING(Severity.BLOCKER, FindingField.PARAMETERS, false,
+            "A variável usada declara como origem uma etapa que não existe mais ou que está fora do escopo da variável.",
+            "Revise a origem da variável em Variáveis e dependências.",
+            RuleSet.V1_1),
+    DECLARED_PRODUCER_AFTER_CONSUMER(Severity.BLOCKER, FindingField.PARAMETERS, false,
+            "A etapa usa uma variável cuja etapa de origem declarada vem DEPOIS dela.",
+            "Mova a etapa de origem para antes desta ou revise a origem da variável.",
+            RuleSet.V1_1),
+    STEP_OUTPUT_SELF_CONSUMED(Severity.BLOCKER, FindingField.PARAMETERS, false,
+            "A etapa usa uma variável que declara a própria etapa como origem.",
+            "Revise a origem da variável: uma etapa não pode depender do valor que ela mesma produziria.",
+            RuleSet.V1_1),
+    DATA_DEPENDENCY_CYCLE(Severity.BLOCKER, FindingField.PARAMETERS, false,
+            "A etapa participa de um ciclo de dependências declaradas entre etapas.",
+            "Revise as origens declaradas das variáveis envolvidas para que cada valor venha de uma etapa anterior.",
+            RuleSet.V1_1),
+    STEP_OUTPUT_NOT_PROVEN(Severity.WARNING, FindingField.PARAMETERS, true,
+            "O valor vem da saída declarada de outra etapa. O Studio não comprova que essa etapa produz o valor.",
+            "Mantenha a declaração. A captura de saídas de etapas não faz parte desta versão.",
+            RuleSet.V1_1),
+    INPUT_VALUE_NOT_AVAILABLE(Severity.WARNING, FindingField.PARAMETERS, true,
+            "O valor é uma entrada do processo: só existirá na execução e não é conhecido nem verificado pelo Studio.",
+            "Nada a corrigir na configuração. Nunca grave valores reais de entrada no projeto.",
+            RuleSet.V1_1),
+
+    // ------------------------------------------------------------------ variável
+    VARIABLE_SCOPE_SESSION_MISSING(Severity.BLOCKER, FindingField.VARIABLE, false,
+            "A variável está declarada para uma sessão que não existe mais.",
+            "Mude o escopo da variável para a automação ou para uma sessão existente.",
+            RuleSet.V1_1),
+    VARIABLE_PRODUCER_MISSING(Severity.BLOCKER, FindingField.VARIABLE, false,
+            "A etapa declarada como origem da variável não existe mais.",
+            "Escolha outra etapa de origem ou outra origem para a variável.",
+            RuleSet.V1_1),
+    VARIABLE_PRODUCER_OUT_OF_SCOPE(Severity.BLOCKER, FindingField.VARIABLE, false,
+            "A etapa declarada como origem está fora do escopo da variável.",
+            "Mude o escopo da variável ou escolha uma etapa de origem dentro dele.",
+            RuleSet.V1_1),
+    SENSITIVE_CONSTANT_FORBIDDEN(Severity.BLOCKER, FindingField.VARIABLE, false,
+            "A variável tem um valor fixo, mas é sensível ou o valor parece um dado sensível.",
+            "Use a origem entrada para dados pessoais e uma referência de credencial para segredos. Nunca grave dados sensíveis no projeto.",
+            RuleSet.V1_1),
+    VARIABLE_DECLARATION_INCONSISTENT(Severity.BLOCKER, FindingField.VARIABLE, false,
+            "A declaração da variável não respeita as regras atuais (tipo, significado, sensibilidade ou restrições).",
+            "Edite a variável em Variáveis e dependências; o formulário indica o que precisa mudar.",
+            RuleSet.V1_1),
+    VARIABLE_SEMANTIC_UNCONFIRMED(Severity.WARNING, FindingField.VARIABLE, true,
+            "O significado da variável foi proposto, mas não confirmado pelo desenvolvedor.",
+            "Confirme ou corrija o significado em Variáveis e dependências.",
+            RuleSet.V1_1),
+    VARIABLE_SEMANTIC_UNSPECIFIED(Severity.INFO, FindingField.VARIABLE, false,
+            "O significado da variável não foi especificado.",
+            "Opcional: informe o significado (por exemplo, CPF, e-mail, valor monetário) para regras mais precisas.",
+            RuleSet.V1_1),
+    CONSTANT_STORED_UNENCRYPTED(Severity.INFO, FindingField.VARIABLE, false,
+            "O valor fixo da variável fica gravado no arquivo do projeto, que não é criptografado.",
+            "Nada a corrigir para valores públicos ou internos não sensíveis.",
+            RuleSet.V1_1),
+    VARIABLE_UNUSED(Severity.INFO, FindingField.VARIABLE, false,
+            "A variável está declarada, mas nenhuma etapa a usa.",
+            "Use a variável numa etapa ou exclua a declaração, se não fizer parte do processo.",
+            RuleSet.V1_1);
 
     private final Severity severity;
     private final FindingField field;
     private final boolean limitsAssessment;
     private final String explanation;
     private final String guidance;
+    private final RuleSet since;
 
     FindingCode(Severity severity, FindingField field, boolean limitsAssessment, String explanation, String guidance) {
+        this(severity, field, limitsAssessment, explanation, guidance, RuleSet.V1_0);
+    }
+
+    FindingCode(Severity severity, FindingField field, boolean limitsAssessment, String explanation, String guidance, RuleSet since) {
         this.severity = severity;
         this.field = field;
         this.limitsAssessment = limitsAssessment;
         this.explanation = explanation;
         this.guidance = guidance;
+        this.since = since;
+    }
+
+    /** Versão das regras que introduziu o código. */
+    public RuleSet since() {
+        return since;
+    }
+
+    /** Catálogo de uma versão das regras, na ordem das regras. */
+    public static java.util.List<FindingCode> of(RuleSet rules) {
+        return java.util.Arrays.stream(values()).filter(c -> rules.includes(c.since)).toList();
     }
 
     public Severity severity() {

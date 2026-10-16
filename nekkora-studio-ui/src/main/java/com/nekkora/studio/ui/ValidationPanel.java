@@ -292,8 +292,11 @@ public final class ValidationPanel extends NekkoraPanel {
         guidance.setToolTipText(how.isEmpty() ? null : how);
         guidance.getAccessibleContext().setAccessibleDescription(how);
         goTo.setEnabled(i != null);
-        goTo.setText(i == null || i.finding().scope() == FindingScope.STEP ? "Ir para etapa" : i.finding().scope() == FindingScope.SESSION
-                ? "Ir para sessão" : "Ir para automação");
+        goTo.setText(i == null || i.finding().scope() == FindingScope.STEP ? "Ir para etapa" : switch (i.finding().scope()) {
+            case SESSION -> "Ir para sessão";
+            case VARIABLE -> "Ir para variável";
+            default -> "Ir para automação";
+        });
         edit.setEnabled(i != null && i.editable() && i.finding().scope() == FindingScope.STEP && EDITABLE_FIELDS.contains(i.finding().field()));
     }
 

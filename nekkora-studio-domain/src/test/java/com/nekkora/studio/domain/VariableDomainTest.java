@@ -13,7 +13,7 @@ import com.nekkora.studio.domain.action.ValueSource;
 import com.nekkora.studio.domain.element.CorrelationKeys;
 import com.nekkora.studio.domain.origin.RecordingObservation;
 import com.nekkora.studio.domain.origin.StepProvenance;
-import com.nekkora.studio.domain.variable.SemanticAuthority;
+import com.nekkora.studio.domain.variable.SemanticStatus;
 import com.nekkora.studio.domain.variable.SemanticType;
 import com.nekkora.studio.domain.variable.Sensitivity;
 import com.nekkora.studio.domain.variable.TextFormat;
@@ -50,7 +50,7 @@ class VariableDomainTest {
 
     /** cliente.cpf do exemplo-guia: STRING, CPF, entrada, dados pessoais, confirmado, 11 dígitos — sem CPF algum. */
     private static VariableDraft cpf() {
-        return new VariableDraft("cliente.cpf", VariableType.STRING, SemanticType.BRAZILIAN_CPF, SemanticAuthority.USER_CONFIRMED,
+        return new VariableDraft("cliente.cpf", VariableType.STRING, SemanticType.BRAZILIAN_CPF, SemanticStatus.USER_CONFIRMED,
                 "Documento do cliente consultado", VariableScope.automation(), VariableOrigin.input(), Sensitivity.PERSONAL_DATA,
                 new VariableConstraints(true, 11, 11, TextFormat.DIGITS, null, null, null, null));
     }
@@ -103,15 +103,15 @@ class VariableDomainTest {
                 "CPF é texto (zeros à esquerda)");
         assertEquals(ValidationProblem.VARIABLE_SENSITIVITY_TOO_LOW, refused(() -> a.declareVariable(cpf().withSensitivity(Sensitivity.PUBLIC))));
         assertEquals(ValidationProblem.VARIABLE_AUTHORITY_INVALID, refused(() -> a.declareVariable(VariableDraft.of("x", VariableType.STRING)
-                .withSemantic(SemanticType.UNSPECIFIED, SemanticAuthority.USER_CONFIRMED))));
+                .withSemantic(SemanticType.UNSPECIFIED, SemanticStatus.USER_CONFIRMED))));
         assertEquals(ValidationProblem.VARIABLE_AUTHORITY_INVALID, refused(() -> a.declareVariable(VariableDraft.of("x", VariableType.STRING)
-                .withSemantic(SemanticType.FREE_TEXT, SemanticAuthority.UNSPECIFIED))));
+                .withSemantic(SemanticType.FREE_TEXT, SemanticStatus.UNSPECIFIED))));
         VariableDefinition named = a.declareVariable(VariableDraft.of("cliente.email", VariableType.STRING));
         assertEquals(SemanticType.UNSPECIFIED, named.semantic(), "o nome não define o significado");
-        assertEquals(SemanticAuthority.UNSPECIFIED, named.authority());
+        assertEquals(SemanticStatus.UNSPECIFIED, named.authority());
         VariableDefinition proposed = a.declareVariable(VariableDraft.of("contato", VariableType.STRING).withSemantic(SemanticType.EMAIL,
-                SemanticAuthority.PROPOSED_UNCONFIRMED).withSensitivity(Sensitivity.PERSONAL_DATA));
-        assertEquals(SemanticAuthority.PROPOSED_UNCONFIRMED, proposed.authority());
+                SemanticStatus.PROPOSED_UNCONFIRMED).withSensitivity(Sensitivity.PERSONAL_DATA));
+        assertEquals(SemanticStatus.PROPOSED_UNCONFIRMED, proposed.authority());
     }
 
     @Test
@@ -124,7 +124,7 @@ class VariableDomainTest {
         assertEquals(ValidationProblem.VARIABLE_CONSTRAINT_INVALID, refused(() -> a.declareVariable(VariableDraft.of("b", VariableType.INTEGER).withConstraints(onInteger))));
         VariableConstraints fractionalBound = new VariableConstraints(false, null, null, TextFormat.ANY, new BigDecimal("0.5"), null, null, null);
         assertEquals(ValidationProblem.VARIABLE_CONSTRAINT_INVALID, refused(() -> a.declareVariable(VariableDraft.of("c", VariableType.INTEGER).withConstraints(fractionalBound))));
-        VariableDraft money = VariableDraft.of("pagamento.valor_total", VariableType.DECIMAL).withSemantic(SemanticType.CURRENCY, SemanticAuthority.USER_CONFIRMED);
+        VariableDraft money = VariableDraft.of("pagamento.valor_total", VariableType.DECIMAL).withSemantic(SemanticType.CURRENCY, SemanticStatus.USER_CONFIRMED);
         assertEquals(ValidationProblem.VARIABLE_CONSTRAINT_INVALID, refused(() -> a.declareVariable(money)), "moeda e escala obrigatórias");
         assertEquals(ValidationProblem.VARIABLE_CONSTRAINT_INVALID, refused(() -> a.declareVariable(money.withConstraints(
                 new VariableConstraints(true, null, null, TextFormat.ANY, null, null, 2, "XYZ")))), "moeda ISO 4217");
@@ -265,9 +265,9 @@ class VariableDomainTest {
         long revision = a.revision();
         assertFalse(a.updateVariable(v.id(), cpf()));
         assertEquals(revision, a.revision());
-        assertTrue(a.updateVariable(v.id(), cpf().withSemantic(SemanticType.BRAZILIAN_CPF, SemanticAuthority.PROPOSED_UNCONFIRMED)));
+        assertTrue(a.updateVariable(v.id(), cpf().withSemantic(SemanticType.BRAZILIAN_CPF, SemanticStatus.PROPOSED_UNCONFIRMED)));
         VariableDefinition after = a.variable(v.id()).orElseThrow();
-        assertEquals(SemanticAuthority.PROPOSED_UNCONFIRMED, after.authority());
+        assertEquals(SemanticStatus.PROPOSED_UNCONFIRMED, after.authority());
         assertEquals(v.createdAt(), after.createdAt());
         assertNotEquals(v, after);
         assertEquals(ValidationProblem.VARIABLE_NOT_FOUND, refused(() -> a.updateVariable(new com.nekkora.studio.domain.variable.VariableId(

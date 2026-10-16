@@ -26,7 +26,7 @@ import com.nekkora.studio.domain.origin.RecordingObservation;
 import com.nekkora.studio.domain.origin.StepProvenance;
 import com.nekkora.studio.domain.privacy.CapturePrivacy;
 import com.nekkora.studio.domain.privacy.DisplaySafety;
-import com.nekkora.studio.domain.variable.SemanticAuthority;
+import com.nekkora.studio.domain.variable.SemanticStatus;
 import com.nekkora.studio.domain.variable.SemanticType;
 import com.nekkora.studio.domain.variable.Sensitivity;
 import com.nekkora.studio.domain.variable.TextFormat;
@@ -183,23 +183,23 @@ final class RichAutomation {
         Automation a = build(clock);
         LogicalSession cons = a.sessions().get(1);
         LogicalSession res = a.sessions().get(2);
-        a.declareVariable(VariableDraft.of("cliente.login", VariableType.STRING).withSemantic(SemanticType.IDENTIFIER, SemanticAuthority.USER_CONFIRMED)
+        a.declareVariable(VariableDraft.of("cliente.login", VariableType.STRING).withSemantic(SemanticType.IDENTIFIER, SemanticStatus.USER_CONFIRMED)
                 .withPurpose("Usuário de acesso do cliente fictício").withOrigin(VariableOrigin.input()).withSensitivity(Sensitivity.INTERNAL)
                 .withConstraints(new VariableConstraints(true, 3, 40, TextFormat.LETTERS_AND_DIGITS, null, null, null, null)));
         VariableDefinition login = a.variableNamed("cliente.login").orElseThrow();
         a.renameVariable(login.id(), "cliente.usuario"); // updatedAt > createdAt; o consumidor passa a apontar para ela
-        a.declareVariable(VariableDraft.of("cliente.cpf", VariableType.STRING).withSemantic(SemanticType.BRAZILIAN_CPF, SemanticAuthority.USER_CONFIRMED)
+        a.declareVariable(VariableDraft.of("cliente.cpf", VariableType.STRING).withSemantic(SemanticType.BRAZILIAN_CPF, SemanticStatus.USER_CONFIRMED)
                 .withSensitivity(Sensitivity.PERSONAL_DATA).withOrigin(VariableOrigin.input()).withConstraints(new VariableConstraints(true, 11, 11, TextFormat.DIGITS, null, null, null, null)));
-        a.declareVariable(VariableDraft.of("consulta.termo", VariableType.STRING).withSemantic(SemanticType.FREE_TEXT, SemanticAuthority.PROPOSED_UNCONFIRMED)
+        a.declareVariable(VariableDraft.of("consulta.termo", VariableType.STRING).withSemantic(SemanticType.FREE_TEXT, SemanticStatus.PROPOSED_UNCONFIRMED)
                 .withScope(VariableScope.session(cons.id())).withOrigin(VariableOrigin.constant("termo de pesquisa")).withSensitivity(Sensitivity.PUBLIC));
         a.declareVariable(VariableDraft.of("resultado.codigo", VariableType.STRING).withScope(VariableScope.session(res.id()))
                 .withOrigin(VariableOrigin.stepOutput(id(a, "Consultar detalhes"))).withSensitivity(Sensitivity.INTERNAL));
-        a.declareVariable(VariableDraft.of("pedido.valor", VariableType.DECIMAL).withSemantic(SemanticType.CURRENCY, SemanticAuthority.USER_CONFIRMED)
+        a.declareVariable(VariableDraft.of("pedido.valor", VariableType.DECIMAL).withSemantic(SemanticType.CURRENCY, SemanticStatus.USER_CONFIRMED)
                 .withSensitivity(Sensitivity.INTERNAL).withOrigin(VariableOrigin.input())
                 .withConstraints(new VariableConstraints(false, null, null, TextFormat.ANY, new BigDecimal("0.00"), new BigDecimal("99999.99"), 2, "BRL")));
         a.declareVariable(VariableDraft.of("pedido.quantidade", VariableType.INTEGER).withOrigin(VariableOrigin.constant("3"))
                 .withConstraints(new VariableConstraints(false, null, null, TextFormat.ANY, BigDecimal.ONE, new BigDecimal("10"), null, null)));
-        a.declareVariable(VariableDraft.of("pedido.data", VariableType.DATE).withSemantic(SemanticType.DATE_ISO, SemanticAuthority.USER_CONFIRMED)
+        a.declareVariable(VariableDraft.of("pedido.data", VariableType.DATE).withSemantic(SemanticType.DATE_ISO, SemanticStatus.USER_CONFIRMED)
                 .withOrigin(VariableOrigin.input()));
         a.declareVariable(VariableDraft.of("cliente.ativo", VariableType.BOOLEAN).withOrigin(VariableOrigin.unbound()));
         return a;

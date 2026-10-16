@@ -6,12 +6,12 @@ import java.util.Objects;
  * Conteúdo pedido para criar ou editar uma variável (sem identidade nem instantes). Uma constante pode vir em forma
  * livre (ex.: "1.50"); a operação de domínio a confere e a guarda na forma canônica do tipo.
  */
-public record VariableDraft(String name, VariableType type, SemanticType semantic, SemanticAuthority authority, String purpose, VariableScope scope,
+public record VariableDraft(String name, VariableType type, SemanticType semantic, SemanticStatus authority, String purpose, VariableScope scope,
                             VariableOrigin origin, Sensitivity sensitivity, VariableConstraints constraints) {
     public VariableDraft {
         Objects.requireNonNull(type, "type");
         semantic = semantic == null ? SemanticType.UNSPECIFIED : semantic;
-        authority = authority == null ? SemanticAuthority.UNSPECIFIED : authority;
+        authority = authority == null ? SemanticStatus.UNSPECIFIED : authority;
         purpose = purpose == null ? "" : purpose;
         scope = scope == null ? VariableScope.automation() : scope;
         origin = origin == null ? VariableOrigin.unbound() : origin;
@@ -28,7 +28,7 @@ public record VariableDraft(String name, VariableType type, SemanticType semanti
         return new VariableDraft(n, type, semantic, authority, purpose, scope, origin, sensitivity, constraints);
     }
 
-    public VariableDraft withSemantic(SemanticType s, SemanticAuthority a) {
+    public VariableDraft withSemantic(SemanticType s, SemanticStatus a) {
         return new VariableDraft(name, type, s, a, purpose, scope, origin, sensitivity, constraints);
     }
 

@@ -181,6 +181,13 @@ public final class StepDetailsForm extends StudioForm<StepDetailsForm.Values> {
     private final NekkoraTextField optionValue = new NekkoraTextField("Ex.: SP");
     private final NekkoraFormField optionValueField;
     private final NekkoraParagraph valueHelp = new NekkoraParagraph("", TextTone.SECONDARY);
+    // STUDIO-008: variáveis declaradas visíveis na sessão da etapa (escolher preenche o nome; nada é inferido)
+    private final Automation automation;
+    private final NekkoraComboBox<String> declared;
+    private final NekkoraFormField declaredField;
+    private final NekkoraParagraph declaredInfo = new NekkoraParagraph("", TextTone.SECONDARY);
+    /** Primeira opção da lista de variáveis declaradas (nenhuma escolhida). */
+    public static final String CHOOSE_VARIABLE = "Escolher variável declarada…";
     // elemento
     private final List<NekkoraRadioButton> preferred = new ArrayList<>();
     private final NekkoraRadioButton noPreferred = new NekkoraRadioButton("Nenhum preferencial");
@@ -203,6 +210,7 @@ public final class StepDetailsForm extends StudioForm<StepDetailsForm.Values> {
     public StepDetailsForm(Automation automation, AutomationStep step) {
         this.step = step;
         this.stepId = step.id();
+        this.automation = automation;
         // ------------------------------------------------ Geral
         basics = StepForm.forEdit(step);
         name = basics.nameInput();
@@ -238,7 +246,10 @@ public final class StepDetailsForm extends StudioForm<StepDetailsForm.Values> {
             r.getAccessibleContext().setAccessibleName("Origem do valor: " + m.label());
             modeGroup.add(r);
             modes.add(r);
-            r.addActionListener(e -> refreshValueHelp());
+            r.addActionListener(e -> {
+                refreshValueHelp();
+                refreshParameters();
+            });
         }
         boolean sensitive = step.element().map(ElementReference::sensitive).orElse(false);
         if (sensitive) {
@@ -246,6 +257,36 @@ public final class StepDetailsForm extends StudioForm<StepDetailsForm.Values> {
             modes.get(ValueMode.LITERAL.ordinal()).setToolTipText("Campo sensível: use uma variável ou uma credencial.");
         }
         valueField = new NekkoraFormField("Referência ou valor", valueText).optional();
+        SessionId stepSession = automation.sessionOf(step.id()).orElseThrow().id();
+        List<String> names = new ArrayList<>();
+        names.add(CHOOSE_VARIABLE);
+        automation.variables().stream().filter(v -> v.scope().visibleIn(stepSession)).map(com.nekkora.studio.domain.variable.VariableDefinition::name)
+                .sorted(String.CASE_INSENSITIVE_ORDER).forEach(names::add);
+        declared = new NekkoraComboBox<>(names);
+        declared.getAccessibleContext().setAccessibleName("Variáveis declaradas");
+        declared.addActionListener(e -> {
+            String chosen = declared.getSelectedValue();
+            if (chosen != null && !CHOOSE_VARIABLE.equals(chosen) && !chosen.equals(valueText.getText())) valueText.setText(chosen);
+        });
+        declaredField = new NekkoraFormField("Variáveis declaradas", declared).optional()
+                .helper(names.size() == 1 ? "Nenhuma variável declarada visível nesta sessão. Declare em Variáveis e dependências (Ctrl+Shift+B)."
+                        : "Visíveis na sessão desta etapa. Você também pode digitar o nome; um nome não declarado é apontado na validação.");
+        valueText.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+            @Override
+            public void insertUpdate(javax.swing.event.DocumentEvent e) {
+                refreshDeclaredInfo();
+            }
+
+            @Override
+            public void removeUpdate(javax.swing.event.DocumentEvent e) {
+                refreshDeclaredInfo();
+            }
+
+            @Override
+            public void changedUpdate(javax.swing.event.DocumentEvent e) {
+                refreshDeclaredInfo();
+            }
+        });
         optionLabelField = new NekkoraFormField("Rótulo da opção", optionLabel).optional().helper("Texto visível, como \"São Paulo\".");
         optionValueField = new NekkoraFormField("Valor técnico", optionValue).optional().helper("Valor da opção na página, como \"SP\" (pode ficar vazio).");
         type.addActionListener(e -> refreshParameters());
@@ -357,8 +398,10 @@ public final class StepDetailsForm extends StudioForm<StepDetailsForm.Values> {
             for (NekkoraRadioButton r : modes) radios.add(r);
             radios.addGlue();
             parametersBody.add(radios);
+            if (currentMode() == ValueMode.VARIABLE) parametersBody.add(declaredField);
             parametersBody.add(valueField);
             parametersBody.add(valueHelp);
+            if (currentMode() == ValueMode.VARIABLE) parametersBody.add(declaredInfo);
         }
         if (t != null && t.acceptsOption()) {
             parametersBody.add(optionLabelField);
@@ -387,10 +430,30 @@ public final class StepDetailsForm extends StudioForm<StepDetailsForm.Values> {
         valueHelp.setText(switch (m) {
             case NONE -> "Sem valor configurado.";
             case LITERAL -> "Texto fixo e não sensível, digitado por você. Nada observado na gravação é copiado para cá.";
-            case VARIABLE -> "Nome de uma variável do processo, como cliente.nome ou pedido.numero.";
+            case VARIABLE -> "Nome exato de uma variável declarada do processo, como cliente.nome ou pedido.numero.";
             case CREDENTIAL -> "Apelido de uma credencial, como sistema.senha. O Studio guarda só o apelido: a referência ainda não está "
                     + "vinculada a um cofre de credenciais.";
         });
+    }
+
+    /** O nome digitado corresponde a uma variável declarada (nome exato)? Mostra a declaração; nunca um valor. */
+    private void refreshDeclaredInfo() {
+        String typed = valueText.getText().strip();
+        var v = automation.variableNamed(typed).filter(x -> x.name().equals(typed));
+        String info;
+        if (typed.isEmpty()) {
+            info = "";
+        } else if (v.isEmpty()) {
+            info = "Não declarada: a validação aponta \"variável não declarada\". Nomes parecidos não são associados.";
+        } else {
+            SessionId here = automation.sessionOf(stepId).map(com.nekkora.studio.domain.LogicalSession::id).orElse(null);
+            info = "Declarada: " + v.get().type().label() + " · " + v.get().semantic().label() + " · origem " + v.get().origin().kind().label().toLowerCase(
+                    java.util.Locale.ROOT) + (here != null && !v.get().scope().visibleIn(here) ? " · fora do escopo desta sessão" : "");
+        }
+        declaredInfo.setText(info);
+        declaredInfo.getAccessibleContext().setAccessibleDescription(info);
+        String match = v.map(com.nekkora.studio.domain.variable.VariableDefinition::name).orElse(CHOOSE_VARIABLE);
+        if (!match.equals(declared.getSelectedValue())) declared.setSelectedItem(match);
     }
 
     // ------------------------------------------------------------------ elemento
@@ -699,6 +762,15 @@ public final class StepDetailsForm extends StudioForm<StepDetailsForm.Values> {
 
     public NekkoraRadioButton modeInput(ValueMode mode) {
         return modes.get(mode.ordinal());
+    }
+
+    /** STUDIO-008: lista das variáveis declaradas visíveis na sessão da etapa. */
+    public NekkoraComboBox<String> declaredVariableInput() {
+        return declared;
+    }
+
+    public String declaredVariableInfo() {
+        return declaredInfo.getText();
     }
 
     public NekkoraTextField valueInput() {

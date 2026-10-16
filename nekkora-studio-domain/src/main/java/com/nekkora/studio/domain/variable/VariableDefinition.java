@@ -24,7 +24,7 @@ import java.util.Objects;
  * @param createdAt   criação
  * @param updatedAt   última alteração
  */
-public record VariableDefinition(VariableId id, String name, VariableType type, SemanticType semantic, SemanticAuthority authority, String purpose,
+public record VariableDefinition(VariableId id, String name, VariableType type, SemanticType semantic, SemanticStatus authority, String purpose,
                                  VariableScope scope, VariableOrigin origin, Sensitivity sensitivity, VariableConstraints constraints, Instant createdAt,
                                  Instant updatedAt) {
     public VariableDefinition {

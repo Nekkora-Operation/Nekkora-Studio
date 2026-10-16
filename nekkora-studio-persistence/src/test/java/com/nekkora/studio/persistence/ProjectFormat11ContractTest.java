@@ -9,7 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.nekkora.studio.bridge.json.Json;
 import com.nekkora.studio.domain.Automation;
 import com.nekkora.studio.domain.ModelVersion;
-import com.nekkora.studio.domain.variable.SemanticAuthority;
+import com.nekkora.studio.domain.variable.SemanticStatus;
 import com.nekkora.studio.domain.variable.SemanticType;
 import com.nekkora.studio.domain.variable.Sensitivity;
 import com.nekkora.studio.domain.variable.TextFormat;
@@ -79,7 +79,7 @@ class ProjectFormat11ContractTest {
         Map<String, Class<? extends Enum<?>>> enums = new LinkedHashMap<>();
         enums.put("VariableType", VariableType.class);
         enums.put("SemanticType", SemanticType.class);
-        enums.put("SemanticAuthority", SemanticAuthority.class);
+        enums.put("SemanticStatus", SemanticStatus.class);
         enums.put("Sensitivity", Sensitivity.class);
         enums.put("VariableScopeKind", VariableScope.Kind.class);
         enums.put("VariableOriginKind", VariableOrigin.Kind.class);
@@ -200,7 +200,7 @@ class ProjectFormat11ContractTest {
         Automation a = files.load(p10, clock).automation();
         assertEquals(ModelVersion.CURRENT, a.modelVersion());
         VariableDefinition v = a.declareVariable(VariableDraft.of("cliente.email", VariableType.STRING)
-                .withSemantic(SemanticType.EMAIL, SemanticAuthority.USER_CONFIRMED).withSensitivity(Sensitivity.PERSONAL_DATA)
+                .withSemantic(SemanticType.EMAIL, SemanticStatus.USER_CONFIRMED).withSensitivity(Sensitivity.PERSONAL_DATA)
                 .withOrigin(VariableOrigin.input()));
         Path p = dir.resolve("novo.nekkora");
         Files.write(p, files.serialize(ProjectFiles.Snapshot.of(a, UUID.randomUUID().toString()), ProjectFormat.Kind.PROJECT, null, Instant.now()));

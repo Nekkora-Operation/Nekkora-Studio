@@ -5,14 +5,14 @@ package com.nekkora.studio.domain.variable;
  * é só uma proposta ainda não confirmada e da ausência de especificação. Nenhum produtor automático (IA) existe nesta
  * missão: uma proposta é o significado escolhido e ainda não confirmado pelo próprio desenvolvedor.
  */
-public enum SemanticAuthority {
+public enum SemanticStatus {
     USER_CONFIRMED("Confirmado pelo desenvolvedor"),
     PROPOSED_UNCONFIRMED("Proposto, não confirmado"),
     UNSPECIFIED("Sem especificação");
 
     private final String label;
 
-    SemanticAuthority(String label) {
+    SemanticStatus(String label) {
         this.label = label;
     }
 
