@@ -517,21 +517,34 @@ public final class StudioView {
         }
     }
 
-    /** Linhas com o lugar de cada apontamento no estado ATUAL (o relatório não guarda nomes). */
+    /**
+     * Linhas com o lugar de cada apontamento no estado ATUAL (o relatório não guarda nomes). Etapas e sessões são
+     * indexadas uma vez: procurar cada etapa na automação inteira custava O(apontamentos × etapas) — ~400 ms na EDT com
+     * 5.000 etapas, medido na homologação.
+     */
     private List<com.nekkora.studio.ui.ValidationPanel.Item> validationItems(Automation a, com.nekkora.studio.validation.ValidationReport report) {
         boolean editable = !controller.service().isLocked(a.id());
+        Map<StepId, com.nekkora.studio.domain.AutomationStep> steps = new HashMap<>();
+        Map<SessionId, com.nekkora.studio.domain.LogicalSession> sessions = new HashMap<>();
+        for (com.nekkora.studio.domain.LogicalSession s : a.sessions()) {
+            sessions.put(s.id(), s);
+            for (com.nekkora.studio.domain.AutomationStep st : s.steps()) steps.put(st.id(), st);
+        }
         java.util.List<com.nekkora.studio.ui.ValidationPanel.Item> out = new java.util.ArrayList<>(report.findings().size());
         for (com.nekkora.studio.validation.Finding f : report.findings()) {
             String place;
             boolean exists = true;
             switch (f.scope()) {
                 case AUTOMATION -> place = "Automação";
-                case SESSION -> place = "Sessão " + f.sessionNumber() + a.session(f.session()).map(s -> " — " + s.name()).orElse(" (removida)");
+                case SESSION -> {
+                    com.nekkora.studio.domain.LogicalSession s = sessions.get(f.session());
+                    place = "Sessão " + f.sessionNumber() + (s == null ? " (removida)" : " — " + s.name());
+                }
                 default -> {
-                    Optional<com.nekkora.studio.domain.AutomationStep> st = a.step(f.step());
-                    exists = st.isPresent();
-                    place = "Sessão " + f.sessionNumber() + " · Etapa " + String.format("%02d", f.stepNumber())
-                            + st.map(s -> " — " + s.name()).orElse(" (removida)");
+                    com.nekkora.studio.domain.AutomationStep st = steps.get(f.step());
+                    exists = st != null;
+                    place = "Sessão " + f.sessionNumber() + " · Etapa " + (f.stepNumber() < 10 ? "0" : "") + f.stepNumber()
+                            + (st == null ? " (removida)" : " — " + st.name());
                 }
             }
             out.add(new com.nekkora.studio.ui.ValidationPanel.Item(f, place, editable && exists));

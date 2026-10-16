@@ -315,12 +315,13 @@ public final class Studio007Homologation {
         moveFloatingAway();
         clickInPage("document.getElementById('usuario')");
         typeText(USER);
-        clickInPage("document.getElementById('senha')");
-        typeText(PASSWORD);
-        waitFor("2 etapas gravadas", 30, () -> edt(auth::stepCount) == 2);
+        clickInPage("document.getElementById('senha')"); // o campo Usuário perde o foco: a etapa é consolidada
+        waitFor("1 etapa gravada", 30, () -> edt(auth::stepCount) == 1);
         validateByShortcut();
         check("Validar DURANTE a gravação é permitido (consulta) e não interfere: continua gravando", stateIs(RecorderState.RECORDING)
                 && edt(() -> panel().isCurrent()));
+        clickInPage("document.getElementById('senha')");
+        typeText(PASSWORD);
         clickInPage("document.getElementById('entrar')");
         waitFor("3 etapas gravadas", 30, () -> edt(auth::stepCount) == 3);
         check("S007-047 etapa recebida do Recorder depois da validação: resultado desatualizado", !edt(() -> panel().isCurrent()));
