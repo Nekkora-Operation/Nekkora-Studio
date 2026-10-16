@@ -73,6 +73,8 @@ class CapturePrivacyTest {
         // conteúdo idêntico; o fim de linha depende do checkout (core.autocrlf) e não faz parte do contrato
         assertEquals(lf(Files.readString(SIBLING.resolve("ui-vocabulary.json"))), lf(Files.readString(LOCAL_VOCABULARY)), "rode a cópia de contracts/privacy");
         assertEquals(lf(Files.readString(SIBLING.resolve("privacy-v2-vectors.json"))), lf(Files.readString(LOCAL_VECTORS)));
+        assertEquals(lf(Files.readString(SIBLING.resolve("structural-attributes.json"))),
+                lf(Files.readString(Path.of("src", "main", "resources", "privacy", "structural-attributes.json"))), "rode a cópia de contracts/privacy");
     }
 
     private static String lf(String s) {

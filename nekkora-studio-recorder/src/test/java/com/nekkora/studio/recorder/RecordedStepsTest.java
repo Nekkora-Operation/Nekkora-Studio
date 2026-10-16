@@ -287,4 +287,26 @@ class RecordedStepsTest {
         StepDraft d = RecordedStepDrafts.draft(s);
         assertFalse(d.name().contains("Quixad"), d.name());
     }
+
+    @Test
+    void sec001P1PayloadAdversarialComPapelArbitrarioENumeroLongoNoLocalizador() {
+        // Revisão dos PRs #7 (P1-01/P1-02): o Studio não confia no produtor
+        Map<String, Object> el = element("BUTTON", "Salvar", "button", "salvar", false);
+        el.put("role", "gumercindo-tavares");
+        el.put("locators", List.of(
+                Json.obj().put("strategy", "ATTRIBUTE").put("description", "button {data-customer=12345678900}").put("css", null)
+                        .put("xpath", "//button[@data-customer='12345678900']").put("matchCount", 1).put("matchesTarget", true)
+                        .put("stability", "HEURISTIC_STABLE").put("validation", "LIVE").build(),
+                Json.obj().put("strategy", "POSITIONAL").put("description", "html >> body >> div {nth-of-type 123} >> button {nth-of-type 1}")
+                        .put("css", "html > body > div:nth-of-type(123) > button:nth-of-type(1)").put("xpath", null).put("matchCount", 1)
+                        .put("matchesTarget", true).put("stability", "HEURISTIC_UNSTABLE").put("validation", "LIVE").build()));
+        el.put("preferredLocator", 1);
+        RecordedStep r = parse(step("rec-1", 1, "route-1", "CLICK", el, "CAPTURE_AND_INTERACT"));
+        String all = r.element().toString();
+        assertFalse(all.contains("gumercindo") || all.contains("12345678900"), all);
+        assertTrue(r.notes().contains("LOCATORS_WITHHELD"), r.notes().toString());
+        ElementReference ref = RecordedStepDrafts.draft(r).element();
+        assertEquals(1, ref.locators().size(), "a posição estrutural continua");
+        assertTrue(ref.locators().get(0).expression().contains("nth-of-type(123)"));
+    }
 }

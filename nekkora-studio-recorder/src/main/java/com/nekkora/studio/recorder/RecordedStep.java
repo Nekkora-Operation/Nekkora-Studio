@@ -104,6 +104,9 @@ public record RecordedStep(String recordingId, String eventId, long sequence, St
     static Map<String, Object> guard(Map<String, Object> element, List<String> notes) {
         Map<String, Object> e = new java.util.LinkedHashMap<>(element);
         e.put("name", nameOrEmpty(e.get("name")));
+        // P1-01 (revisão dos PRs #7): papel ARIA só pela regra fechada do atributo role
+        String role = e.get("role") instanceof String s ? CapturePrivacy.attribute("role", s, null, null) : null;
+        e.put("role", role == null || role.isEmpty() ? null : role);
         boolean sensitive = Boolean.TRUE.equals(e.get("sensitive"));
         for (String k : new String[]{"htmlId", "htmlName"}) {
             Object v = e.get(k);
