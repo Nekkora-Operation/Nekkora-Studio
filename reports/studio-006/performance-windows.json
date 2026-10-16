@@ -1,0 +1,11 @@
+{
+  "generatedBy": "ProjectPerformanceTest",
+  "java": "21.0.12",
+  "os": "Windows 11",
+  "results": [
+    {"etapas": 10, "sessoes": 1, "evidencias": 12, "arquivoBytes": 17727, "fotografiaEdtMs": 0.59, "serializacaoMs": 2.33, "salvarComReleituraMs": 16.63, "leituraPacoteMs": 2.34, "abrirCompletoMs": 7.44, "validacaoEReconstrucaoMs": 5.1, "memoriaProjetoAbertoMB": 0.0361328125, "recuperacaoGravarMs": 10.84, "recuperacaoVarrerMs": 10.8},
+    {"etapas": 100, "sessoes": 4, "evidencias": 102, "arquivoBytes": 157119, "fotografiaEdtMs": 3.05, "serializacaoMs": 7.28, "salvarComReleituraMs": 39.79, "leituraPacoteMs": 6.96, "abrirCompletoMs": 22.2, "validacaoEReconstrucaoMs": 15.24, "memoriaProjetoAbertoMB": 0.3486328125, "recuperacaoGravarMs": 31.71, "recuperacaoVarrerMs": 21.48},
+    {"etapas": 1000, "sessoes": 40, "evidencias": 1002, "arquivoBytes": 1558744, "fotografiaEdtMs": 7.8, "serializacaoMs": 67.16, "salvarComReleituraMs": 226.39, "leituraPacoteMs": 36.06, "abrirCompletoMs": 145.97, "validacaoEReconstrucaoMs": 109.91, "memoriaProjetoAbertoMB": 3.4833984375, "recuperacaoGravarMs": 229.56, "recuperacaoVarrerMs": 132.45},
+    {"etapas": 5000, "sessoes": 200, "evidencias": 5001, "arquivoBytes": 7783406, "fotografiaEdtMs": 27.76, "serializacaoMs": 331.81, "salvarComReleituraMs": 1038.42, "leituraPacoteMs": 222.22, "abrirCompletoMs": 670.23, "validacaoEReconstrucaoMs": 448.01, "memoriaProjetoAbertoMB": 17.4169921875, "recuperacaoGravarMs": 962.58, "recuperacaoVarrerMs": 671.64}
+  ]
+}

@@ -468,7 +468,7 @@ public final class StudioView {
                     .orElse("Projetos são arquivos locais .nekkora, não criptografados. Não guarde segredos neles."));
         }
         boolean recovery = controller.projects().settings().recoveryEnabled() && controller.projects().recovery().isPresent();
-        recoveryStatus.setText(recovery ? "Recuperação automática ativa" : "Recuperação automática desativada");
+        recoveryStatus.setText(recovery ? "Recuperação ativa" : "Recuperação desativada");
         recoveryStatus.setToolTipText(controller.projects().recovery().isEmpty() ? "Sem diretório de dados local nesta sessão."
                 : "Arquivo → Recuperação automática… (cópias locais das alterações não salvas)");
     }
@@ -697,10 +697,13 @@ public final class StudioView {
         return List.of(projectStatus, unsavedStatus, countStatus, themeStatus, recoveryStatus);
     }
 
-    /** Item adicional da barra de status (ex.: conexão com o navegador, STUDIO-002). */
+    /**
+     * Item adicional da barra de status (ex.: conexão com o navegador, STUDIO-002), logo depois da situação do projeto:
+     * em janela estreita, os itens mais à direita de cada lado saem primeiro.
+     */
     public void addStatusItem(JComponent item) {
         extraStatus.add(item);
-        statusBar.addLeft(item);
+        statusBar.addLeft(item, extraStatus.size());
         statusBar.revalidate();
     }
 

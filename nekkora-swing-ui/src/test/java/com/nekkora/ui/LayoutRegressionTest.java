@@ -109,4 +109,50 @@ class LayoutRegressionTest {
         }
         return null;
     }
+
+    @Test
+    @DisplayName("STUDIO-006: barra de status estreita (1366×768 a 150%) não sobrepõe itens; esquerda tem prioridade; larga = posições do BorderLayout")
+    void barraDeStatusSemSobreposicao() throws Exception {
+        TestSupport.theme(NekkoraThemes.SAKURA_DARK);
+        java.util.List<javax.swing.JComponent> items = new java.util.ArrayList<>();
+        com.nekkora.ui.studio.NekkoraStatusBar bar = TestSupport.onEdt(() -> {
+            com.nekkora.ui.studio.NekkoraStatusBar b = new com.nekkora.ui.studio.NekkoraStatusBar();
+            for (String t : java.util.List.of("Alterações não salvas — sem arquivo", "Navegador: conectado (Nekkora Extension 0.4.0)", "Alterações não salvas",
+                    "1 automação no Studio")) {
+                javax.swing.JComponent c = com.nekkora.ui.studio.NekkoraStatusBar.item(IconName.ALERT, t);
+                items.add(c);
+                b.addLeft(c);
+            }
+            for (String t : java.util.List.of("Recuperação desativada", "Sakura Dark")) {
+                javax.swing.JComponent c = com.nekkora.ui.studio.NekkoraStatusBar.item(IconName.SUN, t);
+                items.add(c);
+                b.addRight(c);
+            }
+            return b;
+        });
+        int wide = TestSupport.onEdt(() -> bar.getPreferredSize().width) + 40;
+        for (int width : new int[] {wide, 910, 870, 600, 300, 0}) {
+            java.util.List<java.awt.Rectangle> shown = TestSupport.onEdt(() -> {
+                bar.setSize(width, Scale.px(28));
+                bar.doLayout();
+                for (Component side : bar.getComponents()) ((Container) side).doLayout();
+                java.util.List<java.awt.Rectangle> out = new java.util.ArrayList<>();
+                for (javax.swing.JComponent c : items) {
+                    if (!com.nekkora.ui.studio.NekkoraStatusBar.shown(c)) continue;
+                    java.awt.Rectangle r = SwingUtilities.convertRectangle(c.getParent(), c.getBounds(), bar);
+                    assertTrue(r.x >= 0 && r.x + r.width <= width, "item dentro da barra (" + width + "): " + r);
+                    assertEquals(c.getPreferredSize().width, r.width, "item inteiro, nunca cortado");
+                    out.add(r);
+                }
+                return out;
+            });
+            for (int i = 0; i < shown.size(); i++) {
+                for (int j = i + 1; j < shown.size(); j++) assertTrue(!shown.get(i).intersects(shown.get(j)), width + ": " + shown.get(i) + " × " + shown.get(j));
+            }
+            if (width == wide) assertEquals(items.size(), shown.size(), "com espaço, tudo aparece");
+            if (width == 870) {
+                assertTrue(TestSupport.onEdt(() -> com.nekkora.ui.studio.NekkoraStatusBar.shown(items.get(0))), "o primeiro item (situação do projeto) fica");
+            }
+        }
+    }
 }

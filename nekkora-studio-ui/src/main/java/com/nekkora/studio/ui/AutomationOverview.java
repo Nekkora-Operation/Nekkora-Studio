@@ -77,7 +77,7 @@ public final class AutomationOverview extends NekkoraPanel {
         NekkoraStack texts = NekkoraStack.vertical(Spacing.SPACE_1);
         NekkoraStack nameRow = NekkoraStack.horizontal(Spacing.SPACE_4).align(NekkoraStack.Align.CENTER);
         nameRow.add(title);
-        nameRow.add(new NekkoraStatusBadge(Status.DRAFT, "Rascunho em memória"));
+        nameRow.add(new NekkoraStatusBadge(Status.DRAFT, "Rascunho"));
         texts.add(nameRow);
         texts.add(summary);
         heading.add(texts);
