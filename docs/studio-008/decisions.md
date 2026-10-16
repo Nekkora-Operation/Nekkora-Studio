@@ -43,3 +43,17 @@ fixa "1.1.0" como versão desconhecida. Para seguir são necessárias estas muda
 Nada mais das fixtures/schemas 1.0.0 muda; os binários `.nekkora` congelados ficam intactos.
 
 **Autorizado pela usuária em 2026-10-16** (opção "Autorizar os 4 ajustes"), antes de qualquer código de produção.
+
+## 4. Decisões tomadas durante a implementação
+
+| Id | Decisão | Motivo |
+|---|---|---|
+| D-S008-09 | `SemanticAuthority` passou a se chamar `SemanticStatus` (valores `USER_CONFIRMED`, `PROPOSED_UNCONFIRMED`, `UNSPECIFIED`); o campo JSON continua `authority` no `variables.json` e vira `semanticStatus` no contrato semântico | `StudioScopeTest.semFuncionalidadesFicticias` recusa classes com "auth" no nome (regra de escopo da STUDIO-001: nada de autenticação) |
+| D-S008-10 | A ação "Variáveis e dependências…" fica no painel de propriedades da automação (grupo Ações), no atalho Ctrl+Shift+B e na aba "Variáveis" do painel inferior — **não** no menu Automação nem na barra de ferramentas | `ValidationStudioTest.s007048e049` fixa os itens do menu Automação (mudar esse teste não estava entre os 4 ajustes autorizados); na barra, a 1366 px, um botão a mais empurrava "Executar" para fora (visto nas capturas da homologação) |
+| D-S008-17 | "Versão do modelo" no painel de propriedades: 1.0.0 e 1.1.0 são atuais; "(anterior)" só para versão não suportada | antes, qualquer versão ≠ 1.0.0 aparecia como "anterior" |
+| D-S008-11 | Regras 1.1.0: 19 códigos novos (10 na etapa, 9 na variável), escopo e campo `VARIABLE`; apontamentos de variável vêm depois dos da automação e antes das sessões, na ordem do catálogo; `VARIABLE_RESOLUTION_UNAVAILABLE` continua no catálogo mas não é emitido pelas regras 1.1.0 | ver `validation-rules.md` |
+| D-S008-12 | A identidade "sem variáveis = 1.0.0 byte a byte" é conferida entrada por entrada **descompactada** (nomes, ordem e bytes de cada documento) | os bytes compactados do ZIP dependem do zlib da plataforma (Windows ≠ Linux); os documentos não |
+| D-S008-13 | Excluir ou mover uma etapa produtora, ou excluir a sessão de um escopo, **não** altera a declaração da variável: a validação aponta (`VARIABLE_PRODUCER_MISSING`, `VARIABLE_PRODUCER_OUT_OF_SCOPE`, `VARIABLE_SCOPE_SESSION_MISSING`, `DECLARED_PRODUCER_MISSING`) | nada é corrigido em silêncio |
+| D-S008-14 | Migração 1.0→1.1 só ao gravar **sobre o próprio arquivo** 1.0: confirmação explícita; cópia conferida do original em `<nome> (formato 1.0.0).nekkora` (depois ` 2`, ` 3`…), nunca substituindo um arquivo existente; conflito (nada copiado nem gravado) se o original mudou. "Salvar como" em outro arquivo não toca no original | não reescrever destrutivamente o formato |
+| D-S008-15 | Homologação da 008 sem navegador | nenhum cenário grava, executa ou consulta página |
+| D-S008-16 | `Studio007Homologation` (roteiro histórico da 007, fora do `verify`) não foi alterado; com as regras 1.1.0 a verificação "variável → `VARIABLE_RESOLUTION_UNAVAILABLE`" daquele roteiro não vale mais | é o registro da 007; alterar não estava autorizado |

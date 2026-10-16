@@ -152,10 +152,7 @@ public final class Studio008Homologation {
             return null;
         });
         waitFor("janela do Studio", 10, () -> edt(() -> window.frame().isShowing()));
-        check("ação Variáveis e dependências na barra de ferramentas e atalho Ctrl+Shift+B", edt(() -> find(window.frame().getContentPane(),
-                com.nekkora.ui.navigation.NekkoraToolbarButton.class, b -> b.getAction() != null
-                        && StudioActions.VARIABLES.equals(b.getAction().getValue(com.nekkora.ui.action.NekkoraAction.ID))) != null
-                && javax.swing.KeyStroke.getKeyStroke(KeyEvent.VK_B, com.nekkora.ui.action.NekkoraKeys.menuMask() | InputEvent.SHIFT_DOWN_MASK)
+        check("atalho Ctrl+Shift+B de Variáveis e dependências (o botão fica no painel de propriedades da automação)", edt(() -> javax.swing.KeyStroke.getKeyStroke(KeyEvent.VK_B, com.nekkora.ui.action.NekkoraKeys.menuMask() | InputEvent.SHIFT_DOWN_MASK)
                         .equals(window.studio().view().actions().get(StudioActions.VARIABLES).shortcutKey())));
 
         // ================================================================ preparação: automação 1.0 salva
@@ -183,6 +180,11 @@ public final class Studio008Homologation {
         check("sem variáveis o projeto é gravado em 1.0.0 (" + formatOf(file) + ")", ProjectFormat.FORMAT_VERSION.equals(formatOf(file))
                 && !entries(file).containsKey(ProjectFormat.VARIABLES));
         String sha10 = sha(file);
+
+        check("painel de propriedades da automação: botão Variáveis e dependências e versão do modelo 1.0.0 sem \"(anterior)\"",
+                edt(() -> find(window.studio().view().inspector(), AbstractButton.class, b -> "Variáveis e dependências".equals(b.getText())
+                        && b.isShowing()) != null && texts(window.studio().view().inspector()).contains("1.0.0")
+                        && !texts(window.studio().view().inspector()).contains("(anterior)")));
 
         // ================================================================ Cenário 1 — declarar CPF sem valor
         focusStudioWorkspace();
@@ -790,6 +792,8 @@ public final class Studio008Homologation {
     private void shortcut(String what, Callable<Boolean> effect, String toolbarFallback, int... keys) throws Exception {
         for (int attempt = 1; attempt <= 3; attempt++) {
             requireActive(edt(window::frame));
+            if (attempt > 1 && !dialogOpenNow()) focusStudio();
+            probeKeyboard();
             int before = keysSeen.size();
             press(keys);
             long end = System.currentTimeMillis() + 3000;
@@ -809,6 +813,26 @@ public final class Studio008Homologation {
         log("atalho " + what + " não chegou ao Studio: usado o botão \"" + toolbarFallback + "\" da barra de ferramentas");
         click(b);
         waitFor(what + " (botão)", 10, effect);
+    }
+
+    /** Há um diálogo do Studio aberto (aí o foco está nele, não na janela principal). */
+    private boolean dialogOpenNow() throws Exception {
+        return edt(() -> {
+            for (Window w : Window.getWindows()) if (w instanceof java.awt.Dialog d && d.isShowing()) return true;
+            return false;
+        });
+    }
+
+    /**
+     * Sonda inofensiva antes de um atalho: pressiona Shift sozinho e confere que a JVM recebeu. Se não recebeu, o teclado
+     * não está com o Studio (outro programa na frente): a homologação para em vez de mandar atalhos para outro programa.
+     */
+    private void probeKeyboard() throws Exception {
+        int before = keysSeen.size();
+        press(KeyEvent.VK_SHIFT);
+        long end = System.currentTimeMillis() + 1500;
+        while (keysSeen.size() == before && System.currentTimeMillis() < end) sleep(50);
+        if (keysSeen.size() == before) throw new IllegalStateException("o teclado não está com o Studio: homologação interrompida sem enviar o atalho");
     }
 
     /** Teclas recebidas pela JVM (código + modificadores; nunca texto). */
@@ -834,13 +858,12 @@ public final class Studio008Homologation {
             window.frame().toFront();
             return null;
         });
-        sleep(200);
-        if (!edt(() -> window.frame().isActive())) {
-            Rectangle b = edt(() -> window.frame().getBounds());
-            robot.mouseMove(b.x + b.width / 2, b.y + 12);
-            robot.mousePress(InputEvent.BUTTON1_DOWN_MASK);
-            robot.mouseRelease(InputEvent.BUTTON1_DOWN_MASK);
-        }
+        // clique na barra de título: dá ao Studio o primeiro plano DO SISTEMA (o "ativo" do Java não garante isso logo após
+        // abrir — as teclas iriam para o programa que estivesse na frente)
+        Rectangle b = edt(() -> window.frame().getBounds());
+        robot.mouseMove(b.x + b.width / 2, b.y + 12);
+        robot.mousePress(InputEvent.BUTTON1_DOWN_MASK);
+        robot.mouseRelease(InputEvent.BUTTON1_DOWN_MASK);
         waitFor("Studio com foco", 10, () -> edt(() -> window.frame().isFocused() || window.frame().isActive()));
         sleep(300);
     }

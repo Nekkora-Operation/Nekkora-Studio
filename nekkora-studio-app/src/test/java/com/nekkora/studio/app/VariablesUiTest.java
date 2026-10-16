@@ -252,6 +252,35 @@ class VariablesUiTest {
     }
 
     @Test
+    @DisplayName("S008 — painel de propriedades da automação: botão Variáveis e dependências; versão do modelo 1.1.0 não é \"anterior\"")
+    void inspetor() {
+        fx.missionExample();
+        Edt.run(() -> fx.studio.controller().selectAutomation(fx.active().id()));
+        String before = StudioFixture.texts(fx.studio.view().inspector());
+        assertTrue(before.contains("1.0.0") && !before.contains("(anterior)"), before);
+        declareCpf();
+        Edt.run(() -> fx.studio.controller().selectAutomation(fx.active().id()));
+        String after = StudioFixture.texts(fx.studio.view().inspector());
+        assertTrue(after.contains("1.1.0") && !after.contains("(anterior)"), "1.1.0 é atual, não anterior: " + after);
+        javax.swing.AbstractButton b = Edt.call(() -> find(fx.studio.view().inspector(), "Variáveis e dependências"));
+        assertEquals("1 variável declarada", Edt.call(() -> b.getAccessibleContext().getAccessibleDescription()));
+        Edt.run(() -> fx.studio.view().hideValidation());
+        Edt.run(b::doClick);
+        assertTrue(Edt.call(() -> fx.studio.view().variablesVisible()));
+    }
+
+    private static javax.swing.AbstractButton find(java.awt.Container root, String text) {
+        for (java.awt.Component c : root.getComponents()) {
+            if (c instanceof javax.swing.AbstractButton b && text.equals(b.getText())) return b;
+            if (c instanceof java.awt.Container ct) {
+                javax.swing.AbstractButton b = find(ct, text);
+                if (b != null) return b;
+            }
+        }
+        return null;
+    }
+
+    @Test
     @DisplayName("S008 — durante a gravação: consultar sim, editar não (mesmo bloqueio das outras edições)")
     void bloqueioDeGravacao() {
         fx.missionExample();

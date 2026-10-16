@@ -136,6 +136,11 @@ public final class StudioView {
             }
 
             @Override
+            public void showVariables() {
+                controller.showVariables();
+            }
+
+            @Override
             public void editSession(SessionId session) {
                 controller.editSession(session);
             }
@@ -295,13 +300,8 @@ public final class StudioView {
         NekkoraToolbarButton validate = new NekkoraToolbarButton(actions.get(StudioActions.VALIDATE), true);
         validate.getAccessibleContext().setAccessibleDescription(String.valueOf(actions.get(StudioActions.VALIDATE).getValue(javax.swing.Action.SHORT_DESCRIPTION)));
         tb.add(validate);
-        // STUDIO-008: variáveis e dependências (só ícone; nome e atalho na dica e no nome acessível)
-        NekkoraToolbarButton variables = new NekkoraToolbarButton(actions.get(StudioActions.VARIABLES), false);
-        NekkoraTooltips.install(variables, "Variáveis e dependências (" + com.nekkora.ui.action.NekkoraKeys.format(actions.get(StudioActions.VARIABLES)
-                .shortcutKey()) + ")", null);
-        variables.getAccessibleContext().setAccessibleName("Variáveis e dependências");
-        variables.getAccessibleContext().setAccessibleDescription(String.valueOf(actions.get(StudioActions.VARIABLES).getValue(javax.swing.Action.SHORT_DESCRIPTION)));
-        tb.add(variables);
+        // STUDIO-008: "Variáveis e dependências" fica no painel de propriedades da automação, no atalho e na aba do painel
+        // inferior — não na barra (a 1366 px ela já não tem espaço sobrando)
         for (String id : StudioActions.FUTURE) {
             NekkoraToolbarButton b = new NekkoraToolbarButton(actions.get(id), false);
             NekkoraTooltips.install(b, actions.get(id).getValue(javax.swing.Action.NAME) + " — "
