@@ -1,0 +1,16 @@
+{
+  "description": "Tipo de ação fora do vocabulário (ex.: executar script).",
+  "base": "consulta-clientes.nekkora",
+  "changes": [
+    {
+      "entry": "step:2",
+      "op": "set",
+      "pointer": "/effective/actionType",
+      "value": "RUN_SCRIPT"
+    }
+  ],
+  "addEntries": {},
+  "rehash": true,
+  "expectedError": "INVALID_CONTENT",
+  "schemaRejects": true
+}

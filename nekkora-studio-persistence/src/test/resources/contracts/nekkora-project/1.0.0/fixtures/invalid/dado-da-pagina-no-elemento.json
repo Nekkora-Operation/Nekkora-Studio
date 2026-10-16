@@ -1,0 +1,16 @@
+{
+  "description": "Nome acessível com dado da página fora da nekkora-privacy/2: recusado, não sanitizado em silêncio.",
+  "base": "consulta-clientes.nekkora",
+  "changes": [
+    {
+      "entry": "step:0",
+      "op": "set",
+      "pointer": "/original/capturedElement/accessibleName",
+      "value": "Consultar cliente Bartolomeu Quixadá"
+    }
+  ],
+  "addEntries": {},
+  "rehash": true,
+  "expectedError": "PRIVACY_VIOLATION",
+  "schemaRejects": false
+}

@@ -1,0 +1,16 @@
+{
+  "description": "Identificador de correlação com espaço: identificadores internos têm forma fechada.",
+  "base": "consulta-clientes.nekkora",
+  "changes": [
+    {
+      "entry": "step:2",
+      "op": "set",
+      "pointer": "/original/provenance/correlation/RECORDING_ID",
+      "value": "rec 1"
+    }
+  ],
+  "addEntries": {},
+  "rehash": true,
+  "expectedError": "INVALID_CONTENT",
+  "schemaRejects": true
+}

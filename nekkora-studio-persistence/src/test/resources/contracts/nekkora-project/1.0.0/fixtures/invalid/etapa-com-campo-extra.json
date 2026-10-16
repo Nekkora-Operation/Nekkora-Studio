@@ -1,0 +1,16 @@
+{
+  "description": "Campo desconhecido (script) numa etapa: campos exatos.",
+  "base": "consulta-clientes.nekkora",
+  "changes": [
+    {
+      "entry": "step:0",
+      "op": "set",
+      "pointer": "/effective/script",
+      "value": "document.forms[0].submit()"
+    }
+  ],
+  "addEntries": {},
+  "rehash": true,
+  "expectedError": "INVALID_CONTENT",
+  "schemaRejects": true
+}

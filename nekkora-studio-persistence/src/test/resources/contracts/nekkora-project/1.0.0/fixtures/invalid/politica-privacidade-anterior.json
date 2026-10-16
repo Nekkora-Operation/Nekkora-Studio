@@ -1,0 +1,16 @@
+{
+  "description": "privacyPolicy nekkora-privacy/1: política anterior; recusada, sem migração.",
+  "base": "consulta-clientes.nekkora",
+  "changes": [
+    {
+      "entry": "manifest.json",
+      "op": "set",
+      "pointer": "/privacyPolicy",
+      "value": "nekkora-privacy/1"
+    }
+  ],
+  "addEntries": {},
+  "rehash": true,
+  "expectedError": "PRIVACY_POLICY_UNSUPPORTED",
+  "schemaRejects": true
+}

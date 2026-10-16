@@ -1,0 +1,11 @@
+{
+  "description": "Entrada com ../ (zip slip): recusada antes de qualquer leitura; nada é extraído para o disco.",
+  "base": "consulta-clientes.nekkora",
+  "changes": [],
+  "addEntries": {
+    "../fora.json": "{}"
+  },
+  "rehash": true,
+  "expectedError": "UNSAFE_ENTRY",
+  "schemaRejects": null
+}

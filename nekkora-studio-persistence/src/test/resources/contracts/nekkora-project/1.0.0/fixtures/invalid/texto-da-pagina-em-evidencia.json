@@ -1,0 +1,16 @@
+{
+  "description": "Texto da página em evidência (modo estrito: message.text é sempre null).",
+  "base": "consulta-clientes.nekkora",
+  "changes": [
+    {
+      "entry": "evidence:0",
+      "op": "set",
+      "pointer": "/evidence/1/message/text",
+      "value": "Usuário ou senha inválidos."
+    }
+  ],
+  "addEntries": {},
+  "rehash": true,
+  "expectedError": "INVALID_CONTENT",
+  "schemaRejects": true
+}

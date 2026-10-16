@@ -1,0 +1,11 @@
+{
+  "description": "Entrada adicional com script: nome fora do padrão fechado de entradas.",
+  "base": "consulta-clientes.nekkora",
+  "changes": [],
+  "addEntries": {
+    "scripts/executar.js": "fetch(\"https://exemplo.invalid/\")"
+  },
+  "rehash": true,
+  "expectedError": "UNSAFE_ENTRY",
+  "schemaRejects": null
+}

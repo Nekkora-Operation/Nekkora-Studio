@@ -1,0 +1,16 @@
+{
+  "description": "Documento alterado sem atualizar o manifesto: o SHA-256 detecta (corrupção acidental; não é autenticação).",
+  "base": "consulta-clientes.nekkora",
+  "changes": [
+    {
+      "entry": "step:2",
+      "op": "set",
+      "pointer": "/effective/name",
+      "value": "Outro nome"
+    }
+  ],
+  "addEntries": {},
+  "rehash": false,
+  "expectedError": "CHECKSUM_MISMATCH",
+  "schemaRejects": false
+}
