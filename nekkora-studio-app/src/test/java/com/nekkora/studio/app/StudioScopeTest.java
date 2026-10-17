@@ -124,6 +124,9 @@ class StudioScopeTest {
         // STUDIO-006: "Salvo" é real — ProjectState só devolve SAVED quando a geração em memória é a gravada por um salvamento
         // CONFIRMADO (verificado em ProjectStudioTest); antes da STUDIO-006, salvar não existia e o texto só poderia ser fictício
         String confirmedSavedLabel = "SAVED(\"Salvo\"),";
+        // STUDIO-010 (D-S010-13): o PDF do PDD visual é REAL — gerado e verificado pelo módulo nekkora-studio-pdd (PddPdfTest,
+        // PddUiTest e a homologação). Só os pacotes do PDD (app/pdd, ui/pdd) e a descrição da ação podem falar em PDF.
+        String pddActionDescription = ".description(\"Documento PDF do processo mapeado: sessões, instruções e capturas sanitizadas do laboratório. Não altera a automação.\"));";
         List<String> v = new ArrayList<>();
         for (String module : List.of("nekkora-studio-domain", "nekkora-studio-ui", "nekkora-studio-app", "nekkora-studio-bridge", "nekkora-studio-recorder")) {
             try (Stream<Path> files = Files.walk(ROOT.resolve(module).resolve("src/main/java"))) {
@@ -133,8 +136,14 @@ class StudioScopeTest {
                     if (name.matches("(?i).*(login|license|licen[cç]a|executor|runner|llm|export|sensor|clickcapture).*") || name.matches("(Ai|AI)[A-Z].*")
                             || (name.matches("(?i).*auth.*") && !name.equals("BridgeAuth.java"))) v.add("classe: " + f);
                     List<String> lines = Files.readAllLines(f);
+                    String unix = f.toString().replace(java.io.File.separatorChar, '/');
+                    boolean pddPackage = unix.contains("/com/nekkora/studio/app/pdd/") || unix.contains("/com/nekkora/studio/ui/pdd/");
                     for (int i = 0; i < lines.size(); i++) {
                         String l = lines.get(i).strip();
+                        if (pddPackage && l.toLowerCase().contains("pdf") && !l.toLowerCase().matches(".*(ana souza|ollama|openai|anthropic|playwright|selenium).*")) {
+                            continue;
+                        }
+                        if (name.equals("StudioActions.java") && l.equals(pddActionDescription)) continue;
                         if (l.startsWith("*") || l.startsWith("//") || l.startsWith("/**")) continue; // documentação pode citar o escopo futuro
                         if (fake.matcher(l).find() && !(f.getFileName().toString().equals("RecorderPresenter.java") && l.equals(confirmedLabel))
                                 && !(f.getFileName().toString().equals("RecorderText.java") && l.equals(confirmedStepsLabel))

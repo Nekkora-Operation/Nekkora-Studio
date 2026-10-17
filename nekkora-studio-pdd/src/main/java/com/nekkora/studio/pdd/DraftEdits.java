@@ -143,7 +143,7 @@ public final class DraftEdits {
      */
     public static DocumentDraft refresh(DocumentDraft old, ProcessProjection oldProjection, ProcessProjection now) {
         DocumentDraft fresh = DraftBuilder.build(now);
-        Map<StepId, StepFacts> before = facts(oldProjection);
+        Map<StepId, StepFacts> before = oldProjection == null ? Map.of() : facts(oldProjection); // sem a projeção antiga: tudo é refeito
         Map<StepId, StepFacts> after = facts(now);
         Map<List<StepId>, Block> oldBlocks = new HashMap<>();
         old.blocks().forEach(b -> oldBlocks.put(b.stepIds(), b));

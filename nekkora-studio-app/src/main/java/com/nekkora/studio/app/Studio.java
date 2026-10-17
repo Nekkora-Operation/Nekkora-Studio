@@ -65,6 +65,26 @@ public final class Studio {
         this.clock = clock;
         // STUDIO-009: debug guiado (criado no primeiro uso, com a janela configurada pela aplicação)
         view.actions().onGuidedDebug(() -> guidedDebug().open());
+        // STUDIO-010: PDD visual (rascunho e imagens sanitizadas no diretório de dados; nunca no .nekkora)
+        view.actions().onVisualPdd(() -> visualPdd().open());
+    }
+
+    private java.util.function.Function<com.nekkora.studio.ui.pdd.PddPanel, com.nekkora.studio.app.pdd.PddPresenter.Host> pddHosts =
+            p -> com.nekkora.studio.app.pdd.PddPresenter.Host.headless(null);
+    private com.nekkora.studio.app.pdd.PddPresenter visualPdd;
+
+    /** Janela real do PDD (a aplicação configura; os testes ficam sem janela). Antes do primeiro uso. */
+    public void useVisualPddHosts(java.util.function.Function<com.nekkora.studio.ui.pdd.PddPanel, com.nekkora.studio.app.pdd.PddPresenter.Host> factory) {
+        this.pddHosts = java.util.Objects.requireNonNull(factory);
+    }
+
+    /** STUDIO-010: PDD visual da automação ativa. */
+    public com.nekkora.studio.app.pdd.PddPresenter visualPdd() {
+        if (visualPdd == null) {
+            visualPdd = new com.nekkora.studio.app.pdd.PddPresenter(service, link, recorder, environment.decisionActor(), clock,
+                    environment.dataDir().orElse(null), pddHosts);
+        }
+        return visualPdd;
     }
 
     private final Clock clock;
@@ -133,6 +153,7 @@ public final class Studio {
         projects.dispose();
         persistence.shutdown();
         if (guidedDebug != null) guidedDebug.dispose();
+        if (visualPdd != null) visualPdd.dispose();
         recorderPresenter.dispose();
         recorder.close();
         view.dispose();

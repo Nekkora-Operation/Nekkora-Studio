@@ -56,8 +56,16 @@ public final class PdfRenderer {
         }
     }
 
-    /** Rótulo da versão ("v001") e data do documento. */
-    public record Options(String versionLabel, LocalDate date) {}
+    /**
+     * Rótulo da versão ("v001") e data do documento. {@code preview}: prévia no editor — texto pendente aparece como
+     * "[Revisar] …" e texto fora da política como "[Texto recusado pela política]" (nunca o texto); o arquivo exportado
+     * nunca usa a prévia.
+     */
+    public record Options(String versionLabel, LocalDate date, boolean preview) {
+        public Options(String versionLabel, LocalDate date) {
+            this(versionLabel, date, false);
+        }
+    }
 
     static final float W = PDRectangle.A4.getWidth();
     static final float H = PDRectangle.A4.getHeight();
@@ -78,6 +86,7 @@ public final class PdfRenderer {
             + "mapeado e não comprova resultado de negócio.";
 
     private final PDDocument doc;
+    private boolean preview;
     private final PDFont regular;
     private final PDFont bold;
     private final List<PDPage> pages = new ArrayList<>();
@@ -99,6 +108,7 @@ public final class PdfRenderer {
         Objects.requireNonNull(d);
         try (PDDocument doc = new PDDocument()) {
             PdfRenderer r = new PdfRenderer(doc, fonts);
+            r.preview = options.preview();
             r.body(d, images, options);
             r.footers();
             PDDocumentInformation info = new PDDocumentInformation();
@@ -130,7 +140,7 @@ public final class PdfRenderer {
         y -= 14;
         for (Section s : d.sections()) {
             ensure(60);
-            text(bold, 14, INK, M, y - 14, s.number() + ". " + exportable(s.title()));
+            text(bold, 14, INK, M, y - 14, s.number() + ". " + exportable(s.title(), preview));
             y -= 26;
             if (s.blocks().isEmpty()) {
                 text(regular, 9.5f, MUTED, M, y - 9.5f, "Sessão sem etapas mapeadas.");
@@ -151,13 +161,13 @@ public final class PdfRenderer {
         boolean declared = b.instructions().stream().allMatch(i -> i.kind() == Instruction.Kind.DECLARED);
         lines.add(new String[] {recorded ? "Ações observadas na gravação" : declared ? "Etapas declaradas no Studio" : "Ações gravadas e etapas declaradas", "nota"});
         for (Instruction i : b.instructions()) {
-            List<String> w = wrap(regular, 10, i.ordinal() + ". " + exportable(i.text()), LEFT_W);
+            List<String> w = wrap(regular, 10, i.ordinal() + ". " + exportable(i.text(), preview), LEFT_W);
             for (int k = 0; k < w.size(); k++) lines.add(new String[] {(k == 0 ? "" : "     ") + w.get(k), "texto"});
             if (cap != null && !placed(cap, i.stepId())) lines.add(new String[] {"     (marcador indisponível)", "nota"});
         }
         float textH = 0;
         for (String[] l : lines) textH += "nota".equals(l[1]) ? 13 : 14.5f;
-        List<String> title = wrap(bold, 11, exportable(b.title()), W - 2 * M);
+        List<String> title = wrap(bold, 11, exportable(b.title(), preview), W - 2 * M);
         float need = title.size() * 15 + 8 + Math.max(textH, imgH) + 22;
         ensure(Math.min(need, H - 2 * M - 30));
         for (String t : title) {
@@ -246,8 +256,11 @@ public final class PdfRenderer {
         return c.annotations().stream().anyMatch(a -> a.stepId().equals(step) && a.status() == Annotation.Status.PLACED);
     }
 
-    private static String exportable(DocText t) {
-        if (!t.exportable()) throw new IllegalStateException("texto não exportável no documento");
+    private static String exportable(DocText t, boolean preview) {
+        if (!t.exportable()) {
+            if (!preview) throw new IllegalStateException("texto não exportável no documento");
+            return PddText.problems(t.value()).isEmpty() ? "[Revisar] " + pdfText(t.value()) : "[Texto recusado pela política]";
+        }
         return pdfText(t.value());
     }
 
