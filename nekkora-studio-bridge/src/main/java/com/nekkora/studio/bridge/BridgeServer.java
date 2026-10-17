@@ -456,7 +456,8 @@ public final class BridgeServer implements BrowserLink, AutoCloseable {
             }
             case "bridge.disconnected" -> c.disconnectReason = Json.string(payload, "reason");
             default -> {
-                if (type.startsWith("studio.recording.") && payload != null) {
+                // eventos do contrato para os ouvintes (gravação e, desde a STUDIO-009, debug guiado); fora da lista fechada: ignorado
+                if ((type.startsWith("studio.recording.") || type.startsWith("studio.debug.") && BridgeProtocol.EVENTS.contains(type)) && payload != null) {
                     BridgeEvent ev = new BridgeEvent(type, payload);
                     for (Listener l : listeners) {
                         try {

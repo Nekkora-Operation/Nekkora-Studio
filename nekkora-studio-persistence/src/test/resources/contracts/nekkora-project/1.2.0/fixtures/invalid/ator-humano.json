@@ -1,0 +1,14 @@
+{
+  "description": "Ator fora do vocabulário (rótulo de confirmação humana): não existe no contrato.",
+  "base": "consulta-clientes-decisoes.nekkora",
+  "changes": [
+    {
+      "entry": "step:2",
+      "op": "set",
+      "pointer": "/effective/targetDecision/actor",
+      "value": "HUMAN_CONFIRMED"
+    }
+  ],
+  "expectedError": "INVALID_CONTENT",
+  "schemaRejects": true
+}

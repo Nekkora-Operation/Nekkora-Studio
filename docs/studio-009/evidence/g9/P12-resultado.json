@@ -1,0 +1,22 @@
+{
+  "plano": {
+    "automationId": "774defa5-103d-4b24-bc30-bdc50611a35d",
+    "planRevision": "sha256:c9341d1aa23cb39337c5bd53d05683a9cae33239d124fe4650942c1c04aab42c",
+    "operator": "TEST_AGENT"
+  },
+  "etapas": [
+    {
+      "stepId": "a1abe836-28d7-484a-9665-4ceea4ef7383",
+      "posicao": "1.1",
+      "status": "OK",
+      "ms": 109
+    },
+    {
+      "stepId": "a44a73a5-7733-4745-8140-7442cde06414",
+      "posicao": "1.2",
+      "status": "OK",
+      "ms": 78
+    }
+  ],
+  "status": "ETAPAS_EXECUTADAS"
+}

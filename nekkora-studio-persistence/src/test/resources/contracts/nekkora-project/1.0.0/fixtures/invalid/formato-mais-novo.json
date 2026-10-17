@@ -1,12 +1,12 @@
 {
-  "description": "formatVersion 1.2.0: criado por versão mais recente; recusado sem migração silenciosa.",
+  "description": "formatVersion 1.3.0: criado por versão mais recente; recusado sem migração silenciosa.",
   "base": "consulta-clientes.nekkora",
   "changes": [
     {
       "entry": "manifest.json",
       "op": "set",
       "pointer": "/formatVersion",
-      "value": "1.2.0"
+      "value": "1.3.0"
     }
   ],
   "addEntries": {},

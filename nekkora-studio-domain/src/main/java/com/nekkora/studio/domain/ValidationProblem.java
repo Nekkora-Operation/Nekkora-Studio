@@ -70,7 +70,11 @@ public enum ValidationProblem {
     VARIABLE_PRODUCER_NOT_FOUND(Field.VALUE, "A etapa produtora não existe nesta automação."),
     VARIABLE_PRODUCER_OUT_OF_SCOPE(Field.VALUE, "A etapa produtora fica fora da sessão do escopo da variável."),
     VARIABLE_PURPOSE_LOOKS_SENSITIVE(Field.DESCRIPTION, "A finalidade parece conter um dado sensível. Descreva o significado sem exemplos reais."),
-    VARIABLE_LIMIT_REACHED(Field.NONE, "Limite de variáveis atingido nesta automação.");
+    VARIABLE_LIMIT_REACHED(Field.NONE, "Limite de variáveis atingido nesta automação."),
+    // ---- STUDIO-009: decisões sobre o alvo (debug guiado)
+    TARGET_DECISION_AUTHORITY(Field.NONE, "Uma decisão do desenvolvedor não pode ser substituída por um agente de teste."),
+    TARGET_INCOMPATIBLE_WITH_ACTION(Field.LOCATOR, "O elemento escolhido não é compatível com a ação da etapa (ex.: preencher um botão). Nada foi alterado."),
+    TARGET_REPLACEMENT_INVALID(Field.LOCATOR, "A referência escolhida não pode substituir o alvo (sem política de privacidade reconhecida).");
 
     /** Campo do formulário ao qual o problema se refere (para posicionar a mensagem). */
     public enum Field { NONE, NAME, DESCRIPTION, SESSION, ACTION_TYPE, VALUE, LOCATOR, COMMENT }

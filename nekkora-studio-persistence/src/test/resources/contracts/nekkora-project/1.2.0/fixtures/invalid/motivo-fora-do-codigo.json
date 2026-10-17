@@ -1,0 +1,14 @@
+{
+  "description": "Motivo em texto livre em vez de código.",
+  "base": "consulta-clientes-decisoes.nekkora",
+  "changes": [
+    {
+      "entry": "step:2",
+      "op": "set",
+      "pointer": "/effective/targetDecision/basis/reasons/0",
+      "value": "parece o campo certo"
+    }
+  ],
+  "expectedError": "INVALID_CONTENT",
+  "schemaRejects": true
+}

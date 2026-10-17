@@ -16,7 +16,10 @@ public final class BridgeProtocol {
             // STUDIO-003: entrega confiável das etapas gravadas e rota de sessão lógica
             "studio.recording.steps.ack", "studio.recording.steps.sync", "studio.recording.route",
             // STUDIO-005: entrega confiável das evidências observadas
-            "studio.recording.evidence.ack", "studio.recording.evidence.sync");
+            "studio.recording.evidence.ack", "studio.recording.evidence.sync",
+            // STUDIO-009: debug guiado (guided-debug/1) — inspeção, destaque e seleção; nunca ações na página
+            "studio.debug.start", "studio.debug.inspect", "studio.debug.highlight", "studio.debug.pick", "studio.debug.finish",
+            "studio.debug.status", "studio.debug.renew", "studio.debug.probe");
 
     public static final List<String> EVENTS = List.of("bridge.connected", "bridge.disconnected",
             "studio.recording.started", "studio.recording.paused", "studio.recording.resumed", "studio.recording.modeChanged",
@@ -25,11 +28,15 @@ public final class BridgeProtocol {
             // STUDIO-003: etapa gravada
             "studio.recording.step",
             // STUDIO-005: evidência observada
-            "studio.recording.evidence");
+            "studio.recording.evidence",
+            // STUDIO-009: elemento escolhido no navegador e mudança de estado da sessão de debug
+            "studio.debug.picked", "studio.debug.changed");
 
     /** Capacidades negociadas no início da gravação (acréscimos compatíveis do nekkora-bridge/1). */
     public static final String CAPABILITY_STEPS = "steps/1";
     public static final String CAPABILITY_EVIDENCE = "evidence/1";
+    /** STUDIO-009: capacidade do debug guiado (comandos studio.debug.*). */
+    public static final String CAPABILITY_GUIDED_DEBUG = "guided-debug/1";
 
     public static final List<String> RECORDING_STATES = List.of("RECORDING", "PAUSED", "DEGRADED", "COMPLETED", "CANCELLED", "EXPIRED", "FAILED");
 

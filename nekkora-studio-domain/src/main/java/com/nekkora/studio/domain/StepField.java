@@ -10,7 +10,12 @@ public enum StepField {
     DESCRIPTION("Descrição"),
     ACTION_TYPE("Tipo de ação"),
     PARAMETERS("Parâmetros"),
-    PREFERRED_LOCATOR("Localizador preferencial");
+    PREFERRED_LOCATOR("Localizador preferencial"),
+    /**
+     * STUDIO-009: o alvo efetivo foi SUBSTITUÍDO por outro elemento (Corrigir → selecionar no navegador). O capturado
+     * continua intacto; restaurar o original volta para ele.
+     */
+    TARGET("Alvo");
 
     private final String label;
 

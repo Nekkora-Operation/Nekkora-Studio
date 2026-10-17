@@ -48,7 +48,7 @@ public final class RecordedStepDrafts {
                 .description(description(s))
                 .actionType(type)
                 .element(element)
-                .provenance(StepProvenance.recorded(correlation(s, s.element()), observation(s)))
+                .provenance(StepProvenance.recorded(correlation(recordingKeys(s), s.element()), observation(s)))
                 .context(new StepContext("Navegador", safe(s.title()), safe(s.url())));
         if (type == ActionType.SELECT_OPTION && s.optionLabel() != null && !s.optionLabel().isBlank() && DisplaySafety.isSafeToDisplay(s.optionLabel())) {
             String value = s.optionValue() == null || !DisplaySafety.isSafeToDisplay(s.optionValue()) ? "" : s.optionValue();
@@ -124,7 +124,27 @@ public final class RecordedStepDrafts {
     // --------------------------------------------------------------------------------------- elemento
 
     static ElementReference element(RecordedStep s) {
-        Map<String, Object> e = s.element();
+        return element(s.element(), s.notes(), recordingKeys(s));
+    }
+
+    private static EnumMap<CorrelationKeys.Key, String> recordingKeys(RecordedStep s) {
+        EnumMap<CorrelationKeys.Key, String> base = new EnumMap<>(CorrelationKeys.Key.class);
+        base.put(CorrelationKeys.Key.RECORDING_ID, s.recordingId());
+        base.put(CorrelationKeys.Key.RECORDED_EVENT_ID, s.eventId());
+        return base;
+    }
+
+    /**
+     * STUDIO-009: referência de um elemento ESCOLHIDO no navegador pelo debug guiado (evento {@code studio.debug.picked}).
+     * Mesma 4ª barreira e mesmo mapeamento de uma etapa gravada; sem chaves de gravação (não houve gravação).
+     */
+    public static ElementReference selectedElement(Map<String, Object> raw, List<String> notes) {
+        List<String> n = new java.util.ArrayList<>(notes);
+        Map<String, Object> safe = RecordedStep.guard(raw, n);
+        return element(safe, n, new EnumMap<>(CorrelationKeys.Key.class));
+    }
+
+    private static ElementReference element(Map<String, Object> e, List<String> notes, EnumMap<CorrelationKeys.Key, String> baseKeys) {
         boolean sensitive = Json.bool(e, "sensitive", false);
         ElementReference.Builder b = ElementReference.builder()
                 .accessibleName(text(Json.string(e, "name")))
@@ -135,7 +155,7 @@ public final class RecordedStepDrafts {
                 .sensitive(sensitive)
                 .privacyPolicy(DisplaySafety.KNOWN_PRODUCER_POLICY)
                 .sourceContract(SOURCE_CONTRACT)
-                .correlation(correlation(s, e));
+                .correlation(correlation(baseKeys, e));
         List<Object> locators = Json.array(e, "locators");
         int preferred = (int) Json.number(e, "preferredLocator", -1);
         boolean live = false;
@@ -185,7 +205,7 @@ public final class RecordedStepDrafts {
         if (lookalikes > 0) {
             b.addStabilityNote(lookalikes + " elemento(s) parecido(s) na página");
         }
-        for (String note : s.notes()) {
+        for (String note : notes) {
             switch (note) {
                 case "ELEMENT_UNRESOLVED" -> b.addObstacle(new ObservedObstacle("ELEMENT_UNRESOLVED", ObservedObstacle.Severity.HIGH,
                         "O motor semântico não correlacionou o elemento: sem identidade nem localizador definitivo (revisar)."));
@@ -209,10 +229,8 @@ public final class RecordedStepDrafts {
         return b.build();
     }
 
-    private static CorrelationKeys correlation(RecordedStep s, Map<String, Object> e) {
-        EnumMap<CorrelationKeys.Key, String> keys = new EnumMap<>(CorrelationKeys.Key.class);
-        keys.put(CorrelationKeys.Key.RECORDING_ID, s.recordingId());
-        keys.put(CorrelationKeys.Key.RECORDED_EVENT_ID, s.eventId());
+    private static CorrelationKeys correlation(EnumMap<CorrelationKeys.Key, String> base, Map<String, Object> e) {
+        EnumMap<CorrelationKeys.Key, String> keys = new EnumMap<>(base);
         Map<String, Object> c = Json.object(e, "correlation");
         if (c != null) {
             put(keys, CorrelationKeys.Key.TARGET_ID, Json.string(c, "targetId"));

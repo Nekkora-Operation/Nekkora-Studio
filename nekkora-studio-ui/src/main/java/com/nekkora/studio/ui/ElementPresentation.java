@@ -44,6 +44,12 @@ public final class ElementPresentation {
         return human.isEmpty() ? StudioText.NOT_AVAILABLE : Character.toUpperCase(human.charAt(0)) + human.substring(1);
     }
 
+    /** STUDIO-009: resumo de uma linha ("Campo de pesquisa · Código do registro"), em texto seguro. */
+    public static String title(ElementReference e) {
+        String name = StudioText.technical(e.accessibleName());
+        return kindLabel(e.semanticKind()) + (name.isBlank() || StudioText.NOT_AVAILABLE.equals(name) ? "" : " · " + name);
+    }
+
     public static List<Row> rows(ElementReference e) {
         List<Row> rows = new ArrayList<>();
         rows.add(new Row("Elemento", StudioText.technical(e.accessibleName())));

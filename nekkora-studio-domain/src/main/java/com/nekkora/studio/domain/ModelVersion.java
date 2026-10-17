@@ -16,12 +16,17 @@ public final class ModelVersion {
     public static final String CURRENT = "1.0.0";
     /** STUDIO-008: modelo com catálogo de variáveis declaradas. */
     public static final String V1_1 = "1.1.0";
+    /**
+     * STUDIO-009: modelo com decisões sobre o alvo (confirmado/rejeitado, por quem) e alvo substituto depois de uma
+     * correção aprovada. O catálogo de variáveis continua opcional.
+     */
+    public static final String V1_2 = "1.2.0";
     /** Versão mais recente conhecida por este Studio. */
-    public static final String LATEST = V1_1;
+    public static final String LATEST = V1_2;
 
     /** A versão é lida por este Studio. */
     public static boolean supported(String version) {
-        return CURRENT.equals(version) || V1_1.equals(version);
+        return CURRENT.equals(version) || V1_1.equals(version) || V1_2.equals(version);
     }
 
     private ModelVersion() {}

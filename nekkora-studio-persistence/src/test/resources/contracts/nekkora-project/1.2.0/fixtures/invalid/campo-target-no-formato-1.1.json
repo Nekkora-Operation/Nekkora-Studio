@@ -1,0 +1,14 @@
+{
+  "description": "Edição do campo TARGET registrada num arquivo 1.1.0.",
+  "base": "1.1:consulta-clientes-variaveis.nekkora",
+  "changes": [
+    {
+      "entry": "step:0",
+      "op": "set",
+      "pointer": "/effective/fieldEdits/TARGET",
+      "value": "2026-10-17T12:00:00Z"
+    }
+  ],
+  "expectedError": "INVALID_CONTENT",
+  "schemaRejects": null
+}

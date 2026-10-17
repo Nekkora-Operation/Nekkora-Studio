@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nekkora.dev/contracts/nekkora-studio/guided-debug-record/1.0.0",
+  "description": "STUDIO-009 G7: registro de uma passagem do debug guiado. Contexto somente leitura; só códigos. Sem valores, nomes, texto da página, frases do resolvedor, chaves de correlação nem resultado de negócio. O ator é DEVELOPER ou TEST_AGENT — nunca confirmação humana nem verificação por IA.",
+  "$ref": "#/$defs/Record",
+  "$defs": {
+    "Uuid": {"type": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"},
+    "Code": {"type": "string", "pattern": "^[A-Z][A-Z0-9_]{0,59}$"},
+    "Actor": {"enum": ["DEVELOPER", "TEST_AGENT"]},
+    "Record": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "version", "automationId", "planSchema", "planRevision", "operator", "exportedAt", "meaning", "entries", "finalDecisions", "summary", "exclusions"],
+      "properties": {
+        "schema": {"const": "nekkora-studio/guided-debug-record"},
+        "version": {"const": "1.0.0"},
+        "automationId": {"$ref": "#/$defs/Uuid"},
+        "planSchema": {"const": "nekkora-studio/guided-debug-plan/1.0.0"},
+        "planRevision": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+        "operator": {"$ref": "#/$defs/Actor"},
+        "exportedAt": {"type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}T"},
+        "meaning": {"const": "NO_EXECUTION_NO_BUSINESS_OUTCOME"},
+        "entries": {"type": "array", "items": {"$ref": "#/$defs/Entry"}},
+        "finalDecisions": {"type": "array", "items": {"$ref": "#/$defs/FinalDecision"}},
+        "summary": {
+          "type": "object", "additionalProperties": false,
+          "required": ["entries", "confirmed", "rejected", "undecided", "reused", "probesPerformed"],
+          "properties": {
+            "entries": {"type": "integer", "minimum": 0}, "confirmed": {"type": "integer", "minimum": 0}, "rejected": {"type": "integer", "minimum": 0},
+            "undecided": {"type": "integer", "minimum": 0}, "reused": {"type": "integer", "minimum": 0}, "probesPerformed": {"type": "integer", "minimum": 0}
+          }
+        },
+        "exclusions": {"type": "array", "items": {"enum": ["VALUES", "NAMES_AND_DESCRIPTIONS", "PAGE_TEXT", "RESOLVER_STATEMENTS", "CORRELATION_KEYS", "BUSINESS_OUTCOME"]}}
+      }
+    },
+    "Entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["stepId", "at", "kind", "status", "identitySource", "reasons", "outcome", "outcomeReasons", "actor"],
+      "properties": {
+        "stepId": {"$ref": "#/$defs/Uuid"},
+        "at": {"type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}T"},
+        "kind": {"enum": ["VERIFICATION", "DECISION", "CORRECTION", "PROBE"]},
+        "status": {"$ref": "#/$defs/Code"},
+        "identitySource": {"type": "string", "pattern": "^([A-Z][A-Z0-9_]{0,59})?$"},
+        "reasons": {"type": "array", "maxItems": 16, "items": {"$ref": "#/$defs/Code"}},
+        "outcome": {"type": "string", "pattern": "^([A-Z][A-Z0-9_]{0,59})?$"},
+        "outcomeReasons": {"type": "array", "maxItems": 16, "items": {"$ref": "#/$defs/Code"}},
+        "actor": {"$ref": "#/$defs/Actor"}
+      }
+    },
+    "FinalDecision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["stepId", "decision", "actor", "basisStatus", "targetReplaced"],
+      "properties": {
+        "stepId": {"$ref": "#/$defs/Uuid"},
+        "decision": {"anyOf": [{"type": "null"}, {"enum": ["CONFIRMED", "REJECTED"]}]},
+        "actor": {"anyOf": [{"type": "null"}, {"$ref": "#/$defs/Actor"}]},
+        "basisStatus": {"anyOf": [{"type": "null"}, {"$ref": "#/$defs/Code"}]},
+        "targetReplaced": {"type": "boolean"}
+      }
+    }
+  }
+}

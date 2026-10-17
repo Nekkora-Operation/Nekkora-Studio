@@ -341,7 +341,8 @@ class ValidationStudioTest {
             }
             return out;
         });
-        assertEquals(List.of("Automação", "Nova sessão", "Nova etapa", "Validar automação"), menu);
+        // STUDIO-009 (D-S009-15): o menu Automação ganhou "Depurar no navegador…" (Ctrl+Shift+D); a validação continua no lugar
+        assertEquals(List.of("Automação", "Nova sessão", "Nova etapa", "Validar automação", "Depurar no navegador…"), menu);
         var key = studio.view().actions().get(StudioActions.VALIDATE).shortcutKey();
         assertEquals(javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_V, com.nekkora.ui.action.NekkoraKeys.menuMask()
                 | java.awt.event.InputEvent.SHIFT_DOWN_MASK), key);

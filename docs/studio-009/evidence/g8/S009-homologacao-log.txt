@@ -1,0 +1,228 @@
+Tela: java.awt.Rectangle[x=0,y=0,width=1920,height=1032] · java 21.0.12
+Operador: Claude como AGENTE DE TESTE (decisões TEST_AGENT; nenhuma confirmação humana) · ator do Studio: TEST_AGENT
+Native Host instalado pelo script oficial (install-host.ps1)
+Chrome for Testing: 155.0.8059.39
+OK    Conexão autenticada Studio ⇄ host ⇄ extensão
+OK    Ator das decisões no Studio = agente de teste
+  etapas gravadas: [Preencher campo Código do registro, Clicar no botão Consultar] [FILL, CLICK]
+OK    H1: gravação = preencher (código) e clicar (Consultar)
+OK    H1: cada etapa gravada traz identidade lógica registrada (targetId) — o vínculo para o debug
+OK    H1: o valor digitado não está no modelo
+captura S009-H1-mapeamento.png (1920x1000)
+OK    H2: plano com 2 etapas inspecionáveis pela identidade registrada
+OK    H2: plano sem o valor digitado e sem chaves de correlação
+  janela do debug em java.awt.Rectangle[x=1476,y=24,width=420,height=812]
+  etapa 1: Etapa 1.1 · Preencher · Preencher campo Código do registro · Reconhecido: Campo de pesquisa · Código do registro · por quê: [Elemento reencontrado pela identidade registrada na gravação, comparando tipo, nome e contexto., A página recriou o elemento desde a gravação (mesma identidade).]
+OK    H3: etapa 1 proposta e verificada tecnicamente (RESOLVED), Continuar habilitado
+OK    H3: destaque rosa visível no Chrome sobre o campo
+OK    H3: destacar não gerou clique/foco/entrada/envio na página
+OK    H3: oráculo: nenhuma consulta feita pelo debug
+  alvo na tela java.awt.Rectangle[x=921,y=296,width=248,height=39] · janela do debug java.awt.Rectangle[x=1476,y=24,width=420,height=812]
+OK    H3: a janela do debug não cobre o elemento destacado
+captura S009-H3-01-proposta-campo.png (1920x1000)
+OK    H3/G6: sonda preencheu o campo com o dado do catálogo (lido na página do laboratório)
+captura S009-H3-02-proposta-botao.png (1920x1000)
+OK    H3: até aqui, nenhuma consulta no oráculo (sonda de preencher não consulta)
+OK    H3/G6: oráculo independente — exatamente 1 consulta, com o código do catálogo
+captura S009-H3-03-sonda-resultado.png (1920x1000)
+OK    H3: 2 decisões CONFIRMED registradas como TEST_AGENT
+captura S009-H3-04-fim.png (1920x1000)
+  janela do debug em java.awt.Rectangle[x=1476,y=24,width=420,height=912]
+captura S009-H4-01-reconfirmado.png (1920x1000)
+OK    H4: segunda passagem reconfirmou as 2 etapas sem perguntar (REUSE ×2) e terminou sozinha
+OK    H4: nada consultado na 2ª passagem
+OK    H5: com decisões o projeto é gravado em 1.2.0 (1.2.0)
+OK    H5: as decisões estão no arquivo com o ator TEST_AGENT, sem confirmação humana
+OK    H5: o arquivo não guarda o valor digitado na gravação nem o dado da sonda
+OK    H5: reaberto, as 2 decisões TEST_AGENT continuam nas etapas
+  janela do debug em java.awt.Rectangle[x=1476,y=24,width=420,height=912]
+OK    H5: depois de reabrir o arquivo, as 2 etapas são reconfirmadas sem pergunta (REUSE ×2)
+  janela do debug em java.awt.Rectangle[x=1476,y=24,width=420,height=1000]
+  id-mudado etapa 1: Requer revisão · RESOLVED · fonte TARGET_ID · [NODE_REPLACED, ID_ATTRIBUTE_CHANGED, NAME_ATTRIBUTE_CHANGED] · pontuação 0.68 · Continuar habilitado
+captura S009-H13-id-mudado-etapa1.png (1920x1000)
+    destaque na tela java.awt.Rectangle[x=925,y=308,width=240,height=31] · esperado java.awt.Rectangle[x=921,y=296,width=248,height=39]
+OK    H13 id-mudado etapa 1: comprovado SOBRE o elemento certo
+  id-mudado etapa 2: Não verificável · NOT_FOUND · fonte TARGET_ID · [] · pontuação 0.60
+captura S009-H13-id-mudado-etapa2.png (1920x1000)
+OK    H13 id-mudado: o debug não interagiu com a página (nenhum clique, foco, entrada ou envio)
+  janela do debug em java.awt.Rectangle[x=1476,y=24,width=420,height=912]
+  reordenado etapa 1: Reconfirmado tecnicamente · RESOLVED · fonte TARGET_ID · [NODE_REPLACED] · pontuação 1.00 · Continuar habilitado
+    destaque na tela java.awt.Rectangle[x=1103,y=308,width=240,height=31] · esperado java.awt.Rectangle[x=1099,y=296,width=248,height=39]
+OK    H13 reordenado etapa 1: comprovado SOBRE o elemento certo
+  reordenado etapa 2: Reconfirmado tecnicamente · RESOLVED · fonte TARGET_ID · [NODE_REPLACED] · pontuação 1.00 · Continuar habilitado
+    destaque na tela java.awt.Rectangle[x=925,y=308,width=89,height=31] · esperado java.awt.Rectangle[x=921,y=296,width=97,height=39]
+OK    H13 reordenado etapa 2: comprovado SOBRE o elemento certo
+OK    H13 reordenado: o debug não interagiu com a página (nenhum clique, foco, entrada ou envio)
+  janela do debug em java.awt.Rectangle[x=1476,y=24,width=420,height=912]
+  errado etapa 1: Reconfirmado tecnicamente · RESOLVED · fonte TARGET_ID · [NODE_REPLACED] · pontuação 1.00 · Continuar habilitado
+captura S009-H13-errado-etapa1.png (1920x1000)
+    destaque na tela java.awt.Rectangle[x=925,y=308,width=240,height=31] · esperado java.awt.Rectangle[x=921,y=296,width=248,height=39]
+OK    H13 errado etapa 1: comprovado SOBRE o elemento certo
+  errado etapa 2: Requer revisão · RESOLVED · fonte TARGET_ID · [NODE_REPLACED, ID_ATTRIBUTE_CHANGED] · pontuação 0.60 · Continuar habilitado
+captura S009-H13-errado-etapa2.png (1920x1000)
+    destaque na tela java.awt.Rectangle[x=1173,y=308,width=89,height=31] · esperado java.awt.Rectangle[x=1169,y=296,width=97,height=39]
+OK    H13 errado etapa 2: comprovado SOBRE o elemento certo
+OK    H13 errado: o debug não interagiu com a página (nenhum clique, foco, entrada ou envio)
+  janela do debug em java.awt.Rectangle[x=1476,y=24,width=420,height=912]
+  oculto etapa 1: Reconfirmado tecnicamente · RESOLVED · fonte TARGET_ID · [NODE_REPLACED] · pontuação 1.00 · Continuar habilitado
+    destaque na tela java.awt.Rectangle[x=925,y=308,width=240,height=31] · esperado java.awt.Rectangle[x=921,y=296,width=248,height=39]
+OK    H13 oculto etapa 1: comprovado SOBRE o elemento certo
+  oculto etapa 2: Requer revisão · RESOLVED · fonte TARGET_ID · [NODE_REPLACED, HIDDEN] · pontuação 1.00 · Continuar habilitado
+captura S009-H13-oculto-etapa2.png (1920x1000)
+    elemento sem área na página (oculto): não há onde destacar; vale a recusa de reconfirmar
+OK    H13 oculto etapa 2: comprovado SOBRE o elemento certo
+OK    H13 oculto: estado inadequado nunca é reconfirmado sem pergunta
+OK    H13 oculto: o debug não interagiu com a página (nenhum clique, foco, entrada ou envio)
+  janela do debug em java.awt.Rectangle[x=1476,y=24,width=420,height=912]
+  desabilitado etapa 1: Reconfirmado tecnicamente · RESOLVED · fonte TARGET_ID · [NODE_REPLACED] · pontuação 1.00 · Continuar habilitado
+    destaque na tela java.awt.Rectangle[x=925,y=308,width=240,height=31] · esperado java.awt.Rectangle[x=921,y=296,width=248,height=39]
+OK    H13 desabilitado etapa 1: comprovado SOBRE o elemento certo
+  desabilitado etapa 2: Requer revisão · RESOLVED · fonte TARGET_ID · [NODE_REPLACED, DISABLED] · pontuação 1.00 · Continuar habilitado
+captura S009-H13-desabilitado-etapa2.png (1920x1000)
+    destaque na tela java.awt.Rectangle[x=1173,y=308,width=89,height=31] · esperado java.awt.Rectangle[x=1169,y=296,width=97,height=39]
+OK    H13 desabilitado etapa 2: comprovado SOBRE o elemento certo
+OK    H13 desabilitado: estado inadequado nunca é reconfirmado sem pergunta
+OK    H13 desabilitado: o debug não interagiu com a página (nenhum clique, foco, entrada ou envio)
+  janela do debug em java.awt.Rectangle[x=1476,y=24,width=420,height=912]
+  rerender etapa 1: Reconfirmado tecnicamente · RESOLVED · fonte TARGET_ID · [NODE_REPLACED] · pontuação 1.00 · Continuar habilitado
+    destaque na tela java.awt.Rectangle[x=925,y=308,width=240,height=31] · esperado java.awt.Rectangle[x=921,y=296,width=248,height=39]
+OK    H13 rerender etapa 1: comprovado SOBRE o elemento certo
+  rerender etapa 2: Reconfirmado tecnicamente · RESOLVED · fonte TARGET_ID · [NODE_REPLACED] · pontuação 1.00 · Continuar habilitado
+    destaque na tela java.awt.Rectangle[x=1173,y=308,width=89,height=31] · esperado java.awt.Rectangle[x=1169,y=296,width=97,height=39]
+OK    H13 rerender etapa 2: comprovado SOBRE o elemento certo
+OK    H13 rerender: o debug não interagiu com a página (nenhum clique, foco, entrada ou envio)
+  janela do debug em java.awt.Rectangle[x=1476,y=24,width=420,height=912]
+  tardio etapa 1: Reconfirmado tecnicamente · RESOLVED · fonte TARGET_ID · [NODE_REPLACED] · pontuação 1.00 · Continuar habilitado
+    destaque na tela java.awt.Rectangle[x=925,y=308,width=240,height=31] · esperado java.awt.Rectangle[x=921,y=296,width=248,height=39]
+OK    H13 tardio etapa 1: comprovado SOBRE o elemento certo
+  tardio etapa 2: Reconfirmado tecnicamente · RESOLVED · fonte TARGET_ID · [NODE_REPLACED] · pontuação 1.00 · Continuar habilitado
+    destaque na tela java.awt.Rectangle[x=1173,y=308,width=89,height=31] · esperado java.awt.Rectangle[x=1169,y=296,width=97,height=39]
+OK    H13 tardio etapa 2: comprovado SOBRE o elemento certo
+OK    H13 tardio: o debug não interagiu com a página (nenhum clique, foco, entrada ou envio)
+  janela do debug em java.awt.Rectangle[x=1476,y=24,width=420,height=912]
+  removido etapa 1: Reconfirmado tecnicamente · RESOLVED · fonte TARGET_ID · [NODE_REPLACED] · pontuação 1.00 · Continuar habilitado
+    destaque na tela java.awt.Rectangle[x=925,y=308,width=240,height=31] · esperado java.awt.Rectangle[x=921,y=296,width=248,height=39]
+OK    H13 removido etapa 1: comprovado SOBRE o elemento certo
+  removido etapa 2: Não verificável · NOT_FOUND · fonte TARGET_ID · [] · pontuação 0.24 — aguardando o elemento voltar e verificando de novo
+  removido etapa 2: Reconfirmado tecnicamente · RESOLVED · fonte TARGET_ID · [NODE_REPLACED] · pontuação 1.00 · Continuar habilitado
+    destaque na tela java.awt.Rectangle[x=1173,y=308,width=89,height=31] · esperado java.awt.Rectangle[x=1169,y=296,width=97,height=39]
+OK    H13 removido etapa 2: comprovado SOBRE o elemento certo
+OK    H13 removido: o debug não interagiu com a página (nenhum clique, foco, entrada ou envio)
+  janela do debug em java.awt.Rectangle[x=1476,y=24,width=420,height=874]
+  iframe etapa 1: Não verificável · NOT_FOUND · fonte TARGET_ID · [] · pontuação 0.00
+  iframe etapa 2: Não verificável · NOT_FOUND · fonte TARGET_ID · [] · pontuação 0.00
+OK    H13 iframe: o debug não interagiu com a página (nenhum clique, foco, entrada ou envio)
+  janela do debug em java.awt.Rectangle[x=1476,y=24,width=420,height=874]
+  iframe-aninhado etapa 1: Não verificável · NOT_FOUND · fonte TARGET_ID · [] · pontuação 0.00
+  iframe-aninhado etapa 2: Não verificável · NOT_FOUND · fonte TARGET_ID · [] · pontuação 0.00
+OK    H13 iframe-aninhado: o debug não interagiu com a página (nenhum clique, foco, entrada ou envio)
+  janela do debug em java.awt.Rectangle[x=1476,y=24,width=420,height=874]
+  iframe-ambiguo etapa 1: Não verificável · NOT_FOUND · fonte TARGET_ID · [] · pontuação 0.00
+captura S009-H13-iframe-ambiguo-etapa1.png (1920x1000)
+OK    H13 iframe-ambiguo etapa 1: indistinguível NÃO é comprovado nem reconfirmado
+OK    H13 iframe-ambiguo etapa 1: sem destaque sólido e sem sonda
+  iframe-ambiguo etapa 2: Não verificável · NOT_FOUND · fonte TARGET_ID · [] · pontuação 0.00
+captura S009-H13-iframe-ambiguo-etapa2.png (1920x1000)
+OK    H13 iframe-ambiguo etapa 2: indistinguível NÃO é comprovado nem reconfirmado
+OK    H13 iframe-ambiguo etapa 2: sem destaque sólido e sem sonda
+OK    H13 iframe-ambiguo: o debug não interagiu com a página (nenhum clique, foco, entrada ou envio)
+  janela do debug em java.awt.Rectangle[x=1476,y=24,width=420,height=874]
+  shadow-aberto etapa 1: Não verificável · NOT_FOUND · fonte TARGET_ID · [] · pontuação 0.00
+  shadow-aberto etapa 2: Não verificável · NOT_FOUND · fonte TARGET_ID · [] · pontuação 0.00
+OK    H13 shadow-aberto: o debug não interagiu com a página (nenhum clique, foco, entrada ou envio)
+  janela do debug em java.awt.Rectangle[x=1476,y=24,width=420,height=874]
+  shadow-fechado etapa 1: Não verificável · NOT_FOUND · fonte TARGET_ID · [] · pontuação 0.00
+  shadow-fechado etapa 2: Não verificável · NOT_FOUND · fonte TARGET_ID · [] · pontuação 0.00
+OK    H13 shadow-fechado: o debug não interagiu com a página (nenhum clique, foco, entrada ou envio)
+  janela do debug em java.awt.Rectangle[x=1476,y=24,width=420,height=950]
+  rotulo-suprimido etapa 1: Requer revisão · INSUFFICIENT_EVIDENCE · fonte TARGET_ID · [] · pontuação 0.48
+  rotulo-suprimido etapa 2: Requer revisão · INSUFFICIENT_EVIDENCE · fonte TARGET_ID · [] · pontuação 0.16
+OK    H13 rotulo-suprimido: o debug não interagiu com a página (nenhum clique, foco, entrada ou envio)
+  janela do debug em java.awt.Rectangle[x=1476,y=24,width=420,height=912]
+  duplicado etapa 1: Reconfirmado tecnicamente · RESOLVED · fonte TARGET_ID · [NODE_REPLACED] · pontuação 1.00 · Continuar habilitado
+captura S009-H13-duplicado-etapa1.png (1920x1000)
+    destaque na tela java.awt.Rectangle[x=925,y=308,width=240,height=31] · esperado java.awt.Rectangle[x=921,y=296,width=248,height=39]
+OK    H13 duplicado etapa 1: comprovado SOBRE o elemento certo
+  duplicado etapa 2: Requer revisão · AMBIGUOUS · fonte TARGET_ID · [TARGET_AMBIGUOUS] · pontuação 0.60
+captura S009-H13-duplicado-etapa2.png (1920x1000)
+OK    H13 duplicado etapa 2: indistinguível NÃO é comprovado nem reconfirmado
+OK    H13 duplicado etapa 2: sem destaque sólido e sem sonda
+OK    H13 duplicado: o debug não interagiu com a página (nenhum clique, foco, entrada ou envio)
+OK    H6/H13: nenhuma variante gerou consulta no oráculo
+  janela do debug em java.awt.Rectangle[x=1476,y=24,width=420,height=874]
+OK    H13b iframe: etapa sem identidade comprovada oferece Corrigir
+captura S009-H8-escolha-incompativel.png (1920x1000)
+OK    H8: botão escolhido (dentro do quadro) para "preencher": incompatível e Aplicar desabilitado
+OK    H8: descartar não alterou o alvo
+  iframe: depois = [Row[key=Elemento, value=Campo de pesquisa · Código do registro], Row[key=Localizador, value=ID: input {id=registro-codigo} (input#registro-codigo) · Provavelmente estável], Row[key=Visível, value=Sim], Row[key=Habilitado, value=Sim]]
+captura S009-H13b-iframe-comparar.png (1920x1000)
+OK    H13b iframe: campo escolhido DENTRO do quadro é compatível (Aplicar habilitado)
+OK    H13b iframe: escolher não clicou, não focou nem enviou nada (página e quadro)
+  janela do debug em java.awt.Rectangle[x=1476,y=24,width=420,height=893]
+  shadow aberto: depois = [Row[key=Elemento, value=Campo de pesquisa · Código do registro], Row[key=Localizador, value=ID: input {id=registro-codigo} (input#registro-codigo) · Provavelmente estável], Row[key=Visível, value=Sim], Row[key=Habilitado, value=Sim]]
+captura S009-H13b-shadow-comparar.png (1920x1000)
+OK    H13b shadow aberto: campo escolhido dentro da raiz é compatível
+OK    H13b shadow aberto: escolher não interagiu com a página
+OK    H13b: oráculo — nenhuma consulta
+  janela do debug em java.awt.Rectangle[x=1476,y=24,width=420,height=1000]
+  navegação: época 1 → 3 · Requer revisão
+OK    H10: navegar na aba fez o debug verificar de novo na página nova (época mudou), sem reaproveitar a página anterior
+OK    H10: a janela do debug não roubou o foco do Chrome ao se atualizar
+captura S009-H10-reinspecao-apos-navegar.png (1920x1000)
+  janela do debug em java.awt.Rectangle[x=1476,y=24,width=420,height=990]
+  aba fechada: Sessão de debug encerrada · A aba foi fechada.
+OK    H11: fechar a aba encerra a sessão de debug e a janela diz por quê
+captura S009-H11-aba-fechada.png (1920x1000)
+  janela do debug em java.awt.Rectangle[x=1476,y=24,width=420,height=1000]
+  desconectado: FINISHED · Não verificável · A conexão com o navegador caiu: nenhuma verificação anterior vale mais. Reconecte a extensão e depure de novo.
+OK    H16: sem conexão, nada pode ser confirmado com base numa verificação antiga
+captura S009-H16-desconectado.png (1920x1000)
+  janela do debug em java.awt.Rectangle[x=1476,y=24,width=420,height=990]
+  após reconectar: Requer revisão · RESOLVED · fonte TARGET_ID · [NODE_REPLACED] · pontuação 1.00 · Continuar habilitado
+OK    H16: depois de reconectar, a sessão órfã é encerrada e uma nova sessão inspeciona normalmente (identidade comprovada)
+  janela do debug em java.awt.Rectangle[x=1476,y=24,width=420,height=1000]
+  duplicado etapa 1: Requer revisão · RESOLVED · fonte TARGET_ID · [NODE_REPLACED] · pontuação 1.00 · Continuar habilitado
+    destaque na tela java.awt.Rectangle[x=925,y=308,width=240,height=31] · esperado java.awt.Rectangle[x=921,y=296,width=248,height=39]
+OK    H7 etapa 1: identidade comprovada sobre o campo do 1º formulário (id gravado) e Continuar disponível
+OK    H7 etapa 1: decisão CONFIRMED do TEST_AGENT
+  duplicado etapa 2: Requer revisão · AMBIGUOUS · fonte TARGET_ID · [TARGET_AMBIGUOUS] · pontuação 0.60
+captura S009-H7-duplicado-etapa2-revisao.png (1920x1000)
+OK    H7 etapa 2: botão duplicado pede revisão (não proposto, Continuar desabilitado, 2 candidatos, sem destaque sólido)
+OK    H7 etapa 2: rejeição registrada como TEST_AGENT
+captura S009-H7-comparar-etapa2.png (1920x1000)
+OK    H7 etapa 2: comparação antes × depois compatível, Aplicar habilitado
+  etapa 2 após aplicar: STEP · Requer revisão · Requer revisão · AMBIGUOUS · fonte TARGET_ID · [TARGET_AMBIGUOUS, INDISTINGUISHABLE_AT_REGISTRATION, LOOKALIKES_PRESENT] · pontuação 1.00
+OK    H7 etapa 2: alvo substituído; decisão CONFIRMED do TEST_AGENT; capturado original intacto
+OK    H7 etapa 2: botão idêntico escolhido continua NÃO comprovado (AMBIGUOUS), sem reconfirmar nem Continuar
+OK    H7: escolher no navegador não clicou, não focou e não enviou nada na página
+OK    H7: oráculo — nenhuma consulta durante a correção
+captura S009-H7-fim.png (1920x1000)
+OK    H9: Ctrl+Z desfez a substituição da etapa 2 (volta ao alvo gravado)
+captura S009-H9-desfeito.png (1920x1000)
+OK    H9: Ctrl+Y refez a substituição
+OK    H7: substituições salvas em 1.2.0 (targetReplacement no arquivo)
+  janela do debug em java.awt.Rectangle[x=1476,y=24,width=420,height=1000]
+captura S009-H14-100-sakura-dark.png (420x1000)
+OK    H14 100% · Sakura Dark: janela inteira dentro da tela (java.awt.Rectangle[x=1476,y=24,width=420,height=1000])
+OK    H14 100% · Sakura Dark: ações visíveis (Corrigir/Encerrar)
+captura S009-H14-100-midnight-dark.png (420x1000)
+OK    H14 100% · Midnight Dark: janela inteira dentro da tela (java.awt.Rectangle[x=1476,y=24,width=420,height=1000])
+OK    H14 100% · Midnight Dark: ações visíveis (Corrigir/Encerrar)
+captura S009-H14-100-porcelain-light.png (420x1000)
+OK    H14 100% · Porcelain Light: janela inteira dentro da tela (java.awt.Rectangle[x=1476,y=24,width=420,height=1000])
+OK    H14 100% · Porcelain Light: ações visíveis (Corrigir/Encerrar)
+captura S009-H14-100-sage-light.png (420x1000)
+OK    H14 100% · Sage Light: janela inteira dentro da tela (java.awt.Rectangle[x=1476,y=24,width=420,height=1000])
+OK    H14 100% · Sage Light: ações visíveis (Corrigir/Encerrar)
+  alvo na tela java.awt.Rectangle[x=921,y=296,width=248,height=39] · janela do debug java.awt.Rectangle[x=1476,y=24,width=420,height=1000]
+OK    H14 100%: a janela do debug não cobre o elemento destacado
+OK    G7: registro do debug sem o valor digitado, sem nomes e com ator TEST_AGENT
+OK    G7: registro sem chaves de correlação e sem textos da página
+OK    H15 projeto .nekkora: sem o valor digitado/sondado e sem o nome fictício do rótulo suprimido
+OK    H15 registro do debug: sem o valor digitado/sondado e sem o nome fictício do rótulo suprimido
+OK    H15 plano: sem o valor digitado/sondado e sem o nome fictício do rótulo suprimido
+OK    H15 log da homologação: sem o valor digitado/sondado e sem o nome fictício do rótulo suprimido
+OK    H15 logs do host: sem o valor digitado/sondado e sem o nome fictício do rótulo suprimido
+OK    H15 dados do Studio: sem o valor digitado/sondado e sem o nome fictício do rótulo suprimido
+OK    H15 dados do host: sem o valor digitado/sondado e sem o nome fictício do rótulo suprimido
+RESULTADO: 106 verificações, 0 falha(s)

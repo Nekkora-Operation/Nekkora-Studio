@@ -1,0 +1,14 @@
+{
+  "description": "Alvo substituto com nome acessível fora do vocabulário (dado de pessoa fictícia): violação de privacidade.",
+  "base": "consulta-clientes-decisoes.nekkora",
+  "changes": [
+    {
+      "entry": "step:7",
+      "op": "set",
+      "pointer": "/effective/targetReplacement/accessibleName",
+      "value": "Pedido de Ana Souza"
+    }
+  ],
+  "expectedError": "PRIVACY_VIOLATION",
+  "schemaRejects": false
+}

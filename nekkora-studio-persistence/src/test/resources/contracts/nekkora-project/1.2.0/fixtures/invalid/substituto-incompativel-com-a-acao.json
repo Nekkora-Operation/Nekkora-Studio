@@ -1,0 +1,87 @@
+{
+  "description": "Alvo substituto do tipo botão numa etapa de preencher: a mesma regra do domínio recusa na leitura.",
+  "base": "consulta-clientes-decisoes.nekkora",
+  "changes": [
+    {
+      "entry": "step:0",
+      "op": "set",
+      "pointer": "/effective/targetReplacement",
+      "value": {
+        "accessibleName": "Pesquisar",
+        "semanticKind": "BUTTON",
+        "tag": "button",
+        "htmlId": "pesquisar-v2",
+        "htmlName": null,
+        "sensitive": false,
+        "privacyPolicy": "nekkora-privacy/2",
+        "sourceContract": "nekkora-bridge/1#studio.recording.step",
+        "preferredLocator": 0,
+        "locators": [
+          {
+            "strategy": "ID",
+            "description": "button {id=pesquisar-v2}",
+            "expression": "#pesquisar-v2",
+            "stability": "HEURISTIC_STABLE",
+            "matchCount": 1,
+            "matchesTarget": true
+          },
+          {
+            "strategy": "TEXT",
+            "description": "button {text=\"Salvar\"}",
+            "expression": "//button[normalize-space(.)=\"Salvar\"]",
+            "stability": "UNKNOWN",
+            "matchCount": 3,
+            "matchesTarget": true
+          }
+        ],
+        "accessPath": [
+          {
+            "type": "MAIN_DOCUMENT",
+            "label": "Documento",
+            "locator": "",
+            "correlation": {}
+          },
+          {
+            "type": "IFRAME",
+            "label": "Cadastro",
+            "locator": "#cadastro",
+            "correlation": {
+              "FRAME_ID": "f1"
+            }
+          }
+        ],
+        "context": [
+          {
+            "relation": "IN_FORM",
+            "kind": "FORM",
+            "name": "Login",
+            "locator": ""
+          }
+        ],
+        "stabilityNotes": [
+          "Localizador preferencial executado na página real e único",
+          "2 elemento(s) parecido(s) na página"
+        ],
+        "obstacles": [
+          {
+            "type": "INDISTINGUISHABLE_LOOKALIKES",
+            "severity": "MEDIUM",
+            "description": "Há elementos idênticos na página que não se distinguem pelos atributos."
+          }
+        ],
+        "correlation": {
+          "TARGET_ID": "tgt-button",
+          "NODE_ID": "n12"
+        }
+      }
+    },
+    {
+      "entry": "step:0",
+      "op": "set",
+      "pointer": "/effective/preferredLocator",
+      "value": 0
+    }
+  ],
+  "expectedError": "INVALID_CONTENT",
+  "schemaRejects": false
+}

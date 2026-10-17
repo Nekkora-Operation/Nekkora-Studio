@@ -224,14 +224,18 @@ public final class ProjectService {
         // STUDIO-008: gravar o formato 1.1 SOBRE o próprio arquivo de formato anterior é migração — confirmação explícita e
         // cópia do arquivo original antes de substituí-lo. Salvar como em outro arquivo não toca no original.
         boolean ownFile = expected != null && p.path().map(target::equals).orElse(false);
-        boolean migrate = ownFile && ModelVersion.V1_1.equals(a.modelVersion()) && !p.fileFormat().map(ProjectFormat::representsVariables).orElse(false);
+        // STUDIO-009: o mesmo vale para o formato 1.2 (decisões sobre o alvo) sobre um arquivo 1.0/1.1
+        String needed = ProjectFormat.formatForModel(a.modelVersion());
+        boolean migrate = ownFile && (ModelVersion.V1_1.equals(a.modelVersion()) && !p.fileFormat().map(ProjectFormat::representsVariables).orElse(false)
+                || ModelVersion.V1_2.equals(a.modelVersion()) && !p.fileFormat().map(ProjectFormat::representsTargetDecisions).orElse(false));
         String backupLabel = "formato " + p.fileFormat().orElse("anterior");
         if (migrate) {
             String backupName = ProjectFormat.SUFFIX.length() < target.getFileName().toString().length()
                     ? target.getFileName().toString().substring(0, target.getFileName().toString().length() - ProjectFormat.SUFFIX.length())
                     : target.getFileName().toString();
-            if (!confirm(new StudioPrompts.Confirmation("Atualizar o formato do projeto?", "\"" + a.name() + "\" tem variáveis declaradas e precisa ser "
-                    + "gravado no formato " + ProjectFormat.FORMAT_VERSION_1_1 + ". Versões anteriores do Nekkora Studio não abrem esse formato. Antes de "
+            String why = ModelVersion.V1_2.equals(a.modelVersion()) ? "tem decisões sobre o alvo de etapas" : "tem variáveis declaradas";
+            if (!confirm(new StudioPrompts.Confirmation("Atualizar o formato do projeto?", "\"" + a.name() + "\" " + why + " e precisa ser "
+                    + "gravado no formato " + needed + ". Versões anteriores do Nekkora Studio não abrem esse formato. Antes de "
                     + "gravar, uma cópia do arquivo atual será guardada na mesma pasta como \"" + backupName + " (" + backupLabel + ")" + ProjectFormat.SUFFIX
                     + "\". Nada é executado e nenhuma credencial é solicitada.", "Atualizar e salvar", false))) {
                 return done(Outcome.CANCELLED);

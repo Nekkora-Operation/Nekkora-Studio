@@ -1,0 +1,1785 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nekkora.dev/contracts/nekkora-project/1.2.0",
+  "title": "Projeto do Nekkora Studio (.nekkora) — formato 1.2.0",
+  "description": "Documentos JSON (UTF-8, RFC 8259, sem chaves repetidas) contidos no pacote ZIP .nekkora. Cada entrada é validada pela definição indicada em x-entries. Os campos são EXATOS: nenhum campo extra é aceito e todos os campos existem (ausência é representada por null). Este schema descreve a ESTRUTURA; as regras semânticas (referências internas, coerência entre original e efetivo, política nekkora-privacy/2, limites de tamanho do leitor) são aplicadas pelo leitor do Studio e estão documentadas em docs/studio-006/project-format.md e docs/studio-008/versioning-and-migration.md. O formato 1.1.0 (STUDIO-008) acrescenta exatamente uma entrada, variables.json (catálogo de variáveis, modelo 1.1.0), obrigatória; o resto é idêntico ao 1.0.0. Um projeto sem variáveis continua sendo escrito em 1.0.0 (schema 1.0.0). Nenhum valor de entrada ou de execução é gravado: só a declaração; constante só para variável não sensível. O SHA-256 do manifesto detecta corrupção acidental; não é assinatura nem garantia de autenticidade. O pacote não é criptografado. STUDIO-009 (1.2.0): o 1.1.0 mais, em cada etapa (effective), o alvo substituto depois de uma correção aprovada (targetReplacement, mesma forma do elemento capturado) e a decisão sobre o alvo (targetDecision: confirmado/rejeitado, ator DEVELOPER ou TEST_AGENT, resumo em códigos da verificação técnica e a expectativa da etapa). O catálogo de variáveis é OPCIONAL em 1.2.x. O escritor só usa 1.2.x quando há ao menos uma decisão ou alvo substituto.",
+  "x-entries": {
+    "manifest.json": "#/$defs/Manifest",
+    "metadata.json": "#/$defs/Metadata",
+    "automation.json": "#/$defs/Automation",
+    "sessions.json": "#/$defs/Sessions",
+    "variables.json": "#/$defs/Variables",
+    "steps/<stepId>.json": "#/$defs/Step",
+    "evidence/<stepId>.json": "#/$defs/StepEvidence",
+    "evidence/unattributed.json": "#/$defs/UnattributedEvidence"
+  },
+  "$defs": {
+    "Uuid": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+      "description": "UUID na forma canônica (minúsculas)."
+    },
+    "Instant": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{3}|\\.[0-9]{6}|\\.[0-9]{9})?Z$",
+      "description": "Instante UTC na forma canônica de java.time.Instant."
+    },
+    "InstantOrNull": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Instant"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "Sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "Text": {
+      "type": "string"
+    },
+    "TextOrNull": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "Code": {
+      "type": "string",
+      "pattern": "^[A-Z_]{1,40}$",
+      "description": "Código técnico; nunca texto livre."
+    },
+    "EntryPath": {
+      "type": "string",
+      "pattern": "^((metadata|automation|sessions|variables)\\.json|steps/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\\.json|evidence/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|unattributed)\\.json)$",
+      "description": "Única forma de nome de entrada: sem caminho absoluto, sem '..', sem diretórios arbitrários. O manifesto não se declara."
+    },
+    "Manifest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "format",
+        "formatVersion",
+        "kind",
+        "automationModel",
+        "privacyPolicy",
+        "projectId",
+        "automationId",
+        "createdAt",
+        "savedAt",
+        "recoveryOf",
+        "limits",
+        "entries"
+      ],
+      "properties": {
+        "format": {
+          "const": "nekkora-studio/project"
+        },
+        "formatVersion": {
+          "type": "string",
+          "pattern": "^1\\.2\\.[0-9]{1,4}$",
+          "description": "SemVer do pacote. Este schema descreve 1.2.x (decisões sobre o alvo; variables.json opcional); 1.0.x e 1.1.x são descritos pelos schemas 1.0.0 e 1.1.0; MINOR/MAJOR maior é recusado (NEWER_VERSION) sem migração silenciosa."
+        },
+        "kind": {
+          "enum": [
+            "PROJECT",
+            "RECOVERY"
+          ]
+        },
+        "automationModel": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "schema",
+            "version"
+          ],
+          "properties": {
+            "schema": {
+              "const": "nekkora-studio/automation"
+            },
+            "version": {
+              "const": "1.2.0"
+            }
+          }
+        },
+        "privacyPolicy": {
+          "const": "nekkora-privacy/2"
+        },
+        "projectId": {
+          "$ref": "#/$defs/Uuid"
+        },
+        "automationId": {
+          "$ref": "#/$defs/Uuid"
+        },
+        "createdAt": {
+          "$ref": "#/$defs/Instant"
+        },
+        "savedAt": {
+          "$ref": "#/$defs/Instant"
+        },
+        "recoveryOf": {
+          "description": "null num PROJECT; objeto numa fotografia RECOVERY (origem das alterações não salvas).",
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "projectPath",
+                "baseSize",
+                "baseSha256"
+              ],
+              "properties": {
+                "projectPath": {
+                  "$ref": "#/$defs/TextOrNull"
+                },
+                "baseSize": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "minimum": 0
+                },
+                "baseSha256": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/$defs/Sha256"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        "limits": {
+          "type": "object",
+          "description": "Informativo: o leitor usa os próprios limites, nunca os declarados.",
+          "additionalProperties": false,
+          "required": [
+            "maxEntryBytes",
+            "maxTotalBytes",
+            "maxSteps"
+          ],
+          "properties": {
+            "maxEntryBytes": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "maxTotalBytes": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "maxSteps": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "entries": {
+          "type": "array",
+          "maxItems": 40004,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "path",
+              "sha256",
+              "size"
+            ],
+            "properties": {
+              "path": {
+                "$ref": "#/$defs/EntryPath"
+              },
+              "sha256": {
+                "$ref": "#/$defs/Sha256"
+              },
+              "size": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 8388608
+              }
+            }
+          }
+        }
+      }
+    },
+    "Metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "producer",
+        "encrypted",
+        "notice"
+      ],
+      "properties": {
+        "producer": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "application",
+            "version"
+          ],
+          "properties": {
+            "application": {
+              "type": "string"
+            },
+            "version": {
+              "type": "string"
+            }
+          }
+        },
+        "encrypted": {
+          "const": false,
+          "description": "O formato não é criptografado; true é recusado."
+        },
+        "notice": {
+          "type": "string"
+        }
+      }
+    },
+    "Automation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "modelVersion",
+        "automationId",
+        "name",
+        "description",
+        "status",
+        "createdAt",
+        "updatedAt",
+        "revision",
+        "sessions"
+      ],
+      "properties": {
+        "schema": {
+          "const": "nekkora-studio/automation"
+        },
+        "modelVersion": {
+          "const": "1.2.0"
+        },
+        "automationId": {
+          "$ref": "#/$defs/Uuid"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/AutomationStatus"
+        },
+        "createdAt": {
+          "$ref": "#/$defs/Instant"
+        },
+        "updatedAt": {
+          "$ref": "#/$defs/Instant"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "sessions": {
+          "type": "array",
+          "maxItems": 2000,
+          "items": {
+            "$ref": "#/$defs/Uuid"
+          },
+          "description": "Ordem das sessões."
+        }
+      }
+    },
+    "Variables": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "variables"
+      ],
+      "properties": {
+        "variables": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 2000,
+          "items": {
+            "$ref": "#/$defs/Variable"
+          },
+          "description": "Catálogo de variáveis (STUDIO-008), na ordem de declaração. Um projeto sem variáveis é escrito em 1.0.0."
+        }
+      }
+    },
+    "Variable": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "variableId",
+        "name",
+        "technicalType",
+        "semanticType",
+        "authority",
+        "purpose",
+        "scope",
+        "origin",
+        "sensitivity",
+        "constraints",
+        "createdAt",
+        "updatedAt"
+      ],
+      "properties": {
+        "variableId": {
+          "$ref": "#/$defs/Uuid"
+        },
+        "name": {
+          "type": "string",
+          "pattern": "^[A-Za-z][A-Za-z0-9_.-]{0,63}$",
+          "description": "Nome simbólico (o ponto faz parte do nome). Único sem distinção de maiúsculas (regra do leitor)."
+        },
+        "technicalType": {
+          "$ref": "#/$defs/VariableType"
+        },
+        "semanticType": {
+          "$ref": "#/$defs/SemanticType"
+        },
+        "authority": {
+          "$ref": "#/$defs/SemanticStatus"
+        },
+        "purpose": {
+          "type": "string",
+          "maxLength": 2000,
+          "description": "Contexto para pessoas; não é fonte de verdade executável."
+        },
+        "scope": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "sessionId"
+          ],
+          "properties": {
+            "kind": {
+              "$ref": "#/$defs/VariableScopeKind"
+            },
+            "sessionId": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        },
+        "origin": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "constant",
+            "producerStepId"
+          ],
+          "properties": {
+            "kind": {
+              "$ref": "#/$defs/VariableOriginKind"
+            },
+            "constant": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 500,
+              "description": "Só em CONSTANT, só para sensibilidade PUBLIC/INTERNAL, na forma canônica do tipo (regras do leitor). Não é criptografado."
+            },
+            "producerStepId": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Só em STEP_OUTPUT: etapa produtora DECLARADA (não comprovada)."
+            }
+          }
+        },
+        "sensitivity": {
+          "$ref": "#/$defs/Sensitivity"
+        },
+        "constraints": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "required",
+            "minLength",
+            "maxLength",
+            "textFormat",
+            "minimum",
+            "maximum",
+            "scale",
+            "currency"
+          ],
+          "properties": {
+            "required": {
+              "type": "boolean"
+            },
+            "minLength": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 10000
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "maxLength": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 10000
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "textFormat": {
+              "$ref": "#/$defs/TextFormat"
+            },
+            "minimum": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/DecimalText"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "maximum": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/DecimalText"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "scale": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 18
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "currency": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[A-Z]{3}$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        },
+        "createdAt": {
+          "$ref": "#/$defs/Instant"
+        },
+        "updatedAt": {
+          "$ref": "#/$defs/Instant"
+        }
+      }
+    },
+    "DecimalText": {
+      "type": "string",
+      "pattern": "^-?[0-9]{1,30}(\\.[0-9]{1,18})?$",
+      "description": "Decimal como texto (nunca ponto flutuante)."
+    },
+    "Sessions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sessions"
+      ],
+      "properties": {
+        "sessions": {
+          "type": "array",
+          "maxItems": 2000,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "sessionId",
+              "name",
+              "description",
+              "notes",
+              "steps"
+            ],
+            "properties": {
+              "sessionId": {
+                "$ref": "#/$defs/Uuid"
+              },
+              "name": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "notes": {
+                "type": "string"
+              },
+              "steps": {
+                "type": "array",
+                "maxItems": 20000,
+                "items": {
+                  "$ref": "#/$defs/Uuid"
+                },
+                "description": "Ordem das etapas da sessão."
+              }
+            }
+          }
+        }
+      }
+    },
+    "Step": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "stepId",
+        "createdAt",
+        "original",
+        "effective"
+      ],
+      "properties": {
+        "stepId": {
+          "$ref": "#/$defs/Uuid"
+        },
+        "createdAt": {
+          "$ref": "#/$defs/Instant"
+        },
+        "original": {
+          "type": "object",
+          "description": "O que foi capturado ou criado — nunca substituído pelas edições.",
+          "additionalProperties": false,
+          "required": [
+            "provenance",
+            "capturedElement",
+            "context",
+            "observedOutcome",
+            "baseline",
+            "derivedFrom"
+          ],
+          "properties": {
+            "provenance": {
+              "$ref": "#/$defs/Provenance"
+            },
+            "capturedElement": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Element"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "context": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "application",
+                    "screenTitle",
+                    "location"
+                  ],
+                  "properties": {
+                    "application": {
+                      "type": "string"
+                    },
+                    "screenTitle": {
+                      "type": "string"
+                    },
+                    "location": {
+                      "type": "string"
+                    }
+                  }
+                }
+              ]
+            },
+            "observedOutcome": {
+              "type": "string"
+            },
+            "baseline": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Baseline"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "derivedFrom": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        },
+        "effective": {
+          "type": "object",
+          "description": "Valores efetivos editados pelo usuário.",
+          "additionalProperties": false,
+          "required": [
+            "name",
+            "description",
+            "actionType",
+            "parameters",
+            "preferredLocator",
+            "manualLocators",
+            "comments",
+            "fieldEdits",
+            "lastManualChange",
+            "targetReplacement",
+            "targetDecision"
+          ],
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
+            "actionType": {
+              "$ref": "#/$defs/ActionType"
+            },
+            "parameters": {
+              "$ref": "#/$defs/Parameters"
+            },
+            "preferredLocator": {
+              "type": "integer",
+              "minimum": -1,
+              "maximum": 1000
+            },
+            "manualLocators": {
+              "type": "array",
+              "maxItems": 1000,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "syntax",
+                  "expression",
+                  "note",
+                  "proposedAt",
+                  "verification"
+                ],
+                "properties": {
+                  "syntax": {
+                    "enum": [
+                      "CSS",
+                      "XPATH"
+                    ]
+                  },
+                  "expression": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 500
+                  },
+                  "note": {
+                    "type": "string",
+                    "maxLength": 200
+                  },
+                  "proposedAt": {
+                    "$ref": "#/$defs/Instant"
+                  },
+                  "verification": {
+                    "const": "NOT_VERIFIED",
+                    "description": "Um localizador manual nunca é verificado nesta fase."
+                  }
+                }
+              }
+            },
+            "comments": {
+              "type": "array",
+              "maxItems": 1000,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "text",
+                  "createdAt",
+                  "editedAt"
+                ],
+                "properties": {
+                  "text": {
+                    "type": "string"
+                  },
+                  "createdAt": {
+                    "$ref": "#/$defs/Instant"
+                  },
+                  "editedAt": {
+                    "$ref": "#/$defs/InstantOrNull"
+                  }
+                }
+              }
+            },
+            "fieldEdits": {
+              "type": "object",
+              "propertyNames": {
+                "$ref": "#/$defs/StepField"
+              },
+              "additionalProperties": {
+                "$ref": "#/$defs/Instant"
+              }
+            },
+            "lastManualChange": {
+              "$ref": "#/$defs/InstantOrNull"
+            },
+            "targetReplacement": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Element"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Alvo que substitui o capturado depois de uma correção aprovada (o capturado continua em original.capturedElement)."
+            },
+            "targetDecision": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/TargetDecision"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    "Provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "origin",
+        "correlation",
+        "recording"
+      ],
+      "properties": {
+        "origin": {
+          "$ref": "#/$defs/StepOrigin"
+        },
+        "correlation": {
+          "$ref": "#/$defs/Correlation"
+        },
+        "recording": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "mode",
+                "observation",
+                "businessOutcome",
+                "evidence",
+                "limitations"
+              ],
+              "properties": {
+                "mode": {
+                  "$ref": "#/$defs/CaptureMode"
+                },
+                "observation": {
+                  "$ref": "#/$defs/Observation"
+                },
+                "businessOutcome": {
+                  "$ref": "#/$defs/BusinessOutcome"
+                },
+                "evidence": {
+                  "type": "array",
+                  "maxItems": 64,
+                  "items": {
+                    "$ref": "#/$defs/Code"
+                  }
+                },
+                "limitations": {
+                  "type": "array",
+                  "maxItems": 64,
+                  "items": {
+                    "$ref": "#/$defs/Code"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "Correlation": {
+      "type": "object",
+      "description": "Identificadores técnicos internos (transportados, nunca exibidos).",
+      "propertyNames": {
+        "$ref": "#/$defs/CorrelationKey"
+      },
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9._:-]{1,120}$"
+      }
+    },
+    "Element": {
+      "type": "object",
+      "description": "Referência compacta do elemento capturado (nekkora-privacy/2): nunca PageMap, captura de tela ou valor digitado.",
+      "additionalProperties": false,
+      "required": [
+        "accessibleName",
+        "semanticKind",
+        "tag",
+        "htmlId",
+        "htmlName",
+        "sensitive",
+        "privacyPolicy",
+        "sourceContract",
+        "preferredLocator",
+        "locators",
+        "accessPath",
+        "context",
+        "stabilityNotes",
+        "obstacles",
+        "correlation"
+      ],
+      "properties": {
+        "accessibleName": {
+          "type": "string"
+        },
+        "semanticKind": {
+          "type": "string"
+        },
+        "tag": {
+          "type": "string"
+        },
+        "htmlId": {
+          "$ref": "#/$defs/TextOrNull"
+        },
+        "htmlName": {
+          "$ref": "#/$defs/TextOrNull"
+        },
+        "sensitive": {
+          "type": "boolean"
+        },
+        "privacyPolicy": {
+          "$ref": "#/$defs/TextOrNull"
+        },
+        "sourceContract": {
+          "$ref": "#/$defs/TextOrNull"
+        },
+        "preferredLocator": {
+          "type": "integer",
+          "minimum": -1,
+          "maximum": 1000
+        },
+        "locators": {
+          "type": "array",
+          "maxItems": 1000,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "strategy",
+              "description",
+              "expression",
+              "stability",
+              "matchCount",
+              "matchesTarget"
+            ],
+            "properties": {
+              "strategy": {
+                "$ref": "#/$defs/LocatorStrategy"
+              },
+              "description": {
+                "type": "string"
+              },
+              "expression": {
+                "type": "string"
+              },
+              "stability": {
+                "$ref": "#/$defs/LocatorStability"
+              },
+              "matchCount": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "matchesTarget": {
+                "type": "boolean"
+              }
+            }
+          }
+        },
+        "accessPath": {
+          "type": "array",
+          "maxItems": 1000,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "type",
+              "label",
+              "locator",
+              "correlation"
+            ],
+            "properties": {
+              "type": {
+                "$ref": "#/$defs/AccessStepType"
+              },
+              "label": {
+                "type": "string"
+              },
+              "locator": {
+                "type": "string"
+              },
+              "correlation": {
+                "$ref": "#/$defs/Correlation"
+              }
+            }
+          }
+        },
+        "context": {
+          "type": "array",
+          "maxItems": 1000,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "relation",
+              "kind",
+              "name",
+              "locator"
+            ],
+            "properties": {
+              "relation": {
+                "type": "string"
+              },
+              "kind": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "locator": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "stabilityNotes": {
+          "type": "array",
+          "maxItems": 1000,
+          "items": {
+            "type": "string"
+          }
+        },
+        "obstacles": {
+          "type": "array",
+          "maxItems": 1000,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "type",
+              "severity",
+              "description"
+            ],
+            "properties": {
+              "type": {
+                "type": "string"
+              },
+              "severity": {
+                "$ref": "#/$defs/Severity"
+              },
+              "description": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "correlation": {
+          "$ref": "#/$defs/Correlation"
+        }
+      }
+    },
+    "Baseline": {
+      "type": "object",
+      "description": "Valores originais de uma etapa capturada (o efetivo é comparado com eles).",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "description",
+        "actionType",
+        "parameters",
+        "preferredLocator"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "actionType": {
+          "$ref": "#/$defs/ActionType"
+        },
+        "parameters": {
+          "$ref": "#/$defs/Parameters"
+        },
+        "preferredLocator": {
+          "type": "integer",
+          "minimum": -1,
+          "maximum": 1000
+        }
+      }
+    },
+    "Parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "value",
+        "option"
+      ],
+      "properties": {
+        "value": {
+          "description": "Origem do valor: texto literal digitado NO STUDIO, referência a variável ou alias de credencial. Nunca o segredo nem o valor digitado na página.",
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "kind",
+                "text"
+              ],
+              "properties": {
+                "kind": {
+                  "const": "LITERAL"
+                },
+                "text": {
+                  "type": "string"
+                }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "kind",
+                "name"
+              ],
+              "properties": {
+                "kind": {
+                  "const": "VARIABLE"
+                },
+                "name": {
+                  "type": "string"
+                }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "kind",
+                "alias"
+              ],
+              "properties": {
+                "kind": {
+                  "const": "CREDENTIAL"
+                },
+                "alias": {
+                  "type": "string"
+                }
+              }
+            }
+          ]
+        },
+        "option": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "label",
+                "value"
+              ],
+              "properties": {
+                "label": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": "string"
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "StepEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "stepId",
+        "evidence"
+      ],
+      "properties": {
+        "stepId": {
+          "$ref": "#/$defs/Uuid"
+        },
+        "evidence": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/Evidence"
+          }
+        }
+      }
+    },
+    "UnattributedEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "evidence"
+      ],
+      "properties": {
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Evidence"
+          }
+        }
+      }
+    },
+    "Evidence": {
+      "type": "object",
+      "description": "Evidência observada (imutável). O resultado de negócio NÃO é validado por evidências. Nunca há texto da página (modo estrito).",
+      "additionalProperties": false,
+      "required": [
+        "evidenceId",
+        "sequence",
+        "recordingId",
+        "eventId",
+        "observedAt",
+        "type",
+        "source",
+        "relation",
+        "confidence",
+        "classification",
+        "document",
+        "region",
+        "message",
+        "field",
+        "state",
+        "navigation",
+        "signals",
+        "candidates",
+        "signalsObserved",
+        "limitations"
+      ],
+      "properties": {
+        "evidenceId": {
+          "type": "string"
+        },
+        "sequence": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "recordingId": {
+          "type": "string"
+        },
+        "eventId": {
+          "$ref": "#/$defs/TextOrNull"
+        },
+        "observedAt": {
+          "$ref": "#/$defs/Instant"
+        },
+        "type": {
+          "$ref": "#/$defs/EvidenceType"
+        },
+        "source": {
+          "$ref": "#/$defs/EvidenceSource"
+        },
+        "relation": {
+          "$ref": "#/$defs/EvidenceRelation"
+        },
+        "confidence": {
+          "$ref": "#/$defs/EvidenceConfidence"
+        },
+        "classification": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EvidenceClassification"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "document": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "frame",
+            "inShadow",
+            "url"
+          ],
+          "properties": {
+            "frame": {
+              "type": "boolean"
+            },
+            "inShadow": {
+              "type": "boolean"
+            },
+            "url": {
+              "$ref": "#/$defs/TextOrNull"
+            }
+          }
+        },
+        "region": {
+          "$ref": "#/$defs/TextOrNull"
+        },
+        "message": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "availability",
+            "text"
+          ],
+          "properties": {
+            "availability": {
+              "$ref": "#/$defs/MessageAvailability"
+            },
+            "text": {
+              "type": "null",
+              "description": "Sempre null: o texto da página nunca é persistido."
+            }
+          }
+        },
+        "field": {
+          "$ref": "#/$defs/TextOrNull"
+        },
+        "state": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "attribute",
+                "from",
+                "to"
+              ],
+              "properties": {
+                "attribute": {
+                  "$ref": "#/$defs/StateAttribute"
+                },
+                "from": {
+                  "$ref": "#/$defs/StateValue"
+                },
+                "to": {
+                  "$ref": "#/$defs/StateValue"
+                }
+              }
+            }
+          ]
+        },
+        "navigation": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "newDocument",
+                "url"
+              ],
+              "properties": {
+                "newDocument": {
+                  "type": "boolean"
+                },
+                "url": {
+                  "$ref": "#/$defs/TextOrNull"
+                }
+              }
+            }
+          ]
+        },
+        "signals": {
+          "type": "array",
+          "maxItems": 8,
+          "items": {
+            "$ref": "#/$defs/EvidenceSignal"
+          }
+        },
+        "candidates": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000
+        },
+        "signalsObserved": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000
+        },
+        "limitations": {
+          "type": "array",
+          "maxItems": 8,
+          "items": {
+            "$ref": "#/$defs/EvidenceLimitation"
+          }
+        }
+      }
+    },
+    "AutomationStatus": {
+      "enum": [
+        "DRAFT"
+      ]
+    },
+    "StepOrigin": {
+      "enum": [
+        "MANUAL",
+        "RECORDED",
+        "IMPORTED",
+        "GENERATED"
+      ]
+    },
+    "StepField": {
+      "enum": [
+        "NAME",
+        "DESCRIPTION",
+        "ACTION_TYPE",
+        "PARAMETERS",
+        "PREFERRED_LOCATOR",
+        "TARGET"
+      ]
+    },
+    "ActionType": {
+      "enum": [
+        "CLICK",
+        "FILL",
+        "SELECT_OPTION",
+        "CHECK",
+        "UNCHECK",
+        "PRESS_KEY",
+        "NAVIGATE",
+        "WAIT_FOR",
+        "OBSERVE",
+        "UNKNOWN"
+      ]
+    },
+    "CaptureMode": {
+      "enum": [
+        "CAPTURE_ONLY",
+        "CAPTURE_AND_INTERACT"
+      ]
+    },
+    "Observation": {
+      "enum": [
+        "PROPOSED",
+        "INTERACTION_OBSERVED"
+      ]
+    },
+    "BusinessOutcome": {
+      "enum": [
+        "NOT_VALIDATED"
+      ]
+    },
+    "CorrelationKey": {
+      "enum": [
+        "RECORDING_ID",
+        "CAPTURE_SESSION_ID",
+        "CAPTURE_ID",
+        "PAGE_SESSION_ID",
+        "TARGET_ID",
+        "NODE_ID",
+        "DOCUMENT_ID",
+        "FRAME_ID",
+        "RECORDED_EVENT_ID"
+      ]
+    },
+    "LocatorStrategy": {
+      "enum": [
+        "TEST_ATTRIBUTE",
+        "ID",
+        "NAME",
+        "LABEL",
+        "ROLE_NAME",
+        "CONTEXTUAL",
+        "ROW_CONTEXT",
+        "ATTRIBUTE",
+        "TEXT",
+        "XPATH_RELATIVE",
+        "POSITIONAL"
+      ]
+    },
+    "LocatorStability": {
+      "enum": [
+        "OBSERVED_STABLE",
+        "HEURISTIC_STABLE",
+        "UNKNOWN",
+        "HEURISTIC_UNSTABLE",
+        "OBSERVED_UNSTABLE"
+      ]
+    },
+    "AccessStepType": {
+      "enum": [
+        "MAIN_DOCUMENT",
+        "IFRAME",
+        "SHADOW_ROOT",
+        "ELEMENT"
+      ]
+    },
+    "Severity": {
+      "enum": [
+        "LOW",
+        "MEDIUM",
+        "HIGH"
+      ]
+    },
+    "EvidenceType": {
+      "enum": [
+        "FORM_SUBMITTED",
+        "ROUTE_CHANGED",
+        "DOCUMENT_CHANGED",
+        "VISIBLE_ALERT",
+        "VISIBLE_ERROR_MESSAGE",
+        "VISIBLE_STATUS_MESSAGE",
+        "VALIDATION_FEEDBACK",
+        "LOADING_INDICATOR",
+        "LOADING_FINISHED",
+        "ELEMENT_STATE_CHANGED",
+        "CONTENT_CHANGED",
+        "OBSERVATION_COMPLETE",
+        "OBSERVATION_INCOMPLETE",
+        "AMBIGUOUS_FEEDBACK"
+      ]
+    },
+    "EvidenceSource": {
+      "enum": [
+        "INTERACTION_NORMALIZER",
+        "FEEDBACK_OBSERVER",
+        "FORM_OBSERVER",
+        "NAVIGATION_OBSERVER",
+        "RECORDER"
+      ]
+    },
+    "EvidenceRelation": {
+      "enum": [
+        "AT_ACTION",
+        "AFTER_ACTION"
+      ]
+    },
+    "EvidenceConfidence": {
+      "enum": [
+        "DIRECTLY_OBSERVED",
+        "TEMPORALLY_ASSOCIATED",
+        "AMBIGUOUS",
+        "INCOMPLETE"
+      ]
+    },
+    "EvidenceClassification": {
+      "enum": [
+        "ERROR_INDICATOR",
+        "STATUS_INDICATOR",
+        "VALIDATION_INDICATOR",
+        "UNKNOWN_FEEDBACK"
+      ]
+    },
+    "EvidenceSignal": {
+      "enum": [
+        "ROLE_ALERT",
+        "ROLE_ALERTDIALOG",
+        "ROLE_STATUS",
+        "ARIA_LIVE_ASSERTIVE",
+        "ARIA_LIVE_POLITE",
+        "ARIA_INVALID",
+        "NATIVE_INVALID",
+        "ARIA_ERRORMESSAGE",
+        "ERROR_HINT",
+        "ARIA_BUSY",
+        "ROLE_PROGRESSBAR",
+        "SUBMIT_EVENT",
+        "HISTORY_API",
+        "NEW_DOCUMENT",
+        "TARGET_ATTRIBUTE"
+      ]
+    },
+    "EvidenceLimitation": {
+      "enum": [
+        "MESSAGE_SUPPRESSED",
+        "WINDOW_CUT_BY_NAVIGATION",
+        "WINDOW_CUT_BY_PAUSE",
+        "WINDOW_CUT_BY_STOP",
+        "EVIDENCE_LIMIT_REACHED",
+        "CROSS_DOCUMENT_NOT_ATTRIBUTED",
+        "PARTIAL_COVERAGE",
+        "ORDER_BY_RECEPTION"
+      ]
+    },
+    "StateAttribute": {
+      "enum": [
+        "ARIA_EXPANDED",
+        "ARIA_PRESSED",
+        "ARIA_CHECKED",
+        "ARIA_SELECTED",
+        "ARIA_DISABLED",
+        "DISABLED"
+      ]
+    },
+    "StateValue": {
+      "enum": [
+        "TRUE",
+        "FALSE",
+        "MIXED",
+        "ABSENT"
+      ]
+    },
+    "MessageAvailability": {
+      "enum": [
+        "NONE",
+        "AVAILABLE",
+        "SUPPRESSED"
+      ]
+    },
+    "VariableType": {
+      "enum": [
+        "STRING",
+        "INTEGER",
+        "DECIMAL",
+        "BOOLEAN",
+        "DATE"
+      ]
+    },
+    "SemanticType": {
+      "enum": [
+        "UNSPECIFIED",
+        "FREE_TEXT",
+        "IDENTIFIER",
+        "BRAZILIAN_CPF",
+        "EMAIL",
+        "CURRENCY",
+        "PERCENTAGE",
+        "DATE_ISO"
+      ]
+    },
+    "SemanticStatus": {
+      "enum": [
+        "USER_CONFIRMED",
+        "PROPOSED_UNCONFIRMED",
+        "UNSPECIFIED"
+      ]
+    },
+    "Sensitivity": {
+      "enum": [
+        "PUBLIC",
+        "INTERNAL",
+        "PERSONAL_DATA",
+        "SECRET"
+      ]
+    },
+    "VariableScopeKind": {
+      "enum": [
+        "AUTOMATION",
+        "SESSION"
+      ]
+    },
+    "VariableOriginKind": {
+      "enum": [
+        "INPUT",
+        "CONSTANT",
+        "STEP_OUTPUT",
+        "UNBOUND"
+      ]
+    },
+    "TextFormat": {
+      "enum": [
+        "ANY",
+        "DIGITS",
+        "LETTERS_AND_DIGITS",
+        "EMAIL_SHAPE",
+        "BRAZILIAN_CPF_MASKED"
+      ]
+    },
+    "DecisionKind": {
+      "enum": [
+        "CONFIRMED",
+        "REJECTED"
+      ]
+    },
+    "DecisionActor": {
+      "enum": [
+        "DEVELOPER",
+        "TEST_AGENT"
+      ],
+      "description": "Quem decidiu: DEVELOPER (interface do Studio) ou TEST_AGENT (agente de teste em modo de laboratório). Não existe rótulo de confirmação humana nem de verificação por IA."
+    },
+    "TargetDecision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "actor",
+        "decidedAt",
+        "basis",
+        "expectation"
+      ],
+      "description": "Decisão durável sobre o alvo da etapa (STUDIO-009). Sem valores e sem texto livre.",
+      "properties": {
+        "kind": {
+          "$ref": "#/$defs/DecisionKind"
+        },
+        "actor": {
+          "$ref": "#/$defs/DecisionActor"
+        },
+        "decidedAt": {
+          "$ref": "#/$defs/Instant"
+        },
+        "basis": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "identitySource",
+            "status",
+            "reasons",
+            "observedAt",
+            "location"
+          ],
+          "description": "Resumo, em códigos, da verificação técnica que embasou a decisão (situada: não prova o estado atual).",
+          "properties": {
+            "identitySource": {
+              "type": "string",
+              "pattern": "^[A-Z][A-Z0-9_]{0,59}$"
+            },
+            "status": {
+              "type": "string",
+              "pattern": "^[A-Z][A-Z0-9_]{0,59}$"
+            },
+            "reasons": {
+              "type": "array",
+              "maxItems": 16,
+              "items": {
+                "type": "string",
+                "pattern": "^[A-Z][A-Z0-9_]{0,59}$"
+              }
+            },
+            "observedAt": {
+              "$ref": "#/$defs/InstantOrNull"
+            },
+            "location": {
+              "type": "string",
+              "maxLength": 2048
+            }
+          }
+        },
+        "expectation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "action",
+            "valueKind",
+            "variableRef",
+            "targetId",
+            "targetKind",
+            "targetTag",
+            "preferredExpression",
+            "path"
+          ],
+          "description": "O que a etapa esperava do alvo na decisão: mudou ⇒ a decisão não é reutilizada sem revisão.",
+          "properties": {
+            "action": {
+              "$ref": "#/$defs/ActionType"
+            },
+            "valueKind": {
+              "enum": [
+                "NONE",
+                "LITERAL",
+                "VARIABLE",
+                "CREDENTIAL"
+              ]
+            },
+            "variableRef": {
+              "type": "string",
+              "pattern": "^([A-Za-z][A-Za-z0-9_.-]{0,63})?$"
+            },
+            "targetId": {
+              "type": "string",
+              "pattern": "^([A-Za-z0-9._:-]{1,80})?$"
+            },
+            "targetKind": {
+              "type": "string",
+              "pattern": "^[A-Z_]{1,40}$"
+            },
+            "targetTag": {
+              "type": "string",
+              "maxLength": 41
+            },
+            "preferredExpression": {
+              "type": "string",
+              "maxLength": 500
+            },
+            "path": {
+              "type": "array",
+              "maxItems": 12,
+              "items": {
+                "$ref": "#/$defs/AccessStepType"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

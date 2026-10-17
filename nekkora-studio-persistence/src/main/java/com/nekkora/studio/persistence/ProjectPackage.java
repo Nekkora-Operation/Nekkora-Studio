@@ -259,10 +259,11 @@ public final class ProjectPackage {
         for (String required : List.of(ProjectFormat.METADATA, ProjectFormat.AUTOMATION, ProjectFormat.SESSIONS, ProjectFormat.UNATTRIBUTED)) {
             if (!declared.contains(required)) throw new ProjectException(ProjectException.Error.MISSING_ENTRY, required);
         }
-        // STUDIO-008: o catálogo de variáveis é obrigatório em 1.1.x e não existe em 1.0.x (nada é ignorado em silêncio)
+        // STUDIO-008: o catálogo de variáveis é obrigatório em 1.1.x e não existe em 1.0.x (nada é ignorado em silêncio);
+        // STUDIO-009: em 1.2.x ele é opcional
         boolean variables = declared.contains(ProjectFormat.VARIABLES);
-        if (ProjectFormat.hasVariables(formatVersion) && !variables) throw new ProjectException(ProjectException.Error.MISSING_ENTRY, ProjectFormat.VARIABLES);
-        if (!ProjectFormat.hasVariables(formatVersion) && variables) {
+        if (ProjectFormat.requiresVariables(formatVersion) && !variables) throw new ProjectException(ProjectException.Error.MISSING_ENTRY, ProjectFormat.VARIABLES);
+        if (!ProjectFormat.allowsVariables(formatVersion) && variables) {
             throw new ProjectException(ProjectException.Error.UNEXPECTED_ENTRY, ProjectFormat.VARIABLES);
         }
         Doc meta = Doc.of(json(raw.get(ProjectFormat.METADATA), ProjectFormat.METADATA), ProjectFormat.METADATA, "producer", "encrypted", "notice");

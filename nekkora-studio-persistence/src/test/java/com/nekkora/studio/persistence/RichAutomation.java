@@ -205,6 +205,24 @@ final class RichAutomation {
         return a;
     }
 
+    /**
+     * STUDIO-009: a automação com variáveis mais decisões sobre o alvo — uma confirmação por agente de teste, uma correção
+     * aprovada pelo desenvolvedor (alvo substituto) e uma rejeição. Dados fictícios; vocabulário controlado.
+     */
+    static Automation withDecisions(Clock clock) {
+        Automation a = withVariables(clock);
+        com.nekkora.studio.domain.target.TargetDecision.Basis resolved = new com.nekkora.studio.domain.target.TargetDecision.Basis("TARGET_ID", "RESOLVED",
+                List.of("LOOKALIKES_PRESENT"), clock.instant(), "http://127.0.0.1:18765/{…}/login.html");
+        a.decideTarget(id(a, "Clicar no botão Entrar"), com.nekkora.studio.domain.target.TargetDecision.Kind.CONFIRMED,
+                com.nekkora.studio.domain.target.DecisionActor.TEST_AGENT, resolved);
+        a.replaceTarget(id(a, "Clicar no botão Pesquisar"), element("Pesquisar", "BUTTON", "button", "pesquisar-v2", false, false),
+                com.nekkora.studio.domain.target.DecisionActor.DEVELOPER, new com.nekkora.studio.domain.target.TargetDecision.Basis("DESCRIPTOR",
+                        "INSUFFICIENT_EVIDENCE", List.of("DESCRIPTOR_ONLY", "ID_ATTRIBUTE_CHANGED"), clock.instant(), "http://127.0.0.1:18765/{…}/consulta.html"));
+        a.decideTarget(id(a, "Selecionar São Paulo no campo Estado"), com.nekkora.studio.domain.target.TargetDecision.Kind.REJECTED,
+                com.nekkora.studio.domain.target.DecisionActor.TEST_AGENT, com.nekkora.studio.domain.target.TargetDecision.Basis.notInspected());
+        return a;
+    }
+
     /** A etapa por nome (os nomes desta automação são únicos). */
     static AutomationStep step(Automation a, String name) {
         return a.sessions().stream().flatMap(s -> s.steps().stream()).filter(s -> s.name().equals(name)).findFirst().orElseThrow();

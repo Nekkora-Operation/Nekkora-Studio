@@ -86,6 +86,7 @@ public final class StepPresentation {
             case ACTION_TYPE -> b.actionType().label();
             case PARAMETERS -> parameters(b.parameters());
             case PREFERRED_LOCATOR -> locator(step.capturedElement().orElse(null), b.preferredLocator());
+            case TARGET -> target(step.capturedElement().orElse(null));
         };
     }
 
@@ -97,7 +98,13 @@ public final class StepPresentation {
             case ACTION_TYPE -> step.actionType().label();
             case PARAMETERS -> parameters(step.parameters());
             case PREFERRED_LOCATOR -> locator(step.element().orElse(null), step.element().map(e -> e.preferredLocatorIndex()).orElse(-1));
+            case TARGET -> target(step.element().orElse(null));
         };
+    }
+
+    /** STUDIO-009: alvo em texto seguro (tipo e nome apresentável), para comparar capturado × substituto. */
+    private static String target(com.nekkora.studio.domain.element.ElementReference e) {
+        return e == null ? StudioText.NOT_AVAILABLE : ElementPresentation.title(e);
     }
 
     /** Parâmetros em texto: valor (referências pelo nome, nunca pelo conteúdo) ou opção. */

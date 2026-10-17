@@ -1,0 +1,16 @@
+{
+  "description": "Frase livre do resolvedor (pode citar a página) na base da decisão: campo inexistente.",
+  "base": "consulta-clientes-decisoes.nekkora",
+  "changes": [
+    {
+      "entry": "step:2",
+      "op": "set",
+      "pointer": "/effective/targetDecision/basis/evidence",
+      "value": [
+        "Candidato n41 é plausível: nome \"Ana Souza\""
+      ]
+    }
+  ],
+  "expectedError": "INVALID_CONTENT",
+  "schemaRejects": true
+}

@@ -28,8 +28,10 @@ public final class ProjectFormat {
     public static final String FORMAT_VERSION = "1.0.0";
     /** Formato com catálogo de variáveis (STUDIO-008). */
     public static final String FORMAT_VERSION_1_1 = "1.1.0";
+    /** Formato com decisões sobre o alvo e alvo substituto (STUDIO-009); catálogo de variáveis opcional. */
+    public static final String FORMAT_VERSION_1_2 = "1.2.0";
     /** Versão mais nova que esta versão do Studio lê e escreve. */
-    public static final String LATEST_FORMAT_VERSION = FORMAT_VERSION_1_1;
+    public static final String LATEST_FORMAT_VERSION = FORMAT_VERSION_1_2;
     public static final String PRIVACY_POLICY = CapturePrivacy.VERSION;
     public static final String EXTENSION = "nekkora";
     public static final String SUFFIX = "." + EXTENSION;
@@ -87,23 +89,54 @@ public final class ProjectFormat {
         return Compatibility.SUPPORTED;
     }
 
-    /** O formato 1.1.x (com catálogo de variáveis)? Só para versões {@code SUPPORTED}. */
-    static boolean hasVariables(String supportedVersion) {
-        return !supportedVersion.split("\\.")[1].equals("0");
+    private static int minor(String supportedVersion) {
+        return Integer.parseInt(supportedVersion.split("\\.")[1]);
+    }
+
+    /** {@code variables.json} é obrigatório (1.1.x). Só para versões {@code SUPPORTED}. */
+    static boolean requiresVariables(String supportedVersion) {
+        return minor(supportedVersion) == 1;
+    }
+
+    /** {@code variables.json} pode existir (1.1.x obrigatório; 1.2.x opcional; 1.0.x nunca). */
+    static boolean allowsVariables(String supportedVersion) {
+        return minor(supportedVersion) >= 1;
+    }
+
+    /** STUDIO-009: o formato representa decisões sobre o alvo e alvo substituto (1.2.x). */
+    static boolean hasTargetDecisions(String supportedVersion) {
+        return minor(supportedVersion) >= 2;
     }
 
     /** Versão do modelo de automação exigida por uma versão de formato suportada. */
     static String modelFor(String supportedVersion) {
-        return hasVariables(supportedVersion) ? ModelVersion.V1_1 : ModelVersion.CURRENT;
+        return switch (minor(supportedVersion)) {
+            case 0 -> ModelVersion.CURRENT;
+            case 1 -> ModelVersion.V1_1;
+            default -> ModelVersion.V1_2;
+        };
     }
 
     /** A versão (de um arquivo lido) já representa o catálogo de variáveis — gravar nela não é migração. */
     public static boolean representsVariables(String version) {
-        return compatibility(version) == Compatibility.SUPPORTED && hasVariables(version);
+        return compatibility(version) == Compatibility.SUPPORTED && allowsVariables(version);
     }
 
-    /** Menor versão do formato capaz de representar os documentos (D-S008-06). */
+    /** A versão (de um arquivo lido) já representa decisões sobre o alvo — gravar nela não é migração (STUDIO-009). */
+    public static boolean representsTargetDecisions(String version) {
+        return compatibility(version) == Compatibility.SUPPORTED && hasTargetDecisions(version);
+    }
+
+    /** Versão do formato que acompanha um modelo de automação (a menor que o representa). */
+    public static String formatForModel(String modelVersion) {
+        if (ModelVersion.V1_2.equals(modelVersion)) return FORMAT_VERSION_1_2;
+        return ModelVersion.V1_1.equals(modelVersion) ? FORMAT_VERSION_1_1 : FORMAT_VERSION;
+    }
+
+    /** Menor versão do formato capaz de representar os documentos (D-S008-06; STUDIO-009: pelo modelo declarado). */
     public static String versionFor(java.util.Map<String, ?> documents) {
+        Object automation = documents.get(AUTOMATION);
+        if (automation instanceof java.util.Map<?, ?> a && ModelVersion.V1_2.equals(a.get("modelVersion"))) return FORMAT_VERSION_1_2;
         return documents.containsKey(VARIABLES) ? FORMAT_VERSION_1_1 : FORMAT_VERSION;
     }
 

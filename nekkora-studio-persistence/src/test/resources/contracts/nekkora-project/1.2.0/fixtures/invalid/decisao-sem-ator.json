@@ -1,0 +1,13 @@
+{
+  "description": "Decisão sem ator.",
+  "base": "consulta-clientes-decisoes.nekkora",
+  "changes": [
+    {
+      "entry": "step:2",
+      "op": "remove",
+      "pointer": "/effective/targetDecision/actor"
+    }
+  ],
+  "expectedError": "INVALID_CONTENT",
+  "schemaRejects": true
+}

@@ -4,6 +4,8 @@ import com.nekkora.studio.domain.action.ActionParameters;
 import com.nekkora.studio.domain.action.ActionType;
 import com.nekkora.studio.domain.action.ValueSource;
 import com.nekkora.studio.domain.element.ElementReference;
+import com.nekkora.studio.domain.target.DecisionActor;
+import com.nekkora.studio.domain.target.TargetDecision;
 import com.nekkora.studio.domain.element.ManualLocator;
 import com.nekkora.studio.domain.variable.VariableDefinition;
 import com.nekkora.studio.domain.variable.VariableDraft;
@@ -175,6 +177,12 @@ public final class Automation {
      * 1.1.0 com o catálogo de variáveis (STUDIO-008, D-S008-06).
      */
     public String modelVersion() {
+        // STUDIO-009: decisão sobre o alvo ou alvo substituto exigem o modelo 1.2.0 (a menor versão capaz de representá-los)
+        for (LogicalSession s : sessions) {
+            for (AutomationStep st : s.steps()) {
+                if (st.targetDecision().isPresent() || st.replacementTarget().isPresent()) return ModelVersion.V1_2;
+            }
+        }
         return variables.isEmpty() ? ModelVersion.CURRENT : ModelVersion.V1_1;
     }
 
@@ -423,7 +431,7 @@ public final class Automation {
         if (!source.manualLocators().isEmpty()) {
             AutomationStep.State s = copy.state();
             copy.apply(new AutomationStep.State(s.name(), s.description(), s.actionType(), s.parameters(), s.element(), source.manualLocators(),
-                    s.comments(), s.edits(), s.lastManualChange()));
+                    s.comments(), s.edits(), s.lastManualChange(), null, null)); // a cópia não herda decisão: nunca foi verificada
         }
         session.insert(session.positionOf(stepId), copy);
         touch();
@@ -474,7 +482,7 @@ public final class Automation {
         }
         AutomationStep.State before = step.state();
         AutomationStep.State next = new AutomationStep.State(n, d, edit.actionType(), edit.parameters(), effective, edit.manualLocators(), comments,
-                before.edits(), before.lastManualChange());
+                before.edits(), before.lastManualChange(), before.replacement(), before.decision());
         LogicalSession from = sessionOf(stepId).orElseThrow();
         boolean moves = from != to;
         if (!moves && before.equalsIgnoringHistory(next)) return false;
@@ -558,8 +566,109 @@ public final class Automation {
             case ACTION_TYPE -> e.actionType(b.actionType());
             case PARAMETERS -> e.parameters(b.parameters());
             case PREFERRED_LOCATOR -> e.preferredLocator(b.preferredLocator());
+            case TARGET -> {
+                return restoreTarget(step, b);
+            }
         }
         return editStep(stepId, e);
+    }
+
+    // ------------------------------------------------------------------ STUDIO-009: decisões sobre o alvo
+
+    /**
+     * Registra a decisão sobre o alvo EFETIVO da etapa (confirmado ou rejeitado). Não executa nada: só a associação
+     * etapa ↔ identidade do alvo. A expectativa (ação, origem do valor, identidade técnica, tipo, localizador preferencial,
+     * trajetória) é calculada aqui, do estado atual — nunca informada por fora. Um agente de teste não substitui uma
+     * decisão do desenvolvedor (D-S009-06).
+     *
+     * @return {@code false} se a mesma decisão já estava registrada
+     */
+    public boolean decideTarget(StepId stepId, TargetDecision.Kind kind, DecisionActor actor, TargetDecision.Basis basis) {
+        AutomationStep step = requireStep(stepId);
+        ElementReference effective = step.element().orElseThrow(() -> new DomainValidationException(ValidationProblem.STEP_HAS_NO_ELEMENT));
+        requireAuthority(step, actor);
+        AutomationStep.State before = step.state();
+        TargetDecision previous = before.decision();
+        TargetDecision decision = new TargetDecision(kind, actor, clock.instant(), basis, expectation(step.actionType(), step.parameters(), effective));
+        if (previous != null && previous.kind() == kind && previous.actor() == actor && previous.basis().equals(basis)
+                && previous.expectation().equals(decision.expectation())) {
+            return false;
+        }
+        step.edit(new AutomationStep.State(before.name(), before.description(), before.actionType(), before.parameters(), before.element(),
+                before.manualLocators(), before.comments(), before.edits(), before.lastManualChange(), before.replacement(), decision), clock.instant());
+        touch();
+        return true;
+    }
+
+    /**
+     * Substitui o alvo efetivo por outra referência (Corrigir → selecionar no navegador ou adotar candidato), já aprovada
+     * pelo ator depois da comparação, numa ÚNICA operação: o substituto passa a ser a base do alvo efetivo e a decisão
+     * CONFIRMED do ator é registrada. O elemento capturado, a baseline e a procedência não mudam. Ação e parâmetros não
+     * mudam aqui (exigem confirmação separada). Tipo incompatível com a ação: recusado sem alteração parcial.
+     */
+    public void replaceTarget(StepId stepId, ElementReference replacement, DecisionActor actor, TargetDecision.Basis basis) {
+        AutomationStep step = requireStep(stepId);
+        Objects.requireNonNull(replacement, "replacement");
+        if (replacement.privacyPolicy().isEmpty()) throw new DomainValidationException(ValidationProblem.TARGET_REPLACEMENT_INVALID);
+        requireAuthority(step, actor);
+        if (unusualTarget(step.actionType(), replacement.semanticKind())) {
+            throw new DomainValidationException(ValidationProblem.TARGET_INCOMPATIBLE_WITH_ACTION);
+        }
+        checkParameters(step.actionType(), step.parameters(), replacement);
+        AutomationStep.State before = step.state();
+        Instant now = clock.instant();
+        TargetDecision decision = new TargetDecision(TargetDecision.Kind.CONFIRMED, actor, now, basis, expectation(step.actionType(), step.parameters(),
+                replacement));
+        step.edit(new AutomationStep.State(before.name(), before.description(), before.actionType(), before.parameters(), replacement,
+                before.manualLocators(), before.comments(), before.edits(), before.lastManualChange(), replacement, decision), now);
+        touch();
+    }
+
+    /** Volta ao alvo capturado: sem substituto e sem decisão (ela era sobre o substituto). */
+    private boolean restoreTarget(AutomationStep step, CapturedBaseline b) {
+        AutomationStep.State before = step.state();
+        if (before.replacement() == null) return false;
+        ElementReference captured = step.capturedElement().orElse(null);
+        ElementReference effective = captured == null ? null : captured.withPreferredLocator(b.preferredLocator());
+        checkParameters(before.actionType(), before.parameters(), effective);
+        step.edit(new AutomationStep.State(before.name(), before.description(), before.actionType(), before.parameters(), effective, before.manualLocators(),
+                before.comments(), before.edits(), before.lastManualChange(), null, null), clock.instant());
+        touch();
+        return true;
+    }
+
+    private static void requireAuthority(AutomationStep step, DecisionActor actor) {
+        Objects.requireNonNull(actor, "actor");
+        DecisionActor previous = step.targetDecision().map(TargetDecision::actor).orElse(null);
+        if (!actor.mayOverride(previous)) throw new DomainValidationException(ValidationProblem.TARGET_DECISION_AUTHORITY);
+    }
+
+    /** Tipos usuais por ação (a mesma tabela do plano do debug); tipo desconhecido não é afirmado como incompatível. */
+    static boolean unusualTarget(ActionType action, String kind) {
+        java.util.Set<String> usual = switch (action) {
+            case FILL -> java.util.Set.of("TEXT_INPUT", "EMAIL_INPUT", "PASSWORD_INPUT", "NUMBER_INPUT", "DATE_INPUT", "SEARCH_INPUT", "TEL_INPUT", "URL_INPUT",
+                    "OTHER_INPUT", "TEXTAREA", "CONTENTEDITABLE", "COMBOBOX");
+            case SELECT_OPTION -> java.util.Set.of("SELECT", "COMBOBOX", "LISTBOX", "CUSTOM_DROPDOWN", "OPTION");
+            case CHECK -> java.util.Set.of("CHECKBOX", "RADIO", "SWITCH");
+            case UNCHECK -> java.util.Set.of("CHECKBOX", "SWITCH");
+            default -> null;
+        };
+        return usual != null && !ElementReference.UNKNOWN_KIND.equals(kind) && !usual.contains(kind);
+    }
+
+    /** Expectativa da decisão: o que a etapa espera do alvo agora. */
+    public static TargetDecision.Expectation expectation(ActionType action, ActionParameters parameters, ElementReference target) {
+        ValueSource v = parameters.value().orElse(null);
+        String valueKind = v == null ? "NONE" : switch (v) {
+            case ValueSource.LiteralValue l -> "LITERAL";
+            case ValueSource.VariableReference r -> "VARIABLE";
+            case ValueSource.CredentialReference c -> "CREDENTIAL";
+        };
+        String variable = v instanceof ValueSource.VariableReference r ? r.name() : "";
+        return new TargetDecision.Expectation(action, valueKind, variable,
+                target.correlation().get(com.nekkora.studio.domain.element.CorrelationKeys.Key.TARGET_ID).orElse(""), target.semanticKind(), target.tag(),
+                target.preferredLocator().map(com.nekkora.studio.domain.element.LocatorCandidate::expression).orElse(""),
+                target.accessPath().stream().map(com.nekkora.studio.domain.element.AccessStep::type).toList());
     }
 
     // ------------------------------------------------------------------ STUDIO-008: variáveis declaradas
@@ -663,8 +772,7 @@ public final class Automation {
         for (StepId s : consumers) {
             AutomationStep st = requireStep(s);
             AutomationStep.State before = st.state();
-            st.edit(new AutomationStep.State(before.name(), before.description(), before.actionType(), ActionParameters.none(), before.element(),
-                    before.manualLocators(), before.comments(), before.edits(), before.lastManualChange()), now);
+            st.edit(before.withParameters(ActionParameters.none()), now);
         }
         variables.remove(current);
         touch();
@@ -682,8 +790,7 @@ public final class Automation {
         }
         for (AutomationStep st : steps) {
             AutomationStep.State before = st.state();
-            st.edit(new AutomationStep.State(before.name(), before.description(), before.actionType(), target, before.element(), before.manualLocators(),
-                    before.comments(), before.edits(), before.lastManualChange()), now);
+            st.edit(before.withParameters(target), now);
         }
     }
 
@@ -816,7 +923,7 @@ public final class Automation {
 
     /** Referência efetiva com o localizador preferencial pedido — validado como na captura. */
     private static ElementReference withPreferred(AutomationStep step, int index) {
-        ElementReference captured = step.capturedElement().orElse(null);
+        ElementReference captured = step.targetBase().orElse(null); // STUDIO-009: o substituto aprovado, se houver
         if (captured == null) {
             if (index != -1) throw new DomainValidationException(ValidationProblem.STEP_HAS_NO_ELEMENT);
             return null;

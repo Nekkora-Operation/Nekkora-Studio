@@ -1,0 +1,14 @@
+{
+  "description": "Ator \"AI_VERIFIED\": o contrato não tem rótulo de verificação por IA.",
+  "base": "consulta-clientes-decisoes.nekkora",
+  "changes": [
+    {
+      "entry": "step:2",
+      "op": "set",
+      "pointer": "/effective/targetDecision/actor",
+      "value": "AI_VERIFIED"
+    }
+  ],
+  "expectedError": "INVALID_CONTENT",
+  "schemaRejects": true
+}

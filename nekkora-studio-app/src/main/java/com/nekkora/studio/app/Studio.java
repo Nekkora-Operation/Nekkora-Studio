@@ -62,6 +62,28 @@ public final class Studio {
         // STUDIO-006: salvar só com a gravação quiescente (nunca finaliza nem cancela uma gravação para salvar)
         projects.setBusyGuard(id -> RecorderPresenter.busyForSave(recorder.snapshot(), id));
         projects.restartRecoveryTimer();
+        this.clock = clock;
+        // STUDIO-009: debug guiado (criado no primeiro uso, com a janela configurada pela aplicação)
+        view.actions().onGuidedDebug(() -> guidedDebug().open());
+    }
+
+    private final Clock clock;
+    private java.util.function.Function<com.nekkora.studio.ui.debug.GuidedDebugPanel, com.nekkora.studio.app.debug.GuidedDebugPresenter.Host> debugHosts =
+            p -> com.nekkora.studio.app.debug.GuidedDebugPresenter.Host.headless();
+    private com.nekkora.studio.app.debug.GuidedDebugPresenter guidedDebug;
+
+    /** Janela real do debug guiado (a aplicação configura; os testes ficam sem janela). Antes do primeiro uso. */
+    public void useGuidedDebugHosts(java.util.function.Function<com.nekkora.studio.ui.debug.GuidedDebugPanel,
+            com.nekkora.studio.app.debug.GuidedDebugPresenter.Host> factory) {
+        this.debugHosts = java.util.Objects.requireNonNull(factory);
+    }
+
+    /** STUDIO-009: debug guiado (inspecionar, destacar, confirmar/corrigir — nunca executar). */
+    public com.nekkora.studio.app.debug.GuidedDebugPresenter guidedDebug() {
+        if (guidedDebug == null) {
+            guidedDebug = new com.nekkora.studio.app.debug.GuidedDebugPresenter(service, link, recorder, environment.decisionActor(), clock, debugHosts);
+        }
+        return guidedDebug;
     }
 
     /** Studio sem ligação com o navegador (testes e uso sem Bridge): Gravar explica que o navegador não está conectado. */
@@ -110,6 +132,7 @@ public final class Studio {
     public void dispose() {
         projects.dispose();
         persistence.shutdown();
+        if (guidedDebug != null) guidedDebug.dispose();
         recorderPresenter.dispose();
         recorder.close();
         view.dispose();
