@@ -26,6 +26,18 @@
       <artifactId>nekkora-studio-bridge</artifactId>
     </dependency>
     <dependency>
+      <!-- G7: PDF local (Apache-2.0). Isolado neste módulo. -->
+      <groupId>org.apache.pdfbox</groupId>
+      <artifactId>pdfbox</artifactId>
+      <version>3.0.5</version>
+    </dependency>
+    <dependency>
+      <!-- só nos testes: as fontes Inter do design system (o app as injeta no renderizador) -->
+      <groupId>com.nekkora</groupId>
+      <artifactId>nekkora-swing-ui</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter</artifactId>
       <scope>test</scope>

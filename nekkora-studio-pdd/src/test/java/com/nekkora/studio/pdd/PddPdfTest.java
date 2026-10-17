@@ -1,0 +1,177 @@
+package com.nekkora.studio.pdd;
+
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import com.nekkora.studio.domain.Automation;
+import com.nekkora.studio.domain.StepContext;
+import com.nekkora.studio.domain.StepDraft;
+import com.nekkora.studio.domain.action.ActionType;
+import com.nekkora.studio.pdd.DocumentDraft.Annotation;
+import com.nekkora.studio.pdd.DocumentDraft.Block;
+import com.nekkora.studio.pdd.DocumentDraft.Region;
+import com.nekkora.studio.pdd.DocumentDraft.SafeCapture;
+import com.nekkora.studio.pdd.PddExporter.ExportException;
+import java.awt.image.BufferedImage;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.util.List;
+import javax.imageio.ImageIO;
+import org.apache.pdfbox.Loader;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.font.PDFont;
+import org.apache.pdfbox.rendering.PDFRenderer;
+import org.apache.pdfbox.text.PDFTextStripper;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+
+/** STUDIO-010 G7/G8 — PDF local, versões, manifesto e verificações da exportação. */
+class PddPdfTest {
+    @TempDir
+    Path tmp;
+    static final Clock CLOCK = Clock.fixed(Instant.parse("2026-10-17T12:00:00Z"), ZoneOffset.UTC);
+
+    /** Imagem sanitizada sintética do login: rótulos (portadores) e campos (molduras), em px do dispositivo. */
+    static BufferedImage loginImage() {
+        BufferedImage img = new BufferedImage(1280, 720, BufferedImage.TYPE_INT_RGB);
+        for (int y = 0; y < 720; y++) for (int x = 0; x < 1280; x++) img.setRGB(x, y, VisualVerifier.OPAQUE);
+        int[][] carriers = {{40, 118, 60, 20}, {290, 118, 52, 20}, {544, 142, 72, 36}};
+        for (int[] c : carriers) for (int y = c[1]; y < c[1] + c[3]; y++) for (int x = c[0]; x < c[0] + c[2]; x++) img.setRGB(x, y, 0xF6F8FA);
+        int[][] fields = {{40, 140, 240, 39}, {290, 140, 240, 39}};
+        for (int[] f : fields) {
+            for (int y = f[1]; y < f[1] + f[3]; y++) {
+                for (int x = f[0]; x < f[0] + f[2]; x++) {
+                    boolean edge = y == f[1] || y == f[1] + f[3] - 1 || x == f[0] || x == f[0] + f[2] - 1;
+                    img.setRGB(x, y, edge ? VisualVerifier.FIELD_BORDER : VisualVerifier.FIELD_FILL);
+                }
+            }
+        }
+        return img;
+    }
+
+    static final List<Region> LOGIN_REGIONS = List.of(new Region("CARRIER", 40, 118, 60, 20), new Region("CARRIER", 290, 118, 52, 20),
+            new Region("CARRIER", 544, 142, 72, 36), new Region("FIELD", 40, 140, 240, 39), new Region("FIELD", 290, 140, 240, 39));
+
+    record Fixture(Automation automation, ProcessProjection projection, DocumentDraft draft, PddStore store) {}
+
+    Fixture ready() throws Exception {
+        Automation a = PddLab.consulta();
+        ProcessProjection p = ProcessProjection.of(a);
+        DocumentDraft d = DraftEdits.reviseSectionTitle(DraftBuilder.build(p), 1, "Autenticação", "TEST_AGENT");
+        Block login = d.sections().get(0).blocks().get(0);
+        d = DraftEdits.reviseBlockTitle(d, login.blockId(), "Realizar autenticação", "TEST_AGENT");
+        PddStore store = new PddStore(tmp.resolve("dados"));
+        java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+        ImageIO.write(loginImage(), "png", out);
+        String sha = store.putCapture(d.automationId(), out.toByteArray());
+        SafeCapture c = new SafeCapture(sha, 1280, 720, 1.0, CLOCK.instant(), 1, "nekkora-visual/1", login.screenKey(), login.stepIds(), List.of(
+                new Annotation(login.stepIds().get(0), Annotation.Status.PLACED, 40 / 1280.0, 140 / 720.0, 240 / 1280.0, 39 / 720.0, ""),
+                new Annotation(login.stepIds().get(1), Annotation.Status.PLACED, 290 / 1280.0, 140 / 720.0, 240 / 1280.0, 39 / 720.0, ""),
+                new Annotation(login.stepIds().get(2), Annotation.Status.OMITTED, 0, 0, 0, 0, "TARGET_AMBIGUOUS")), List.of(), LOGIN_REGIONS);
+        d = DraftEdits.attachCapture(d, login.blockId(), c);
+        return new Fixture(a, p, d, store);
+    }
+
+    static PdfRenderer.Fonts fonts() throws Exception {
+        return PdfRenderer.Fonts.fromClasspath(PddPdfTest.class.getClassLoader());
+    }
+
+    @Test
+    @DisplayName("G7 PDF: seções na ordem, títulos e instruções numeradas pesquisáveis, imagem indisponível declarada, Inter embutida, metadados controlados, sem sentinelas")
+    void pdf() throws Exception {
+        Fixture f = ready();
+        Path dir = tmp.resolve("saida");
+        PddExporter.Exported e = PddExporter.export(f.draft(), f.projection(), f.store(), dir, fonts(), CLOCK, null);
+        assertEquals(dir.resolve("pdd-visual-v001.pdf"), e.pdf());
+        try (PDDocument doc = Loader.loadPDF(e.pdf().toFile())) {
+            String text = new PDFTextStripper().getText(doc);
+            int a = text.indexOf("1. Autenticação");
+            int b = text.indexOf("2. Consulta");
+            int c = text.indexOf("3. Resultado");
+            assertTrue(a >= 0 && a < b && b < c, "seções na ordem das sessões:\n" + text);
+            for (String s : List.of("Realizar autenticação", "1. Informar o campo \"Usuário\"", "2. Informar a senha", "3. Selecionar \"Entrar\"",
+                    "(marcador indisponível)", "Imagem indisponível", "Ações observadas na gravação", "Etapas declaradas no Studio",
+                    "não comprova resultado de negócio")) {
+                assertTrue(text.contains(s), "falta: " + s + "\n" + text);
+            }
+            for (String s : PddLab.SENTINELS) assertFalse(text.contains(s), "sentinela no PDF: " + s);
+            assertEquals("PDD visual", doc.getDocumentInformation().getTitle());
+            assertNull(doc.getDocumentInformation().getAuthor());
+            assertNull(doc.getDocumentCatalog().getMetadata(), "sem XMP");
+            PDFont font = doc.getPage(0).getResources().getFont(doc.getPage(0).getResources().getFontNames().iterator().next());
+            assertTrue(font.getName().contains("Inter") && font.isEmbedded(), font.getName());
+            BufferedImage page = new PDFRenderer(doc).renderImageWithDPI(0, 96);
+            ImageIO.write(page, "png", Path.of("target", "pdd-pagina-1.png").toFile()); // para inspeção visual (dados sintéticos)
+            int ink = 0;
+            for (int y = 0; y < page.getHeight(); y += 2) for (int x = 0; x < page.getWidth(); x += 2) if ((page.getRGB(x, y) & 0xFFFFFF) != 0xFFFFFF) ink++;
+            assertTrue(ink > 2000, "página não está em branco");
+        }
+        String manifest = Files.readString(e.manifest());
+        assertTrue(manifest.contains(f.projection().revision()) && manifest.contains("\"documentVersion\": 1"));
+        for (String s : PddLab.SENTINELS) assertFalse(manifest.contains(s), "sentinela no manifesto: " + s);
+        assertFalse(manifest.contains("Autenticação"), "manifesto sem textos");
+    }
+
+    @Test
+    @DisplayName("G8 versões: v001, v002…; nunca sobrescreve (arquivo pré-existente pula para o próximo); anteriores intactos; nenhum temporário sobra")
+    void versoes() throws Exception {
+        Fixture f = ready();
+        Path dir = tmp.resolve("saida");
+        PddExporter.Exported v1 = PddExporter.export(f.draft(), f.projection(), f.store(), dir, fonts(), CLOCK, null);
+        byte[] first = Files.readAllBytes(v1.pdf());
+        assertEquals(2, PddExporter.export(f.draft(), f.projection(), f.store(), dir, fonts(), CLOCK, null).version());
+        Files.writeString(dir.resolve("pdd-visual-v003.pdf"), "arquivo de outra pessoa");
+        assertEquals(4, PddExporter.export(f.draft(), f.projection(), f.store(), dir, fonts(), CLOCK, null).version());
+        assertArrayEquals(first, Files.readAllBytes(v1.pdf()), "v001 intacto");
+        assertEquals("arquivo de outra pessoa", Files.readString(dir.resolve("pdd-visual-v003.pdf")));
+        try (var s = Files.list(dir)) {
+            assertTrue(s.noneMatch(p -> p.getFileName().toString().endsWith(".tmp")), "sem temporários");
+        }
+    }
+
+    @Test
+    @DisplayName("G8 recusas: pendência que bloqueia, imagem adulterada ou ausente no armazenamento, cancelamento — nada é escrito")
+    void recusas() throws Exception {
+        Fixture f = ready();
+        Path dir = tmp.resolve("saida");
+        DocumentDraft pending = DraftBuilder.build(f.projection());
+        assertEquals("DRAFT_HAS_BLOCKING_PENDING", assertThrows(ExportException.class,
+                () -> PddExporter.export(pending, f.projection(), f.store(), dir, fonts(), CLOCK, null)).code());
+        assertEquals("CANCELLED", assertThrows(ExportException.class,
+                () -> PddExporter.export(f.draft(), f.projection(), f.store(), dir, fonts(), CLOCK, () -> true)).code());
+        String sha = f.draft().sections().get(0).blocks().get(0).captureSha();
+        Path file = f.store().folder(f.draft().automationId()).resolve("capturas").resolve(sha.substring(7) + ".png");
+        BufferedImage leak = loginImage();
+        leak.setRGB(900, 600, 0xE6007E);
+        ImageIO.write(leak, "png", file.toFile());
+        assertEquals("CAPTURE_REJECTED_CHECKSUM_MISMATCH", assertThrows(ExportException.class,
+                () -> PddExporter.export(f.draft(), f.projection(), f.store(), dir, fonts(), CLOCK, null)).code(), "imagem trocada no disco");
+        Files.delete(file);
+        assertEquals("CAPTURE_FILE_MISSING", assertThrows(ExportException.class,
+                () -> PddExporter.export(f.draft(), f.projection(), f.store(), dir, fonts(), CLOCK, null)).code());
+        assertTrue(!Files.exists(dir) || Files.list(dir).findAny().isEmpty(), "nenhum arquivo escrito");
+    }
+
+    @Test
+    @DisplayName("G8 desatualizado: o processo mudou depois da exportação → o último PDF é indicado como desatualizado; o rascunho exige atualizar")
+    void desatualizado() throws Exception {
+        Fixture f = ready();
+        Path dir = tmp.resolve("saida");
+        PddExporter.export(f.draft(), f.projection(), f.store(), dir, fonts(), CLOCK, null);
+        assertFalse(PddExporter.latest(dir, f.projection()).orElseThrow().outdated());
+        f.automation().appendStep(f.automation().sessions().get(1).id(), StepDraft.builder().name("x").actionType(ActionType.WAIT_FOR)
+                .context(new StepContext("Laboratório", "Consulta", PddLab.CONSULTA)).build());
+        ProcessProjection now = ProcessProjection.of(f.automation());
+        assertTrue(PddExporter.latest(dir, now).orElseThrow().outdated());
+        assertEquals("DRAFT_HAS_BLOCKING_PENDING", assertThrows(ExportException.class,
+                () -> PddExporter.export(f.draft(), now, f.store(), dir, fonts(), CLOCK, null)).code());
+    }
+}
