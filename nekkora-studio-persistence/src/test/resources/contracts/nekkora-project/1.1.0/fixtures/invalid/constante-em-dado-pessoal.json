@@ -1,0 +1,21 @@
+{
+  "description": "Variável PERSONAL_DATA (CPF) com origem CONSTANT: valor fixo sensível nunca é aceito.",
+  "base": "consulta-clientes-variaveis.nekkora",
+  "changes": [
+    {
+      "entry": "variables.json",
+      "op": "set",
+      "pointer": "/variables/1/origin",
+      "value": {
+        "kind": "CONSTANT",
+        "constant": "00000000000",
+        "producerStepId": null
+      }
+    }
+  ],
+  "removeEntries": [],
+  "addEntries": {},
+  "rehash": true,
+  "expectedError": "INVALID_CONTENT",
+  "schemaRejects": false
+}

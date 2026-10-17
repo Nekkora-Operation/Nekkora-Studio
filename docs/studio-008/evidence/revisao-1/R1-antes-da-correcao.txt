@@ -1,0 +1,16 @@
+# Reprodução ANTES da correção (código revisado 6d24d51 + testes novos), 2026-10-17T02:45Z
+# ./mvnw -o test -pl nekkora-studio-persistence,nekkora-studio-validation,nekkora-studio-semantics -am -Dmaven.test.failure.ignore=true -Dtest=SemanticContractApiTest,SemanticContractTest#representacao,VariableRepresentationTest,ProjectFormat11ContractTest#cpfComMascara
+[ERROR] Tests run: 1, Failures: 0, Errors: 1, Skipped: 0, Time elapsed: 0.167 s <<< FAILURE! -- in com.nekkora.studio.persistence.ProjectFormat11ContractTest
+[ERROR]   ProjectFormat11ContractTest.cpfComMascara:226 » IllegalArgument No enum constant com.nekkora.studio.domain.variable.TextFormat.BRAZILIAN_CPF_MASKED
+[ERROR] Tests run: 1, Failures: 0, Errors: 1, Skipped: 0
+[ERROR] Tests run: 4, Failures: 1, Errors: 1, Skipped: 0, Time elapsed: 0.146 s <<< FAILURE! -- in com.nekkora.studio.validation.VariableRepresentationTest
+[ERROR]   VariableRepresentationTest.cpfConfirmadoSemFormato:65 significado confirmado não basta: [] ==> expected: <true> but was: <false>
+[ERROR]   VariableRepresentationTest.representacaoDeclarada:80 » IllegalArgument No enum constant com.nekkora.studio.domain.variable.TextFormat.BRAZILIAN_CPF_MASKED
+[ERROR] Tests run: 4, Failures: 1, Errors: 1, Skipped: 0
+[ERROR] Tests run: 3, Failures: 3, Errors: 0, Skipped: 0, Time elapsed: 0.195 s <<< FAILURE! -- in com.nekkora.studio.semantics.SemanticContractApiTest
+[ERROR] Tests run: 1, Failures: 0, Errors: 1, Skipped: 0, Time elapsed: 0.002 s <<< FAILURE! -- in com.nekkora.studio.semantics.SemanticContractTest
+[ERROR]   SemanticContractApiTest.apiSemValoresExcluidos:110 caminhos públicos que alcançam conteúdo excluído ==> expected: <[]> but was: <[contract.variables()[0].definition().origin().constant() = https://lab.exemplo.test/portal, contract.variables()[0].definition().origin().constantValue().get() = https://lab.exemplo.test/portal, contract.variables()[0].definition().purpose() = Endereço do portal de laboratório, contract.variables()[0].definition().draft().toString() = VariableDraft[name=portal.endereco, type=STRING, semantic=UNSPECIFIED, authority=UNSPECIFIED, purpose=Endereço do portal de laboratório, scope=VariableScope[kind=AUTOMATION, session=null], origin=VariableOrigin[CONSTANT], sensitivity=PUBLIC, constraints=VariableConstraints[required=false, minLength=null, maxLength=null, textFormat=ANY, minimum=null, maximum=null, scale=null, currency=null]], contract.variables()[0].definition().draft().purpose() = Endereço do portal de laboratório]>
+[ERROR]   SemanticContractApiTest.origemSemValor:131 a variável do contrato não carrega a definição do domínio: [definition, producer, consumers] ==> expected: <true> but was: <false>
+[ERROR]   SemanticContractApiTest.semReferenciasAoDominio:119 tipos do domínio alcançáveis pelo contrato ==> expected: <[]> but was: <[com.nekkora.studio.domain.variable.VariableConstraints, com.nekkora.studio.domain.variable.VariableDefinition, com.nekkora.studio.domain.variable.VariableDraft, com.nekkora.studio.domain.variable.VariableOrigin, com.nekkora.studio.domain.variable.VariableScope]>
+[ERROR]   SemanticContractTest.representacao:213 » IllegalArgument No enum constant com.nekkora.studio.domain.variable.TextFormat.BRAZILIAN_CPF_MASKED
+[ERROR] Tests run: 4, Failures: 3, Errors: 1, Skipped: 0

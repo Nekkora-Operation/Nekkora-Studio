@@ -31,7 +31,8 @@ public final class ValidationService {
     private record Stamp(ValidationReport report, Automation automation, ProjectState project, long generation) {}
 
     private final StudioState state;
-    private final AutomationValidator validator = new AutomationValidator();
+    /** STUDIO-008: as regras mais novas (1.1.0: variáveis declaradas e fluxo de dados). */
+    private final AutomationValidator validator = new AutomationValidator(com.nekkora.studio.validation.RuleSet.LATEST);
     private final Map<AutomationId, Stamp> results = new HashMap<>();
 
     public ValidationService(StudioState state) {

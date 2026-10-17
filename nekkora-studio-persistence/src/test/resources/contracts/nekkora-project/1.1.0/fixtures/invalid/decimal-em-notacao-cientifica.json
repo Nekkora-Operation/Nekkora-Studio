@@ -1,0 +1,17 @@
+{
+  "description": "Limite numérico fora da forma de texto decimal.",
+  "base": "consulta-clientes-variaveis.nekkora",
+  "changes": [
+    {
+      "entry": "variables.json",
+      "op": "set",
+      "pointer": "/variables/4/constraints/maximum",
+      "value": "1E5"
+    }
+  ],
+  "removeEntries": [],
+  "addEntries": {},
+  "rehash": true,
+  "expectedError": "INVALID_CONTENT",
+  "schemaRejects": true
+}

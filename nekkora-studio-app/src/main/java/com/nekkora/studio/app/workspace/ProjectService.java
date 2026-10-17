@@ -6,6 +6,7 @@ import com.nekkora.studio.app.ui.StudioPrompts;
 import com.nekkora.studio.domain.Automation;
 import com.nekkora.studio.domain.AutomationId;
 import com.nekkora.studio.domain.DomainValidationException;
+import com.nekkora.studio.domain.ModelVersion;
 import com.nekkora.studio.persistence.ProjectException;
 import com.nekkora.studio.persistence.ProjectFiles;
 import com.nekkora.studio.persistence.ProjectFormat;
@@ -220,6 +221,24 @@ public final class ProjectService {
 
     private CompletableFuture<Outcome> write(Automation a, ProjectState p, Path target, ProjectRepository.Fingerprint expected, boolean overwrite) {
         AutomationId id = a.id();
+        // STUDIO-008: gravar o formato 1.1 SOBRE o próprio arquivo de formato anterior é migração — confirmação explícita e
+        // cópia do arquivo original antes de substituí-lo. Salvar como em outro arquivo não toca no original.
+        boolean ownFile = expected != null && p.path().map(target::equals).orElse(false);
+        boolean migrate = ownFile && ModelVersion.V1_1.equals(a.modelVersion()) && !p.fileFormat().map(ProjectFormat::representsVariables).orElse(false);
+        String backupLabel = "formato " + p.fileFormat().orElse("anterior");
+        if (migrate) {
+            String backupName = ProjectFormat.SUFFIX.length() < target.getFileName().toString().length()
+                    ? target.getFileName().toString().substring(0, target.getFileName().toString().length() - ProjectFormat.SUFFIX.length())
+                    : target.getFileName().toString();
+            if (!confirm(new StudioPrompts.Confirmation("Atualizar o formato do projeto?", "\"" + a.name() + "\" tem variáveis declaradas e precisa ser "
+                    + "gravado no formato " + ProjectFormat.FORMAT_VERSION_1_1 + ". Versões anteriores do Nekkora Studio não abrem esse formato. Antes de "
+                    + "gravar, uma cópia do arquivo atual será guardada na mesma pasta como \"" + backupName + " (" + backupLabel + ")" + ProjectFormat.SUFFIX
+                    + "\". Nada é executado e nenhuma credencial é solicitada.", "Atualizar e salvar", false))) {
+                return done(Outcome.CANCELLED);
+            }
+            Outcome blocked = blocked(id, p);
+            if (blocked != null) return done(blocked);
+        }
         String projectId = p.projectId().orElseGet(() -> UUID.randomUUID().toString());
         long generation = p.generation();
         long t0 = System.nanoTime();
@@ -234,32 +253,36 @@ public final class ProjectService {
         return background(() -> {
             long w0 = System.nanoTime();
             try {
+                // a cópia do original vem ANTES e confere o mesmo conteúdo esperado: se o arquivo mudou, nada é copiado nem gravado
+                Path backup = migrate ? files.repository().backupCopy(target, expected, backupLabel) : null;
                 ProjectRepository.Saved saved = files.save(target, snapshot, expected, overwrite, at, domainClock);
                 log("salvar", "ok", w0, saved.fingerprint().size(), null);
                 // as fotografias superadas por este salvamento são apagadas ANTES de o sucesso ser informado
-                return new Written(saved, discardOnWorker(id, generation), null);
+                return new Written(saved, discardOnWorker(id, generation), null, backup);
             } catch (ProjectException e) {
                 log("salvar", "erro", w0, -1, e.error());
-                return new Written(null, false, e);
+                return new Written(null, false, e, null);
             } catch (RuntimeException e) {
                 log("salvar", "erro", w0, -1, ProjectException.Error.WRITE_FAILED);
-                return new Written(null, false, new ProjectException(ProjectException.Error.WRITE_FAILED, "", e));
+                return new Written(null, false, new ProjectException(ProjectException.Error.WRITE_FAILED, "", e), null);
             }
-        }).thenApply(w -> w.error() == null ? onSaved(id, p, w.saved(), projectId, generation, at, w.cleaned())
+        }).thenApply(w -> w.error() == null ? onSaved(id, p, w.saved(), projectId, generation, at, w.cleaned(), snapshot.formatVersion(), w.backup())
                 : onSaveFailed(id, p, w.error(), target, confirmedOverwrite));
     }
 
     /** Resultado do trabalho de disco de um salvamento. */
-    private record Written(ProjectRepository.Saved saved, boolean cleaned, ProjectException error) {}
+    private record Written(ProjectRepository.Saved saved, boolean cleaned, ProjectException error, Path backup) {}
 
-    private Outcome onSaved(AutomationId id, ProjectState p, ProjectRepository.Saved saved, String projectId, long generation, Instant at, boolean cleaned) {
-        p.saved(saved.path(), projectId, saved.fingerprint(), generation, at);
-        recents.touch(saved.path(), at, ProjectFormat.FORMAT_VERSION);
+    private Outcome onSaved(AutomationId id, ProjectState p, ProjectRepository.Saved saved, String projectId, long generation, Instant at, boolean cleaned,
+            String formatVersion, Path backup) {
+        p.saved(saved.path(), projectId, saved.fingerprint(), generation, at, formatVersion);
+        recents.touch(saved.path(), at, formatVersion);
         String name = state.catalog().find(id).map(Automation::name).orElse("Projeto");
         if (cleaned) settleDebt(id, generation);
         else owe(id, name, generation);
         String pending = p.dirty() ? " Há alterações feitas durante o salvamento que ainda não foram salvas." : "";
         String cleanup = cleaned ? "" : " Uma fotografia de recuperação antiga deste projeto não pôde ser apagada; o Studio tentará de novo ao sair.";
+        if (backup != null) cleanup += " Formato atualizado para " + formatVersion + "; o arquivo anterior foi preservado como \"" + backup.getFileName() + "\".";
         workspace.report(new Notice(cleaned ? Notice.Kind.SUCCESS : Notice.Kind.WARNING, "Projeto salvo", name + " — " + saved.path().getFileName() + "."
                 + pending + (saved.atomic() ? "" : " (substituição com cópia de segurança: o sistema de arquivos não oferece troca atômica)") + cleanup));
         state.fire(id, StudioChange.PROJECT, StudioChange.UNSAVED_CHANGES);
@@ -359,7 +382,7 @@ public final class ProjectService {
             return Outcome.FAILED;
         }
         workspace.history().clear(a.id()); // D-S006-09: o histórico começa vazio
-        state.putProject(a.id(), ProjectState.opened(file, l.manifest().projectId(), l.fingerprint(), l.manifest().savedAt()));
+        state.putProject(a.id(), ProjectState.opened(file, l.manifest().projectId(), l.fingerprint(), l.manifest().savedAt(), l.manifest().formatVersion()));
         recents.touch(file, clock.instant(), l.manifest().formatVersion());
         show(a.id());
         workspace.report(new Notice(Notice.Kind.SUCCESS, "Projeto aberto", a.name() + " — " + file.getFileName() + "."));
@@ -434,7 +457,7 @@ public final class ProjectService {
         Automation a = l.automation();
         workspace.closeAutomation(id);
         workspace.history().clear(id); // D-S006-09: o histórico começa vazio
-        state.putProject(id, ProjectState.opened(file, l.manifest().projectId(), l.fingerprint(), l.manifest().savedAt()));
+        state.putProject(id, ProjectState.opened(file, l.manifest().projectId(), l.fingerprint(), l.manifest().savedAt(), l.manifest().formatVersion()));
         recents.touch(file, clock.instant(), l.manifest().formatVersion());
         show(id);
         workspace.report(new Notice(Notice.Kind.SUCCESS, "Projeto recarregado", a.name() + " — " + file.getFileName()

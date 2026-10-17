@@ -52,7 +52,25 @@ public enum ValidationProblem {
     EVIDENCE_NOT_APPLICABLE(Field.NONE, "Esta etapa foi apenas proposta (a ação não foi executada): não há consequência para observar."),
     EVIDENCE_LIMIT_REACHED(Field.NONE, "Limite de evidências atingido para esta etapa."),
     HISTORY_CONFLICT(Field.NONE,
-            "A automação mudou por outro caminho depois desta alteração (por exemplo, recebeu etapas do Recorder). O histórico de edição foi descartado para não aplicar uma alteração sobre um estado diferente.");
+            "A automação mudou por outro caminho depois desta alteração (por exemplo, recebeu etapas do Recorder). O histórico de edição foi descartado para não aplicar uma alteração sobre um estado diferente."),
+    // ---- STUDIO-008: variáveis declaradas
+    VARIABLE_NAME_INVALID(Field.NAME, "Use letras, números, ponto, hífen ou sublinhado no nome da variável, começando por uma letra (até 64 caracteres)."),
+    VARIABLE_NAME_IN_USE(Field.NAME, "Já existe uma variável com este nome nesta automação (o nome vale para todos os escopos)."),
+    VARIABLE_NOT_FOUND(Field.NONE, "A variável não existe nesta automação."),
+    VARIABLE_IN_USE(Field.NONE, "A variável é usada por etapas. Para excluí-la, confirme o descarte dos vínculos (as etapas ficam sem valor)."),
+    VARIABLE_SEMANTIC_INCOMPATIBLE(Field.VALUE, "O significado escolhido não é compatível com o tipo técnico."),
+    VARIABLE_SENSITIVITY_TOO_LOW(Field.VALUE, "Este significado exige uma classificação de sensibilidade mais alta (por exemplo, dados pessoais)."),
+    VARIABLE_AUTHORITY_INVALID(Field.VALUE, "Escolha o significado antes de confirmá-lo; sem significado, não há o que confirmar."),
+    VARIABLE_CONSTRAINT_INVALID(Field.VALUE, "As restrições não são coerentes com o tipo (comprimento, formato, limites, escala ou moeda)."),
+    VARIABLE_FORMAT_INCOMPATIBLE(Field.VALUE, "O formato contradiz o significado (ex.: máscara de CPF num e-mail). Escolha um formato compatível."),
+    VARIABLE_CONSTANT_FORBIDDEN(Field.VALUE, "Variáveis com dados pessoais ou segredos não podem ter valor fixo: o projeto não é criptografado."),
+    VARIABLE_CONSTANT_INVALID(Field.VALUE, "O valor fixo não é válido para o tipo ou não respeita as restrições."),
+    VARIABLE_CONSTANT_LOOKS_SENSITIVE(Field.VALUE, "O valor fixo parece conter um dado sensível. Declare a variável como entrada."),
+    VARIABLE_SCOPE_SESSION_NOT_FOUND(Field.SESSION, "A sessão do escopo não existe nesta automação."),
+    VARIABLE_PRODUCER_NOT_FOUND(Field.VALUE, "A etapa produtora não existe nesta automação."),
+    VARIABLE_PRODUCER_OUT_OF_SCOPE(Field.VALUE, "A etapa produtora fica fora da sessão do escopo da variável."),
+    VARIABLE_PURPOSE_LOOKS_SENSITIVE(Field.DESCRIPTION, "A finalidade parece conter um dado sensível. Descreva o significado sem exemplos reais."),
+    VARIABLE_LIMIT_REACHED(Field.NONE, "Limite de variáveis atingido nesta automação.");
 
     /** Campo do formulário ao qual o problema se refere (para posicionar a mensagem). */
     public enum Field { NONE, NAME, DESCRIPTION, SESSION, ACTION_TYPE, VALUE, LOCATOR, COMMENT }

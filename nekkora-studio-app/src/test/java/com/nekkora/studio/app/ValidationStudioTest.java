@@ -163,7 +163,8 @@ class ValidationStudioTest {
         assertFalse(result(a).current(), "editar deixa o relatório anterior desatualizado");
         ValidationReport afterEdit = validate();
         assertFalse(codes(afterEdit, fill).contains(FindingCode.REQUIRED_VALUE_MISSING), "S007-034");
-        assertTrue(codes(afterEdit, fill).contains(FindingCode.VARIABLE_RESOLUTION_UNAVAILABLE));
+        // STUDIO-008 (ajuste autorizado): com o catálogo de variáveis, uma referência sem declaração é VARIABLE_NOT_DECLARED
+        assertTrue(codes(afterEdit, fill).contains(FindingCode.VARIABLE_NOT_DECLARED));
 
         Edt.run(() -> studio.service().undo(a.id()));
         assertFalse(result(a).current());

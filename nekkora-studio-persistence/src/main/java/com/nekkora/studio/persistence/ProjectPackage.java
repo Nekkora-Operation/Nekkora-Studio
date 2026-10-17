@@ -96,11 +96,12 @@ public final class ProjectPackage {
         if (total > ProjectFormat.MAX_TOTAL_BYTES) throw new ProjectException(ProjectException.Error.TOO_LARGE, "projeto");
         Map<String, Object> manifest = new LinkedHashMap<>();
         manifest.put("format", ProjectFormat.FORMAT);
-        manifest.put("formatVersion", ProjectFormat.FORMAT_VERSION);
+        String formatVersion = ProjectFormat.versionFor(documents); // a menor versão que representa o conteúdo
+        manifest.put("formatVersion", formatVersion);
         manifest.put("kind", kind.name());
         Map<String, Object> model = new LinkedHashMap<>();
         model.put("schema", ModelVersion.SCHEMA);
-        model.put("version", ModelVersion.CURRENT);
+        model.put("version", ProjectFormat.modelFor(formatVersion));
         manifest.put("automationModel", model);
         manifest.put("privacyPolicy", ProjectFormat.PRIVACY_POLICY);
         manifest.put("projectId", projectId);
@@ -208,7 +209,8 @@ public final class ProjectPackage {
         }
         // a versão é conferida ANTES do resto: um formato mais novo pode ter campos que esta versão não conhece
         Object fv = mm.get("formatVersion");
-        switch (ProjectFormat.compatibility(fv instanceof String s ? s : null)) {
+        String formatVersion = fv instanceof String s ? s : null;
+        switch (ProjectFormat.compatibility(formatVersion)) {
             case NEWER -> throw new ProjectException(ProjectException.Error.NEWER_VERSION, "formatVersion");
             case OLDER, INVALID -> throw new ProjectException(ProjectException.Error.UNSUPPORTED_VERSION, "formatVersion");
             case SUPPORTED -> { }
@@ -216,7 +218,8 @@ public final class ProjectPackage {
         Doc m = Doc.of(manifestJson, ProjectFormat.MANIFEST, "format", "formatVersion", "kind", "automationModel", "privacyPolicy", "projectId",
                 "automationId", "createdAt", "savedAt", "recoveryOf", "limits", "entries");
         Doc model = m.obj("automationModel", "schema", "version");
-        if (!ModelVersion.SCHEMA.equals(model.str("schema")) || !ModelVersion.CURRENT.equals(model.str("version"))) {
+        // cada versão do formato tem exatamente um modelo: 1.0.x → 1.0.0, 1.1.x → 1.1.0
+        if (!ModelVersion.SCHEMA.equals(model.str("schema")) || !ProjectFormat.modelFor(formatVersion).equals(model.str("version"))) {
             throw new ProjectException(ProjectException.Error.UNSUPPORTED_VERSION, "automationModel");
         }
         if (!ProjectFormat.PRIVACY_POLICY.equals(m.str("privacyPolicy"))) {
@@ -255,6 +258,12 @@ public final class ProjectPackage {
         }
         for (String required : List.of(ProjectFormat.METADATA, ProjectFormat.AUTOMATION, ProjectFormat.SESSIONS, ProjectFormat.UNATTRIBUTED)) {
             if (!declared.contains(required)) throw new ProjectException(ProjectException.Error.MISSING_ENTRY, required);
+        }
+        // STUDIO-008: o catálogo de variáveis é obrigatório em 1.1.x e não existe em 1.0.x (nada é ignorado em silêncio)
+        boolean variables = declared.contains(ProjectFormat.VARIABLES);
+        if (ProjectFormat.hasVariables(formatVersion) && !variables) throw new ProjectException(ProjectException.Error.MISSING_ENTRY, ProjectFormat.VARIABLES);
+        if (!ProjectFormat.hasVariables(formatVersion) && variables) {
+            throw new ProjectException(ProjectException.Error.UNEXPECTED_ENTRY, ProjectFormat.VARIABLES);
         }
         Doc meta = Doc.of(json(raw.get(ProjectFormat.METADATA), ProjectFormat.METADATA), ProjectFormat.METADATA, "producer", "encrypted", "notice");
         meta.obj("producer", "application", "version");

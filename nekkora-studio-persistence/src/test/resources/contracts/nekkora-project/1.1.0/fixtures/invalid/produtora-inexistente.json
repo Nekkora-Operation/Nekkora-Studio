@@ -1,0 +1,17 @@
+{
+  "description": "STEP_OUTPUT apontando para uma etapa que não existe.",
+  "base": "consulta-clientes-variaveis.nekkora",
+  "changes": [
+    {
+      "entry": "variables.json",
+      "op": "set",
+      "pointer": "/variables/3/origin/producerStepId",
+      "value": "00000000-0000-4000-8000-999999999999"
+    }
+  ],
+  "removeEntries": [],
+  "addEntries": {},
+  "rehash": true,
+  "expectedError": "INTEGRITY",
+  "schemaRejects": false
+}

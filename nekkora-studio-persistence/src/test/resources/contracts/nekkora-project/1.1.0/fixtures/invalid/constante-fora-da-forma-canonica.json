@@ -1,0 +1,17 @@
+{
+  "description": "Constante INTEGER \"03\": o leitor não normaliza em silêncio (forma canônica \"3\").",
+  "base": "consulta-clientes-variaveis.nekkora",
+  "changes": [
+    {
+      "entry": "variables.json",
+      "op": "set",
+      "pointer": "/variables/5/origin/constant",
+      "value": "03"
+    }
+  ],
+  "removeEntries": [],
+  "addEntries": {},
+  "rehash": true,
+  "expectedError": "INVALID_CONTENT",
+  "schemaRejects": false
+}

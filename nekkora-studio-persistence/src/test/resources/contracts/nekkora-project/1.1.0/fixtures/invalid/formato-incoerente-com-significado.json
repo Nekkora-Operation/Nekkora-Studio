@@ -1,0 +1,17 @@
+{
+  "description": "CPF declarado com formato de e-mail: nenhuma forma válida de CPF satisfaz o formato (revisão 2 do PR #11).",
+  "base": "consulta-clientes-variaveis.nekkora",
+  "changes": [
+    {
+      "entry": "variables.json",
+      "op": "set",
+      "pointer": "/variables/1/constraints/textFormat",
+      "value": "EMAIL_SHAPE"
+    }
+  ],
+  "removeEntries": [],
+  "addEntries": {},
+  "rehash": true,
+  "expectedError": "INVALID_CONTENT",
+  "schemaRejects": false
+}

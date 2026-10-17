@@ -1,0 +1,3 @@
+apontamentos: antigo 20, novo 21, acrescentados 1 (VARIABLE_REPRESENTATION_UNSPECIFIED WARNING variável=00000000-0000-0000-0000-000000000002)
+summary diferenças: {'warnings': (4, 5)}
+OK: além do apontamento acrescentado e do total de avisos, só renumeração consistente de 14 identificadores normalizados

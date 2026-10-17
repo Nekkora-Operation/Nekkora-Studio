@@ -1,0 +1,17 @@
+{
+  "description": "Dois nomes iguais sem distinção de maiúsculas.",
+  "base": "consulta-clientes-variaveis.nekkora",
+  "changes": [
+    {
+      "entry": "variables.json",
+      "op": "set",
+      "pointer": "/variables/1/name",
+      "value": "Cliente.Usuario"
+    }
+  ],
+  "removeEntries": [],
+  "addEntries": {},
+  "rehash": true,
+  "expectedError": "INVALID_CONTENT",
+  "schemaRejects": false
+}

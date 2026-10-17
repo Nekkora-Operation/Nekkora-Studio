@@ -110,15 +110,19 @@ class ValidationContractTest {
     }
 
     @Test
-    @DisplayName("schema 1.0.0 = código: códigos, detalhes, severidades, escopos, campos e estados")
+    @DisplayName("schema 1.0.0 = código das regras 1.0.0: códigos, detalhes, severidades, escopos, campos e estados")
     void schemaIgualAoCodigo() throws Exception {
+        // STUDIO-008 (ajuste autorizado): o catálogo ganhou os códigos 1.1.0 no FIM; o schema 1.0.0 é comparado com o
+        // subconjunto das regras 1.0.0 — mesmos códigos, na mesma ordem (o schema 1.1.0 tem o seu próprio teste)
         Map<String, Object> s = schema();
-        assertEquals(names(FindingCode.values()), enumOf(s, "Code"), "códigos (na ordem das regras)");
+        assertEquals(FindingCode.of(RuleSet.V1_0).stream().map(Enum::name).toList(), enumOf(s, "Code"), "códigos (na ordem das regras)");
         assertEquals(List.copyOf(FindingDetails.all()), enumOf(s, "Detail"));
         assertEquals(names(ValidationStatus.values()), enumOf(s, "Status"));
         assertEquals(names(Severity.values()), propEnum(s, "severity"));
-        assertEquals(names(FindingScope.values()), propEnum(s, "scope"));
-        assertEquals(names(FindingField.values()), propEnum(s, "field"));
+        assertEquals(FindingScope.of(RuleSet.V1_0).stream().map(Enum::name).toList(), propEnum(s, "scope"));
+        assertEquals(FindingField.of(RuleSet.V1_0).stream().map(Enum::name).toList(), propEnum(s, "field"));
+        assertEquals(names(FindingCode.values()).subList(0, FindingCode.of(RuleSet.V1_0).size()), enumOf(s, "Code"),
+                "os códigos 1.1.0 só foram acrescentados ao fim");
         Map<String, Object> report = Json.object(Json.object(s, "$defs"), "Report");
         assertEquals(AutomationValidator.RULES_VERSION, Json.object(Json.object(report, "properties"), "rules").get("const"));
         assertEquals(ValidationReport.VERSION, Json.object(Json.object(report, "properties"), "version").get("const"));

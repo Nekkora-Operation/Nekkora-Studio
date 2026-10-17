@@ -1,0 +1,17 @@
+{
+  "description": "CPF declarado sobre um tipo DECIMAL.",
+  "base": "consulta-clientes-variaveis.nekkora",
+  "changes": [
+    {
+      "entry": "variables.json",
+      "op": "set",
+      "pointer": "/variables/4/semanticType",
+      "value": "BRAZILIAN_CPF"
+    }
+  ],
+  "removeEntries": [],
+  "addEntries": {},
+  "rehash": true,
+  "expectedError": "INVALID_CONTENT",
+  "schemaRejects": false
+}

@@ -12,7 +12,8 @@ final class ValidationReportJson {
         StringBuilder b = new StringBuilder(256 + r.findings().size() * 400);
         b.append("{\n");
         field(b, 1, "schema", str(ValidationReport.SCHEMA), true);
-        field(b, 1, "version", str(ValidationReport.VERSION), true);
+        boolean v11 = ValidationReport.VERSION_1_1.equals(r.version());
+        field(b, 1, "version", str(r.version()), true);
         field(b, 1, "rules", str(r.rulesVersion()), true);
         field(b, 1, "automationId", str(r.automationId().value().toString()), true);
         field(b, 1, "status", str(r.status().name()), true);
@@ -40,7 +41,9 @@ final class ValidationReportJson {
                 field(b, 3, "scope", str(f.scope().name()), true);
                 field(b, 3, "sessionId", f.session() == null ? "null" : str(f.session().value().toString()), true);
                 field(b, 3, "stepId", f.step() == null ? "null" : str(f.step().value().toString()), true);
-                field(b, 3, "position", f.scope() == FindingScope.AUTOMATION ? "null"
+                // 1.1.0: a identidade da variável (nunca o nome); o relatório 1.0.0 continua exatamente como era
+                if (v11) field(b, 3, "variableId", f.variable() == null ? "null" : str(f.variable().value().toString()), true);
+                field(b, 3, "position", f.scope() == FindingScope.AUTOMATION || f.scope() == FindingScope.VARIABLE ? "null"
                         : "{\"session\": " + f.sessionNumber() + ", \"step\": " + (f.scope() == FindingScope.STEP ? Integer.toString(f.stepNumber()) : "null") + "}",
                         true);
                 field(b, 3, "field", str(f.field().name()), true);

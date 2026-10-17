@@ -40,6 +40,12 @@
       <artifactId>nekkora-studio-validation</artifactId>
     </dependency>
     <dependency>
+      <!-- STUDIO-008: contrato semântico — só nos testes (desempenho e homologação); o Studio não o persiste nem o envia -->
+      <groupId>com.nekkora</groupId>
+      <artifactId>nekkora-studio-semantics</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
       <groupId>com.nekkora</groupId>
       <artifactId>nekkora-studio-bridge</artifactId>
     </dependency>
@@ -65,6 +71,7 @@
             <configuration>
               <excludes>
                 <exclude>**/Scale150Test.java</exclude>
+                <exclude>**/Variables150Test.java</exclude>
               </excludes>
             </configuration>
           </execution>
@@ -75,6 +82,7 @@
             <configuration>
               <includes>
                 <include>**/Scale150Test.java</include>
+                <include>**/Variables150Test.java</include>
               </includes>
               <reportNameSuffix>scale150</reportNameSuffix>
               <systemPropertyVariables>

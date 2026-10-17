@@ -1,0 +1,17 @@
+{
+  "description": "variables.json sem variáveis: um projeto sem variáveis é escrito em 1.0.0 (o schema exige ao menos uma).",
+  "base": "consulta-clientes-variaveis.nekkora",
+  "changes": [
+    {
+      "entry": "variables.json",
+      "op": "set",
+      "pointer": "/variables",
+      "value": []
+    }
+  ],
+  "removeEntries": [],
+  "addEntries": {},
+  "rehash": true,
+  "expectedError": "INVALID_CONTENT",
+  "schemaRejects": true
+}

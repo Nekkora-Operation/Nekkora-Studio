@@ -131,6 +131,47 @@ public final class ProjectRepository {
         }
     }
 
+    /**
+     * STUDIO-008: cópia de segurança de um arquivo ANTES de uma migração de formato. Só copia se o conteúdo atual é o
+     * esperado (senão conflito: nada é copiado nem gravado); grava num nome NOVO ao lado do arquivo
+     * ({@code <nome> (<rótulo>).nekkora}, depois {@code … 2}, {@code … 3}…), sem nunca substituir um arquivo existente, e
+     * confere a cópia.
+     *
+     * @return o arquivo da cópia
+     */
+    public Path backupCopy(Path file, Fingerprint expected, String label) throws ProjectException {
+        Objects.requireNonNull(expected, "expected");
+        Path source = file.toAbsolutePath().normalize();
+        Path dir = source.getParent();
+        String name = source.getFileName().toString();
+        String base = name.toLowerCase(Locale.ROOT).endsWith(ProjectFormat.SUFFIX) ? name.substring(0, name.length() - ProjectFormat.SUFFIX.length()) : name;
+        try {
+            if (!Files.exists(source)) throw new ProjectException(ProjectException.Error.CONFLICT, "arquivo removido");
+            byte[] data = ops.readAll(source);
+            if (!expected.equals(fingerprint(data))) throw new ProjectException(ProjectException.Error.CONFLICT, "arquivo alterado");
+            for (int i = 1; i <= 99; i++) {
+                Path target = dir.resolve(base + " (" + label + ")" + (i == 1 ? "" : " " + i) + ProjectFormat.SUFFIX);
+                if (Files.exists(target)) continue;
+                Path temp = ops.createTemp(dir, "." + target.getFileName() + ".", ".tmp");
+                try {
+                    ops.writeAndSync(temp, data);
+                    if (!fingerprint(ops.readAll(temp)).equals(expected)) throw new ProjectException(ProjectException.Error.WRITE_FAILED, "cópia de segurança");
+                    ops.move(temp, target); // sem REPLACE_EXISTING: um arquivo que surgiu nesse meio-tempo nunca é substituído
+                    temp = null;
+                    ops.syncDirectory(dir);
+                    return target;
+                } catch (java.nio.file.FileAlreadyExistsException e) {
+                    // outro programa criou esse nome agora: tenta o próximo
+                } finally {
+                    if (temp != null) ops.deleteIfExists(temp);
+                }
+            }
+            throw new ProjectException(ProjectException.Error.WRITE_FAILED, "cópia de segurança: nomes disponíveis esgotados");
+        } catch (IOException e) {
+            throw map(e, ProjectException.Error.WRITE_FAILED);
+        }
+    }
+
     /** Idade mínima de um temporário para ser considerado abandonado (encerramento no meio de uma gravação). */
     static final java.time.Duration STALE = java.time.Duration.ofMinutes(10);
 

@@ -17,6 +17,9 @@ import com.nekkora.studio.domain.element.ManualLocator;
 import com.nekkora.studio.domain.evidence.ObservedEvidence;
 import com.nekkora.studio.domain.port.EvidenceIntake;
 import com.nekkora.studio.domain.port.StepIntake;
+import com.nekkora.studio.domain.variable.VariableDefinition;
+import com.nekkora.studio.domain.variable.VariableDraft;
+import com.nekkora.studio.domain.variable.VariableId;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
@@ -341,6 +344,46 @@ public final class WorkspaceService implements StepIntake, EvidenceIntake {
     public void restoreOriginal(AutomationId automationId, StepId stepId, StepField field) {
         stepEdit(automationId, stepId, "Restaurar " + field.label().toLowerCase(java.util.Locale.ROOT) + " original",
                 a -> a.restoreOriginal(stepId, field));
+    }
+
+    // ------------------------------------------------------------------ STUDIO-008: variáveis
+
+    /**
+     * Declara uma variável (só a declaração: nenhum valor de execução). Bloqueada durante a gravação, desfazível, marca o
+     * projeto como alterado — como qualquer edição.
+     */
+    public VariableDefinition declareVariable(AutomationId automationId, VariableDraft draft) {
+        return edit(automationId, "Declarar variável", true, (a, c) -> {
+            c.header = true;
+            return a.declareVariable(draft);
+        });
+    }
+
+    /** Edita a declaração (uma mudança de nome leva junto as etapas que a usam, na MESMA operação desfazível). */
+    public boolean updateVariable(AutomationId automationId, VariableId variableId, VariableDraft draft) {
+        return edit(automationId, "Editar variável", true, (a, c) -> {
+            c.header = true;
+            return a.updateVariable(variableId, draft);
+        });
+    }
+
+    /** Renomeia e atualiza as referências das etapas consumidoras numa única operação; devolve quantas etapas mudaram. */
+    public int renameVariable(AutomationId automationId, VariableId variableId, String newName) {
+        return edit(automationId, "Renomear variável", true, (a, c) -> {
+            c.header = true;
+            return a.renameVariable(variableId, newName);
+        });
+    }
+
+    /**
+     * Exclui a declaração. Em uso, só com {@code detachConsumers} (confirmado pelo usuário): os parâmetros das etapas que a
+     * usavam são esvaziados na mesma operação desfazível. Devolve quantas etapas foram desligadas.
+     */
+    public int removeVariable(AutomationId automationId, VariableId variableId, boolean detachConsumers) {
+        return edit(automationId, "Excluir variável", true, (a, c) -> {
+            c.header = true;
+            return a.removeVariable(variableId, detachConsumers);
+        });
     }
 
     // ------------------------------------------------------------------ desfazer / refazer

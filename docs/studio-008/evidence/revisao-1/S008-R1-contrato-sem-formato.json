@@ -1,0 +1,22 @@
+{
+  "schema": "nekkora-studio/semantic-contract",
+  "version": "1.0.0",
+  "automationId": "49ef516f-6426-4f5c-a643-ecc396d8bd4d",
+  "modelVersion": "1.1.0",
+  "dataFlowRules": "nekkora-validation-rules/1.1.0",
+  "summary": {"variables": 1, "steps": 1, "variableReferences": 1, "undeclaredReferences": 0, "uncertainties": 2},
+  "variables": [
+    {"variableId": "6dc71e3c-905d-42c5-a860-5942b159f9fb", "name": "cliente.cpf", "technicalType": "STRING", "semanticType": "BRAZILIAN_CPF", "semanticStatus": "USER_CONFIRMED", "sensitivity": "PERSONAL_DATA",
+      "scope": {"kind": "AUTOMATION", "sessionId": null}, "origin": {"kind": "INPUT", "constantDeclared": false, "producer": null},
+      "constraints": {"required": false, "minLength": null, "maxLength": null, "textFormat": "ANY", "minimum": null, "maximum": null, "scale": null, "currency": null},
+      "consumers": ["a55c838d-5b3e-49c7-9e39-14df887fd8fb"]}
+  ],
+  "steps": [
+    {"stepId": "a55c838d-5b3e-49c7-9e39-14df887fd8fb", "sessionId": "b499a286-3389-42b6-a925-b56d03f6c170", "position": {"session": 1, "step": 1}, "actionType": "FILL", "value": "VARIABLE", "reference": "DECLARED", "variableId": "6dc71e3c-905d-42c5-a860-5942b159f9fb"}
+  ],
+  "uncertainties": [
+    {"code": "INPUT_VALUE_UNKNOWN", "variableId": "6dc71e3c-905d-42c5-a860-5942b159f9fb", "stepId": null},
+    {"code": "REPRESENTATION_UNSPECIFIED", "variableId": "6dc71e3c-905d-42c5-a860-5942b159f9fb", "stepId": null}
+  ],
+  "exclusions": ["RUNTIME_VALUES", "CONSTANT_VALUES", "LITERAL_VALUES", "CREDENTIAL_ALIASES", "UNDECLARED_REFERENCE_NAMES", "AUTOMATION_SESSION_AND_STEP_NAMES", "FREE_TEXT_PURPOSE", "PAGE_CONTENT", "LOCATORS", "EVIDENCE"]
+}

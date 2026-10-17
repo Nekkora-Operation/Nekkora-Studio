@@ -54,6 +54,10 @@ public final class PropertiesPresenter {
         default void editAutomation() {
         }
 
+        /** STUDIO-008: abre "Variáveis e dependências" da automação. */
+        default void showVariables() {
+        }
+
         default void editSession(SessionId session) {
             renameSession(session);
         }
@@ -120,12 +124,19 @@ public final class PropertiesPresenter {
         NekkoraPropertiesGroup record = inspector.addGroup("Registro");
         record.addRow("Criada em", value(StudioText.dateTime(a.createdAt())));
         record.addRow("Atualizada em", value(StudioText.dateTime(a.updatedAt())));
-        record.addRow("Versão do modelo", value(a.modelVersion().equals(ModelVersion.CURRENT) ? a.modelVersion() : a.modelVersion() + " (anterior)"));
+        // STUDIO-008: 1.0.0 (sem variáveis) e 1.1.0 (com catálogo) são ambas atuais; "anterior" só para versão não suportada
+        record.addRow("Versão do modelo", value(ModelVersion.supported(a.modelVersion()) ? a.modelVersion() : a.modelVersion() + " (anterior)"));
         record.setExpanded(false);
         NekkoraPropertiesGroup act = inspector.addGroup("Ações");
         NekkoraButton edit = NekkoraButton.secondary("Editar propriedades").withIcon(IconName.EDIT).onClick(e -> actions.editAutomation());
         edit.setEnabled(editable);
         act.addFullRow(buttons(edit, NekkoraButton.ghost("Nova sessão").withIcon(IconName.LAYERS).onClick(e -> actions.addSession())));
+        // STUDIO-008: consulta (permitida também durante a gravação; editar variáveis não)
+        int vars = a.variables().size();
+        NekkoraButton variables = NekkoraButton.ghost("Variáveis e dependências").withIcon(IconName.BRACES).onClick(e -> actions.showVariables());
+        variables.getAccessibleContext().setAccessibleDescription(vars == 0 ? "Nenhuma variável declarada" : vars == 1 ? "1 variável declarada"
+                : vars + " variáveis declaradas");
+        act.addFullRow(buttons(variables));
         lockedNote(act, editable);
     }
 

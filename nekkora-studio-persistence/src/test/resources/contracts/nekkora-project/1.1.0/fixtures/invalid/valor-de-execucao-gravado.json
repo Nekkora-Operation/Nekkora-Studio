@@ -1,0 +1,17 @@
+{
+  "description": "Campo de valor numa variável: o formato só guarda a declaração, nunca valores de entrada ou execução.",
+  "base": "consulta-clientes-variaveis.nekkora",
+  "changes": [
+    {
+      "entry": "variables.json",
+      "op": "set",
+      "pointer": "/variables/1/value",
+      "value": "valor ficticio"
+    }
+  ],
+  "removeEntries": [],
+  "addEntries": {},
+  "rehash": true,
+  "expectedError": "INVALID_CONTENT",
+  "schemaRejects": true
+}

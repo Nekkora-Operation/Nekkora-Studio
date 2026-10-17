@@ -62,6 +62,83 @@ public final class StudioController {
         this.showValidation = show == null ? () -> { } : show;
     }
 
+    // ------------------------------------------------------------------ STUDIO-008: variáveis
+
+    private java.util.function.Consumer<com.nekkora.studio.domain.variable.VariableId> showVariables = v -> { };
+
+    /** A janela mostra o painel de variáveis (e seleciona a variável, se não for nula). */
+    public void onVariablesShown(java.util.function.Consumer<com.nekkora.studio.domain.variable.VariableId> show) {
+        this.showVariables = show == null ? v -> { } : show;
+    }
+
+    /** Automação → Variáveis e dependências: consulta (permitida durante a gravação; editar não). */
+    public void showVariables() {
+        active().ifPresent(a -> showVariables.accept(null));
+    }
+
+    /** Declarar variável: só metadados; o domínio decide (nome, significado, sensibilidade, constante). */
+    public void newVariable() {
+        Automation a = active().orElse(null);
+        if (a == null || !editable(a)) return;
+        com.nekkora.studio.domain.variable.VariableId[] created = new com.nekkora.studio.domain.variable.VariableId[1];
+        runForm(StudioOperation.VARIABLE, StudioForms.newVariable(a), v -> attempt(() -> created[0] = service.declareVariable(a.id(), v.toDraft()).id()));
+        if (created[0] != null) showVariables.accept(created[0]);
+    }
+
+    public void editVariable(com.nekkora.studio.domain.variable.VariableId id) {
+        Automation a = active().orElse(null);
+        if (a == null || !editable(a)) return;
+        com.nekkora.studio.domain.variable.VariableDefinition v = a.variable(id).orElse(null);
+        if (v == null) return;
+        runForm(StudioOperation.VARIABLE, StudioForms.editVariable(a, v), x -> attempt(() -> service.updateVariable(a.id(), id, x.toDraft())));
+        showVariables.accept(id);
+    }
+
+    /** Renomear com prévia das etapas que passam a usar o novo nome (uma única operação desfazível). */
+    public void renameVariable(com.nekkora.studio.domain.variable.VariableId id) {
+        Automation a = active().orElse(null);
+        if (a == null || !editable(a)) return;
+        com.nekkora.studio.domain.variable.VariableDefinition v = a.variable(id).orElse(null);
+        if (v == null) return;
+        java.util.Map<StepId, String> places = com.nekkora.studio.ui.VariablePresentation.places(a);
+        java.util.List<String> consumers = com.nekkora.studio.validation.DataFlowAnalysis.of(a).consumersOf(id).stream().map(c -> places.get(c.step()))
+                .toList();
+        int[] changed = {-1};
+        runForm(StudioOperation.VARIABLE, StudioForms.renameVariable(v.name(), consumers),
+                name -> attempt(() -> changed[0] = service.renameVariable(a.id(), id, name)));
+        if (changed[0] >= 0) {
+            service.report(new com.nekkora.studio.app.workspace.Notice(com.nekkora.studio.app.workspace.Notice.Kind.SUCCESS, "Variável renomeada",
+                    changed[0] == 0 ? "Nenhuma etapa usava a variável." : (changed[0] == 1 ? "1 etapa atualizada." : changed[0] + " etapas atualizadas.")
+                            + " Use Desfazer para voltar."));
+            showVariables.accept(id);
+        }
+    }
+
+    /** Excluir: em uso, só com confirmação explícita do descarte dos vínculos (as etapas ficam sem valor). */
+    public void deleteVariable(com.nekkora.studio.domain.variable.VariableId id) {
+        Automation a = active().orElse(null);
+        if (a == null || !editable(a)) return;
+        com.nekkora.studio.domain.variable.VariableDefinition v = a.variable(id).orElse(null);
+        if (v == null) return;
+        int n = a.consumersOf(id).size();
+        String message = "Variável: " + v.name() + "\nEtapas que a usam: " + n + "\n\n" + (n == 0 ? "Nenhuma etapa usa esta variável."
+                : (n == 1 ? "A etapa que a usa ficará" : "As " + n + " etapas que a usam ficarão") + " sem valor configurado — a validação vai apontar.")
+                + " Você pode desfazer enquanto o histórico desta automação existir.";
+        if (!confirmOperation(new StudioPrompts.Confirmation("Excluir variável?", message, n == 0 ? "Excluir variável"
+                : n == 1 ? "Excluir e desligar 1 etapa" : "Excluir e desligar " + n + " etapas", true))) {
+            return;
+        }
+        attemptNotice("Variável não excluída", () -> service.removeVariable(a.id(), id, n > 0));
+        showVariables.accept(null);
+    }
+
+    /** Seleciona uma etapa (a partir do painel de variáveis). */
+    public void goToStep(StepId stepId) {
+        Automation a = active().orElse(null);
+        if (a == null) return;
+        a.sessionOf(stepId).ifPresent(s -> service.select(new Selection.OfStep(a.id(), s.id(), stepId)));
+    }
+
     /**
      * Automação → Validar automação: diagnóstico estrutural do estado ATUAL da automação ativa. Não executa nada, não
      * consulta o navegador, não edita a automação (nada vai para o desfazer) e não a marca como não salva. Permitido
@@ -78,6 +155,15 @@ public final class StudioController {
     public void goToFinding(com.nekkora.studio.validation.Finding f) {
         Automation a = active().orElse(null);
         if (a == null) return;
+        if (f.scope() == com.nekkora.studio.validation.FindingScope.VARIABLE) {
+            if (a.variable(f.variable()).isPresent()) {
+                showVariables.accept(f.variable());
+            } else {
+                service.report(new com.nekkora.studio.app.workspace.Notice(com.nekkora.studio.app.workspace.Notice.Kind.INFO, "Variável não encontrada",
+                        "A variável deste apontamento não existe mais. Valide a automação novamente."));
+            }
+            return;
+        }
         if (f.step() != null) {
             Optional<LogicalSession> s = a.sessionOf(f.step());
             if (s.isPresent()) {

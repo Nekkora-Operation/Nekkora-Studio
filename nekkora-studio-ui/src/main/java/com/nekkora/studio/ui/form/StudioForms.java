@@ -59,6 +59,24 @@ public final class StudioForms {
                 new StepDetailsForm(automation, step), "Salvar alterações", NekkoraDialog.Size.LARGE);
     }
 
+    /** STUDIO-008: declarar variável (só metadados; nenhum valor de execução). */
+    public static FormSpec<VariableForm.Values> newVariable(Automation automation) {
+        return new FormSpec<>("Nova variável", "Declare um dado do processo de \"" + automation.name() + "\". O Studio guarda só a declaração: "
+                + "nenhum valor de execução, nenhuma senha.", IconName.BRACES, new VariableForm(automation, null), "Declarar variável",
+                NekkoraDialog.Size.LARGE);
+    }
+
+    public static FormSpec<VariableForm.Values> editVariable(Automation automation, com.nekkora.studio.domain.variable.VariableDefinition v) {
+        return new FormSpec<>("Editar variável", "Mudar o nome aqui também atualiza as etapas que usam a variável, na mesma operação.", IconName.BRACES,
+                new VariableForm(automation, v), "Salvar variável", NekkoraDialog.Size.LARGE);
+    }
+
+    /** Renomear com prévia das etapas atualizadas. */
+    public static FormSpec<String> renameVariable(String currentName, java.util.List<String> consumers) {
+        return new FormSpec<>("Renomear variável", "O nome e as referências das etapas mudam juntos: um Desfazer volta tudo.", IconName.EDIT,
+                new RenameVariableForm(currentName, consumers), "Renomear", NekkoraDialog.Size.MEDIUM);
+    }
+
     /** STUDIO-004: mover uma etapa para outra posição ou sessão da mesma automação. */
     public static FormSpec<MoveStepForm.Values> moveStep(Automation automation, AutomationStep step) {
         return new FormSpec<>("Mover etapa", "\"" + step.name() + "\" continua a mesma etapa: só muda de lugar.", IconName.SORT,

@@ -32,13 +32,19 @@ public final class ProjectFiles {
             Objects.requireNonNull(projectId, "projectId");
             return new Snapshot(projectId, a.id(), a.name(), a.createdAt(), a.stepCount(), ProjectCodec.documents(a));
         }
+
+        /** Versão do formato que esta fotografia produz (a menor capaz de representá-la). */
+        public String formatVersion() {
+            return ProjectFormat.versionFor(documents);
+        }
     }
 
     /** Projeto lido e reconstruído. */
     public record Loaded(Automation automation, ProjectPackage.Manifest manifest, ProjectRepository.Fingerprint fingerprint) {}
 
     private static final Set<String> INTEGRITY_REASONS = Set.of("DUPLICATE_ID", "DUPLICATE_RECORDED_EVENT", "EVIDENCE_STEP_MISMATCH", "EVIDENCE_ORDER",
-            "EVIDENCE_NOT_ATTRIBUTED", "EVIDENCE_NOT_UNATTRIBUTED", "LOCATOR_NOT_FOUND", "BASELINE_INCONSISTENT", "PROVENANCE_INCONSISTENT");
+            "EVIDENCE_NOT_ATTRIBUTED", "EVIDENCE_NOT_UNATTRIBUTED", "LOCATOR_NOT_FOUND", "BASELINE_INCONSISTENT", "PROVENANCE_INCONSISTENT",
+            "VARIABLE_SCOPE_SESSION_NOT_FOUND", "VARIABLE_PRODUCER_NOT_FOUND");
 
     private final ProjectRepository repository;
     private final String producerVersion;
