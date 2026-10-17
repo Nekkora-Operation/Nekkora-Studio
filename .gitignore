@@ -1,4 +1,6 @@
-target/
+# saída do Maven (raiz e módulos) — NÃO o pacote de código domain/target
+/target/
+/*/target/
 *.class
 *.log
 .idea/
