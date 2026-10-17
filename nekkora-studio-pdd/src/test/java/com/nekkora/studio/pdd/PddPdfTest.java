@@ -210,7 +210,55 @@ class PddPdfTest {
     }
 
     @Test
-    @DisplayName("G8 desatualizado:o processo mudou depois da exportação → o último PDF é indicado como desatualizado; o rascunho exige atualizar")
+    @DisplayName("R2 (PDFBox 3.0.8): acentos e pontuação extraídos sem perda; imagem no PDF idêntica, pixel a pixel, à captura sanitizada guardada")
+    void caracteresEImagemFiel() throws Exception {
+        Fixture f = ready();
+        Block login = f.draft().sections().get(0).blocks().get(0);
+        String title = "Ação de conferência: área pública (opção única), após a emissão";
+        DocumentDraft d = DraftEdits.reviseBlockTitle(f.draft(), login.blockId(), title, "TEST_AGENT");
+        PddExporter.Exported e = PddExporter.export(d, f.projection(), f.store(), tmp.resolve("saida"), fonts(), CLOCK, null);
+        try (PDDocument doc = Loader.loadPDF(e.pdf().toFile())) {
+            String text = new PDFTextStripper().getText(doc);
+            assertTrue(text.contains(title), "título com acentos e pontuação:\n" + text);
+            for (String s : List.of("Autenticação", "Informar o campo \"Usuário\"", "Código do registro", "não comprova resultado de negócio")) {
+                assertTrue(text.contains(s), "falta: " + s);
+            }
+            assertFalse(text.contains("\uFFFD"), "nenhum caractere de substituição");
+            var res = doc.getPage(0).getResources();
+            BufferedImage inPdf = null;
+            for (var n : res.getXObjectNames()) {
+                if (res.getXObject(n) instanceof org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject img) inPdf = img.getImage();
+            }
+            assertTrue(inPdf != null, "imagem no PDF");
+            BufferedImage stored = ImageIO.read(new java.io.ByteArrayInputStream(f.store().capture(d.automationId(), login.captureSha()).orElseThrow()));
+            // o PDF leva o recorte da área útil (união das regiões + margem): cada pixel dele existe igual na captura guardada
+            int matches = 0;
+            outer:
+            for (int oy = 0; oy + inPdf.getHeight() <= stored.getHeight(); oy++) {
+                for (int ox = 0; ox + inPdf.getWidth() <= stored.getWidth(); ox++) {
+                    boolean same = true;
+                    for (int y = 0; y < inPdf.getHeight() && same; y += 3) {
+                        for (int x = 0; x < inPdf.getWidth() && same; x += 3) {
+                            same = (inPdf.getRGB(x, y) & 0xFFFFFF) == (stored.getRGB(ox + x, oy + y) & 0xFFFFFF);
+                        }
+                    }
+                    if (same) {
+                        matches++;
+                        for (int y = 0; y < inPdf.getHeight(); y++) {
+                            for (int x = 0; x < inPdf.getWidth(); x++) {
+                                assertEquals(stored.getRGB(ox + x, oy + y) & 0xFFFFFF, inPdf.getRGB(x, y) & 0xFFFFFF, "pixel " + x + "," + y);
+                            }
+                        }
+                        break outer;
+                    }
+                }
+            }
+            assertEquals(1, matches, "a imagem do PDF é um recorte exato (sem perda) da captura sanitizada");
+        }
+    }
+
+    @Test
+    @DisplayName("G8 desatualizado: o processo mudou depois da exportação → o último PDF é indicado como desatualizado; o rascunho exige atualizar")
     void desatualizado() throws Exception {
         Fixture f = ready();
         Path dir = tmp.resolve("saida");

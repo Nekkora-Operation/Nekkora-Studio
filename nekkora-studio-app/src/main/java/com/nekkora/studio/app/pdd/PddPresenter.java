@@ -618,6 +618,7 @@ public final class PddPresenter implements PddPanel.Actions {
             case "PAGE_CHANGED", "TAB_CLOSED" -> "A aba navegou ou foi fechada antes do atalho.";
             case "ARM_EXPIRED" -> "O atalho não foi pressionado a tempo.";
             case "TAB_MISMATCH" -> "O atalho foi pressionado em outra aba.";
+            case "ACTIVE_TAB_CHANGED" -> "A aba ativa mudou durante a captura: a imagem foi descartada. Fique na aba do laboratório e tente de novo.";
             case "CANCELLED" -> "Captura cancelada.";
             case "LINK_LOST" -> "A conexão com o navegador caiu.";
             case "SANITIZATION_CHECK_FAILED" -> "A imagem não passou na verificação da política visual: nada foi guardado.";

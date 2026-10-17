@@ -125,7 +125,8 @@ class StudioScopeTest {
         // CONFIRMADO (verificado em ProjectStudioTest); antes da STUDIO-006, salvar não existia e o texto só poderia ser fictício
         String confirmedSavedLabel = "SAVED(\"Salvo\"),";
         // STUDIO-010 (D-S010-13): o PDF do PDD visual é REAL — gerado e verificado pelo módulo nekkora-studio-pdd (PddPdfTest,
-        // PddUiTest e a homologação). Só os pacotes do PDD (app/pdd, ui/pdd) e a descrição da ação podem falar em PDF.
+        // PddUiTest e a homologação). Só os pacotes do PDD (app/pdd, ui/pdd) e a descrição da ação podem falar em PDF — e, nesses
+        // pacotes, a exceção retira SÓ a palavra "PDF": o resto da linha continua sujeito a todos os outros termos proibidos.
         String pddActionDescription = ".description(\"Documento PDF do processo mapeado: sessões, instruções e capturas sanitizadas do laboratório. Não altera a automação.\"));";
         List<String> v = new ArrayList<>();
         for (String module : List.of("nekkora-studio-domain", "nekkora-studio-ui", "nekkora-studio-app", "nekkora-studio-bridge", "nekkora-studio-recorder")) {
@@ -140,12 +141,10 @@ class StudioScopeTest {
                     boolean pddPackage = unix.contains("/com/nekkora/studio/app/pdd/") || unix.contains("/com/nekkora/studio/ui/pdd/");
                     for (int i = 0; i < lines.size(); i++) {
                         String l = lines.get(i).strip();
-                        if (pddPackage && l.toLowerCase().contains("pdf") && !l.toLowerCase().matches(".*(ana souza|ollama|openai|anthropic|playwright|selenium).*")) {
-                            continue;
-                        }
                         if (name.equals("StudioActions.java") && l.equals(pddActionDescription)) continue;
                         if (l.startsWith("*") || l.startsWith("//") || l.startsWith("/**")) continue; // documentação pode citar o escopo futuro
-                        if (fake.matcher(l).find() && !(f.getFileName().toString().equals("RecorderPresenter.java") && l.equals(confirmedLabel))
+                        String checked = pddPackage ? l.replaceAll("(?i)pdf", "") : l;
+                        if (fake.matcher(checked).find() && !(f.getFileName().toString().equals("RecorderPresenter.java") && l.equals(confirmedLabel))
                                 && !(f.getFileName().toString().equals("RecorderText.java") && l.equals(confirmedStepsLabel))
                                 && !(f.getFileName().toString().equals("ProjectState.java") && l.equals(confirmedSavedLabel))) {
                             v.add(f.getFileName() + ":" + (i + 1) + "  " + l);
