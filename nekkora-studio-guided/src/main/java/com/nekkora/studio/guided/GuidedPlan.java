@@ -302,7 +302,7 @@ public final class GuidedPlan {
             ActionType.CHECK, Set.of("CHECKBOX", "RADIO", "SWITCH"),
             ActionType.UNCHECK, Set.of("CHECKBOX", "SWITCH"));
 
-    static boolean unusual(ActionType action, String kind) {
+    public static boolean unusual(ActionType action, String kind) {
         Set<String> usual = USUAL_KINDS.get(action);
         return usual != null && !ElementReference.UNKNOWN_KIND.equals(kind) && !usual.contains(kind);
     }

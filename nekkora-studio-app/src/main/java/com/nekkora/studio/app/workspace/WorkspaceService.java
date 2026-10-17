@@ -321,6 +321,22 @@ public final class WorkspaceService implements StepIntake, EvidenceIntake {
         stepEdit(automationId, stepId, "Alterar localizador preferencial", a -> a.choosePreferredLocator(stepId, index));
     }
 
+    /** STUDIO-009: decisão sobre o alvo (Continuar = confirmar; Corrigir = rejeitar), desfazível. */
+    public void decideTarget(AutomationId automationId, StepId stepId, com.nekkora.studio.domain.target.TargetDecision.Kind kind,
+            com.nekkora.studio.domain.target.DecisionActor actor, com.nekkora.studio.domain.target.TargetDecision.Basis basis) {
+        stepEdit(automationId, stepId, kind == com.nekkora.studio.domain.target.TargetDecision.Kind.CONFIRMED ? "Confirmar alvo" : "Rejeitar alvo",
+                a -> a.decideTarget(stepId, kind, actor, basis));
+    }
+
+    /** STUDIO-009: correção aprovada — o alvo efetivo passa a ser a referência escolhida (uma operação, desfazível). */
+    public void replaceTarget(AutomationId automationId, StepId stepId, com.nekkora.studio.domain.element.ElementReference replacement,
+            com.nekkora.studio.domain.target.DecisionActor actor, com.nekkora.studio.domain.target.TargetDecision.Basis basis) {
+        stepEdit(automationId, stepId, "Corrigir alvo", a -> {
+            a.replaceTarget(stepId, replacement, actor, basis);
+            return true;
+        });
+    }
+
     public void addManualLocator(AutomationId automationId, StepId stepId, ManualLocator locator) {
         stepEdit(automationId, stepId, "Propor localizador", a -> a.addManualLocator(stepId, locator));
     }

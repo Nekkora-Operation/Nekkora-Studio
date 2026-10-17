@@ -50,6 +50,21 @@ public final class StudioEnvironment {
         return Optional.ofNullable(dataDir);
     }
 
+    /** Propriedade de sistema que liga o modo de laboratório do debug guiado (decisões rotuladas como agente de teste). */
+    public static final String DECISION_ACTOR_PROPERTY = "nekkora.studio.decisionActor";
+    /** Variável de ambiente equivalente. */
+    public static final String DECISION_ACTOR_ENV = "NEKKORA_STUDIO_DECISION_ACTOR";
+
+    /**
+     * STUDIO-009 (D-S009-06): quem as decisões do debug guiado registram. {@code TEST_AGENT} SÓ em modo de laboratório
+     * explícito (propriedade {@value #DECISION_ACTOR_PROPERTY} ou variável {@value #DECISION_ACTOR_ENV} = {@code TEST_AGENT},
+     * usadas pelos roteiros de homologação); qualquer outro valor ou nenhum: {@code DEVELOPER}. A interface mostra o ator.
+     */
+    public com.nekkora.studio.domain.target.DecisionActor decisionActor() {
+        String v = System.getProperty(DECISION_ACTOR_PROPERTY, System.getenv(DECISION_ACTOR_ENV));
+        return "TEST_AGENT".equals(v) ? com.nekkora.studio.domain.target.DecisionActor.TEST_AGENT : com.nekkora.studio.domain.target.DecisionActor.DEVELOPER;
+    }
+
     RecentProjects recents() {
         return dataDir == null ? RecentProjects.inMemory() : RecentProjects.load(dataDir);
     }

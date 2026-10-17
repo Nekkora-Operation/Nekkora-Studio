@@ -75,6 +75,8 @@ public final class StudioApplication {
         }, link, new SwingRecorderPrompts(frame::getRootPane),
                 panel -> new SwingRecorderWindowHost(() -> frame, panel, () -> ref.get().recorderPresenter().closeRequest().run()), environment);
         ref.set(studio);
+        studio.useGuidedDebugHosts(panel -> new com.nekkora.studio.app.debug.SwingGuidedDebugHost(() -> frame, panel,
+                () -> ref.get().guidedDebug().closeRequest().run()));
         frame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
         frame.addWindowListener(new WindowAdapter() {
             @Override

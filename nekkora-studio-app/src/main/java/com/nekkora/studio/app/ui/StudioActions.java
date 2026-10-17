@@ -40,6 +40,8 @@ public final class StudioActions {
     public static final String VALIDATE = "studio.automation.validate";
     /** STUDIO-008: variáveis declaradas e dependências da automação ativa. */
     public static final String VARIABLES = "studio.automation.variables";
+    /** STUDIO-009: debug guiado no navegador (inspecionar, destacar, confirmar/corrigir — nunca executar). */
+    public static final String GUIDED_DEBUG = "studio.automation.guidedDebug";
 
     /** Ações que dependem de missões futuras e permanecem desabilitadas. */
     public static final List<String> FUTURE = List.of(RUN);
@@ -96,10 +98,21 @@ public final class StudioActions {
         registry.register(NekkoraAction.of(VARIABLES, "Variáveis e dependências…", controller::showVariables).icon(IconName.BRACES)
                 .shortcut(NekkoraKeys.shortcut(KeyEvent.VK_B, InputEvent.SHIFT_DOWN_MASK)).category("Automação")
                 .description("Declarar e revisar as variáveis do processo e as etapas que as usam. Nenhum valor de execução é guardado."));
+        registry.register(NekkoraAction.of(GUIDED_DEBUG, "Depurar no navegador…", () -> guidedDebugHandler.run()).icon(IconName.SEARCH)
+                .shortcut(NekkoraKeys.shortcut(KeyEvent.VK_D, InputEvent.SHIFT_DOWN_MASK)).category("Automação")
+                .description("Reencontrar e destacar no Chrome o alvo de cada etapa, com Continuar ou Corrigir. Nada é clicado, preenchido ou enviado."));
         future(RUN, "Executar", IconName.PLAY, "A execução de automações chega em uma próxima versão do Studio.");
-        for (String id : List.of(NEW_SESSION, NEW_STEP, RENAME_SESSION, RECORD, EDIT, UNDO, REDO, SAVE, SAVE_AS, CLOSE_PROJECT, VALIDATE, VARIABLES)) {
+        for (String id : List.of(NEW_SESSION, NEW_STEP, RENAME_SESSION, RECORD, EDIT, UNDO, REDO, SAVE, SAVE_AS, CLOSE_PROJECT, VALIDATE, VARIABLES,
+                GUIDED_DEBUG)) {
             get(id).setEnabled(false);
         }
+    }
+
+    private Runnable guidedDebugHandler = () -> { };
+
+    /** Liga "Depurar no navegador" ao apresentador do debug guiado (STUDIO-009). */
+    public void onGuidedDebug(Runnable handler) {
+        this.guidedDebugHandler = handler == null ? () -> { } : handler;
     }
 
     /** Liga o botão Gravar ao Recorder (STUDIO-002). */
