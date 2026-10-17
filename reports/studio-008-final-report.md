@@ -14,6 +14,10 @@ de robôs por IA; sem executar automações; STUDIO-009 não iniciada; credencia
 acessado); nada reclassificado nem recuperado da política `nekkora-privacy/2`; goldens não regenerados; fixtures
 1.0.0 preservadas byte a byte, exceto os 4 ajustes autorizados.
 
+**Revisão 1 do PR #11 (2026-10-17)**: P1 (API Java do contrato semântico alcançava valor fixo e finalidade) e P2
+(CPF confirmado sem representação declarada) corrigidos no mesmo PR, sem merge — ver §16 e
+`docs/studio-008/review-1.md`.
+
 ## 1. Baseline
 
 `beae03f` (HEAD da `main`): Windows `./mvnw clean verify` 464/464; Linux `tools/golden-linux.sh verify` 463 + 1
@@ -162,3 +166,35 @@ variáveis (D-S008-16).
 O contrato semântico e a `DataFlowAnalysis` são a base para consumo programático (por exemplo, uma futura geração ou
 execução) sem expor valores. Qualquer evolução que comprove produtoras em execução deve gerar códigos e estados
 novos — nunca reinterpretar `STEP_OUTPUT_NOT_PROVEN` ou `UNVERIFIED_AT_RUNTIME`. STUDIO-009 não foi iniciada.
+
+## 16. Revisão 1 do PR #11 (2026-10-17)
+
+Detalhes, contratos tocados e justificativas em `docs/studio-008/review-1.md`; decisões D-S008-18 a D-S008-21.
+
+| Commit | Conteúdo |
+|---|---|
+| `018d435` | reprodução: testes novos que FALHAM no código revisado (`evidence/revisao-1/R1-antes-da-correcao.txt`) |
+| `b4b2086` | correções P1 e P2, `VariableDraft.toString()`, homologação focada, documentação |
+
+- **P1 (bloqueante)**: `SemanticContract` passa a guardar só cópias próprias (`Variable`, `Scope`, `Origin`,
+  `Constraints`); `SemanticContractApiTest` percorre por reflexão todo caminho público e confere que nenhum alcança valor
+  fixo, finalidade, literais, apelidos ou nomes, nem tipos do domínio além de identidades e enums. Fixture do contrato
+  semântico 1.0.0 **idêntica**.
+- **P2**: `TextFormat.BRAZILIAN_CPF_MASKED`; aviso `VARIABLE_REPRESENTATION_UNSPECIFIED` (limita a avaliação, nunca
+  bloqueio, nunca máscara imposta, nunca obrigatoriedade derivada); incerteza `REPRESENTATION_UNSPECIFIED`. Acréscimos
+  aditivos nos contratos introduzidos neste PR; fixture `validation-report/1.1.0` regenerada **com autorização da
+  usuária** (+1 apontamento; resto renumeração consistente, conferida por script).
+- **Achado extra**: `VariableDraft.toString()` mostrava a finalidade — corrigido.
+- **Reprodução também no Linux**: a primeira execução do `golden-linux.sh` (que testa o `HEAD` commitado) rodou sobre o
+  commit de reprodução e falhou exatamente em `cpfComMascara` (formato inexistente) — confirmação independente de que o
+  teste falha no código sem a correção.
+
+| Verificação | Resultado |
+|---|---|
+| Windows `./mvnw clean verify` (código de `b4b2086`) | **BUILD SUCCESS — 523 testes, 0 falhas, 0 pulados** (514 + 9 novos) |
+| Linux `tools/golden-linux.sh verify` (`b4b2086`) | **BUILD SUCCESS — 523 executados, 522 aprovados, 1 pulado** (`AtomicSaveTest`, root — o de sempre) |
+| Golden screenshots | 4/4 nos dois ambientes; não regenerados |
+| Homologação real focada (`Studio008Review1Homologation`) | **12/12** |
+| Homologação completa (40/40) | reaproveitada: fluxos integrados inalterados; a interface só ganhou a opção do enum e a forma do rótulo de restrição, cobertas pela focada |
+
+Nenhum merge foi feito; extensão intocada; STUDIO-009 não iniciada.
