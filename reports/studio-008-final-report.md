@@ -18,6 +18,9 @@ acessado); nada reclassificado nem recuperado da política `nekkora-privacy/2`; 
 (CPF confirmado sem representação declarada) corrigidos no mesmo PR, sem merge — ver §16 e
 `docs/studio-008/review-1.md`.
 
+**Revisão 2 do PR #11 (2026-10-17)**: P1 e P2 considerados resolvidos; a observação não bloqueante (formato de texto
+que contradiz o significado) foi corrigida no mesmo PR, sem merge — ver §17 e `docs/studio-008/review-2.md`.
+
 ## 1. Baseline
 
 `beae03f` (HEAD da `main`): Windows `./mvnw clean verify` 464/464; Linux `tools/golden-linux.sh verify` 463 + 1
@@ -196,5 +199,30 @@ Detalhes, contratos tocados e justificativas em `docs/studio-008/review-1.md`; d
 | Golden screenshots | 4/4 nos dois ambientes; não regenerados |
 | Homologação real focada (`Studio008Review1Homologation`) | **12/12** |
 | Homologação completa (40/40) | reaproveitada: fluxos integrados inalterados; a interface só ganhou a opção do enum e a forma do rótulo de restrição, cobertas pela focada |
+
+Nenhum merge foi feito; extensão intocada; STUDIO-009 não iniciada.
+
+## 17. Revisão 2 do PR #11 (2026-10-17)
+
+Detalhes, critério e justificativas em `docs/studio-008/review-2.md`; decisões D-S008-22 e D-S008-23.
+
+| Commit | Conteúdo |
+|---|---|
+| `a19e6e4` | reprodução: 3 testes que FALHAM no código de `9992b0a` (`evidence/revisao-2/R2-antes-da-correcao.txt`) |
+| `077b49e` | `SemanticType.admits` + `ValidationProblem.VARIABLE_FORMAT_INCOMPATIBLE` no domínio; mensagem no campo de formato; homologação focada; documentação |
+
+- **Critério**: recusa o formato que nenhuma forma válida do significado satisfaz — e-mail com "Somente dígitos",
+  "Letras e dígitos" ou "Máscara de CPF"; CPF com "Forma de e-mail" (confirmado ou proposto, ao criar, editar ou abrir
+  `.nekkora`). Demais significados abertos; admitir não é declarar a representação (o aviso da revisão 1 continua).
+- **Contratos**: schemas e fixtures existentes intocados; só uma fixture inválida nova (`formato-incoerente-com-significado.json`).
+- **Homologação**: a mensagem original saía cortada no diálogo; foi encurtada e a homologação repetida (capturas com o texto inteiro).
+
+| Verificação | Resultado |
+|---|---|
+| Windows `./mvnw clean verify` (código de `077b49e`) | **BUILD SUCCESS — 525 testes, 0 falhas, 0 pulados** (523 + 2 novos; a fixture nova roda em teste existente) |
+| Linux `tools/golden-linux.sh verify` (`077b49e`) | **BUILD SUCCESS — 525 executados, 524 aprovados, 1 pulado** (`AtomicSaveTest`, root — o de sempre) |
+| Golden screenshots | 4/4 nos dois ambientes; não regenerados |
+| Homologação real focada (`Studio008Review2Homologation`) | **7/7** |
+| Homologações anteriores (40/40 e 12/12) | reaproveitadas: só mudou uma regra de recusa no domínio e o campo da mensagem; a regressão cobre o resto |
 
 Nenhum merge foi feito; extensão intocada; STUDIO-009 não iniciada.
