@@ -14,6 +14,7 @@ import com.nekkora.studio.domain.element.ManualLocator;
 import com.nekkora.studio.domain.privacy.CapturePrivacy;
 import com.nekkora.studio.domain.target.DecisionActor;
 import com.nekkora.studio.domain.target.TargetDecision;
+import com.nekkora.studio.guided.GuidedDebugRecord;
 import com.nekkora.studio.guided.GuidedPlan;
 import com.nekkora.studio.guided.ReusePolicy;
 import com.nekkora.studio.recorder.BrowserTab;
@@ -106,15 +107,6 @@ public final class GuidedDebugPresenter implements GuidedDebugPanel.Actions, Gui
         }
     }
 
-    /** Registro de uma passagem (contexto read-only do G7: verificações e decisões, sem valores). */
-    public record Entry(String stepId, Instant at, String kind, String status, String identitySource, List<String> reasons, String outcome,
-                        List<String> outcomeReasons, String actor) {
-        public Entry {
-            reasons = List.copyOf(reasons);
-            outcomeReasons = List.copyOf(outcomeReasons);
-        }
-    }
-
     private static final Pattern CODE = Pattern.compile("[A-Z][A-Z0-9_]{0,59}");
     /** Pausa antes de avançar sozinho numa etapa reconfirmada (o feedback compacto fica visível). */
     public static final int REUSE_ADVANCE_MS = 1200;
@@ -126,7 +118,8 @@ public final class GuidedDebugPresenter implements GuidedDebugPanel.Actions, Gui
     private final Clock clock;
     private final GuidedDebugPanel panel;
     private final Host host;
-    private final List<Entry> journal = new CopyOnWriteArrayList<>();
+    private final List<GuidedDebugRecord.Entry> journal = new CopyOnWriteArrayList<>();
+    private GuidedPlan plan;
     private GuidedDebugClient client;
     private AutomationId automationId;
     private List<StepId> steps = List.of();
@@ -162,8 +155,17 @@ public final class GuidedDebugPresenter implements GuidedDebugPanel.Actions, Gui
     }
 
     /** Passagens registradas (verificações, reuso e decisões) — sem valores nem texto da página. */
-    public List<Entry> journal() {
+    public List<GuidedDebugRecord.Entry> journal() {
         return List.copyOf(journal);
+    }
+
+    /**
+     * G7: registro desta sessão ({@code guided-debug-record/1.0.0}) — contexto somente leitura, sem valores; vazio se o
+     * debug não começou.
+     */
+    public java.util.Optional<String> recordJson() {
+        if (plan == null || automationId == null) return java.util.Optional.empty();
+        return java.util.Optional.of(GuidedDebugRecord.toJson(plan, automation(), actor, clock.instant(), journal));
     }
 
     public boolean active() {
@@ -233,7 +235,7 @@ public final class GuidedDebugPresenter implements GuidedDebugPanel.Actions, Gui
 
     private void buildPlan() {
         Automation a = automation();
-        GuidedPlan plan = GuidedPlan.of(a, new AutomationValidator(RuleSet.V1_1).validate(a));
+        plan = GuidedPlan.of(a, new AutomationValidator(RuleSet.V1_1).validate(a));
         List<StepId> ids = new ArrayList<>();
         for (GuidedPlan.Step s : plan.steps()) {
             if (s.applicability() != GuidedPlan.Applicability.NO_TARGET_REQUIRED) ids.add(s.id());
@@ -283,8 +285,9 @@ public final class GuidedDebugPresenter implements GuidedDebugPanel.Actions, Gui
         TargetDecision decision = step.targetDecision().orElse(null);
         lastOutcome = ReusePolicy.evaluate(decision, Automation.expectation(step.actionType(), step.parameters(), step.element().orElseThrow()), verification(r),
                 actor);
-        journal.add(new Entry(step.id().value().toString(), r.observedAt() == null ? clock.instant() : r.observedAt(), "VERIFICATION", r.status().name(),
-                r.identitySource().name(), r.reasons(), lastOutcome.verdict().name(), lastOutcome.reasons().stream().map(Enum::name).toList(), actor.name()));
+        journal.add(new GuidedDebugRecord.Entry(step.id(), r.observedAt() == null ? clock.instant() : r.observedAt(), GuidedDebugRecord.Kind.VERIFICATION,
+                r.status().name(), r.identitySource().name(), r.reasons(), lastOutcome.verdict().name(), lastOutcome.reasons().stream().map(Enum::name).toList(),
+                actor));
         boolean resolved = r.status() == GuidedDebugClient.Status.RESOLVED;
         Badge badge;
         String message = "";
@@ -342,8 +345,8 @@ public final class GuidedDebugPresenter implements GuidedDebugPanel.Actions, Gui
         if (step == null || last == null || last.status() != GuidedDebugClient.Status.RESOLVED) return; // só identidade comprovada
         try {
             service.decideTarget(automationId, step.id(), TargetDecision.Kind.CONFIRMED, actor, basis(step, last));
-            journal.add(new Entry(step.id().value().toString(), clock.instant(), "DECISION", "CONFIRMED", last.identitySource().name(), List.of(), "", List.of(),
-                    actor.name()));
+            journal.add(new GuidedDebugRecord.Entry(step.id(), clock.instant(), GuidedDebugRecord.Kind.DECISION, "CONFIRMED", last.identitySource().name(),
+                    last.reasons(), "", List.of(), actor));
         } catch (RuntimeException e) {
             show(stepCard(step, Badge.REVIEW, problem(e), List.of(), candidatesOf(last), true));
             return;
@@ -361,8 +364,8 @@ public final class GuidedDebugPresenter implements GuidedDebugPanel.Actions, Gui
             try {
                 service.decideTarget(automationId, step.id(), TargetDecision.Kind.REJECTED, actor, last == null ? TargetDecision.Basis.notInspected()
                         : basis(step, last));
-                journal.add(new Entry(step.id().value().toString(), clock.instant(), "DECISION", "REJECTED", last == null ? "NONE"
-                        : last.identitySource().name(), List.of(), "", List.of(), actor.name()));
+                journal.add(new GuidedDebugRecord.Entry(step.id(), clock.instant(), GuidedDebugRecord.Kind.DECISION, "REJECTED", last == null ? "NONE"
+                        : last.identitySource().name(), last == null ? List.of() : last.reasons(), "", List.of(), actor));
             } catch (RuntimeException e) {
                 show(stepCard(step, Badge.REVIEW, problem(e), List.of(), candidatesOf(last), false));
                 return;
@@ -462,8 +465,8 @@ public final class GuidedDebugPresenter implements GuidedDebugPanel.Actions, Gui
         TargetDecision.Basis basis = new TargetDecision.Basis("TARGET_ID", "SELECTED_IN_BROWSER", codes(p.notes()), p.observedAt(), location(step));
         try {
             service.replaceTarget(automationId, step.id(), p.element(), actor, basis);
-            journal.add(new Entry(step.id().value().toString(), clock.instant(), "CORRECTION", "SELECTED_IN_BROWSER", "TARGET_ID", codes(p.notes()), "", List.of(),
-                    actor.name()));
+            journal.add(new GuidedDebugRecord.Entry(step.id(), clock.instant(), GuidedDebugRecord.Kind.CORRECTION, "SELECTED_IN_BROWSER", "TARGET_ID",
+                    codes(p.notes()), "", List.of(), actor));
         } catch (RuntimeException e) {
             correcting(step, problem(e));
             return;
@@ -516,8 +519,8 @@ public final class GuidedDebugPresenter implements GuidedDebugPanel.Actions, Gui
             if (err != null) {
                 text = failure(err);
             } else {
-                journal.add(new Entry(id.value().toString(), r.observedAt() == null ? clock.instant() : r.observedAt(), "PROBE", r.status().name(), "",
-                        r.reasons(), r.performed() ? "PERFORMED" : "NOT_PERFORMED", List.of(), actor.name()));
+                journal.add(new GuidedDebugRecord.Entry(id, r.observedAt() == null ? clock.instant() : r.observedAt(), GuidedDebugRecord.Kind.PROBE,
+                        r.status().name(), "", r.reasons(), r.performed() ? "PERFORMED" : "NOT_PERFORMED", List.of(), actor));
                 text = (r.performed() ? "Operação efetuada no laboratório" : "Operação NÃO efetuada")
                         + (r.reasons().isEmpty() ? "" : " (" + String.join(", ", r.reasons().stream().map(GuidedDebugPresenter::probeReason).toList()) + ")")
                         + ". Página mudou: " + (r.domChanged() || r.navigated() ? "sim" : "não")
