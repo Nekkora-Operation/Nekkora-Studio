@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>com.nekkora</groupId>
+    <artifactId>nekkora-studio-parent</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+  </parent>
+
+  <artifactId>nekkora-studio-guided</artifactId>
+  <name>Nekkora Studio Guided Debug</name>
+  <description>STUDIO-009: plano intermediário do debug guiado — projeção determinística, sem valores, das etapas, alvos,
+    contexto, incertezas e critérios de verificação de uma automação. Java puro: sem Swing, sem navegador, sem disco, sem
+    rede. Não executa nada e não certifica execução.</description>
+
+  <dependencies>
+    <dependency>
+      <groupId>com.nekkora</groupId>
+      <artifactId>nekkora-studio-domain</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.nekkora</groupId>
+      <artifactId>nekkora-studio-validation</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.nekkora</groupId>
+      <artifactId>nekkora-studio-semantics</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <!-- só nos testes: JSON estrito do Studio para ler o plano serializado e o schema -->
+      <groupId>com.nekkora</groupId>
+      <artifactId>nekkora-studio-bridge</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+</project>

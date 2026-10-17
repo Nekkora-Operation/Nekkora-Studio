@@ -1,0 +1,180 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nekkora.dev/contracts/nekkora-studio/guided-debug-plan/1.0.0",
+  "description": "STUDIO-009 G1: plano intermediário do debug guiado. Projeção determinística do modelo, sem valores, nomes, finalidades, apelidos de credencial nem chaves de correlação. Não executa e não certifica execução.",
+  "$ref": "#/$defs/Plan",
+  "$defs": {
+    "Uuid": {"type": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"},
+    "Plan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "version", "automationId", "modelVersion", "automationRevision", "planRevision", "staticValidation", "summary", "variables", "steps", "exclusions"],
+      "properties": {
+        "schema": {"const": "nekkora-studio/guided-debug-plan"},
+        "version": {"const": "1.0.0"},
+        "automationId": {"$ref": "#/$defs/Uuid"},
+        "modelVersion": {"enum": ["1.0.0", "1.1.0"]},
+        "automationRevision": {"type": "integer", "minimum": 0},
+        "planRevision": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+        "staticValidation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["rules", "status", "meaning"],
+          "properties": {
+            "rules": {"enum": ["nekkora-validation-rules/1.0.0", "nekkora-validation-rules/1.1.0"]},
+            "status": {"enum": ["INCOMPLETE", "NOT_FULLY_ASSESSABLE", "NO_STATIC_BLOCKERS"]},
+            "meaning": {"const": "STATIC_ONLY"}
+          }
+        },
+        "summary": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["steps", "inspectTarget", "noTargetRequired", "targetMissing", "variables"],
+          "properties": {
+            "steps": {"type": "integer", "minimum": 0},
+            "inspectTarget": {"type": "integer", "minimum": 0},
+            "noTargetRequired": {"type": "integer", "minimum": 0},
+            "targetMissing": {"type": "integer", "minimum": 0},
+            "variables": {"type": "integer", "minimum": 0}
+          }
+        },
+        "variables": {"type": "array", "items": {"$ref": "#/$defs/Variable"}},
+        "steps": {"type": "array", "items": {"$ref": "#/$defs/Step"}},
+        "exclusions": {
+          "type": "array",
+          "items": {"enum": ["LITERAL_VALUES", "CONSTANT_VALUES", "CREDENTIAL_ALIASES", "PURPOSES", "NAMES_AND_DESCRIPTIONS", "COMMENTS", "CORRELATION_KEYS", "RUNTIME_VALUES", "RUNTIME_RESULTS"]}
+        }
+      }
+    },
+    "Variable": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["variableId", "name", "technicalType", "semanticType", "semanticStatus", "sensitivity", "origin", "producerStepId"],
+      "properties": {
+        "variableId": {"$ref": "#/$defs/Uuid"},
+        "name": {"type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_.-]{0,63}$"},
+        "technicalType": {"enum": ["STRING", "INTEGER", "DECIMAL", "BOOLEAN", "DATE"]},
+        "semanticType": {"enum": ["UNSPECIFIED", "FREE_TEXT", "IDENTIFIER", "BRAZILIAN_CPF", "EMAIL", "CURRENCY", "PERCENTAGE", "DATE_ISO"]},
+        "semanticStatus": {"enum": ["UNSPECIFIED", "PROPOSED_UNCONFIRMED", "USER_CONFIRMED"]},
+        "sensitivity": {"enum": ["PUBLIC", "INTERNAL", "PERSONAL_DATA", "SECRET"]},
+        "origin": {"enum": ["INPUT", "CONSTANT", "STEP_OUTPUT", "UNBOUND"]},
+        "producerStepId": {"anyOf": [{"type": "null"}, {"$ref": "#/$defs/Uuid"}]}
+      }
+    },
+    "Step": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["stepId", "sessionId", "position", "origin", "intent", "target", "context", "applicability", "criteria", "uncertainties", "staticFindings", "semanticUncertainties"],
+      "properties": {
+        "stepId": {"$ref": "#/$defs/Uuid"},
+        "sessionId": {"$ref": "#/$defs/Uuid"},
+        "position": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["session", "step"],
+          "properties": {"session": {"type": "integer", "minimum": 1}, "step": {"type": "integer", "minimum": 1}}
+        },
+        "origin": {"enum": ["MANUAL", "RECORDED", "IMPORTED", "GENERATED"]},
+        "intent": {"$ref": "#/$defs/Intent"},
+        "target": {"anyOf": [{"type": "null"}, {"$ref": "#/$defs/Target"}]},
+        "context": {"anyOf": [{"type": "null"}, {"$ref": "#/$defs/Context"}]},
+        "applicability": {"enum": ["INSPECT_TARGET", "NO_TARGET_REQUIRED", "TARGET_MISSING"]},
+        "criteria": {
+          "type": "array",
+          "items": {"enum": ["CONTEXT_AUTHORIZED", "TARGET_IDENTITY_RESOLVED", "TARGET_UNIQUE", "TARGET_VISIBLE", "TARGET_ENABLED", "TARGET_EDITABLE", "TARGET_KIND_MATCHES_ACTION", "FRAME_CHAIN_REACHABLE", "SHADOW_SCOPE_REACHABLE"]}
+        },
+        "uncertainties": {
+          "type": "array",
+          "items": {"enum": ["NO_TARGET_REFERENCE", "IDENTITY_FROM_DESCRIPTOR_ONLY", "NO_VALIDATED_LOCATOR", "MANUAL_LOCATORS_UNVERIFIED", "ACTION_KIND_UNUSUAL", "TARGET_SENSITIVE", "TARGET_IN_FRAME", "TARGET_IN_SHADOW_ROOT", "VALUE_WITHHELD", "STATIC_BLOCKER"]}
+        },
+        "staticFindings": {"type": "array", "items": {"type": "string", "pattern": "^[A-Z][A-Z0-9_]*$"}},
+        "semanticUncertainties": {"type": "array", "items": {"type": "string", "pattern": "^[A-Z][A-Z0-9_]*$"}}
+      }
+    },
+    "Intent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["actionType", "targetRequirement", "value", "variableId", "variableName", "key", "optionDeclared"],
+      "properties": {
+        "actionType": {"enum": ["CLICK", "FILL", "SELECT_OPTION", "CHECK", "UNCHECK", "PRESS_KEY", "NAVIGATE", "WAIT_FOR", "OBSERVE", "UNKNOWN"]},
+        "targetRequirement": {"enum": ["EXPECTED", "OPTIONAL", "NONE"]},
+        "value": {"enum": ["NONE", "LITERAL", "VARIABLE", "CREDENTIAL"]},
+        "variableId": {"anyOf": [{"type": "null"}, {"$ref": "#/$defs/Uuid"}]},
+        "variableName": {"anyOf": [{"type": "null"}, {"type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_.-]{0,63}$"}]},
+        "key": {"anyOf": [{"type": "null"}, {"enum": ["Enter", "Tab", "Escape"]}]},
+        "optionDeclared": {"type": "boolean"}
+      }
+    },
+    "Target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["identitySource", "state", "kind", "tag", "name", "sensitive", "locators", "preferredLocator", "manualLocators", "accessPath", "context"],
+      "properties": {
+        "identitySource": {"enum": ["TARGET_ID", "DESCRIPTOR"]},
+        "state": {"enum": ["AS_CAPTURED", "PREFERRED_LOCATOR_CHANGED"]},
+        "kind": {"type": "string", "pattern": "^[A-Z][A-Z0-9_]*$"},
+        "tag": {"type": "string", "maxLength": 64},
+        "name": {"type": "string", "maxLength": 200},
+        "sensitive": {"type": "boolean"},
+        "locators": {"type": "array", "maxItems": 5, "items": {"$ref": "#/$defs/Locator"}},
+        "preferredLocator": {"type": "integer", "minimum": -1, "maximum": 4},
+        "manualLocators": {"type": "array", "items": {"$ref": "#/$defs/ManualLocator"}},
+        "accessPath": {"type": "array", "maxItems": 12, "items": {"$ref": "#/$defs/PathStep"}},
+        "context": {"type": "array", "items": {"$ref": "#/$defs/Anchor"}}
+      }
+    },
+    "Locator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["index", "strategy", "description", "expression", "stability", "matchCountAtCapture", "validatedAtCapture"],
+      "properties": {
+        "index": {"type": "integer", "minimum": 0, "maximum": 4},
+        "strategy": {"enum": ["TEST_ATTRIBUTE", "ID", "NAME", "LABEL", "ROLE_NAME", "CONTEXTUAL", "ROW_CONTEXT", "ATTRIBUTE", "TEXT", "XPATH_RELATIVE", "POSITIONAL"]},
+        "description": {"type": "string", "maxLength": 500},
+        "expression": {"type": "string", "maxLength": 500},
+        "stability": {"enum": ["OBSERVED_STABLE", "HEURISTIC_STABLE", "UNKNOWN", "HEURISTIC_UNSTABLE", "OBSERVED_UNSTABLE"]},
+        "matchCountAtCapture": {"type": "integer", "minimum": 0},
+        "validatedAtCapture": {"type": "boolean"}
+      }
+    },
+    "ManualLocator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["syntax", "expression", "verification"],
+      "properties": {
+        "syntax": {"enum": ["CSS", "XPATH"]},
+        "expression": {"type": "string", "minLength": 1, "maxLength": 500},
+        "verification": {"const": "NOT_VERIFIED"}
+      }
+    },
+    "PathStep": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "label"],
+      "properties": {
+        "type": {"enum": ["MAIN_DOCUMENT", "IFRAME", "SHADOW_ROOT", "ELEMENT"]},
+        "label": {"type": "string", "maxLength": 200}
+      }
+    },
+    "Anchor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["relation", "kind", "name"],
+      "properties": {
+        "relation": {"type": "string", "pattern": "^[A-Z][A-Z0-9_]*$"},
+        "kind": {"type": "string", "pattern": "^[A-Z][A-Z0-9_]*$"},
+        "name": {"type": "string", "maxLength": 200}
+      }
+    },
+    "Context": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["application", "screenTitle", "location"],
+      "properties": {
+        "application": {"type": "string", "maxLength": 200},
+        "screenTitle": {"type": "string", "maxLength": 200},
+        "location": {"type": "string", "maxLength": 2048}
+      }
+    }
+  }
+}

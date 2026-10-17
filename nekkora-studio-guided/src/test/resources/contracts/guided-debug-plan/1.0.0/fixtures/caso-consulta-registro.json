@@ -1,0 +1,257 @@
+{
+  "schema": "nekkora-studio/guided-debug-plan",
+  "version": "1.0.0",
+  "automationId": "00000000-0000-4000-8000-000000000001",
+  "modelVersion": "1.1.0",
+  "automationRevision": 6,
+  "planRevision": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+  "staticValidation": {
+    "rules": "nekkora-validation-rules/1.1.0",
+    "status": "NOT_FULLY_ASSESSABLE",
+    "meaning": "STATIC_ONLY"
+  },
+  "summary": {
+    "steps": 4,
+    "inspectTarget": 3,
+    "noTargetRequired": 1,
+    "targetMissing": 0,
+    "variables": 1
+  },
+  "variables": [
+    {
+      "variableId": "00000000-0000-4000-8000-000000000002",
+      "name": "registro.codigo",
+      "technicalType": "STRING",
+      "semanticType": "IDENTIFIER",
+      "semanticStatus": "USER_CONFIRMED",
+      "sensitivity": "INTERNAL",
+      "origin": "INPUT",
+      "producerStepId": null
+    }
+  ],
+  "steps": [
+    {
+      "stepId": "00000000-0000-4000-8000-000000000003",
+      "sessionId": "00000000-0000-4000-8000-000000000004",
+      "position": {
+        "session": 1,
+        "step": 1
+      },
+      "origin": "MANUAL",
+      "intent": {
+        "actionType": "NAVIGATE",
+        "targetRequirement": "NONE",
+        "value": "LITERAL",
+        "variableId": null,
+        "variableName": null,
+        "key": null,
+        "optionDeclared": false
+      },
+      "target": null,
+      "context": {
+        "application": "Navegador",
+        "screenTitle": "Consulta de registro",
+        "location": "http://127.0.0.1:8765/studio009/{…}"
+      },
+      "applicability": "NO_TARGET_REQUIRED",
+      "criteria": [],
+      "uncertainties": ["VALUE_WITHHELD"],
+      "staticFindings": [],
+      "semanticUncertainties": []
+    },
+    {
+      "stepId": "00000000-0000-4000-8000-000000000005",
+      "sessionId": "00000000-0000-4000-8000-000000000004",
+      "position": {
+        "session": 1,
+        "step": 2
+      },
+      "origin": "RECORDED",
+      "intent": {
+        "actionType": "FILL",
+        "targetRequirement": "EXPECTED",
+        "value": "VARIABLE",
+        "variableId": "00000000-0000-4000-8000-000000000002",
+        "variableName": "registro.codigo",
+        "key": null,
+        "optionDeclared": false
+      },
+      "target": {
+        "identitySource": "TARGET_ID",
+        "state": "AS_CAPTURED",
+        "kind": "SEARCH_INPUT",
+        "tag": "input",
+        "name": "Código do registro",
+        "sensitive": false,
+        "locators": [
+          {
+            "index": 0,
+            "strategy": "ID",
+            "description": "",
+            "expression": "#registro-codigo",
+            "stability": "HEURISTIC_STABLE",
+            "matchCountAtCapture": 1,
+            "validatedAtCapture": true
+          },
+          {
+            "index": 1,
+            "strategy": "POSITIONAL",
+            "description": "",
+            "expression": "main > form > input:nth-child(2)",
+            "stability": "HEURISTIC_UNSTABLE",
+            "matchCountAtCapture": 1,
+            "validatedAtCapture": true
+          }
+        ],
+        "preferredLocator": 0,
+        "manualLocators": [],
+        "accessPath": [
+          {
+            "type": "MAIN_DOCUMENT",
+            "label": "documento principal"
+          }
+        ],
+        "context": [
+          {
+            "relation": "IN_FORM",
+            "kind": "FORM",
+            "name": "Consulta"
+          }
+        ]
+      },
+      "context": {
+        "application": "Navegador",
+        "screenTitle": "Consulta de registro",
+        "location": "http://127.0.0.1:8765/studio009/{…}"
+      },
+      "applicability": "INSPECT_TARGET",
+      "criteria": ["CONTEXT_AUTHORIZED", "TARGET_IDENTITY_RESOLVED", "TARGET_UNIQUE", "TARGET_VISIBLE", "TARGET_ENABLED", "TARGET_EDITABLE", "TARGET_KIND_MATCHES_ACTION"],
+      "uncertainties": [],
+      "staticFindings": ["LOCATOR_VALIDATED_AT_CAPTURE", "INPUT_VALUE_NOT_AVAILABLE"],
+      "semanticUncertainties": ["INPUT_VALUE_UNKNOWN"]
+    },
+    {
+      "stepId": "00000000-0000-4000-8000-000000000006",
+      "sessionId": "00000000-0000-4000-8000-000000000004",
+      "position": {
+        "session": 1,
+        "step": 3
+      },
+      "origin": "RECORDED",
+      "intent": {
+        "actionType": "CLICK",
+        "targetRequirement": "EXPECTED",
+        "value": "NONE",
+        "variableId": null,
+        "variableName": null,
+        "key": null,
+        "optionDeclared": false
+      },
+      "target": {
+        "identitySource": "TARGET_ID",
+        "state": "AS_CAPTURED",
+        "kind": "BUTTON",
+        "tag": "button",
+        "name": "Consultar",
+        "sensitive": false,
+        "locators": [
+          {
+            "index": 0,
+            "strategy": "TEST_ATTRIBUTE",
+            "description": "",
+            "expression": "[data-testid=\"consultar\"]",
+            "stability": "HEURISTIC_STABLE",
+            "matchCountAtCapture": 1,
+            "validatedAtCapture": true
+          },
+          {
+            "index": 1,
+            "strategy": "POSITIONAL",
+            "description": "",
+            "expression": "main > form > button:nth-child(2)",
+            "stability": "HEURISTIC_UNSTABLE",
+            "matchCountAtCapture": 1,
+            "validatedAtCapture": true
+          }
+        ],
+        "preferredLocator": 0,
+        "manualLocators": [],
+        "accessPath": [
+          {
+            "type": "MAIN_DOCUMENT",
+            "label": "documento principal"
+          }
+        ],
+        "context": [
+          {
+            "relation": "IN_FORM",
+            "kind": "FORM",
+            "name": "Consulta"
+          }
+        ]
+      },
+      "context": {
+        "application": "Navegador",
+        "screenTitle": "Consulta de registro",
+        "location": "http://127.0.0.1:8765/studio009/{…}"
+      },
+      "applicability": "INSPECT_TARGET",
+      "criteria": ["CONTEXT_AUTHORIZED", "TARGET_IDENTITY_RESOLVED", "TARGET_UNIQUE", "TARGET_VISIBLE", "TARGET_ENABLED"],
+      "uncertainties": [],
+      "staticFindings": ["LOCATOR_VALIDATED_AT_CAPTURE"],
+      "semanticUncertainties": []
+    },
+    {
+      "stepId": "00000000-0000-4000-8000-000000000007",
+      "sessionId": "00000000-0000-4000-8000-000000000004",
+      "position": {
+        "session": 1,
+        "step": 4
+      },
+      "origin": "MANUAL",
+      "intent": {
+        "actionType": "WAIT_FOR",
+        "targetRequirement": "OPTIONAL",
+        "value": "NONE",
+        "variableId": null,
+        "variableName": null,
+        "key": null,
+        "optionDeclared": false
+      },
+      "target": {
+        "identitySource": "DESCRIPTOR",
+        "state": "AS_CAPTURED",
+        "kind": "STATUS",
+        "tag": "div",
+        "name": "Resultado da consulta",
+        "sensitive": false,
+        "locators": [
+          {
+            "index": 0,
+            "strategy": "ROLE_NAME",
+            "description": "",
+            "expression": "[role=\"status\"]",
+            "stability": "UNKNOWN",
+            "matchCountAtCapture": 2,
+            "validatedAtCapture": false
+          }
+        ],
+        "preferredLocator": -1,
+        "manualLocators": [],
+        "accessPath": [],
+        "context": []
+      },
+      "context": {
+        "application": "Navegador",
+        "screenTitle": "Consulta de registro",
+        "location": "http://127.0.0.1:8765/studio009/{…}"
+      },
+      "applicability": "INSPECT_TARGET",
+      "criteria": ["CONTEXT_AUTHORIZED", "TARGET_IDENTITY_RESOLVED", "TARGET_UNIQUE", "TARGET_VISIBLE"],
+      "uncertainties": ["IDENTITY_FROM_DESCRIPTOR_ONLY", "NO_VALIDATED_LOCATOR"],
+      "staticFindings": ["WAIT_CONDITION_NOT_MODELED", "LOCATOR_MULTIPLE_MATCHES"],
+      "semanticUncertainties": []
+    }
+  ],
+  "exclusions": ["LITERAL_VALUES", "CONSTANT_VALUES", "CREDENTIAL_ALIASES", "PURPOSES", "NAMES_AND_DESCRIPTIONS", "COMMENTS", "CORRELATION_KEYS", "RUNTIME_VALUES", "RUNTIME_RESULTS"]
+}
