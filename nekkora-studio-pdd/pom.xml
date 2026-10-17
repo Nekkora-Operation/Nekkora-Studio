@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>com.nekkora</groupId>
+    <artifactId>nekkora-studio-parent</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+  </parent>
+
+  <artifactId>nekkora-studio-pdd</artifactId>
+  <name>Nekkora Studio Visual PDD</name>
+  <description>STUDIO-010: PDD visual — projeção documental SOMENTE LEITURA da automação, agrupamento em blocos,
+    instruções determinísticas e seguras, rascunho revisável (nekkora-studio/pdd-visual/1.0.0), imagens já sanitizadas
+    e exportação PDF local versionada. Não altera a automação e não executa nada.</description>
+
+  <dependencies>
+    <dependency>
+      <groupId>com.nekkora</groupId>
+      <artifactId>nekkora-studio-domain</artifactId>
+    </dependency>
+    <dependency>
+      <!-- JSON estrito do Studio (rascunho e manifesto) -->
+      <groupId>com.nekkora</groupId>
+      <artifactId>nekkora-studio-bridge</artifactId>
+    </dependency>
+    <dependency>
+      <!-- G7: PDF local (Apache-2.0). Isolado neste módulo. -->
+      <groupId>org.apache.pdfbox</groupId>
+      <artifactId>pdfbox</artifactId>
+      <version>3.0.8</version>
+    </dependency>
+    <dependency>
+      <!-- só nos testes: as fontes Inter do design system (o app as injeta no renderizador) -->
+      <groupId>com.nekkora</groupId>
+      <artifactId>nekkora-swing-ui</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+</project>

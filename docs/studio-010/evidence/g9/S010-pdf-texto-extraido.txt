@@ -1,0 +1,26 @@
+Processo documentado (PDD visual)
+Versão v001 · 17/10/2026 · Nekkora Studio
+Gerado pelo Nekkora Studio a partir das sessões e etapas mapeadas. As imagens são capturas do navegador
+sanitizadas: só rótulos de interface aparecem; campos e o restante da tela foram ocultados. Este documento descreve
+o processo mapeado e não comprova resultado de negócio.
+1. Autenticação
+Realizar autenticação
+1 2
+3
+Ações observadas na gravação
+1. Informar o campo "Usuário"
+2. Informar a senha
+3. Selecionar "Entrar"
+2. Consulta
+Preencher os campos e selecionar "Consultar"
+1
+2
+Ações observadas na gravação
+1. Informar o campo "Código do registro"
+2. Selecionar "Consultar"
+3. Resultado
+Observar a tela exibida
+Etapas declaradas no Studio
+1. Observar a tela exibida
+     (marcador indisponível)
+Página 1 de 1Nekkora Studio · PDD visual · descreve o processo mapeado; não comprova resultado de negócio.

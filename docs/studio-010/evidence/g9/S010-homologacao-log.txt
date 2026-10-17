@@ -1,0 +1,82 @@
+Tela: java.awt.Rectangle[x=0,y=0,width=1920,height=1032] · java 21.0.12
+Operador: Claude como AGENTE DE TESTE (revisões TEST_AGENT; nenhuma confirmação humana) · ator do Studio: TEST_AGENT
+Native Host instalado pelo script oficial (install-host.ps1)
+Chrome for Testing: 155.0.8059.39
+OK    Conexão autenticada Studio ⇄ host ⇄ extensão
+  etapas: [Preencher campo Usuário, Preencher campo Senha, Clicar no botão Entrar] · [Preencher campo Código do registro, Clicar no botão Consultar] · [Observar o resultado]
+OK    R1: Autenticação = preencher, preencher, clicar; Consulta = preencher, clicar; Resultado = observar (declarada)
+OK    R1: nenhum valor digitado no modelo
+captura S010-R1-mapeamento.png (1008x991)
+  itens: [1. Sessão 1 (revisar),     Preencher os campos e selecionar “Entrar”, 2. Consulta,     Preencher os campos e selecionar “Consultar”, 3. Resultado,     Observar a tela exibida]
+OK    P1: seções na ordem das sessões, um bloco por tela
+OK    P1: "Autenticação" (fora do vocabulário) fica para revisão e bloqueia a exportação
+captura S010-P1-pdd-aberto.png (1244x811)
+OK    P2: títulos revisados pelo AGENTE DE TESTE; exportação liberada
+OK    P2: desfazer volta o título derivado
+OK    P2: refazer reaplica a revisão
+OK    P2: título com valor/dígitos recusado pela política de texto
+  No Chrome, deixe a aba do laboratório no estado desta etapa e pressione Alt+Shift+K. Nada é clicado ou enviado; só rótulos de interface aparecem na imagem.
+  Imagem sanitizada associada: 3 rótulo(s) de interface visíveis; 3 de 3 marcador(es) posicionados. Campos e o restante da tela ficam ocultos.
+captura S010-P3-login-capturado.png (1244x811)
+  No Chrome, deixe a aba do laboratório no estado desta etapa e pressione Alt+Shift+K. Nada é clicado ou enviado; só rótulos de interface aparecem na imagem.
+  Imagem sanitizada associada: 3 rótulo(s) de interface visíveis; 2 de 2 marcador(es) posicionados. Campos e o restante da tela ficam ocultos.
+  No Chrome, deixe a aba do laboratório no estado desta etapa e pressione Alt+Shift+K. Nada é clicado ou enviado; só rótulos de interface aparecem na imagem.
+  Imagem sanitizada associada: 2 rótulo(s) de interface visíveis; 0 de 1 marcador(es) posicionados. Campos e o restante da tela ficam ocultos.
+captura S010-P3-tres-capturas.png (1244x811)
+OK    P3: três capturas reais do Chrome (login, consulta, resultado) aceitas pela 4ª barreira
+OK    P3: imagens diferentes (uma por tela; nenhuma reaproveitada)
+  bloco 1: 1024×849 dpr 1.0 · 3 rótulo(s) · marcadores [PLACED, PLACED, PLACED] · limitações []
+  bloco 2: 1024×849 dpr 1.0 · 3 rótulo(s) · marcadores [PLACED, PLACED] · limitações []
+  bloco 3: 1024×849 dpr 1.0 · 2 rótulo(s) · marcadores [OMITTED] · limitações []
+OK    P3: nenhum pixel do texto sensível (título, nota, valores, tabela do resultado) nas imagens guardadas
+OK    P3: login com 3 marcadores posicionados (Usuário, Senha, Entrar)
+OK    P4: aba fora do laboratório nunca é oferecida para captura
+OK    P4: atalho em OUTRA aba → captura recusada (TAB_MISMATCH), imagem anterior mantida
+OK    P4: cancelar a captura armada: nada capturado
+OK    P5: v001 e v002 lado a lado; v001 intacto
+captura S010-P5-exportado.png (1244x811)
+OK    P5: a automação não mudou com o PDD (rascunho, capturas, exportação)
+OK    P6: seções na ordem original
+OK    P6: texto pesquisável: Realizar autenticação
+OK    P6: texto pesquisável: 1. Informar o campo "Usuário"
+OK    P6: texto pesquisável: 2. Informar a senha
+OK    P6: texto pesquisável: 3. Selecionar "Entrar"
+OK    P6: texto pesquisável: 1. Informar o campo "Código do registro"
+OK    P6: texto pesquisável: 2. Selecionar "Consultar"
+OK    P6: texto pesquisável: Observar a tela exibida
+OK    P6: texto pesquisável: Etapas declaradas no Studio
+OK    P6: texto pesquisável: não comprova resultado de negócio
+OK    P6: PDF sem a sentinela nº 1
+OK    P6: PDF sem a sentinela nº 2
+OK    P6: PDF sem a sentinela nº 3
+OK    P6: PDF sem a sentinela nº 4
+OK    P6: PDF sem a sentinela nº 5
+OK    P6: PDF sem a sentinela nº 6
+OK    P6: PDF sem a sentinela nº 7
+OK    P6: PDF sem a sentinela nº 8
+OK    P6: PDF sem a sentinela nº 9
+OK    P6: PDF sem a sentinela nº 10
+OK    P6: PDF sem a sentinela nº 11
+OK    P6: PDF sem a sentinela nº 12
+OK    P6: PDF sem a sentinela nº 13
+OK    P6: metadados controlados (título fixo, sem autor/assunto/palavras-chave/XMP)
+  PDF: 1 página(s), 3 imagem(ns)
+OK    P6: 3 imagens reais sanitizadas no PDF
+OK    P6: nenhuma cor-sentinela nas páginas renderizadas
+OK    P6: manifesto sem textos nem valores
+OK    P7: automação alterada → aviso e exportação bloqueada até atualizar
+OK    P7: depois de atualizar, o último PDF é indicado como desatualizado
+OK    P7: revisões e capturas dos blocos que não mudaram foram mantidas
+captura S010-P8-tema-sakura-dark.png (1244x811)
+captura S010-P8-tema-midnight-dark.png (1244x811)
+captura S010-P8-tema-porcelain-light.png (1244x811)
+captura S010-P8-tema-sage-light.png (1244x811)
+captura S010-P8-1366x768.png (1310x719)
+OK    P8: em 1366×768 as ações (Exportar, Desfazer, Capturar) ficam visíveis dentro da janela
+OK    P9: arquivos do rascunho só com nome técnico (rascunho.json, <sha>.png)
+OK    P9 rascunho: sem valores digitados e sem conteúdo de negócio do laboratório
+OK    P9 manifesto: sem valores digitados e sem conteúdo de negócio do laboratório
+OK    P9 log da homologação: sem valores digitados e sem conteúdo de negócio do laboratório
+OK    P9 logs do host: sem valores digitados e sem conteúdo de negócio do laboratório
+OK    P9: nenhuma evidência PNG desta rodada com a cor-sentinela (sem pixel bruto da página)
+RESULTADO: 55 verificações, 0 falha(s)

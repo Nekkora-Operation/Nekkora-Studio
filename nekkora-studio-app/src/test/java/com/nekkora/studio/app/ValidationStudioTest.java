@@ -342,7 +342,8 @@ class ValidationStudioTest {
             return out;
         });
         // STUDIO-009 (D-S009-15): o menu Automação ganhou "Depurar no navegador…" (Ctrl+Shift+D); a validação continua no lugar
-        assertEquals(List.of("Automação", "Nova sessão", "Nova etapa", "Validar automação", "Depurar no navegador…"), menu);
+        // STUDIO-010 (D-S010-13): e o submenu "Gerar documentação" (→ PDD visual…)
+        assertEquals(List.of("Automação", "Nova sessão", "Nova etapa", "Validar automação", "Depurar no navegador…", "Gerar documentação"), menu);
         var key = studio.view().actions().get(StudioActions.VALIDATE).shortcutKey();
         assertEquals(javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_V, com.nekkora.ui.action.NekkoraKeys.menuMask()
                 | java.awt.event.InputEvent.SHIFT_DOWN_MASK), key);

@@ -394,6 +394,9 @@ public final class StudioView {
         automation.separator();
         automation.item(actions.get(StudioActions.VALIDATE));
         automation.item(actions.get(StudioActions.GUIDED_DEBUG)); // STUDIO-009
+        com.nekkora.ui.navigation.NekkoraMenu documentation = new com.nekkora.ui.navigation.NekkoraMenu("Gerar documentação"); // STUDIO-010
+        documentation.item(actions.get(StudioActions.VISUAL_PDD));
+        automation.add(documentation);
         menuBar = new javax.swing.JMenuBar();
         menuBar.add(file);
         menuBar.add(automation);
@@ -673,6 +676,7 @@ public final class StudioView {
         actions.get(StudioActions.VALIDATE).setEnabled(a.isPresent());
         actions.get(StudioActions.VARIABLES).setEnabled(a.isPresent());
         actions.get(StudioActions.GUIDED_DEBUG).setEnabled(a.map(x -> x.stepCount() > 0).orElse(false));
+        actions.get(StudioActions.VISUAL_PDD).setEnabled(a.map(x -> x.stepCount() > 0).orElse(false));
         boolean canUndo = a.map(x -> controller.service().canUndo(x.id())).orElse(false);
         boolean canRedo = a.map(x -> controller.service().canRedo(x.id())).orElse(false);
         actions.get(StudioActions.UNDO).setEnabled(canUndo);
