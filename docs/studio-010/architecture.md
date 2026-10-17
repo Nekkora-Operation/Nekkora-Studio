@@ -12,7 +12,7 @@ Automation ─► ProcessProjection (somente leitura, processRevision)
   atualizar)               PddStore  <dataDir>/pdd/<automationId>/rascunho.json + capturas/<sha>.png
                                 │
                                 ▼
-                 PdfRenderer (PDFBox 3.0.5 + Inter) ─► prévia (PDF rasterizado) / PddExporter (vNNN + manifesto)
+                 PdfRenderer (PDFBox 3.0.8 + Inter) ─► prévia (PDF rasterizado) / PddExporter (vNNN + manifesto)
 
 Captura:  PddPresenter ─arm─► Bridge ─► host (PddVisualPrivacy, 3ª barreira) ─► extensão (studio-pdd.js)
           ◄─studio.pdd.captured── (PNG sanitizado + regiões + anotações) ◄── gesto Alt+Shift+K no Chrome

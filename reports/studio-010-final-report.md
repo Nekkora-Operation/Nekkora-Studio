@@ -44,7 +44,7 @@ PRs separados, abertos **sem merge** (o merge é da usuária), extensão primeir
 | G4 | captura sanitizada no laboratório real | `studio-pdd.test.js`, `PddVisualPrivacyTest`, `VisualAndStoreTest`, `Studio010SafeCaptureIT` G4-01..05 (7 testes com G5-01/02) |
 | G5 | marcadores (100%, 150%, rolagem; omitidos com motivo) | IT G4-01, G5-01, G5-02 |
 | G6 | janela de preparação (4 temas, desfazer/refazer, acessibilidade, mudanças detectadas) | `PddUiTest`; homologação P2, P7, P8 |
-| G7 | PDF (PDFBox 3.0.5 + Inter) | `PddPdfTest.pdf`, `variasPaginas`; homologação P6 |
+| G7 | PDF (PDFBox 3.0.8 desde a revisão + Inter) | `PddPdfTest.pdf`, `variasPaginas`; homologação P6 |
 | G8 | versões, manifesto, desatualizado | `PddPdfTest.versoes`, `recusas`, `desatualizado`; homologação P5, P7 |
 | G9 | homologação real integrada **55/55** | [homologation.md](../docs/studio-010/homologation.md) |
 | G10 | documentação | [docs/studio-010](../docs/studio-010/README.md) |
@@ -118,11 +118,10 @@ Na homologação (roteiro e evidências; detalhes em [homologation.md](../docs/s
 | Várias páginas | teste de unidade; homologação real com uma página |
 | Origens reais / sites de clientes | **fora do escopo** (bloqueado por desenho) |
 
-## 8. Pontos que pedem decisão da usuária
+## 8. Decisões da usuária
 
-1. **Permissão `activeTab`** e o atalho `Alt+Shift+K` na extensão (D-S010-07, D-S010-11).
-2. **PDFBox 3.0.5** (Apache-2.0) como dependência nova do Studio (D-S010-12).
-3. **Ajustes em testes de missões anteriores** (D-S010-13): `StudioScopeTest` passa a permitir "PDF" só nos pacotes do PDD; a expectativa do menu Automação (STUDIO-007) inclui "Gerar documentação".
+Aprovadas na revisão final: D-S010-07 e D-S010-11 (`activeTab` + `Alt+Shift+K`), D-S010-12 (PDFBox, atualizado para
+3.0.8) e D-S010-13 (ajustes em testes de missões anteriores, com a exceção estreitada — D-S010-17). Ver §10.
 
 ## 9. Regressão final e PRs
 
@@ -134,3 +133,78 @@ Varredura de privacidade antes de cada push: toda PNG de **todos** os commits da
 - extensão: 3 imagens, 0 ocorrência.
 
 Nenhuma evidência regenerada de missões anteriores entrou em commit.
+
+## 10. Revisão final (R1–R3)
+
+### R1 — identidade da aba na captura (D-S010-15)
+
+**Achado confirmado.** `captureVisibleTab` pega a aba **ativa** da janela, e nada conferia isso entre o gesto e a
+captura. Além disso, `cancel` só valia antes do gesto.
+
+**Correção (`studio-pdd.js`):**
+- a aba armada é conferida no início da preparação, logo antes e logo depois da captura e antes de publicar: ativa na janela do gesto, mesma janela;
+- `chrome.tabs.onActivated`/`onDetached`/`onAttached` invalidam a captura em andamento (ida e volta A→B→A inclusive);
+- divergência → `ACTIVE_TAB_CHANGED` (novo código no contrato), imagem bruta descartada sem decodificar;
+- `cancel` vale com a captura em andamento (`CANCELLED`, nada publicado).
+
+Preservados: `activeTab`, Alt+Shift+K, uso único, só LAB.
+
+**Testes:**
+- 7 de unidade;
+- **5 no Chrome real** (`Studio010SafeCaptureIT` R1-01..05), com abas na **mesma janela** e uma página do laboratório com a thread ocupada, para que a preparação demore de verdade:
+  - troca logo depois do gesto;
+  - troca no meio de uma preparação demorada, seguida de captura limpa na aba original;
+  - gesto numa 2ª aba do laboratório;
+  - ida e volta;
+  - cancelar em andamento.
+
+**Controle negativo** (os mesmos 4 testes de corrida contra o código anterior, Chrome real): **4/4 falham**.
+- Troca de aba: `CAPTURE_DENIED`. Só a concessão do `activeTab` do Chrome protegia; com a outra aba já concedida por um gesto anterior, a captura sairia dela.
+- Ida e volta: a imagem era **publicada**.
+- Cancelar em andamento: era **ignorado**.
+
+Rodadas do IT até ficar estável:
+- 1ª: 11/12 (R1-02 sem demora real: a captura legítima terminou antes da troca);
+- 2ª: 10/12 (a página só ocupava a thread depois do 1º período);
+- 3ª e regressão: 12/12, depois do ajuste da página de teste. O produto não mudou entre essas rodadas.
+
+### R2 — PDFBox 3.0.8 (D-S010-16)
+
+`pdfbox` 3.0.5 → **3.0.8**:
+- `pdfbox-io` e `fontbox` 3.0.8;
+- `commons-logging` 1.3.5 → 1.4.0.
+
+**Nenhuma incompatibilidade.** O que foi verificado:
+- `PddPdfTest` 6/6 cobre:
+  - exportação;
+  - **várias páginas**;
+  - **acentos e pontuação** (teste novo `caracteresEImagemFiel`);
+  - **Inter embutida**;
+  - **imagem no PDF = recorte exato, pixel a pixel, da captura sanitizada**;
+  - **metadados**;
+  - **v001/v002 sem sobrescrever**;
+  - recusas e PDF desatualizado.
+- Homologação real repetida: **55/55**; página renderizada inspecionada (idêntica à da 3.0.5).
+
+### R3 — testes de missões anteriores (D-S010-17)
+
+D-S010-13 está mantida. A exceção do `StudioScopeTest` estava mais larga do que o necessário: numa linha dos pacotes do PDD que contivesse "pdf", a linha inteira era ignorada. Agora:
+- a exceção vale **só** em `app/pdd` e `ui/pdd`;
+- ela retira **só** a palavra "PDF";
+- o resto da linha continua sujeito a todos os termos proibidos.
+
+A expectativa do menu Automação ("Gerar documentação") foi mantida.
+
+### Regressões depois da revisão
+
+| Ambiente | Antes da revisão | Depois |
+|---|---|---|
+| Studio, Windows 11 (`./mvnw clean verify`) | 584/584 | **585/585** (+1 `caracteresEImagemFiel`) |
+| Studio, Linux (contêiner) | 583 + 1 pulado | **584 + 1 pulado** |
+| Extensão, Java | 290 | **290/290** |
+| Extensão, Node | 169 | **176/176** (+7 R1) |
+| Extensão, Chrome real, grupos G1–G8 | 262 | **262/262** |
+| `Studio010SafeCaptureIT` | 7/7 | **12/12** (+5 R1) |
+| Homologação real integrada | 55/55 | **55/55** (PDFBox 3.0.8 + captura com R1) |
+
+**Exemplo:** o PDF da homologação real (v001) foi copiado para `Downloads/Nekkora-PDD-visual-exemplo-v001.pdf`.

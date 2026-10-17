@@ -42,6 +42,10 @@ própria página.
   `nk-pdd-capturar`, permissão `activeTab`). Gesto sem armação, em outra aba, depois de vencer ou com a página mudada:
   nada é capturado (`NOT_ARMED`, `TAB_MISMATCH`, `ARM_EXPIRED`, `PAGE_CHANGED_DURING_CAPTURE`).
 - Ficha do layout antes e depois da captura; diferença → descarte. Dimensões ≠ viewport × DPR → `GEOMETRY_MISMATCH`.
+- **Identidade da aba** (D-S010-15): `captureVisibleTab` pega a aba ativa da janela. A aba armada é conferida no início,
+  logo antes e logo depois da captura e antes de publicar (ativa, mesma janela, nenhuma troca de aba na janela desde o
+  gesto — ida e volta inclusive). Divergência → `ACTIVE_TAB_CHANGED`, imagem bruta descartada sem decodificar.
+- Cancelar vale até a publicação: com a captura em andamento, o resultado é `CANCELLED` e nenhuma imagem sai.
 
 ## Marcadores
 

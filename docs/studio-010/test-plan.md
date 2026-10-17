@@ -17,6 +17,8 @@ Legenda: **U** = teste de unidade/contrato; **IT** = integração no Chrome for 
 | Leitura estrita do rascunho | U `leituraEstrita` |
 | Rastreabilidade bloco ↔ etapas | U `rastreabilidade` |
 | Captura só LAB, só com armação + gesto, uso único | U `studio-pdd.test.js` (armar, gesto sem armação, uso único); IT G4-05; H P4 |
+| Identidade da aba na captura (revisão R1): troca entre o gesto e a captura, durante preparação demorada, durante a captura, ida e volta, 2ª aba do laboratório, aba movida, cancelar em andamento | U `studio-pdd.test.js` (7 testes R1); IT R1-01..05 (abas na mesma janela do Chrome real) |
+| PDFBox 3.0.8 (revisão R2): exportação, paginação, acentos, fontes, imagem fiel, metadados, versões | U `PddPdfTest` (6), incluindo `caracteresEImagemFiel`; homologação real repetida |
 | Aba errada / vencida / cancelada / página mudou / navegação | U `studio-pdd.test.js`; IT G4-04, G4-05; H P4 (TAB_MISMATCH e cancelar) |
 | Sanitização por lista de permissão; campo nunca recebe pixel bruto | U `visual-sanitizer` (3 testes); IT G4-01, G4-02 (sentinelas por classe: pseudo-elemento, fundo, imagem, SVG, canvas, tabela, toast, iframes, shadow, campos), G4-03 (modal) |
 | Verificação de pixels em 4 barreiras | U `studio-pdd.test.js` (SW), `PddVisualPrivacyTest` (6, host), `VisualAndStoreTest.quartaBarreira` (Studio), `PddPdfTest.recusas` (exportação com imagem adulterada) |

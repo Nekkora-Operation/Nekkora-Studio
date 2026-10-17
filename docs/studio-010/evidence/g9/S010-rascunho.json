@@ -1,11 +1,11 @@
 {
   "schema": "nekkora-studio/pdd-visual",
   "version": "1.0.0",
-  "automationId": "88d6c28f-12d9-45d1-851d-ef7352ad257b",
-  "processRevision": "sha256:c22835fe3015f29abdba6267e122aeeb010cf1df1e1e28290c76c435db780c5a",
+  "automationId": "504c69c0-2ed1-4a9f-bc7b-8c8aa4443a9a",
+  "processRevision": "sha256:784a6feebb93a3553745c61a5915ef82226998589d416b42893f27861a57e165",
   "sections": [
     {
-      "sessionId": "a34ed56e-d84f-4cb0-91f9-ee2eb9fcc540",
+      "sessionId": "fd255352-5770-454e-a57e-f4ac6d477b11",
       "number": 1,
       "title": {
         "value": "Autenticação",
@@ -14,8 +14,8 @@
       },
       "blocks": [
         {
-          "blockId": "blk-4979d3420e80dacf",
-          "stepIds": ["b5bb1cff-a85f-417e-817e-6cf4756dc48b", "7696e6a5-75cc-4bb2-bfa1-59d9c9250a75", "de3e636f-7428-4789-9bc9-e25312137263"],
+          "blockId": "blk-7dd2e52bbeac02e1",
+          "stepIds": ["5eab1bd1-59c6-40ee-91d1-440072a08e7a", "8756ed08-5cc6-48a6-8b3d-f74e99c50b7b", "c2f7d6b3-ccff-4282-bddb-aaa90a553c9f"],
           "title": {
             "value": "Realizar autenticação",
             "state": "REVIEWED",
@@ -23,7 +23,7 @@
           },
           "instructions": [
             {
-              "stepId": "b5bb1cff-a85f-417e-817e-6cf4756dc48b",
+              "stepId": "5eab1bd1-59c6-40ee-91d1-440072a08e7a",
               "ordinal": 1,
               "kind": "OBSERVED",
               "text": {
@@ -33,7 +33,7 @@
               }
             },
             {
-              "stepId": "7696e6a5-75cc-4bb2-bfa1-59d9c9250a75",
+              "stepId": "8756ed08-5cc6-48a6-8b3d-f74e99c50b7b",
               "ordinal": 2,
               "kind": "OBSERVED",
               "text": {
@@ -43,7 +43,7 @@
               }
             },
             {
-              "stepId": "de3e636f-7428-4789-9bc9-e25312137263",
+              "stepId": "c2f7d6b3-ccff-4282-bddb-aaa90a553c9f",
               "ordinal": 3,
               "kind": "OBSERVED",
               "text": {
@@ -59,7 +59,7 @@
       ]
     },
     {
-      "sessionId": "8c68510f-96de-479c-8e97-d4b9483b6f71",
+      "sessionId": "a3f1aacc-47cf-471f-af53-48e47757f759",
       "number": 2,
       "title": {
         "value": "Consulta",
@@ -68,8 +68,8 @@
       },
       "blocks": [
         {
-          "blockId": "blk-3d6216c36beead15",
-          "stepIds": ["3317d2e4-64b7-4fcb-bd43-9780c4b77638", "b8147e57-7100-4ff4-bef7-f26c0f44f07b"],
+          "blockId": "blk-a55e805a341a6979",
+          "stepIds": ["b501ce69-507d-4a10-b294-d9846e481a99", "efbacb9d-57cc-478a-b99c-5fad5993026a"],
           "title": {
             "value": "Preencher os campos e selecionar “Consultar”",
             "state": "DERIVED",
@@ -77,7 +77,7 @@
           },
           "instructions": [
             {
-              "stepId": "3317d2e4-64b7-4fcb-bd43-9780c4b77638",
+              "stepId": "b501ce69-507d-4a10-b294-d9846e481a99",
               "ordinal": 1,
               "kind": "OBSERVED",
               "text": {
@@ -87,7 +87,7 @@
               }
             },
             {
-              "stepId": "b8147e57-7100-4ff4-bef7-f26c0f44f07b",
+              "stepId": "efbacb9d-57cc-478a-b99c-5fad5993026a",
               "ordinal": 2,
               "kind": "OBSERVED",
               "text": {
@@ -103,7 +103,7 @@
       ]
     },
     {
-      "sessionId": "ccb17274-3ed2-4fc3-ac16-04cfef417e05",
+      "sessionId": "23f66898-f11f-43dd-b5b8-be87e725e2d4",
       "number": 3,
       "title": {
         "value": "Resultado",
@@ -112,8 +112,8 @@
       },
       "blocks": [
         {
-          "blockId": "blk-23ce6d148839460e",
-          "stepIds": ["2c2fdd65-6829-4587-a43d-7fafc600bff6", "ccc66be4-fe1a-44fc-9f65-22a5352de4ae"],
+          "blockId": "blk-b2f3b318c9449b72",
+          "stepIds": ["3823cb6f-fd5d-4f8f-9491-2d12030a3326", "c48147d0-f3cf-45d1-ae5e-a63affa7c1df"],
           "title": {
             "value": "Observar a tela",
             "state": "DERIVED",
@@ -121,7 +121,7 @@
           },
           "instructions": [
             {
-              "stepId": "2c2fdd65-6829-4587-a43d-7fafc600bff6",
+              "stepId": "3823cb6f-fd5d-4f8f-9491-2d12030a3326",
               "ordinal": 1,
               "kind": "DECLARED",
               "text": {
@@ -131,7 +131,7 @@
               }
             },
             {
-              "stepId": "ccc66be4-fe1a-44fc-9f65-22a5352de4ae",
+              "stepId": "c48147d0-f3cf-45d1-ae5e-a63affa7c1df",
               "ordinal": 2,
               "kind": "DECLARED",
               "text": {
@@ -153,14 +153,14 @@
       "width": 1024,
       "height": 849,
       "devicePixelRatio": 1,
-      "observedAt": "2026-10-17T21:20:56.395Z",
+      "observedAt": "2026-10-17T22:24:56.865Z",
       "pageEpoch": 0,
       "policy": "nekkora-visual/1",
       "screenKey": "tela-cc00b23b2317a71d",
-      "forSteps": ["b5bb1cff-a85f-417e-817e-6cf4756dc48b", "7696e6a5-75cc-4bb2-bfa1-59d9c9250a75", "de3e636f-7428-4789-9bc9-e25312137263"],
+      "forSteps": ["5eab1bd1-59c6-40ee-91d1-440072a08e7a", "8756ed08-5cc6-48a6-8b3d-f74e99c50b7b", "c2f7d6b3-ccff-4282-bddb-aaa90a553c9f"],
       "annotations": [
         {
-          "stepId": "b5bb1cff-a85f-417e-817e-6cf4756dc48b",
+          "stepId": "5eab1bd1-59c6-40ee-91d1-440072a08e7a",
           "status": "PLACED",
           "x": 0.038086,
           "y": 0.1649,
@@ -169,7 +169,7 @@
           "reason": ""
         },
         {
-          "stepId": "7696e6a5-75cc-4bb2-bfa1-59d9c9250a75",
+          "stepId": "8756ed08-5cc6-48a6-8b3d-f74e99c50b7b",
           "status": "PLACED",
           "x": 0.28418,
           "y": 0.1649,
@@ -178,7 +178,7 @@
           "reason": ""
         },
         {
-          "stepId": "de3e636f-7428-4789-9bc9-e25312137263",
+          "stepId": "c2f7d6b3-ccff-4282-bddb-aaa90a553c9f",
           "status": "PLACED",
           "x": 0.530273,
           "y": 0.167256,
@@ -231,14 +231,14 @@
       "width": 1024,
       "height": 849,
       "devicePixelRatio": 1,
-      "observedAt": "2026-10-17T21:21:02.557Z",
+      "observedAt": "2026-10-17T22:25:02.958Z",
       "pageEpoch": 0,
       "policy": "nekkora-visual/1",
       "screenKey": "tela-a21fedd0c57f88ae",
-      "forSteps": ["3317d2e4-64b7-4fcb-bd43-9780c4b77638", "b8147e57-7100-4ff4-bef7-f26c0f44f07b"],
+      "forSteps": ["b501ce69-507d-4a10-b294-d9846e481a99", "efbacb9d-57cc-478a-b99c-5fad5993026a"],
       "annotations": [
         {
-          "stepId": "3317d2e4-64b7-4fcb-bd43-9780c4b77638",
+          "stepId": "b501ce69-507d-4a10-b294-d9846e481a99",
           "status": "PLACED",
           "x": 0.038086,
           "y": 0.125442,
@@ -247,7 +247,7 @@
           "reason": ""
         },
         {
-          "stepId": "b8147e57-7100-4ff4-bef7-f26c0f44f07b",
+          "stepId": "efbacb9d-57cc-478a-b99c-5fad5993026a",
           "status": "PLACED",
           "x": 0.28418,
           "y": 0.127797,

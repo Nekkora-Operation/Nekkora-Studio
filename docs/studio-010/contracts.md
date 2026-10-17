@@ -11,14 +11,15 @@ Esquema: `contracts/studio-bridge.schema.json` da extensão (cópia de teste em
 | Mensagem | Direção | Conteúdo |
 |---|---|---|
 | `studio.pdd.capture.arm` | Studio → extensão | `captureId`, `tabRef` (`t-…`), `leaseMs` (5 000–120 000), `steps[1..32]`: `stepRef`, `targetId` (ou nulo), `descriptor` recuperável já persistido, `actionType`. Resposta `PddArmResult`: `armed`, `duplicate`, `shortcut` (atalho efetivo; vazio se removido) |
-| `studio.pdd.capture.cancel` | Studio → extensão | `captureId`. Resposta `PddCancelResult` |
+| `studio.pdd.capture.cancel` | Studio → extensão | `captureId`. Vale com a captura armada **ou em andamento** (depois do gesto, até a publicação). Resposta `PddCancelResult` |
 | `studio.pdd.captured` | extensão → Studio (evento) | `CAPTURED`: `policy` = `nekkora-visual/1`, `observedAt`, `width`, `height`, `devicePixelRatio` (≥ 0,25), `png` (base64, já sanitizado), `sha256`, `regions` (tipo + retângulo em px do dispositivo), `annotations` (por `stepRef`: `PLACED` + retângulo normalizado, ou `OMITTED` + motivo), `limitations`. `FAILED`: só `captureId` + `code` |
 
 Erro novo: `VISUAL_CAPTURE_NOT_ALLOWED` (origem fora do laboratório). Códigos de falha do evento:
 `NOT_ARMED`, `ARM_EXPIRED`, `TAB_MISMATCH`, `TAB_CLOSED`, `PAGE_CHANGED`, `PAGE_CHANGED_DURING_CAPTURE`,
 `GEOMETRY_MISMATCH`, `SANITIZATION_CHECK_FAILED`, `SANITIZED_IMAGE_TOO_LARGE`, `PERMISSION_REVOKED`, `CAPTURE_BUSY`,
 `CAPTURE_DENIED`, `REGION_OUT_OF_VIEWPORT`, `CARRIER_TOO_LARGE`, `CARRIER_OVERLAPS_FIELD`, `TOO_MANY_REGIONS`,
-`REGION_KIND_UNKNOWN`, `CONTENT_UNAVAILABLE`, `CANCELLED`, `INTERNAL`. Motivos de anotação omitida: `NOT_FOUND`,
+`REGION_KIND_UNKNOWN`, `CONTENT_UNAVAILABLE`, `CANCELLED`, `ACTIVE_TAB_CHANGED` (revisão R1: a aba ativa mudou entre o
+gesto e a publicação), `INTERNAL`. Motivos de anotação omitida: `NOT_FOUND`,
 `AMBIGUOUS`, `IDENTITY_MISMATCH`, `STALE_TARGET`, `SCOPE_UNAVAILABLE`, `INSUFFICIENT_EVIDENCE`, `CONTEXT_UNAVAILABLE`,
 `NODE_NOT_CONNECTED`, `TARGET_OUTSIDE_VIEWPORT`, `TARGET_IN_FRAME`, `NO_TARGET`, `RESOLUTION_FAILED`.
 
