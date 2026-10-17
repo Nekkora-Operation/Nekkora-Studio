@@ -19,7 +19,7 @@ public final class BridgeProtocol {
             "studio.recording.evidence.ack", "studio.recording.evidence.sync",
             // STUDIO-009: debug guiado (guided-debug/1) — inspeção, destaque e seleção; nunca ações na página
             "studio.debug.start", "studio.debug.inspect", "studio.debug.highlight", "studio.debug.pick", "studio.debug.finish",
-            "studio.debug.status", "studio.debug.renew");
+            "studio.debug.status", "studio.debug.renew", "studio.debug.probe");
 
     public static final List<String> EVENTS = List.of("bridge.connected", "bridge.disconnected",
             "studio.recording.started", "studio.recording.paused", "studio.recording.resumed", "studio.recording.modeChanged",

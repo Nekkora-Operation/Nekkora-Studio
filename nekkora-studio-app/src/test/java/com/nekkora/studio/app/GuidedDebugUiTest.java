@@ -95,6 +95,9 @@ class GuidedDebugUiTest {
                         + "\"access\":\"PERMISSION_REQUIRED\",\"active\":false,\"recording\":false}],\"truncated\":false}";
                 case "studio.debug.inspect" -> inspect.apply(payload);
                 case "studio.debug.pick" -> "{\"debug\":" + session() + ",\"requestId\":\"" + payload.get("requestId") + "\",\"picking\":true}";
+                case "studio.debug.probe" -> "{\"debug\":" + session() + ",\"requestId\":\"" + payload.get("requestId") + "\",\"stepRef\":\"s\","
+                        + "\"observedAt\":\"2026-10-17T12:01:00.000Z\",\"pageEpoch\":1,\"status\":\"RESOLVED\",\"performed\":true,\"operation\":\""
+                        + payload.get("operation") + "\",\"reasons\":[],\"after\":{\"domChanged\":true,\"navigated\":false},\"duplicate\":false}";
                 case "studio.debug.highlight" -> "{\"debug\":" + session() + ",\"requestId\":\"" + payload.get("requestId") + "\",\"highlighted\":true,\"box\":null}";
                 default -> "{\"debug\":" + session() + ",\"duplicate\":false}";
             };
@@ -308,5 +311,28 @@ class GuidedDebugUiTest {
         };
         begin();
         assertTrue(card().message().contains("Atualize a Nekkora Extension") || card().badge() == GuidedDebugPanel.Badge.NOT_VERIFIABLE, card().message());
+    }
+
+    @Test
+    @DisplayName("G6 sonda: só em aba LAB com alvo comprovado; envia a CHAVE do dado fictício (nunca o valor); mensagem separa os fatos")
+    void sonda() {
+        studio();
+        labCase();
+        begin();
+        assertTrue(Edt.call(() -> debug().panel().probeButton().isShowing() || debug().panel().probeButton().getParent().isVisible()));
+        assertEquals("Preencher (laboratório)", Edt.call(() -> debug().panel().probeButton().getText()));
+        Edt.run(() -> debug().panel().probeKeysInput().setSelectedItem("lab:registro-suspenso"));
+        Edt.run(() -> debug().panel().probeButton().doClick());
+        Edt.flush();
+        Map<String, Object> sent = browser.payloads.get(browser.commands.lastIndexOf("studio.debug.probe"));
+        assertEquals("lab:registro-suspenso", sent.get("valueKey"));
+        assertEquals("LAB_PROBE", sent.get("authorization"));
+        assertFalse(Json.write(sent).contains("REG-"), "o Studio não conhece o valor");
+        assertTrue(card().message().startsWith("Operação efetuada no laboratório"), card().message());
+        assertTrue(card().message().contains("não é verificado aqui"));
+        browser.inspect = p -> FakeBrowser.inspection("AMBIGUOUS", "DESCRIPTOR", "", "", "[]");
+        Edt.run(() -> debug().next());
+        Edt.flush();
+        assertFalse(Edt.call(() -> debug().panel().probeButton().getParent().isVisible()), "sem alvo comprovado, sem sonda");
     }
 }

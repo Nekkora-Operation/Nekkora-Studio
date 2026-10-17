@@ -137,6 +137,9 @@ public final class GuidedDebugPresenter implements GuidedDebugPanel.Actions, Gui
     private GuidedDebugClient.Inspection beforeCorrection;
     private Timer advance;
     private int lastEpoch;
+    /** A aba escolhida é de laboratório (origem LAB): só então a sonda existe. */
+    private boolean labTab;
+    private final Map<String, Boolean> labTabs = new LinkedHashMap<>();
     private long generation;
 
     public GuidedDebugPresenter(WorkspaceService service, BrowserLink link, RecorderController recorder, DecisionActor actor, Clock clock,
@@ -193,7 +196,10 @@ public final class GuidedDebugPresenter implements GuidedDebugPanel.Actions, Gui
             }
             List<GuidedDebugPanel.Tab> options = new ArrayList<>();
             for (BrowserTab t : tabs) {
-                if (t.access().allowed() && !t.recording()) options.add(new GuidedDebugPanel.Tab(t.tabRef(), t.label() + " · " + t.access().label()));
+                if (t.access().allowed() && !t.recording()) {
+                    options.add(new GuidedDebugPanel.Tab(t.tabRef(), t.label() + " · " + t.access().label()));
+                    labTabs.put(t.tabRef(), t.access() == com.nekkora.studio.recorder.TabAccess.LAB);
+                }
             }
             Card c = new Card(Mode.CHOOSE_TAB, Badge.IDLE, "Depurar \"" + a.name() + "\" no navegador", "", actor.label(), "", List.of(), List.of(), List.of(),
                     List.of(), null, options, options.isEmpty() ? "Nenhuma aba autorizada aberta (laboratório local ou site autorizado na extensão)."
@@ -206,6 +212,7 @@ public final class GuidedDebugPresenter implements GuidedDebugPanel.Actions, Gui
     public void start(String tabRef) {
         requireEdt();
         stopClient();
+        labTab = labTabs.getOrDefault(tabRef, false);
         client = new GuidedDebugClient(link, Duration.ofSeconds(60), Duration.ofSeconds(20));
         client.addListener(this);
         GuidedDebugClient c = client;
@@ -486,6 +493,54 @@ public final class GuidedDebugPresenter implements GuidedDebugPanel.Actions, Gui
         }
     }
 
+    /**
+     * G6: sonda de laboratório — UMA operação explícita no laboratório local (a extensão recusa fora de LAB), sobre o alvo
+     * reencontrado. O resultado separa: alvo comprovado ≠ operação efetuada ≠ mudança observada; sucesso de negócio é do
+     * oráculo do laboratório, nunca daqui.
+     */
+    @Override
+    public void probe(String valueKey) {
+        requireEdt();
+        AutomationStep step = step();
+        if (step == null || client == null || step.element().isEmpty()) return;
+        GuidedDebugClient.ProbeOperation op = switch (step.actionType()) {
+            case FILL -> GuidedDebugClient.ProbeOperation.FILL_FIXTURE;
+            case PRESS_KEY -> GuidedDebugClient.ProbeOperation.PRESS_ENTER;
+            default -> GuidedDebugClient.ProbeOperation.CLICK;
+        };
+        GuidedDebugClient c = client;
+        StepId id = step.id();
+        c.probe(id, op, step.element().get(), valueKey).whenComplete((r, err) -> edt(() -> {
+            if (c != client) return;
+            String text;
+            if (err != null) {
+                text = failure(err);
+            } else {
+                journal.add(new Entry(id.value().toString(), r.observedAt() == null ? clock.instant() : r.observedAt(), "PROBE", r.status().name(), "",
+                        r.reasons(), r.performed() ? "PERFORMED" : "NOT_PERFORMED", List.of(), actor.name()));
+                text = (r.performed() ? "Operação efetuada no laboratório" : "Operação NÃO efetuada")
+                        + (r.reasons().isEmpty() ? "" : " (" + String.join(", ", r.reasons().stream().map(GuidedDebugPresenter::probeReason).toList()) + ")")
+                        + ". Página mudou: " + (r.domChanged() || r.navigated() ? "sim" : "não")
+                        + ". O resultado de negócio não é verificado aqui (o oráculo do laboratório confere).";
+            }
+            Card base = panel.card();
+            show(new Card(base.mode(), base.badge(), base.title(), base.progress(), base.actor(), base.recognized(), base.why(), base.limits(), base.details(),
+                    base.candidates(), base.comparison(), base.tabs(), text, base.canContinue(), base.canCorrect(), base.canPrevious(), base.canNext()));
+        }));
+    }
+
+    private static String probeReason(String code) {
+        return switch (code) {
+            case "TARGET_NOT_RESOLVED" -> "alvo não comprovado";
+            case "NOT_EDITABLE" -> "não aceita digitação";
+            case "DISABLED" -> "desabilitado";
+            case "HIDDEN" -> "oculto";
+            case "UNKNOWN_FIXTURE" -> "dado fictício desconhecido";
+            case "KIND_UNUSUAL_FOR_ACTION" -> "tipo não combina com a ação";
+            default -> code;
+        };
+    }
+
     // ------------------------------------------------------------------------------------------- navegação
 
     @Override
@@ -616,6 +671,17 @@ public final class GuidedDebugPresenter implements GuidedDebugPanel.Actions, Gui
 
     private void show(Card c) {
         panel.show(c);
+        AutomationStep st = c.mode() == Mode.STEP ? step() : null;
+        if (st == null || !labTab || st.element().isEmpty() || last == null || last.status() != GuidedDebugClient.Status.RESOLVED) {
+            panel.setProbe("", List.of());
+        } else {
+            switch (st.actionType()) {
+                case FILL -> panel.setProbe("Preencher (laboratório)", GuidedDebugClient.LAB_FIXTURE_KEYS);
+                case CLICK -> panel.setProbe("Clicar (laboratório)", List.of());
+                case PRESS_KEY -> panel.setProbe("Enter (laboratório)", List.of());
+                default -> panel.setProbe("", List.of());
+            }
+        }
         if (!host.isShowing()) host.show();
         host.fit();
     }
@@ -664,6 +730,7 @@ public final class GuidedDebugPresenter implements GuidedDebugPanel.Actions, Gui
                 case TAB_NOT_FOUND -> "A aba não existe mais.";
                 case INVALID_STATE -> "A aba está ocupada (gravação em andamento ou outro debug).";
                 case CANDIDATE_EXPIRED -> "O candidato pertence a uma página anterior: inspecione de novo.";
+                case PROBE_NOT_ALLOWED -> "A sonda só existe no laboratório local.";
                 case DEBUG_ENDED, DEBUG_NOT_FOUND -> "A sessão de debug foi encerrada.";
                 case TIMEOUT -> "O navegador não respondeu a tempo.";
                 default -> "O navegador recusou o pedido (" + b.code() + ").";

@@ -94,6 +94,24 @@ public final class GuidedDebugClient implements BrowserLink.Listener, AutoClosea
         }
     }
 
+    /** G6: operações da sonda de laboratório (só origem LAB; o valor vem do catálogo sintético da extensão). */
+    public enum ProbeOperation { FILL_FIXTURE, CLICK, PRESS_ENTER }
+
+    /** Chaves do catálogo sintético da sonda (o valor nunca trafega nem aparece no Studio). */
+    public static final List<String> LAB_FIXTURE_KEYS = List.of("lab:registro-ativo", "lab:registro-suspenso", "lab:registro-encerrado",
+            "lab:registro-inexistente");
+
+    /**
+     * Resultado da sonda — fatos separados: alvo reencontrado ({@link #status}) ≠ operação efetuada ({@link #performed}) ≠
+     * mudança observada ({@link #domChanged}/{@link #navigated}). Nenhum campo diz "sucesso de negócio".
+     */
+    public record ProbeResult(String requestId, Instant observedAt, int pageEpoch, Status status, boolean performed, ProbeOperation operation,
+                              List<String> reasons, boolean domChanged, boolean navigated, boolean duplicate) {
+        public ProbeResult {
+            reasons = List.copyOf(reasons);
+        }
+    }
+
     /** Eventos do navegador para esta sessão. */
     public interface Listener {
         void picked(Picked picked);
@@ -181,6 +199,36 @@ public final class GuidedDebugClient implements BrowserLink.Listener, AutoClosea
         p.put("descriptor", descriptor(target));
         p.put("highlight", highlight);
         return link.send("studio.debug.inspect", p, timeout).thenApply(this::inspection);
+    }
+
+    /**
+     * G6: sonda de laboratório sobre o alvo da etapa. {@code requestId} novo a cada chamada (repetir a MESMA operação exige
+     * um pedido explícito novo); a extensão recusa fora de origem LAB ({@code PROBE_NOT_ALLOWED}).
+     */
+    public CompletableFuture<ProbeResult> probe(StepId step, ProbeOperation operation, ElementReference target, String valueKey) {
+        Map<String, Object> p = new LinkedHashMap<>();
+        p.put("debugId", debugId);
+        p.put("requestId", nextRequest());
+        p.put("stepRef", step.value().toString());
+        p.put("operation", operation.name());
+        p.put("targetId", target.correlation().get(CorrelationKeys.Key.TARGET_ID).orElse(null));
+        p.put("descriptor", descriptor(target));
+        p.put("valueKey", operation == ProbeOperation.FILL_FIXTURE ? valueKey : null);
+        p.put("authorization", "LAB_PROBE");
+        return link.send("studio.debug.probe", p, timeout).thenApply(r -> {
+            update(Json.object(r, "debug"));
+            List<String> reasons = new ArrayList<>();
+            for (Object o : Json.array(r, "reasons")) {
+                if (o instanceof String s) {
+                    reasons.add(s);
+                }
+            }
+            Map<String, Object> after = Json.object(r, "after");
+            return new ProbeResult(Json.string(r, "requestId"), instant(Json.string(r, "observedAt")), (int) Json.number(r, "pageEpoch", 0),
+                    enumOr(Status.class, Json.string(r, "status"), Status.CONTEXT_UNAVAILABLE), Json.bool(r, "performed", false),
+                    enumOr(ProbeOperation.class, Json.string(r, "operation"), operation), reasons, after != null && Json.bool(after, "domChanged", false),
+                    after != null && Json.bool(after, "navigated", false), Json.bool(r, "duplicate", false));
+        });
     }
 
     /** Destaca um candidato de uma inspeção da época atual (null limpa). */

@@ -60,6 +60,9 @@ public final class GuidedDebugPanel extends JPanel {
         void next();
 
         void finish();
+
+        /** G6: sonda de laboratório (só em aba LAB): operação explícita, com dado fictício por chave. */
+        void probe(String valueKey);
     }
 
     /** Estado apresentado da etapa. */
@@ -154,6 +157,9 @@ public final class GuidedDebugPanel extends JPanel {
     private final NekkoraStack pickRow = NekkoraStack.horizontal(Spacing.SPACE_2);
     private final NekkoraStack compareRow = NekkoraStack.horizontal(Spacing.SPACE_2);
     private final NekkoraStack navRow = NekkoraStack.horizontal(Spacing.SPACE_2);
+    private final NekkoraStack probeRow = NekkoraStack.horizontal(Spacing.SPACE_2);
+    private final NekkoraComboBox<String> probeKeys = new NekkoraComboBox<>();
+    private final NekkoraButton probeButton = NekkoraButton.secondary("Sonda de laboratório").withIcon(IconName.PLAY).withSize(ControlSize.SMALL);
     private final NekkoraText whyTitle = new NekkoraText("Por quê", TextTone.SECONDARY);
     private final NekkoraText limitsTitle = new NekkoraText("Limitações", TextTone.SECONDARY);
     private final NekkoraText candidatesTitle = new NekkoraText("Outros candidatos", TextTone.SECONDARY);
@@ -207,6 +213,14 @@ public final class GuidedDebugPanel extends JPanel {
         compareRow.add(applyButton);
         compareRow.add(discardButton);
         root.add(compareRow);
+
+        probeKeys.getAccessibleContext().setAccessibleName("Dado fictício do laboratório");
+        probeRow.add(probeKeys);
+        probeRow.add(probeButton);
+        probeRow.setVisible(false);
+        root.add(probeRow);
+        probeButton.addActionListener(e -> actions.probe(probeKeys.isVisible() ? probeKeys.getSelectedValue() : null));
+        probeButton.getAccessibleContext().setAccessibleDescription("Executa UMA operação no laboratório local com dado fictício. Nunca disponível fora do laboratório.");
 
         navRow.add(previousButton);
         navRow.add(nextButton);
@@ -380,5 +394,31 @@ public final class GuidedDebugPanel extends JPanel {
 
     public NekkoraStatusBadge badge() {
         return badge;
+    }
+
+    /**
+     * G6: mostra (ou esconde, com {@code label} vazio) a sonda de laboratório da etapa atual. {@code keys} vazio: operação
+     * sem dado (clicar, Enter).
+     */
+    public void setProbe(String label, List<String> keys) {
+        boolean visible = label != null && !label.isEmpty();
+        probeRow.setVisible(visible);
+        probeButton.setText(visible ? label : "Sonda de laboratório");
+        List<String> current = new ArrayList<>();
+        for (int i = 0; i < probeKeys.getItemCount(); i++) current.add(probeKeys.getItemAt(i));
+        if (!current.equals(keys)) {
+            probeKeys.removeAllItems();
+            keys.forEach(probeKeys::addItem);
+        }
+        probeKeys.setVisible(!keys.isEmpty());
+        revalidate();
+    }
+
+    public NekkoraButton probeButton() {
+        return probeButton;
+    }
+
+    public NekkoraComboBox<String> probeKeysInput() {
+        return probeKeys;
     }
 }
