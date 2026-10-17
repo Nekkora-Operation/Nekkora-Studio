@@ -1,0 +1,55 @@
+--- consulta_registro_editado.py (atual)
++++ consulta_registro_editado.py (gerado)
+@@ -1,9 +1,9 @@
+-# nk-conteudo-sha256: 919ffbb85e34b46fd9d2d25299e552c256c5b2bb17c1586b2e617db217474f5b
++# nk-conteudo-sha256: d899a4d72a53c0a4b5b7891ac0e7b8f2c152dc74c1a050f29cd4d1bef7f55d31
+ """Consulta de registro (laboratório local, dados fictícios) — script GERADO, não edite à mão.
+ 
+ Gerado pelo gerador do caso de laboratório da STUDIO-009 (docs/studio-009/python/gerar.py) a partir do plano
+-sha256:d4ea85f50f5eb690e91f88dab48ff70b5b22b28d461a45a243a0880c2e89c4ce da automação 774defa5-103d-4b24-bc30-bdc50611a35d, validado pela passagem de debug
+-registrada em 2026-10-17T19:09:30.530853700Z (operador TEST_AGENT). O modelo .nekkora é a fonte da verdade:
++sha256:c9341d1aa23cb39337c5bd53d05683a9cae33239d124fe4650942c1c04aab42c da automação 774defa5-103d-4b24-bc30-bdc50611a35d, validado pela passagem de debug
++registrada em 2026-10-17T19:10:03.636773600Z (operador TEST_AGENT). O modelo .nekkora é a fonte da verdade:
+ reparos vão para o modelo e o script é gerado de novo.
+ 
+ Uso: python consulta_registro.py --cdp http://127.0.0.1:PORTA --url-aba URL [--debug PASTA] [--saida resultado.json]
+@@ -21,7 +21,7 @@
+ from playwright.sync_api import TimeoutError as PlaywrightTimeout
+ from playwright.sync_api import sync_playwright
+ 
+-PLANO = {"automationId": "774defa5-103d-4b24-bc30-bdc50611a35d", "planRevision": "sha256:d4ea85f50f5eb690e91f88dab48ff70b5b22b28d461a45a243a0880c2e89c4ce", "operator": "TEST_AGENT"}
++PLANO = {"automationId": "774defa5-103d-4b24-bc30-bdc50611a35d", "planRevision": "sha256:c9341d1aa23cb39337c5bd53d05683a9cae33239d124fe4650942c1c04aab42c", "operator": "TEST_AGENT"}
+ ORIGENS_PERMITIDAS = ("http://127.0.0.1:18765",)  # só o laboratório local: qualquer outra origem é recusada sem ação
+ VARIAVEIS = ["registro.codigo"]
+ ROSA = "#C2466D"  # o mesmo destaque do debug guiado do Studio (caixa sólida, sem etiqueta na página)
+@@ -100,9 +100,9 @@
+ 
+ def etapa_1_1(page, entradas, dbg, timeout_ms):
+     # StepId: a1abe836-28d7-484a-9665-4ceea4ef7383
+-    # Intenção: FILL · alvo SEARCH_INPUT 'Código do registro' · decisão CONFIRMED (TEST_AGENT, base RESOLVED)
+-    # Localizador preferido (ID): input {id=registro-codigo}
+-    etapa = {"stepId": "a1abe836-28d7-484a-9665-4ceea4ef7383", "posicao": "1.1", "acao": "FILL", "seletor": "css=input#registro-codigo", "estrategia": "ID", "tag": "input", "nome": "Código do registro"}
++    # Intenção: FILL · alvo SEARCH_INPUT 'Código do registro' · decisão CONFIRMED (TEST_AGENT, base SELECTED_IN_BROWSER) · alvo SUBSTITUÍDO no debug
++    # Localizador preferido (ID): input {id=codigo-v2}
++    etapa = {"stepId": "a1abe836-28d7-484a-9665-4ceea4ef7383", "posicao": "1.1", "acao": "FILL", "seletor": "css=input#codigo-v2", "estrategia": "ID", "tag": "input", "nome": "Código do registro"}
+     alvo, contagem = localizar(page, etapa, timeout_ms)
+     dbg.antes(page, etapa, alvo, contagem)
+     if contagem == 0:
+@@ -116,9 +116,9 @@
+ 
+ def etapa_1_2(page, entradas, dbg, timeout_ms):
+     # StepId: a44a73a5-7733-4745-8140-7442cde06414
+-    # Intenção: CLICK · alvo BUTTON 'Consultar' · decisão CONFIRMED (TEST_AGENT, base RESOLVED)
+-    # Localizador preferido (TEST_ATTRIBUTE): button {data-testid=consultar}
+-    etapa = {"stepId": "a44a73a5-7733-4745-8140-7442cde06414", "posicao": "1.2", "acao": "CLICK", "seletor": "css=button[data-testid=\"consultar\"]", "estrategia": "TEST_ATTRIBUTE", "tag": "button", "nome": "Consultar"}
++    # Intenção: CLICK · alvo BUTTON 'Consultar' · decisão CONFIRMED (TEST_AGENT, base SELECTED_IN_BROWSER) · alvo SUBSTITUÍDO no debug
++    # Localizador preferido (TEST_ATTRIBUTE): button {data-testid=consultar-v2}
++    etapa = {"stepId": "a44a73a5-7733-4745-8140-7442cde06414", "posicao": "1.2", "acao": "CLICK", "seletor": "css=button[data-testid=\"consultar-v2\"]", "estrategia": "TEST_ATTRIBUTE", "tag": "button", "nome": "Consultar"}
+     alvo, contagem = localizar(page, etapa, timeout_ms)
+     dbg.antes(page, etapa, alvo, contagem)
+     if contagem == 0:
+@@ -194,4 +194,3 @@
+ 
+ if __name__ == '__main__':
+     main()
+-# ajuste manual de quem mantém o script

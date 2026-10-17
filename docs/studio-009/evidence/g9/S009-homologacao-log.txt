@@ -1,0 +1,75 @@
+Tela: java.awt.Rectangle[x=0,y=0,width=1920,height=1032] · java 21.0.12
+Operador: Claude como AGENTE DE TESTE (decisões TEST_AGENT; nenhuma confirmação humana) · ator do Studio: TEST_AGENT
+Native Host instalado pelo script oficial (install-host.ps1)
+Chrome for Testing: 155.0.8059.39
+OK    Conexão autenticada Studio ⇄ host ⇄ extensão
+OK    Ator das decisões no Studio = agente de teste
+  etapas gravadas: [Preencher campo Código do registro, Clicar no botão Consultar] [FILL, CLICK]
+OK    H1: gravação = preencher (código) e clicar (Consultar)
+OK    H1: cada etapa gravada traz identidade lógica registrada (targetId) — o vínculo para o debug
+OK    H1: o valor digitado não está no modelo
+captura S009-H1-mapeamento.png (1920x1000)
+  janela do debug em java.awt.Rectangle[x=1476,y=24,width=420,height=812]
+    destaque na tela java.awt.Rectangle[x=925,y=308,width=240,height=31] · esperado java.awt.Rectangle[x=921,y=296,width=248,height=39]
+  P1 etapa 1.1: Proposto · verificado tecnicamente · RESOLVED · fonte TARGET_ID · [NODE_REPLACED] · pontuação 1.00 · Continuar habilitado
+OK    G9 P1 etapa 1.1: identidade comprovada sobre o elemento certo
+    destaque na tela java.awt.Rectangle[x=1173,y=308,width=89,height=31] · esperado java.awt.Rectangle[x=1169,y=296,width=97,height=39]
+  P1 etapa 1.2: Proposto · verificado tecnicamente · RESOLVED · fonte TARGET_ID · [NODE_REPLACED] · pontuação 1.00 · Continuar habilitado
+OK    G9 P1 etapa 1.2: identidade comprovada sobre o elemento certo
+captura S009-G9-P1-validado.png (1920x1000)
+OK    G9 congelar v1: registro da passagem de debug é da MESMA revisão do plano
+  gerar-v1.log → saída 0 · {"status": "GERADO", "etapas": ["1.1", "1.2"], "planRevision": "sha256:d4ea85f50f5eb690e91f88dab48ff70b5b22b28d461a45a243a0880c2e89c4ce"}
+OK    G9 P2: plano congelado (sha256:d4ea85f50f5e…) gera o script; uma função por StepId
+  P3-execucao.log → saída 0 · {"status": "ETAPAS_EXECUTADAS", "etapas": [["1.1", "OK"], ["1.2", "OK"]]}
+    P3: ETAPAS_EXECUTADAS [OK, OK]
+OK    G9 P3: script executou as 2 etapas (ETAPAS_EXECUTADAS)
+OK    G9 P3: ORÁCULO independente — exatamente 1 consulta, com o código fictício fornecido na execução
+    G9 P3 1.1: script {x=37, y=157.1, width=240, height=31} · Studio java.awt.Rectangle[x=37,y=157,width=240,height=31] · igual · captura 1.1-a1abe836.png
+    G9 P3 1.2: script {x=285, y=157.1, width=89.1, height=31} · Studio java.awt.Rectangle[x=285,y=157,width=89,height=31] · igual · captura 1.2-a44a73a5.png
+OK    G9 P3: 2º debug — o script destacou, para cada StepId, a MESMA caixa do debug do Studio (2 etapas)
+captura S009-G9-P3-resultado.png (1920x1000)
+  P4-execucao.log → saída 3 · {"status": "ORIGEM_NAO_AUTORIZADA", "etapas": []}
+    P4: ORIGEM_NAO_AUTORIZADA []
+OK    G9 P4: origem fora do laboratório recusada sem conectar nem agir (ORIGEM_NAO_AUTORIZADA)
+  P5-execucao.log → saída 1 · {"status": "PARADO_NA_FALHA", "etapas": [["1.1", "OK"], ["1.2", "IDENTITY_MISMATCH"]]}
+    P5: PARADO_NA_FALHA [OK, IDENTITY_MISMATCH]
+OK    G9 P5: botão errado com o mesmo localizador — recusado (IDENTITY_MISMATCH), Limpar NÃO clicado, nada consultado
+  P6-execucao.log → saída 1 · {"status": "PARADO_NA_FALHA", "etapas": [["1.1", "OK"], ["1.2", "TIMEOUT"]]}
+    P6: PARADO_NA_FALHA [OK, TIMEOUT]
+OK    G9 P6: botão oculto — TIMEOUT na etapa 1.2, parada limpa, nada consultado
+  P7-execucao.log → saída 1 · {"status": "PARADO_NA_FALHA", "etapas": [["1.1", "NOT_FOUND"], ["1.2", "NOT_RUN"]]}
+    P7: PARADO_NA_FALHA [NOT_FOUND, NOT_RUN]
+OK    G9 P7: quebra deliberada — etapa 1.1 NOT_FOUND, 1.2 não executada, nada consultado (o oráculo confirma a falha)
+  janela do debug em java.awt.Rectangle[x=1476,y=24,width=420,height=1000]
+  G9 diagnóstico etapa 1.1: Requer revisão · RESOLVED · fonte TARGET_ID · [NODE_REPLACED, ID_ATTRIBUTE_CHANGED, NAME_ATTRIBUTE_CHANGED] · pontuação 0.68 · Continuar habilitado
+captura S009-G9-P8-diagnostico-etapa1.png (1920x1000)
+OK    G9 P8 etapa 1.1: comparação compatível antes de aplicar
+OK    G9 P8 etapa 1.1: alvo substituído no MODELO, capturado original intacto, decisão do TEST_AGENT
+  G9 diagnóstico etapa 1.2: Não verificável · NOT_FOUND · fonte TARGET_ID · [] · pontuação 0.60
+captura S009-G9-P8-diagnostico-etapa2.png (1920x1000)
+OK    G9 P8 etapa 1.2: comparação compatível antes de aplicar
+OK    G9 P8 etapa 1.2: alvo substituído no MODELO, capturado original intacto, decisão do TEST_AGENT
+  janela do debug em java.awt.Rectangle[x=1476,y=24,width=420,height=912]
+    destaque na tela java.awt.Rectangle[x=925,y=308,width=240,height=31] · esperado java.awt.Rectangle[x=921,y=296,width=248,height=39]
+  P9 etapa 1.1: Reconfirmado tecnicamente · RESOLVED · fonte TARGET_ID · [NODE_REPLACED] · pontuação 1.00 · Continuar habilitado
+OK    G9 P9 etapa 1.1: identidade comprovada sobre o elemento certo
+    destaque na tela java.awt.Rectangle[x=1173,y=308,width=89,height=31] · esperado java.awt.Rectangle[x=1169,y=296,width=97,height=39]
+  P9 etapa 1.2: Reconfirmado tecnicamente · RESOLVED · fonte TARGET_ID · [NODE_REPLACED] · pontuação 1.00 · Continuar habilitado
+OK    G9 P9 etapa 1.2: identidade comprovada sobre o elemento certo
+captura S009-G9-P9-validado.png (1920x1000)
+OK    G9 congelar v2: registro da passagem de debug é da MESMA revisão do plano
+OK    G9 P9: o reparo mudou a revisão do plano (d4ea85f5 → c9341d1a) e o registro marca os alvos substituídos
+  gerar-editado.log → saída 3 · {"status": "EDICAO_MANUAL_PRESERVADA", "novo": "consulta_registro_editado.novo.py", "comparacao": "consulta_registro_editado.diff"}
+OK    G9 P10: script editado à mão preservado; o novo vai para .novo.py com a comparação (.diff)
+  gerar-v2.log → saída 0 · {"status": "GERADO", "etapas": ["1.1", "1.2"], "planRevision": "sha256:c9341d1aa23cb39337c5bd53d05683a9cae33239d124fe4650942c1c04aab42c"}
+OK    G9 P11: script gerado de novo do MODELO reparado; a comparação mostra os localizadores novos e os mesmos StepIds
+  P12-execucao.log → saída 0 · {"status": "ETAPAS_EXECUTADAS", "etapas": [["1.1", "OK"], ["1.2", "OK"]]}
+    P12: ETAPAS_EXECUTADAS [OK, OK]
+OK    G9 P12: script reparado executou as 2 etapas (ETAPAS_EXECUTADAS)
+OK    G9 P12: ORÁCULO — exatamente 1 consulta com o código fictício
+    G9 P12 1.1: script {x=37, y=157.1, width=240, height=31} · Studio java.awt.Rectangle[x=37,y=157,width=240,height=31] · igual · captura 1.1-a1abe836.png
+    G9 P12 1.2: script {x=285, y=157.1, width=89.1, height=31} · Studio java.awt.Rectangle[x=285,y=157,width=89,height=31] · igual · captura 1.2-a44a73a5.png
+OK    G9 P12: 2º debug — o script destacou, para cada StepId, a MESMA caixa do debug do Studio (2 etapas)
+captura S009-G9-P12-resultado.png (1920x1000)
+OK    G9: planos, registros, scripts, resultados, logs e depuração SEM o valor fornecido (ele só existe no ambiente da execução)
+RESULTADO: 30 verificações, 0 falha(s)

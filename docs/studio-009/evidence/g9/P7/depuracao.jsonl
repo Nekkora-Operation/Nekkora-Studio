@@ -1,0 +1,2 @@
+{"evento": "ANTES", "stepId": "a1abe836-28d7-484a-9665-4ceea4ef7383", "posicao": "1.1", "acao": "FILL", "localizador": "css=input#registro-codigo", "estrategia": "ID", "contagem": 0, "caixa": null, "captura": null, "instante": "2026-10-17T19:09:46.156Z"}
+{"evento": "DEPOIS", "stepId": "a1abe836-28d7-484a-9665-4ceea4ef7383", "posicao": "1.1", "status": "NOT_FOUND", "ms": 3016, "instante": "2026-10-17T19:09:46.156Z"}

@@ -251,6 +251,14 @@ class GuidedPlanTest {
         GuidedPlan renomeado = plan(a);
         assertNotEquals(antes.automationRevision(), renomeado.automationRevision(), "a automação mudou");
         assertEquals(antes.planRevision(), renomeado.planRevision(), "o nome não faz parte do plano");
+        // G9 (achado da homologação real): decidir o alvo leva o modelo a 1.2.0, mas a decisão é do REGISTRO do debug, não
+        // do conteúdo do plano — a revisão não pode mudar, senão o plano validado nunca casa com o registro que o validou
+        a.decideTarget(preencher.id(), com.nekkora.studio.domain.target.TargetDecision.Kind.CONFIRMED,
+                com.nekkora.studio.domain.target.DecisionActor.TEST_AGENT, new com.nekkora.studio.domain.target.TargetDecision.Basis("TARGET_ID",
+                        "RESOLVED", List.of(), Instant.parse("2026-10-17T12:00:00Z"), ""));
+        GuidedPlan decidido = plan(a);
+        assertEquals("1.2.0", decidido.modelVersion());
+        assertEquals(antes.planRevision(), decidido.planRevision(), "decisões não mudam a revisão do plano");
         a.choosePreferredLocator(preencher.id(), 1);
         GuidedPlan outroPreferencial = plan(a);
         assertNotEquals(antes.planRevision(), outroPreferencial.planRevision());

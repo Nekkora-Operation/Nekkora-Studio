@@ -18,8 +18,9 @@ final class GuidedPlanJson {
     private GuidedPlanJson() {}
 
     /**
-     * @param planRevision revisão a publicar; {@code null} = forma usada para CALCULAR a revisão (revisão vazia e sem a
-     *                     revisão da automação, que muda com edições que não alteram o plano)
+     * @param planRevision revisão a publicar; {@code null} = forma usada para CALCULAR a revisão (revisão vazia, sem a
+     *                     revisão da automação — muda com edições que não alteram o plano — e sem a versão do modelo, que
+     *                     passa a 1.2.0 só porque há DECISÕES: decisões são do registro do debug, não do conteúdo do plano)
      */
     static String write(GuidedPlan p, String planRevision) {
         boolean forRevision = planRevision == null;
@@ -27,7 +28,7 @@ final class GuidedPlanJson {
         root.put("schema", GuidedPlan.SCHEMA);
         root.put("version", GuidedPlan.VERSION);
         root.put("automationId", p.automationId().value().toString());
-        root.put("modelVersion", p.modelVersion());
+        root.put("modelVersion", forRevision ? "" : p.modelVersion());
         root.put("automationRevision", forRevision ? 0L : p.automationRevision());
         root.put("planRevision", forRevision ? "" : planRevision);
         Map<String, Object> validation = new LinkedHashMap<>();

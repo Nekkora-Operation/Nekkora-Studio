@@ -1,0 +1,239 @@
+{
+  "schema": "nekkora-studio/guided-debug-plan",
+  "version": "1.0.0",
+  "automationId": "774defa5-103d-4b24-bc30-bdc50611a35d",
+  "modelVersion": "1.2.0",
+  "automationRevision": 7,
+  "planRevision": "sha256:d4ea85f50f5eb690e91f88dab48ff70b5b22b28d461a45a243a0880c2e89c4ce",
+  "staticValidation": {
+    "rules": "nekkora-validation-rules/1.1.0",
+    "status": "NOT_FULLY_ASSESSABLE",
+    "meaning": "STATIC_ONLY"
+  },
+  "summary": {
+    "steps": 2,
+    "inspectTarget": 2,
+    "noTargetRequired": 0,
+    "targetMissing": 0,
+    "variables": 1
+  },
+  "variables": [
+    {
+      "variableId": "f36970cd-dbb8-4142-9ba9-45ea7b113ed8",
+      "name": "registro.codigo",
+      "technicalType": "STRING",
+      "semanticType": "IDENTIFIER",
+      "semanticStatus": "USER_CONFIRMED",
+      "sensitivity": "INTERNAL",
+      "origin": "INPUT",
+      "producerStepId": null
+    }
+  ],
+  "steps": [
+    {
+      "stepId": "a1abe836-28d7-484a-9665-4ceea4ef7383",
+      "sessionId": "4f86a4aa-1723-4b80-8b36-e7bfdc2d2ca1",
+      "position": {
+        "session": 1,
+        "step": 1
+      },
+      "origin": "RECORDED",
+      "intent": {
+        "actionType": "FILL",
+        "targetRequirement": "EXPECTED",
+        "value": "VARIABLE",
+        "variableId": "f36970cd-dbb8-4142-9ba9-45ea7b113ed8",
+        "variableName": "registro.codigo",
+        "key": null,
+        "optionDeclared": false
+      },
+      "target": {
+        "identitySource": "TARGET_ID",
+        "state": "AS_CAPTURED",
+        "kind": "SEARCH_INPUT",
+        "tag": "input",
+        "name": "Código do registro",
+        "sensitive": false,
+        "locators": [
+          {
+            "index": 0,
+            "strategy": "ID",
+            "description": "input {id=registro-codigo}",
+            "expression": "input#registro-codigo",
+            "stability": "HEURISTIC_STABLE",
+            "matchCountAtCapture": 1,
+            "validatedAtCapture": true
+          },
+          {
+            "index": 1,
+            "strategy": "NAME",
+            "description": "input {name=codigo}",
+            "expression": "input[name=\"codigo\"]",
+            "stability": "HEURISTIC_STABLE",
+            "matchCountAtCapture": 1,
+            "validatedAtCapture": true
+          },
+          {
+            "index": 2,
+            "strategy": "LABEL",
+            "description": "input {label=\"Código do registro\"}",
+            "expression": "//input[@id=//label[normalize-space(.)=\"Código do registro\"]/@for]",
+            "stability": "HEURISTIC_STABLE",
+            "matchCountAtCapture": 1,
+            "validatedAtCapture": true
+          },
+          {
+            "index": 3,
+            "strategy": "CONTEXTUAL",
+            "description": "form {aria-label=Consulta} >> input {id=registro-codigo}",
+            "expression": "form[aria-label=\"Consulta\"] input#registro-codigo",
+            "stability": "HEURISTIC_STABLE",
+            "matchCountAtCapture": 1,
+            "validatedAtCapture": true
+          },
+          {
+            "index": 4,
+            "strategy": "ROLE_NAME",
+            "description": "* {role=searchbox} {name=\"Código do registro\"}",
+            "expression": "",
+            "stability": "HEURISTIC_STABLE",
+            "matchCountAtCapture": 1,
+            "validatedAtCapture": true
+          }
+        ],
+        "preferredLocator": 0,
+        "manualLocators": [],
+        "accessPath": [
+          {
+            "type": "MAIN_DOCUMENT",
+            "label": "Consulta de registro"
+          },
+          {
+            "type": "ELEMENT",
+            "label": "Código do registro"
+          }
+        ],
+        "context": [
+          {
+            "relation": "IN_FORM",
+            "kind": "FORM",
+            "name": "Consulta"
+          }
+        ]
+      },
+      "context": {
+        "application": "Navegador",
+        "screenTitle": "Consulta de registro",
+        "location": "http://127.0.0.1:18765/{…}/{…}/consulta.html?v={…}"
+      },
+      "applicability": "INSPECT_TARGET",
+      "criteria": ["CONTEXT_AUTHORIZED", "TARGET_IDENTITY_RESOLVED", "TARGET_UNIQUE", "TARGET_VISIBLE", "TARGET_ENABLED", "TARGET_EDITABLE", "TARGET_KIND_MATCHES_ACTION"],
+      "uncertainties": [],
+      "staticFindings": ["LOCATOR_VALIDATED_AT_CAPTURE", "INPUT_VALUE_NOT_AVAILABLE"],
+      "semanticUncertainties": ["INPUT_VALUE_UNKNOWN"]
+    },
+    {
+      "stepId": "a44a73a5-7733-4745-8140-7442cde06414",
+      "sessionId": "4f86a4aa-1723-4b80-8b36-e7bfdc2d2ca1",
+      "position": {
+        "session": 1,
+        "step": 2
+      },
+      "origin": "RECORDED",
+      "intent": {
+        "actionType": "CLICK",
+        "targetRequirement": "EXPECTED",
+        "value": "NONE",
+        "variableId": null,
+        "variableName": null,
+        "key": null,
+        "optionDeclared": false
+      },
+      "target": {
+        "identitySource": "TARGET_ID",
+        "state": "AS_CAPTURED",
+        "kind": "BUTTON",
+        "tag": "button",
+        "name": "Consultar",
+        "sensitive": false,
+        "locators": [
+          {
+            "index": 0,
+            "strategy": "TEST_ATTRIBUTE",
+            "description": "button {data-testid=consultar}",
+            "expression": "button[data-testid=\"consultar\"]",
+            "stability": "HEURISTIC_STABLE",
+            "matchCountAtCapture": 1,
+            "validatedAtCapture": true
+          },
+          {
+            "index": 1,
+            "strategy": "ID",
+            "description": "button {id=consultar}",
+            "expression": "button#consultar",
+            "stability": "HEURISTIC_STABLE",
+            "matchCountAtCapture": 1,
+            "validatedAtCapture": true
+          },
+          {
+            "index": 2,
+            "strategy": "CONTEXTUAL",
+            "description": "form {aria-label=Consulta} >> button {data-testid=consultar}",
+            "expression": "form[aria-label=\"Consulta\"] button[data-testid=\"consultar\"]",
+            "stability": "HEURISTIC_STABLE",
+            "matchCountAtCapture": 1,
+            "validatedAtCapture": true
+          },
+          {
+            "index": 3,
+            "strategy": "ROLE_NAME",
+            "description": "* {role=button} {name=\"Consultar\"}",
+            "expression": "",
+            "stability": "HEURISTIC_STABLE",
+            "matchCountAtCapture": 1,
+            "validatedAtCapture": true
+          },
+          {
+            "index": 4,
+            "strategy": "TEXT",
+            "description": "button {text=\"Consultar\"}",
+            "expression": "//button[normalize-space(.)=\"Consultar\"]",
+            "stability": "HEURISTIC_STABLE",
+            "matchCountAtCapture": 1,
+            "validatedAtCapture": true
+          }
+        ],
+        "preferredLocator": 0,
+        "manualLocators": [],
+        "accessPath": [
+          {
+            "type": "MAIN_DOCUMENT",
+            "label": "Consulta de registro"
+          },
+          {
+            "type": "ELEMENT",
+            "label": "Consultar"
+          }
+        ],
+        "context": [
+          {
+            "relation": "IN_FORM",
+            "kind": "FORM",
+            "name": "Consulta"
+          }
+        ]
+      },
+      "context": {
+        "application": "Navegador",
+        "screenTitle": "Consulta de registro",
+        "location": "http://127.0.0.1:18765/{…}/{…}/consulta.html?v={…}"
+      },
+      "applicability": "INSPECT_TARGET",
+      "criteria": ["CONTEXT_AUTHORIZED", "TARGET_IDENTITY_RESOLVED", "TARGET_UNIQUE", "TARGET_VISIBLE", "TARGET_ENABLED"],
+      "uncertainties": [],
+      "staticFindings": ["LOCATOR_VALIDATED_AT_CAPTURE", "OBSERVATION_INCOMPLETE"],
+      "semanticUncertainties": []
+    }
+  ],
+  "exclusions": ["LITERAL_VALUES", "CONSTANT_VALUES", "CREDENTIAL_ALIASES", "PURPOSES", "NAMES_AND_DESCRIPTIONS", "COMMENTS", "CORRELATION_KEYS", "RUNTIME_VALUES", "RUNTIME_RESULTS"]
+}

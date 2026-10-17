@@ -1,0 +1,4 @@
+{"evento": "ANTES", "stepId": "a1abe836-28d7-484a-9665-4ceea4ef7383", "posicao": "1.1", "acao": "FILL", "localizador": "css=input#registro-codigo", "estrategia": "ID", "contagem": 1, "caixa": {"x": 37, "y": 157.1, "width": 240, "height": 31}, "captura": "1.1-a1abe836.png", "instante": "2026-10-17T19:09:39.568Z"}
+{"evento": "DEPOIS", "stepId": "a1abe836-28d7-484a-9665-4ceea4ef7383", "posicao": "1.1", "status": "OK", "ms": 125, "instante": "2026-10-17T19:09:39.594Z"}
+{"evento": "ANTES", "stepId": "a44a73a5-7733-4745-8140-7442cde06414", "posicao": "1.2", "acao": "CLICK", "localizador": "css=button[data-testid=\"consultar\"]", "estrategia": "TEST_ATTRIBUTE", "contagem": 1, "caixa": null, "captura": null, "instante": "2026-10-17T19:09:39.601Z"}
+{"evento": "DEPOIS", "stepId": "a44a73a5-7733-4745-8140-7442cde06414", "posicao": "1.2", "status": "TIMEOUT", "ms": 1516, "instante": "2026-10-17T19:09:41.114Z"}
