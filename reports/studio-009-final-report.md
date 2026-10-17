@@ -137,4 +137,19 @@ Ver [known-limitations.md](../docs/studio-009/known-limitations.md).
 
 ## 9. Regressão final e PRs
 
-Preenchido na abertura dos PRs (abaixo).
+Regressão final do Studio em `630fc56`:
+- Windows `clean verify` 560/560;
+- Linux 560 (559 + 1 pulado);
+- golden 4/4.
+
+Depois disso, só mudaram:
+- rótulos do roteiro de homologação (fonte de teste sem `@Test`);
+- documentação;
+- evidências regeneradas (G8 106/106, 150% 11/11, G9 30/30).
+
+| Repositório | PR | Base | Estado |
+|---|---|---|---|
+| Extensão | [#8](https://github.com/Nekkora-Operation/Nekkora-Extension-Chrome/pull/8) | `main` | aberto, **sem merge**; fazer primeiro |
+| Studio | [#12](https://github.com/Nekkora-Operation/Nekkora-Studio/pull/12) | `main` | aberto, **sem merge**; depois da extensão |
+
+Os commits locais de ambas as branches foram reorganizados **antes** do primeiro push, para que nenhuma captura ou evidência com valor (nem fictício) entrasse no histórico publicado. O conteúdo final não mudou.
