@@ -48,6 +48,10 @@ public final class AutomationStep {
     private List<StepComment> comments;
     private Map<StepField, Instant> edits = Map.of();
     private Instant lastManualChange;
+    /** STUDIO-009: alvo que SUBSTITUI o capturado depois de uma correção aprovada (null = o capturado vale). */
+    private ElementReference replacement;
+    /** STUDIO-009: decisão durável sobre o alvo (confirmado/rejeitado, por quem), separada da verificação técnica. */
+    private com.nekkora.studio.domain.target.TargetDecision decision;
     /** Estado efetivo imutável atual, compartilhado pelas fotografias do histórico enquanto a etapa não muda. */
     private State cached;
     /**
@@ -131,6 +135,24 @@ public final class AutomationStep {
         return Optional.ofNullable(capturedElement);
     }
 
+    /**
+     * STUDIO-009: o elemento que substituiu o capturado depois de uma correção aprovada. Vazio = o alvo é o capturado. A
+     * referência capturada ({@link #capturedElement()}) e a procedência nunca mudam.
+     */
+    public Optional<ElementReference> replacementTarget() {
+        return Optional.ofNullable(replacement);
+    }
+
+    /** STUDIO-009: decisão durável sobre o alvo efetivo, se houver. */
+    public Optional<com.nekkora.studio.domain.target.TargetDecision> targetDecision() {
+        return Optional.ofNullable(decision);
+    }
+
+    /** Base do alvo efetivo: o substituto, se houver; senão o capturado. */
+    Optional<ElementReference> targetBase() {
+        return replacement != null ? Optional.of(replacement) : capturedElement();
+    }
+
     /** Localizadores propostos manualmente — todos {@link ManualLocator.Verification#NOT_VERIFIED}. */
     public List<ManualLocator> manualLocators() {
         return manualLocators;
@@ -175,7 +197,8 @@ public final class AutomationStep {
             case DESCRIPTION -> !description.equals(baseline.description());
             case ACTION_TYPE -> actionType != baseline.actionType();
             case PARAMETERS -> !parameters.equals(baseline.parameters());
-            case PREFERRED_LOCATOR -> element != null && element.preferredLocatorIndex() != baseline.preferredLocator();
+            case PREFERRED_LOCATOR -> replacement == null && element != null && element.preferredLocatorIndex() != baseline.preferredLocator();
+            case TARGET -> replacement != null;
         };
     }
 
@@ -227,7 +250,9 @@ public final class AutomationStep {
 
     /** Fotografia imutável do estado efetivo (histórico de edição em memória). */
     State state() {
-        if (cached == null) cached = new State(name, description, actionType, parameters, element, manualLocators, comments, edits, lastManualChange);
+        if (cached == null) {
+            cached = new State(name, description, actionType, parameters, element, manualLocators, comments, edits, lastManualChange, replacement, decision);
+        }
         return cached;
     }
 
@@ -242,6 +267,8 @@ public final class AutomationStep {
         this.comments = s.comments();
         this.edits = s.edits();
         this.lastManualChange = s.lastManualChange();
+        this.replacement = s.replacement();
+        this.decision = s.decision();
     }
 
     /** Aplica um novo estado efetivo registrando, nos campos que mudaram, o instante da alteração manual. */
@@ -253,9 +280,10 @@ public final class AutomationStep {
         if (before.actionType() != next.actionType()) e.put(StepField.ACTION_TYPE, at);
         if (!before.parameters().equals(next.parameters())) e.put(StepField.PARAMETERS, at);
         if (preferred(before.element()) != preferred(next.element())) e.put(StepField.PREFERRED_LOCATOR, at);
+        if (before.replacement() != next.replacement()) e.put(StepField.TARGET, at);
         boolean changed = !before.equalsIgnoringHistory(next);
         apply(new State(next.name(), next.description(), next.actionType(), next.parameters(), next.element(), next.manualLocators(),
-                next.comments(), e.isEmpty() ? Map.of() : Map.copyOf(e), changed ? at : lastManualChange));
+                next.comments(), e.isEmpty() ? Map.of() : Map.copyOf(e), changed ? at : lastManualChange, next.replacement(), next.decision()));
     }
 
     private static int preferred(ElementReference e) {
@@ -264,7 +292,8 @@ public final class AutomationStep {
 
     /** Estado efetivo de uma etapa. */
     record State(String name, String description, ActionType actionType, ActionParameters parameters, ElementReference element,
-                 List<ManualLocator> manualLocators, List<StepComment> comments, Map<StepField, Instant> edits, Instant lastManualChange) {
+                 List<ManualLocator> manualLocators, List<StepComment> comments, Map<StepField, Instant> edits, Instant lastManualChange,
+                 ElementReference replacement, com.nekkora.studio.domain.target.TargetDecision decision) {
         State {
             Objects.requireNonNull(name);
             Objects.requireNonNull(description);
@@ -276,12 +305,18 @@ public final class AutomationStep {
         }
 
         State withName(String n) {
-            return new State(n, description, actionType, parameters, element, manualLocators, comments, edits, lastManualChange);
+            return new State(n, description, actionType, parameters, element, manualLocators, comments, edits, lastManualChange, replacement, decision);
+        }
+
+        /** Mesmo estado com outros parâmetros (a decisão e o substituto seguem; o reuso confere a expectativa). */
+        State withParameters(ActionParameters p) {
+            return new State(name, description, actionType, p, element, manualLocators, comments, edits, lastManualChange, replacement, decision);
         }
 
         boolean equalsIgnoringHistory(State o) {
             return name.equals(o.name) && description.equals(o.description) && actionType == o.actionType && parameters.equals(o.parameters)
-                    && preferred(element) == preferred(o.element) && manualLocators.equals(o.manualLocators) && comments.equals(o.comments);
+                    && preferred(element) == preferred(o.element) && manualLocators.equals(o.manualLocators) && comments.equals(o.comments)
+                    && replacement == o.replacement && Objects.equals(decision, o.decision);
         }
     }
 

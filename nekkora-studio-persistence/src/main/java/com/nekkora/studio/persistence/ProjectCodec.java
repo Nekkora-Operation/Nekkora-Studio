@@ -38,6 +38,8 @@ import com.nekkora.studio.domain.variable.SemanticType;
 import com.nekkora.studio.domain.variable.Sensitivity;
 import com.nekkora.studio.domain.variable.TextFormat;
 import com.nekkora.studio.domain.variable.VariableConstraints;
+import com.nekkora.studio.domain.target.DecisionActor;
+import com.nekkora.studio.domain.target.TargetDecision;
 import com.nekkora.studio.domain.variable.VariableDefinition;
 import com.nekkora.studio.domain.variable.VariableId;
 import com.nekkora.studio.domain.variable.VariableOrigin;
@@ -111,8 +113,9 @@ public final class ProjectCodec {
             for (VariableDefinition v : a.variables()) vars.add(variable(v));
             docs.put(ProjectFormat.VARIABLES, single("variables", vars));
         }
+        boolean decisions = ModelVersion.V1_2.equals(a.modelVersion());
         for (LogicalSession s : a.sessions()) {
-            for (AutomationStep st : s.steps()) docs.put(ProjectFormat.STEPS_DIR + st.id().value() + ".json", step(st));
+            for (AutomationStep st : s.steps()) docs.put(ProjectFormat.STEPS_DIR + st.id().value() + ".json", step(st, decisions));
         }
         for (LogicalSession s : a.sessions()) {
             for (AutomationStep st : s.steps()) {
@@ -168,7 +171,7 @@ public final class ProjectCodec {
         return m;
     }
 
-    private static Map<String, Object> step(AutomationStep st) {
+    private static Map<String, Object> step(AutomationStep st, boolean decisions) {
         Map<String, Object> d = new LinkedHashMap<>();
         d.put("stepId", st.id().value().toString());
         d.put("createdAt", st.createdAt().toString());
@@ -210,7 +213,75 @@ public final class ProjectCodec {
         for (StepField f : StepField.values()) st.editedAt(f).ifPresent(i -> edits.put(f.name(), i.toString()));
         effective.put("fieldEdits", edits);
         effective.put("lastManualChange", st.lastManualChange().map(Instant::toString).orElse(null));
+        if (decisions) {
+            // STUDIO-009 (modelo 1.2.0): alvo substituto e decisão — os dois campos existem em toda etapa (nulos se não houver)
+            effective.put("targetReplacement", st.replacementTarget().map(ProjectCodec::element).orElse(null));
+            effective.put("targetDecision", st.targetDecision().map(ProjectCodec::decision).orElse(null));
+        }
         d.put("effective", nulls(effective));
+        return d;
+    }
+
+    private static final java.util.regex.Pattern CODE = java.util.regex.Pattern.compile("[A-Z][A-Z0-9_]{0,59}");
+
+    /** Decisão sobre o alvo: campos exatos, códigos fechados; as regras de autoridade e coerência são as do domínio. */
+    private static TargetDecision decision(Doc t) throws ProjectException {
+        Doc b = t.obj("basis", "identitySource", "status", "reasons", "observedAt", "location");
+        Doc x = t.obj("expectation", "action", "valueKind", "variableRef", "targetId", "targetKind", "targetTag", "preferredExpression", "path");
+        List<String> reasons = b.strings("reasons", 16);
+        for (int i = 0; i < reasons.size(); i++) {
+            if (!CODE.matcher(reasons.get(i)).matches()) throw Doc.invalid(b.at("reasons") + "[" + i + "]", "código inválido");
+        }
+        List<com.nekkora.studio.domain.element.AccessStep.Type> path = new ArrayList<>();
+        List<String> types = x.strings("path", 12);
+        for (int i = 0; i < types.size(); i++) path.add(Doc.enumValue(types.get(i), com.nekkora.studio.domain.element.AccessStep.Type.class, x.at("path")));
+        TargetDecision.Kind kind = t.enumValue("kind", TargetDecision.Kind.class);
+        DecisionActor actor = t.enumValue("actor", DecisionActor.class);
+        Instant at = t.instant("decidedAt");
+        String source = b.str("identitySource");
+        String status = b.str("status");
+        Instant observed = b.instantOrNull("observedAt");
+        String location = b.str("location");
+        ActionType action = x.enumValue("action", ActionType.class);
+        String valueKind = x.str("valueKind");
+        String variableRef = x.str("variableRef");
+        String targetId = x.str("targetId");
+        String targetKind = x.str("targetKind");
+        String targetTag = x.str("targetTag");
+        String expression = x.str("preferredExpression");
+        try {
+            return new TargetDecision(kind, actor, at, new TargetDecision.Basis(source, status, reasons, observed, location),
+                    new TargetDecision.Expectation(action, valueKind, variableRef, targetId, targetKind, targetTag, expression, path));
+        } catch (IllegalArgumentException ex) {
+            throw Doc.invalid(t.where(), "decisão fora do contrato");
+        }
+    }
+
+    private static Map<String, Object> decision(TargetDecision t) {
+        Map<String, Object> d = new LinkedHashMap<>();
+        d.put("kind", t.kind().name());
+        d.put("actor", t.actor().name());
+        d.put("decidedAt", t.decidedAt().toString());
+        Map<String, Object> b = new LinkedHashMap<>();
+        b.put("identitySource", t.basis().identitySource());
+        b.put("status", t.basis().status());
+        b.put("reasons", new ArrayList<Object>(t.basis().reasons()));
+        b.put("observedAt", t.basis().observedAt() == null ? null : t.basis().observedAt().toString());
+        b.put("location", t.basis().location());
+        d.put("basis", nulls(b));
+        TargetDecision.Expectation x = t.expectation();
+        Map<String, Object> e = new LinkedHashMap<>();
+        e.put("action", x.action().name());
+        e.put("valueKind", x.valueKind());
+        e.put("variableRef", x.variableRef());
+        e.put("targetId", x.targetId());
+        e.put("targetKind", x.targetKind());
+        e.put("targetTag", x.targetTag());
+        e.put("preferredExpression", x.preferredExpression());
+        List<Object> path = new ArrayList<>();
+        for (com.nekkora.studio.domain.element.AccessStep.Type type : x.path()) path.add(type.name());
+        e.put("path", path);
+        d.put("expectation", e);
         return d;
     }
 
@@ -408,7 +479,9 @@ public final class ProjectCodec {
         if (!ModelVersion.SCHEMA.equals(a.str("schema"))) throw new ProjectException(ProjectException.Error.UNSUPPORTED_VERSION, a.at("schema"));
         // o modelo acompanha o catálogo: 1.0.0 sem variables.json, 1.1.0 com ele (o pacote já conferiu formato ↔ entrada)
         boolean hasVariables = docs.containsKey(ProjectFormat.VARIABLES);
-        if (!(hasVariables ? ModelVersion.V1_1 : ModelVersion.CURRENT).equals(a.str("modelVersion"))) {
+        // STUDIO-009: o modelo 1.2.0 (decisões sobre o alvo) acompanha o formato 1.2.x, com ou sem catálogo de variáveis
+        boolean decisions = ModelVersion.V1_2.equals(a.str("modelVersion"));
+        if (!decisions && !(hasVariables ? ModelVersion.V1_1 : ModelVersion.CURRENT).equals(a.str("modelVersion"))) {
             throw new ProjectException(ProjectException.Error.UNSUPPORTED_VERSION, a.at("modelVersion"));
         }
         AutomationId id = new AutomationId(uuid(a.str("automationId"), a.at("automationId")));
@@ -438,7 +511,7 @@ public final class ProjectCodec {
                 Object stepDoc = docs.get(path);
                 if (stepDoc == null) throw new ProjectException(ProjectException.Error.INTEGRITY, w + ".steps[" + j + "]: etapa inexistente");
                 Object evidenceDoc = docs.get(ProjectFormat.EVIDENCE_DIR + stepId + ".json");
-                steps.add(step(stepDoc, path, stepId, evidenceDoc));
+                steps.add(step(stepDoc, path, stepId, evidenceDoc, decisions));
             }
             sessions.add(new AutomationRestoration.SessionData(new SessionId(uuid(sid, w + ".sessionId")), s.str("name"), s.str("description"),
                     s.str("notes"), steps));
@@ -460,6 +533,10 @@ public final class ProjectCodec {
             variables = vd.each("variables", VariableRules.MAX_VARIABLES, ProjectCodec::variable);
             // o escritor nunca produz catálogo vazio (sem variáveis o projeto é 1.0.0): nada de forma alternativa aceita
             if (variables.isEmpty()) throw Doc.invalid(vd.at("variables"), "catálogo vazio no formato 1.1");
+        }
+        // STUDIO-009: o escritor só usa o modelo 1.2.0 com ao menos uma decisão ou alvo substituto (menor versão capaz)
+        if (decisions && sessions.stream().flatMap(x -> x.steps().stream()).noneMatch(x -> x.decision() != null || x.replacement() != null)) {
+            throw Doc.invalid(a.at("modelVersion"), "modelo 1.2.0 sem decisões sobre o alvo");
         }
         return new AutomationRestoration.AutomationData(id, a.str("name"), a.str("description"), a.enumValue("status", AutomationStatus.class),
                 a.instant("createdAt"), a.instant("updatedAt"), a.str("modelVersion"), a.lng("revision"), sessions, unattributed, variables);
@@ -506,12 +583,20 @@ public final class ProjectCodec {
         return new BigDecimal(text);
     }
 
-    private static AutomationRestoration.StepData step(Object value, String path, String expectedId, Object evidenceDoc) throws ProjectException {
+    private static AutomationRestoration.StepData step(Object value, String path, String expectedId, Object evidenceDoc, boolean decisions)
+            throws ProjectException {
         Doc d = Doc.of(value, path, "stepId", "createdAt", "original", "effective");
         if (!d.str("stepId").equals(expectedId)) throw new ProjectException(ProjectException.Error.INTEGRITY, path + ": identidade difere do nome");
         Doc o = d.obj("original", "provenance", "capturedElement", "context", "observedOutcome", "baseline", "derivedFrom");
-        Doc e = d.obj("effective", "name", "description", "actionType", "parameters", "preferredLocator", "manualLocators", "comments", "fieldEdits",
-                "lastManualChange");
+        // STUDIO-009: os campos do alvo substituto e da decisão existem SÓ no modelo 1.2.0 (e nele, sempre)
+        Doc e = decisions
+                ? d.obj("effective", "name", "description", "actionType", "parameters", "preferredLocator", "manualLocators", "comments", "fieldEdits",
+                        "lastManualChange", "targetReplacement", "targetDecision")
+                : d.obj("effective", "name", "description", "actionType", "parameters", "preferredLocator", "manualLocators", "comments", "fieldEdits",
+                        "lastManualChange");
+        ElementReference replacement = decisions && !e.isNull("targetReplacement") ? element(e.raw("targetReplacement"), e.at("targetReplacement")) : null;
+        TargetDecision decision = decisions && !e.isNull("targetDecision") ? decision(e.obj("targetDecision", "kind", "actor", "decidedAt", "basis",
+                "expectation")) : null;
         StepProvenance provenance = provenance(o.obj("provenance", "origin", "correlation", "recording"));
         ElementReference captured = o.isNull("capturedElement") ? null : element(o.raw("capturedElement"), o.at("capturedElement"));
         StepContext context = null;
@@ -552,7 +637,9 @@ public final class ProjectCodec {
         // os campos de fieldEdits são variáveis (só os editados): lidos como mapa de texto, conferidos um a um
         for (Map.Entry<String, String> en : e.stringMap("fieldEdits", StepField.values().length).entrySet()) {
             String w = e.at("fieldEdits") + "." + en.getKey();
-            edits.put(Doc.enumValue(en.getKey(), StepField.class, w), Doc.instant(en.getValue(), w));
+            StepField f = Doc.enumValue(en.getKey(), StepField.class, w);
+            if (f == StepField.TARGET && !decisions) throw Doc.invalid(w, "campo do modelo 1.2.0 em versão anterior");
+            edits.put(f, Doc.instant(en.getValue(), w));
         }
         List<ObservedEvidence> evidence = List.of();
         if (evidenceDoc != null) {
@@ -565,7 +652,7 @@ public final class ProjectCodec {
         return new AutomationRestoration.StepData(new StepId(uuid(expectedId, path)), d.instant("createdAt"), provenance, captured, context,
                 o.str("observedOutcome"), baseline, derivedFrom, e.str("name"), e.str("description"), e.enumValue("actionType", ActionType.class),
                 parameters(e.raw("parameters"), e.at("parameters")), e.integer("preferredLocator", -1, MAX_LIST), manual, comments, edits,
-                e.instantOrNull("lastManualChange"), evidence);
+                e.instantOrNull("lastManualChange"), evidence, replacement, decision);
     }
 
     private static StepProvenance provenance(Doc p) throws ProjectException {

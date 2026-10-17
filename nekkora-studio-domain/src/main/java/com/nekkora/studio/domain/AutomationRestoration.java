@@ -82,12 +82,22 @@ public final class AutomationRestoration {
     public record StepData(StepId id, Instant createdAt, StepProvenance provenance, ElementReference capturedElement, StepContext context,
                            String observedOutcome, CapturedBaseline baseline, StepId derivedFrom, String name, String description, ActionType actionType,
                            ActionParameters parameters, int preferredLocator, List<ManualLocator> manualLocators, List<StepComment> comments,
-                           Map<StepField, Instant> edits, Instant lastManualChange, List<ObservedEvidence> evidence) {
+                           Map<StepField, Instant> edits, Instant lastManualChange, List<ObservedEvidence> evidence, ElementReference replacement,
+                           com.nekkora.studio.domain.target.TargetDecision decision) {
         public StepData {
             manualLocators = List.copyOf(manualLocators);
             comments = List.copyOf(comments);
             edits = Map.copyOf(edits);
             evidence = List.copyOf(evidence);
+        }
+
+        /** Formatos anteriores à STUDIO-009: sem alvo substituto nem decisão. */
+        public StepData(StepId id, Instant createdAt, StepProvenance provenance, ElementReference capturedElement, StepContext context, String observedOutcome,
+                CapturedBaseline baseline, StepId derivedFrom, String name, String description, ActionType actionType, ActionParameters parameters,
+                int preferredLocator, List<ManualLocator> manualLocators, List<StepComment> comments, Map<StepField, Instant> edits, Instant lastManualChange,
+                List<ObservedEvidence> evidence) {
+            this(id, createdAt, provenance, capturedElement, context, observedOutcome, baseline, derivedFrom, name, description, actionType, parameters,
+                    preferredLocator, manualLocators, comments, edits, lastManualChange, evidence, null, null);
         }
     }
 
@@ -230,14 +240,22 @@ public final class AutomationRestoration {
         String n = name(st.name(), where + ".name");
         String desc = description(st.description(), where + ".description");
         check(st.actionType() != null && st.parameters() != null, "ACTION_REQUIRED", where + ".actionType");
-        check(preferredValid(st.capturedElement(), st.preferredLocator()), "LOCATOR_NOT_FOUND", where + ".preferredLocator");
-        ElementReference effective = st.capturedElement() == null ? null : st.capturedElement().withPreferredLocator(st.preferredLocator());
+        // STUDIO-009: com alvo substituto, o preferencial é dele (o capturado continua intacto)
+        ElementReference base = st.replacement() != null ? st.replacement() : st.capturedElement();
+        check(st.replacement() == null || st.capturedElement() != null || st.provenance().origin() != StepOrigin.RECORDED, "REPLACEMENT_INCONSISTENT",
+                where + ".replacement");
+        check(preferredValid(base, st.preferredLocator()), "LOCATOR_NOT_FOUND", where + ".preferredLocator");
+        check(st.decision() == null || base != null, "DECISION_WITHOUT_TARGET", where + ".decision");
+        // a mesma regra da substituição no domínio: um alvo incompatível com a ação nunca é aceito, nem vindo de arquivo
+        check(st.replacement() == null || !Automation.unusualTarget(st.actionType(), st.replacement().semanticKind()), "TARGET_INCOMPATIBLE_WITH_ACTION",
+                where + ".targetReplacement");
+        ElementReference effective = base == null ? null : base.withPreferredLocator(st.preferredLocator());
         try {
             Automation.checkParameters(st.actionType(), st.parameters(), effective);
         } catch (DomainValidationException e) {
             throw new RestoreException(e.problem().name(), where + ".parameters");
         }
-        check(st.manualLocators().isEmpty() || st.capturedElement() != null, "STEP_HAS_NO_ELEMENT", where + ".manualLocators");
+        check(st.manualLocators().isEmpty() || base != null, "STEP_HAS_NO_ELEMENT", where + ".manualLocators");
         for (int c = 0; c < st.comments().size(); c++) {
             StepComment sc = st.comments().get(c);
             String cw = where + ".comments[" + c + "]";
@@ -267,7 +285,7 @@ public final class AutomationRestoration {
             check(evidenceIds.add(ev.evidenceId()), "DUPLICATE_ID", ew + ".evidenceId");
         }
         AutomationStep.State state = new AutomationStep.State(n, desc, st.actionType(), st.parameters(), effective, st.manualLocators(), st.comments(),
-                st.edits(), st.lastManualChange());
+                st.edits(), st.lastManualChange(), st.replacement(), st.decision());
         return new AutomationStep(st.id(), p, st.capturedElement(), st.context(), st.observedOutcome(), st.createdAt(), st.baseline(), st.derivedFrom(),
                 state, st.evidence());
     }

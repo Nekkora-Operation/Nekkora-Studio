@@ -41,6 +41,9 @@ public final class CapturedDataPolicy {
             for (AutomationStep st : session.steps()) {
                 String w = "sessions[" + s + "].steps[" + i + "]";
                 if (st.capturedElement().isPresent()) element(st.capturedElement().get(), w + ".original.capturedElement");
+                // STUDIO-009: o alvo substituto veio da página pelas mesmas barreiras — mesma exigência de ponto fixo
+                if (st.replacementTarget().isPresent()) element(st.replacementTarget().get(), w + ".effective.targetReplacement");
+                if (st.targetDecision().isPresent()) decision(st.targetDecision().get(), w + ".effective.targetDecision");
                 if (st.context().isPresent()) context(st.context().get(), w + ".original.context");
                 studioText(st.observedOutcome(), w + ".original.observedOutcome");
                 int e = 0;
@@ -82,6 +85,18 @@ public final class CapturedDataPolicy {
             require(o.type().matches("[A-Z_]{1,40}"), w + ".obstacles[" + i + "].type");
             studioText(o.description(), w + ".obstacles[" + i + "].description");
         }
+    }
+
+    /** Decisão: local como modelo de URL; expressão, tipo e tag como os de um elemento capturado. */
+    private static void decision(com.nekkora.studio.domain.target.TargetDecision d, String w) throws ProjectException {
+        String location = d.basis().location();
+        require(location.isEmpty() || location.equals(CapturePrivacy.urlTemplate(location)), w + ".basis.location");
+        var x = d.expectation();
+        require(CapturePrivacy.expressionSafe(x.preferredExpression()), w + ".expectation.preferredExpression");
+        require(x.targetKind().matches("[A-Z_]{1,40}"), w + ".expectation.targetKind");
+        require(x.targetTag().isEmpty() || "unknown".equals(x.targetTag()) || x.targetTag().equals(CapturePrivacy.tagName(x.targetTag())),
+                w + ".expectation.targetTag");
+        require(x.variableRef().isEmpty() || x.variableRef().matches("[A-Za-z][A-Za-z0-9_.-]{0,63}"), w + ".expectation.variableRef");
     }
 
     private static void context(StepContext c, String w) throws ProjectException {

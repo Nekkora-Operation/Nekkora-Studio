@@ -1,0 +1,37 @@
+{
+  "description": "Modelo 1.2.0 sem nenhuma decisão nem alvo substituto: o escritor nunca produz esta forma (versão mínima).",
+  "base": "consulta-clientes-decisoes.nekkora",
+  "changes": [
+    {
+      "entry": "step:2",
+      "op": "set",
+      "pointer": "/effective/targetDecision",
+      "value": null
+    },
+    {
+      "entry": "step:4",
+      "op": "set",
+      "pointer": "/effective/targetDecision",
+      "value": null
+    },
+    {
+      "entry": "step:7",
+      "op": "set",
+      "pointer": "/effective/targetDecision",
+      "value": null
+    },
+    {
+      "entry": "step:7",
+      "op": "set",
+      "pointer": "/effective/targetReplacement",
+      "value": null
+    },
+    {
+      "entry": "step:7",
+      "op": "remove",
+      "pointer": "/effective/fieldEdits/TARGET"
+    }
+  ],
+  "expectedError": "INVALID_CONTENT",
+  "schemaRejects": false
+}

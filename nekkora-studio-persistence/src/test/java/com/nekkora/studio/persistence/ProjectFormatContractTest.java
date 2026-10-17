@@ -111,7 +111,9 @@ class ProjectFormatContractTest {
         enums.put("StateValue", EvidenceVocabulary.StateValue.class);
         enums.put("MessageAvailability", ObservedEvidence.Message.Availability.class);
         for (Map.Entry<String, Class<? extends Enum<?>>> e : enums.entrySet()) {
-            List<String> java = Arrays.stream(e.getValue().getEnumConstants()).map(Enum::name).toList();
+            List<String> java = Arrays.stream(e.getValue().getEnumConstants()).map(Enum::name)
+                    .filter(n -> !(e.getValue() == StepField.class && n.equals("TARGET"))) // STUDIO-009: TARGET só existe no modelo 1.2.0
+                    .toList();
             assertEquals(java, Json.array(Json.object(defs, e.getKey()), "enum"), e.getKey());
         }
         Map<String, Object> manifest = Json.object(Json.object(defs, "Manifest"), "properties");

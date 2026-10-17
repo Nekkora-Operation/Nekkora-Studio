@@ -1,0 +1,40 @@
+{
+  "description": "Campo de decisão num arquivo 1.1.0: o formato anterior não tem onde guardá-lo (nada é ignorado em silêncio).",
+  "base": "1.1:consulta-clientes-variaveis.nekkora",
+  "changes": [
+    {
+      "entry": "step:2",
+      "op": "set",
+      "pointer": "/effective/targetDecision",
+      "value": {
+        "kind": "CONFIRMED",
+        "actor": "TEST_AGENT",
+        "decidedAt": "2026-10-17T12:01:04Z",
+        "basis": {
+          "identitySource": "TARGET_ID",
+          "status": "RESOLVED",
+          "reasons": [
+            "LOOKALIKES_PRESENT"
+          ],
+          "observedAt": "2026-10-17T12:01:03Z",
+          "location": "http://127.0.0.1:18765/{…}/login.html"
+        },
+        "expectation": {
+          "action": "CLICK",
+          "valueKind": "NONE",
+          "variableRef": "",
+          "targetId": "tgt-button",
+          "targetKind": "BUTTON",
+          "targetTag": "button",
+          "preferredExpression": "#entrar",
+          "path": [
+            "MAIN_DOCUMENT",
+            "IFRAME"
+          ]
+        }
+      }
+    }
+  ],
+  "expectedError": "INVALID_CONTENT",
+  "schemaRejects": null
+}

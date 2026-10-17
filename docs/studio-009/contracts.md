@@ -27,3 +27,75 @@ Garantias testadas por `GuidedPlanTest` e `GuidedPlanApiTest`:
 - mesmos bytes para o mesmo estado;
 - ausência de literais, finalidades, nomes, apelidos e chaves de correlação, no JSON **e** em qualquer caminho da API Java;
 - casos negativos: sem alvo, manual só ao lado de referência, descritor, frame/shadow, tipo incomum, sensível, tecla fora do vocabulário, relatório de outra automação.
+
+## 2. `nekkora-bridge/1` + capacidade `guided-debug/1` (G2)
+
+Acréscimo ao contrato da extensão (`contracts/studio-bridge.schema.json`). A cópia do Studio fica em
+`nekkora-studio-bridge/src/test/resources/contracts`. A capacidade é negociada no `studio.debug.start` (`capabilities:
+["guided-debug/1"]`). Studio novo com extensão antiga recebe `UNKNOWN_COMMAND`. Uma capacidade desconhecida recebe
+`BAD_REQUEST`.
+
+| Comando | Payload | Resposta |
+|---|---|---|
+| `studio.debug.start` | `debugId`, `operationId`, `tabRef`, `leaseMs`, `capabilities` | `DebugResult` (`debug`, `duplicate`): idempotente por `operationId` |
+| `studio.debug.inspect` | `debugId`, `requestId`, `stepRef`, `actionType`, `targetId` ou `null`, `descriptor`, `highlight` | `DebugInspectResult`: idempotente por `requestId` |
+| `studio.debug.highlight` | `debugId`, `requestId`, `candidateRef` (`null` limpa) | `DebugHighlightResult` |
+| `studio.debug.pick` | `debugId`, `requestId`, `action` (`START`, `CANCEL` ou `ADOPT_CANDIDATE`), `candidateRef`, `actionType` | `DebugPickResult`; o elemento chega em `studio.debug.picked` |
+| `studio.debug.finish` | `debugId`, `operationId` | `DebugResult` |
+| `studio.debug.status`, `studio.debug.renew` | `debugId` | `DebugResult` |
+
+| Evento | Payload |
+|---|---|
+| `studio.debug.picked` | `debugId`, `requestId`, `pageEpoch`, `observedAt`, `origin` (`BROWSER_SELECTION` ou `ADOPTED_CANDIDATE`), `element` (o `ElementRef` de etapa, com a nova `correlation.targetId`), `checks`, `box`, `notes` |
+| `studio.debug.changed` | `debug` (estado, época, motivo em código) |
+
+`DebugInspectResult`:
+
+| Campo | Conteúdo |
+|---|---|
+| `status` | os do `TargetResolver` (`RESOLVED`, `NOT_FOUND`, `AMBIGUOUS`, `IDENTITY_MISMATCH`, `STALE_TARGET`, `SCOPE_UNAVAILABLE`, `INSUFFICIENT_EVIDENCE`) + `CONTEXT_UNAVAILABLE`. Só `RESOLVED` comprova a identidade |
+| `identitySource` | `TARGET_ID` ou `DESCRIPTOR` |
+| `reasons` | até 16 códigos de um vocabulário fechado (`DebugReasonCode`) |
+| `checks` | `identity`, `unique`, `visible`, `enabled`, `editable`, `kindMatchesAction`, `frameReachable`, `shadowReachable` ∈ {`PASS`, `FAIL`, `UNKNOWN`, `NOT_APPLICABLE`} |
+| `element` | só tipo, nome do vocabulário, tag e se é sensível |
+| `candidates` | até 5, só os plausíveis, com `candidateRef` válido para a época atual |
+| `highlighted`, `box` | caixa em px do viewport e posição aproximada na tela |
+| `continuity` | D7: continuidade técnica, que nunca é identidade |
+
+Não existe campo para frase livre, valor, PageMap, `nodeId` ou rótulo de confirmação humana. As fixtures inválidas `s009-*`
+provam isso.
+
+Barreiras:
+- **Service worker:** filtra códigos e passa os nomes pelo vocabulário.
+- **Host (`DebugPrivacy`):** a mesma barreira de etapa para o elemento escolhido; nomes pelo vocabulário no resumo e nos candidatos; schema estrito.
+- **Studio (4ª barreira, no `GuidedDebugClient`):** reaplica a política.
+
+Host (Native Messaging, `nekkora-nm/1`, acréscimo):
+- `debug.resolve` usa o resolvedor **somente leitura** (D-S009-03).
+- `debug.node.state` faz as verificações situadas de um nó.
+
+## 3. `.nekkora` 1.2.0 (G4)
+
+O 1.1.0 mais dois campos em cada etapa (`effective`):
+- `targetReplacement`: o elemento que substitui o capturado depois de uma correção aprovada, com a mesma forma de `capturedElement`;
+- `targetDecision`: `kind` (`CONFIRMED` ou `REJECTED`), `actor` (`DEVELOPER` ou `TEST_AGENT`), `decidedAt`, `basis` (resumo **em códigos** da verificação: fonte, status, motivos, instante, modelo de URL) e `expectation` (ação, origem do valor, variável, `targetId`, tipo, tag, expressão preferencial, trajetória).
+
+`StepField` ganha `TARGET`, válido só no 1.2. Regras de versão:
+- o escritor grava a **menor** versão capaz: 1.2.0 só com ao menos uma decisão ou substituto; senão 1.1.0 ou 1.0.0, byte a byte como antes;
+- no 1.2.x o catálogo de variáveis é opcional;
+- o leitor recusa um 1.2.0 sem decisões, um campo de decisão ou `TARGET` em 1.0/1.1, e tudo o que é mais novo que 1.2.
+
+Gravar 1.2 sobre o próprio arquivo 1.0 ou 1.1 é migração: pede confirmação explícita e faz uma cópia `… (formato x.y.z).nekkora`, como na STUDIO-008.
+
+Schema e fixtures ficam em `nekkora-studio-persistence/src/test/resources/contracts/nekkora-project/1.2.0/`: 2 válidas e 11 inválidas.
+- Inválidas:
+  - ator `HUMAN_CONFIRMED` ou `AI_VERIFIED`;
+  - decisão sem ator;
+  - frase livre na base;
+  - motivo fora de código;
+  - substituto com texto da página;
+  - URL completa;
+  - 1.2 sem decisões;
+  - substituto incompatível com a ação;
+  - decisão ou `TARGET` em arquivo 1.1.
+- Ajuste em fixtures congeladas: as fixtures "formato mais novo" do 1.0.0 e do 1.1.0 passaram a usar 1.3.0 (antes 1.2.0, que agora é real). É o mesmo ajuste que a STUDIO-008 fez no 1.1.0; os schemas congelados não mudaram (D-S009-12).
