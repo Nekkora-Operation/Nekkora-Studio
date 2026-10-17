@@ -1,0 +1,14 @@
+STUDIO-008 — revisão 2 do PR #11: testes de reprodução executados sobre o código de 9992b0a (antes da correção).
+Comando: ./mvnw -o test -pl nekkora-studio-domain,nekkora-studio-persistence,nekkora-studio-app -Dtest=VariableDomainTest,ProjectFormat11ContractTest,VariablesUiTest
+
+[ERROR]   ProjectFormat11ContractTest.fixturesInvalidas:290 formato-incoerente-com-significado.json ==> Expected com.nekkora.studio.persistence.ProjectException to be thrown, but nothing was thrown.
+[ERROR]   VariableDomainTest.formatoCoerenteComSignificado:141 » IllegalArgument No enum constant com.nekkora.studio.domain.ValidationProblem.VARIABLE_FORMAT_INCOMPATIBLE
+[ERROR]   VariablesUiTest.formatoIncoerenteRecusado:139 nada é declarado ==> expected: <true> but was: <false>
+[ERROR] Tests run: 10, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 3.082 s <<< FAILURE! -- in com.nekkora.studio.app.VariablesUiTest
+[ERROR] Tests run: 10, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 4.479 s <<< FAILURE! -- in com.nekkora.studio.app.VariablesUiTest
+[ERROR] Tests run: 12, Failures: 0, Errors: 1, Skipped: 0, Time elapsed: 0.159 s <<< FAILURE! -- in com.nekkora.studio.domain.VariableDomainTest
+[ERROR] Tests run: 8, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.498 s <<< FAILURE! -- in com.nekkora.studio.persistence.ProjectFormat11ContractTest
+[ERROR] com.nekkora.studio.app.VariablesUiTest.formatoIncoerenteRecusado -- Time elapsed: 0.091 s <<< FAILURE!
+[ERROR] com.nekkora.studio.app.VariablesUiTest.formatoIncoerenteRecusado -- Time elapsed: 0.114 s <<< FAILURE!
+[ERROR] com.nekkora.studio.domain.VariableDomainTest.formatoCoerenteComSignificado -- Time elapsed: 0.005 s <<< ERROR!
+[ERROR] com.nekkora.studio.persistence.ProjectFormat11ContractTest.fixturesInvalidas -- Time elapsed: 0.074 s <<< FAILURE!

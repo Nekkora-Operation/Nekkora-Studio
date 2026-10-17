@@ -136,6 +136,45 @@ class VariableDomainTest {
     }
 
     @Test
+    @DisplayName("revisão 2: formato que nenhuma forma válida do significado satisfaz é recusado (e-mail com máscara de CPF, CPF com forma de e-mail), confirmado ou proposto")
+    void formatoCoerenteComSignificado() {
+        ValidationProblem incompatible = ValidationProblem.valueOf("VARIABLE_FORMAT_INCOMPATIBLE"); // pelo nome: compila no código revisado
+        // formas válidas FICTÍCIAS de cada significado com representação conhecida; os demais não restringem o formato
+        Map<SemanticType, List<String>> forms = Map.of(SemanticType.BRAZILIAN_CPF, List.of("12345678909", "123.456.789-09"),
+                SemanticType.EMAIL, List.of("pessoa@exemplo.test"));
+        int refusedCount = 0;
+        for (SemanticType semantic : SemanticType.values()) {
+            if (!semantic.accepts(VariableType.STRING)) continue; // formato de texto só existe em STRING (regra anterior)
+            List<SemanticStatus> statuses = semantic == SemanticType.UNSPECIFIED ? List.of(SemanticStatus.UNSPECIFIED)
+                    : List.of(SemanticStatus.USER_CONFIRMED, SemanticStatus.PROPOSED_UNCONFIRMED);
+            for (SemanticStatus status : statuses) {
+                for (TextFormat format : TextFormat.values()) {
+                    Automation a = automation();
+                    VariableDraft d = VariableDraft.of("v", VariableType.STRING).withSemantic(semantic, status).withSensitivity(semantic.minimumSensitivity())
+                            .withConstraints(new VariableConstraints(false, null, null, format, null, null, null, null));
+                    boolean coherent = !forms.containsKey(semantic) || forms.get(semantic).stream().anyMatch(format::matches);
+                    String what = semantic + " + " + format + " (" + status + ")";
+                    if (coherent) {
+                        assertEquals(format, a.declareVariable(d).constraints().textFormat(), what);
+                    } else {
+                        assertEquals(incompatible, refused(() -> a.declareVariable(d)), what);
+                        refusedCount++;
+                    }
+                }
+            }
+        }
+        assertEquals(8, refusedCount, "e-mail: dígitos, letras e dígitos, máscara de CPF; CPF: forma de e-mail — confirmados e propostos");
+        // editar também é recusado, e a variável fica como estava
+        Automation a = automation();
+        VariableDefinition email = a.declareVariable(VariableDraft.of("contato", VariableType.STRING)
+                .withSemantic(SemanticType.EMAIL, SemanticStatus.USER_CONFIRMED).withSensitivity(Sensitivity.PERSONAL_DATA)
+                .withConstraints(new VariableConstraints(false, null, null, TextFormat.EMAIL_SHAPE, null, null, null, null)));
+        assertEquals(incompatible, refused(() -> a.updateVariable(email.id(), email.draft().withConstraints(
+                new VariableConstraints(false, null, null, TextFormat.BRAZILIAN_CPF_MASKED, null, null, null, null)))));
+        assertEquals(TextFormat.EMAIL_SHAPE, a.variable(email.id()).orElseThrow().constraints().textFormat());
+    }
+
+    @Test
     @DisplayName("constantes: só não sensíveis, na forma canônica do tipo (decimal exato, sem arredondar; inteiro; data ISO), dentro das restrições; CPF nunca")
     void constantes() {
         Automation a = automation();

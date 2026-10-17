@@ -12,6 +12,7 @@ import com.nekkora.studio.domain.action.ValueSource;
 import com.nekkora.studio.domain.variable.SemanticStatus;
 import com.nekkora.studio.domain.variable.SemanticType;
 import com.nekkora.studio.domain.variable.Sensitivity;
+import com.nekkora.studio.domain.variable.TextFormat;
 import com.nekkora.studio.domain.variable.VariableDefinition;
 import com.nekkora.studio.domain.variable.VariableOrigin;
 import com.nekkora.studio.domain.variable.VariableType;
@@ -122,6 +123,23 @@ class VariablesUiTest {
         assertEquals("https://lab.exemplo.test", fx.active().variableNamed("portal.endereco").orElseThrow().origin().constant());
         VariablesPanel.Row row = Edt.call(() -> panel().variableList().getSelectedValue());
         assertFalse(row.summary().contains("lab.exemplo.test") || row.title().contains("lab.exemplo.test"), "a lista não mostra o valor fixo");
+    }
+
+    @Test
+    @DisplayName("revisão 2 — formato que contradiz o significado (e-mail com máscara de CPF): recusado no campo de formato, nada é declarado")
+    void formatoIncoerenteRecusado() {
+        fx.missionExample();
+        VariableForm[] seen = new VariableForm[1];
+        fx.prompts.then(f -> {
+            seen[0] = (VariableForm) f;
+            variable("cliente.email", VariableType.STRING, SemanticType.EMAIL, true, Sensitivity.PERSONAL_DATA, VariableOrigin.Kind.INPUT, null).accept(f);
+            seen[0].textFormatInput().setSelectedItem(TextFormat.BRAZILIAN_CPF_MASKED);
+        });
+        Edt.run(() -> fx.studio.controller().newVariable());
+        assertTrue(fx.active().variables().isEmpty(), "nada é declarado");
+        assertFalse(fx.prompts.results.get(fx.prompts.results.size() - 1));
+        assertTrue(Edt.call(() -> seen[0].visibleErrors()).contains("contradiz o significado"), Edt.call(() -> seen[0].visibleErrors()));
+        assertEquals(2, Edt.call(() -> seen[0].tabs().getSelectedIndex()), "a aba Restrições, com o campo de formato, fica em primeiro plano");
     }
 
     @Test
