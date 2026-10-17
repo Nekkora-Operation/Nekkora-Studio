@@ -1,0 +1,292 @@
+{
+  "schema": "nekkora-studio/pdd-visual",
+  "version": "1.0.0",
+  "automationId": "88d6c28f-12d9-45d1-851d-ef7352ad257b",
+  "processRevision": "sha256:c22835fe3015f29abdba6267e122aeeb010cf1df1e1e28290c76c435db780c5a",
+  "sections": [
+    {
+      "sessionId": "a34ed56e-d84f-4cb0-91f9-ee2eb9fcc540",
+      "number": 1,
+      "title": {
+        "value": "Autenticação",
+        "state": "REVIEWED",
+        "reviewer": "TEST_AGENT"
+      },
+      "blocks": [
+        {
+          "blockId": "blk-4979d3420e80dacf",
+          "stepIds": ["b5bb1cff-a85f-417e-817e-6cf4756dc48b", "7696e6a5-75cc-4bb2-bfa1-59d9c9250a75", "de3e636f-7428-4789-9bc9-e25312137263"],
+          "title": {
+            "value": "Realizar autenticação",
+            "state": "REVIEWED",
+            "reviewer": "TEST_AGENT"
+          },
+          "instructions": [
+            {
+              "stepId": "b5bb1cff-a85f-417e-817e-6cf4756dc48b",
+              "ordinal": 1,
+              "kind": "OBSERVED",
+              "text": {
+                "value": "Informar o campo “Usuário”",
+                "state": "DERIVED",
+                "reviewer": ""
+              }
+            },
+            {
+              "stepId": "7696e6a5-75cc-4bb2-bfa1-59d9c9250a75",
+              "ordinal": 2,
+              "kind": "OBSERVED",
+              "text": {
+                "value": "Informar a senha",
+                "state": "DERIVED",
+                "reviewer": ""
+              }
+            },
+            {
+              "stepId": "de3e636f-7428-4789-9bc9-e25312137263",
+              "ordinal": 3,
+              "kind": "OBSERVED",
+              "text": {
+                "value": "Selecionar “Entrar”",
+                "state": "DERIVED",
+                "reviewer": ""
+              }
+            }
+          ],
+          "screenKey": "tela-cc00b23b2317a71d",
+          "capture": "sha256:bc201fc0de0b06278f453ca99993b027b022465e28291eb4133dd9d5588dbbb8"
+        }
+      ]
+    },
+    {
+      "sessionId": "8c68510f-96de-479c-8e97-d4b9483b6f71",
+      "number": 2,
+      "title": {
+        "value": "Consulta",
+        "state": "DERIVED",
+        "reviewer": ""
+      },
+      "blocks": [
+        {
+          "blockId": "blk-3d6216c36beead15",
+          "stepIds": ["3317d2e4-64b7-4fcb-bd43-9780c4b77638", "b8147e57-7100-4ff4-bef7-f26c0f44f07b"],
+          "title": {
+            "value": "Preencher os campos e selecionar “Consultar”",
+            "state": "DERIVED",
+            "reviewer": ""
+          },
+          "instructions": [
+            {
+              "stepId": "3317d2e4-64b7-4fcb-bd43-9780c4b77638",
+              "ordinal": 1,
+              "kind": "OBSERVED",
+              "text": {
+                "value": "Informar o campo “Código do registro”",
+                "state": "DERIVED",
+                "reviewer": ""
+              }
+            },
+            {
+              "stepId": "b8147e57-7100-4ff4-bef7-f26c0f44f07b",
+              "ordinal": 2,
+              "kind": "OBSERVED",
+              "text": {
+                "value": "Selecionar “Consultar”",
+                "state": "DERIVED",
+                "reviewer": ""
+              }
+            }
+          ],
+          "screenKey": "tela-a21fedd0c57f88ae",
+          "capture": "sha256:6af3d9b53589aa8a518a804cf8e995f4231bfc9a8da1dda7259b10a95e1d43b0"
+        }
+      ]
+    },
+    {
+      "sessionId": "ccb17274-3ed2-4fc3-ac16-04cfef417e05",
+      "number": 3,
+      "title": {
+        "value": "Resultado",
+        "state": "DERIVED",
+        "reviewer": ""
+      },
+      "blocks": [
+        {
+          "blockId": "blk-23ce6d148839460e",
+          "stepIds": ["2c2fdd65-6829-4587-a43d-7fafc600bff6", "ccc66be4-fe1a-44fc-9f65-22a5352de4ae"],
+          "title": {
+            "value": "Observar a tela",
+            "state": "DERIVED",
+            "reviewer": ""
+          },
+          "instructions": [
+            {
+              "stepId": "2c2fdd65-6829-4587-a43d-7fafc600bff6",
+              "ordinal": 1,
+              "kind": "DECLARED",
+              "text": {
+                "value": "Observar a tela exibida",
+                "state": "DERIVED",
+                "reviewer": ""
+              }
+            },
+            {
+              "stepId": "ccc66be4-fe1a-44fc-9f65-22a5352de4ae",
+              "ordinal": 2,
+              "kind": "DECLARED",
+              "text": {
+                "value": "Aguardar a atualização da tela",
+                "state": "DERIVED",
+                "reviewer": ""
+              }
+            }
+          ],
+          "screenKey": "",
+          "capture": ""
+        }
+      ]
+    }
+  ],
+  "captures": [
+    {
+      "sha256": "sha256:bc201fc0de0b06278f453ca99993b027b022465e28291eb4133dd9d5588dbbb8",
+      "width": 1024,
+      "height": 849,
+      "devicePixelRatio": 1,
+      "observedAt": "2026-10-17T21:20:56.395Z",
+      "pageEpoch": 0,
+      "policy": "nekkora-visual/1",
+      "screenKey": "tela-cc00b23b2317a71d",
+      "forSteps": ["b5bb1cff-a85f-417e-817e-6cf4756dc48b", "7696e6a5-75cc-4bb2-bfa1-59d9c9250a75", "de3e636f-7428-4789-9bc9-e25312137263"],
+      "annotations": [
+        {
+          "stepId": "b5bb1cff-a85f-417e-817e-6cf4756dc48b",
+          "status": "PLACED",
+          "x": 0.038086,
+          "y": 0.1649,
+          "width": 0.234375,
+          "height": 0.045347,
+          "reason": ""
+        },
+        {
+          "stepId": "7696e6a5-75cc-4bb2-bfa1-59d9c9250a75",
+          "status": "PLACED",
+          "x": 0.28418,
+          "y": 0.1649,
+          "width": 0.234375,
+          "height": 0.045347,
+          "reason": ""
+        },
+        {
+          "stepId": "de3e636f-7428-4789-9bc9-e25312137263",
+          "status": "PLACED",
+          "x": 0.530273,
+          "y": 0.167256,
+          "width": 0.071518,
+          "height": 0.042992,
+          "reason": ""
+        }
+      ],
+      "limitations": [],
+      "regions": [
+        {
+          "kind": "CARRIER",
+          "x": 39,
+          "y": 118,
+          "width": 240,
+          "height": 22
+        },
+        {
+          "kind": "CARRIER",
+          "x": 291,
+          "y": 118,
+          "width": 240,
+          "height": 22
+        },
+        {
+          "kind": "CARRIER",
+          "x": 543,
+          "y": 142,
+          "width": 73,
+          "height": 36
+        },
+        {
+          "kind": "FIELD",
+          "x": 39,
+          "y": 140,
+          "width": 240,
+          "height": 39
+        },
+        {
+          "kind": "FIELD",
+          "x": 291,
+          "y": 140,
+          "width": 240,
+          "height": 39
+        }
+      ]
+    },
+    {
+      "sha256": "sha256:6af3d9b53589aa8a518a804cf8e995f4231bfc9a8da1dda7259b10a95e1d43b0",
+      "width": 1024,
+      "height": 849,
+      "devicePixelRatio": 1,
+      "observedAt": "2026-10-17T21:21:02.557Z",
+      "pageEpoch": 0,
+      "policy": "nekkora-visual/1",
+      "screenKey": "tela-a21fedd0c57f88ae",
+      "forSteps": ["3317d2e4-64b7-4fcb-bd43-9780c4b77638", "b8147e57-7100-4ff4-bef7-f26c0f44f07b"],
+      "annotations": [
+        {
+          "stepId": "3317d2e4-64b7-4fcb-bd43-9780c4b77638",
+          "status": "PLACED",
+          "x": 0.038086,
+          "y": 0.125442,
+          "width": 0.234375,
+          "height": 0.045347,
+          "reason": ""
+        },
+        {
+          "stepId": "b8147e57-7100-4ff4-bef7-f26c0f44f07b",
+          "status": "PLACED",
+          "x": 0.28418,
+          "y": 0.127797,
+          "width": 0.094711,
+          "height": 0.042992,
+          "reason": ""
+        }
+      ],
+      "limitations": [],
+      "regions": [
+        {
+          "kind": "CARRIER",
+          "x": 39,
+          "y": 84,
+          "width": 240,
+          "height": 22
+        },
+        {
+          "kind": "CARRIER",
+          "x": 291,
+          "y": 109,
+          "width": 96,
+          "height": 36
+        },
+        {
+          "kind": "CARRIER",
+          "x": 400,
+          "y": 109,
+          "width": 79,
+          "height": 36
+        },
+        {
+          "kind": "FIELD",
+          "x": 39,
+          "y": 106,
+          "width": 240,
+          "height": 39
+        }
+      ]
+    }
+  ]
+}
