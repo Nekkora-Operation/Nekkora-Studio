@@ -62,6 +62,7 @@ public enum ValidationProblem {
     VARIABLE_SENSITIVITY_TOO_LOW(Field.VALUE, "Este significado exige uma classificação de sensibilidade mais alta (por exemplo, dados pessoais)."),
     VARIABLE_AUTHORITY_INVALID(Field.VALUE, "Escolha o significado antes de confirmá-lo; sem significado, não há o que confirmar."),
     VARIABLE_CONSTRAINT_INVALID(Field.VALUE, "As restrições não são coerentes com o tipo (comprimento, formato, limites, escala ou moeda)."),
+    VARIABLE_FORMAT_INCOMPATIBLE(Field.VALUE, "O formato contradiz o significado (ex.: máscara de CPF num e-mail). Escolha um formato compatível."),
     VARIABLE_CONSTANT_FORBIDDEN(Field.VALUE, "Variáveis com dados pessoais ou segredos não podem ter valor fixo: o projeto não é criptografado."),
     VARIABLE_CONSTANT_INVALID(Field.VALUE, "O valor fixo não é válido para o tipo ou não respeita as restrições."),
     VARIABLE_CONSTANT_LOOKS_SENSITIVE(Field.VALUE, "O valor fixo parece conter um dado sensível. Declare a variável como entrada."),

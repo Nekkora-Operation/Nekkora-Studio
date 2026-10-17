@@ -19,6 +19,11 @@
 representação é `DIGITS` ou `BRAZILIAN_CPF_MASKED` (`SemanticType.representations()`); sem ela, a validação avisa
 `VARIABLE_REPRESENTATION_UNSPECIFIED`. Ver `review-1.md`.
 
+**Formato coerente com o significado** (revisão 2): o domínio recusa (`VARIABLE_FORMAT_INCOMPATIBLE`) o formato que
+nenhuma forma válida do significado satisfaz — e-mail com "Somente dígitos", "Letras e dígitos" ou "Máscara de CPF"; CPF
+com "Forma de e-mail". Admitir não é declarar a representação (CPF com "Letras e dígitos" continua com o aviso). Ver
+`review-2.md`.
+
 ## Compatibilidade significado × tipo
 
 | Significado | Tipos aceitos | Sensibilidade mínima |
@@ -31,7 +36,7 @@ representação é `DIGITS` ou `BRAZILIAN_CPF_MASKED` (`SemanticType.representat
 | Texto livre, Identificador, Não especificado | qualquer | — |
 
 Uma combinação incompatível é recusada pelo domínio (`VARIABLE_SEMANTIC_INCOMPATIBLE`,
-`VARIABLE_SENSITIVITY_TOO_LOW`); nada é corrigido em silêncio.
+`VARIABLE_SENSITIVITY_TOO_LOW`, `VARIABLE_FORMAT_INCOMPATIBLE`); nada é corrigido em silêncio.
 
 ## Autoridade (situação do significado)
 

@@ -18,5 +18,7 @@
 | App | `VariablesPerformanceTest` | 10/100/1.000/5.000 etapas (`performance.md`) |
 | Homologação | `Studio008Homologation` | Windows real, Robot, cenários 1–8 (`homologation.md`) |
 | Homologação | `Studio008Review1Homologation` | revisão 1: formato, aviso, contrato, Undo/Redo e gravação (`review-1.md`) |
+| Revisão 2 | `VariableDomainTest#formatoCoerenteComSignificado`, fixture inválida 1.1.0 `formato-incoerente-com-significado.json`, `VariablesUiTest#formatoIncoerenteRecusado` | matriz significado × formato contra formas válidas fictícias (8 recusas: confirmado e proposto), edição recusada sem alterar a variável; arquivo 1.1.0 com CPF em forma de e-mail recusado; formulário real com a mensagem no campo de formato |
+| Homologação | `Studio008Review2Homologation` | revisão 2: recusa no formulário real (criar e editar), formato coerente aceito, validação limpa (`review-2.md`) |
 
 Regressão: Windows `./mvnw clean verify` e Linux `tools/golden-linux.sh verify` (contêiner com JDK fixado).

@@ -1,0 +1,12 @@
+Tela: java.awt.Rectangle[x=0,y=0,width=1920,height=1032] · java 21.0.12
+OK    R2-1 e-mail confirmado + 'Máscara de CPF': recusado ('O formato contradiz o significado (ex.: máscara de CPF num e-mail). Escolha um formato compatível.'); diálogo continua aberto, aba Restrições em primeiro plano
+OK    nada foi declarado (a automação continua sem variáveis)
+captura S008-R2-01-email-com-mascara-recusado.png (760x652)
+OK    R2-2 com 'Forma de e-mail' a variável é declarada (formato coerente), sem valor
+OK    R2-3 CPF + 'Forma de e-mail' na edição: recusado no campo de formato; a variável continua e-mail
+captura S008-R2-02-cpf-com-forma-de-email-recusado.png (760x635)
+OK    com 'Somente dígitos' a edição é aceita: CPF, formato DIGITS
+OK    R2-4 Validar (Ctrl+Shift+V real): nenhuma declaração inconsistente nem aviso de representação para a variável
+captura S008-R2-03-cpf-so-digitos.png (1350x891)
+OK    logs só com códigos e contagens: sem nomes de variáveis
+RESULTADO: 7 verificações, 0 falha(s)

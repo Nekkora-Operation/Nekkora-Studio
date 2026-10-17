@@ -312,6 +312,7 @@ public final class VariableForm extends StudioForm<VariableForm.Values> {
             case VARIABLE_PRODUCER_NOT_FOUND, VARIABLE_PRODUCER_OUT_OF_SCOPE -> producerField;
             case VARIABLE_SCOPE_SESSION_NOT_FOUND -> scopeField;
             case VARIABLE_CONSTRAINT_INVALID -> rangeField;
+            case VARIABLE_FORMAT_INCOMPATIBLE -> formatField;
             case VARIABLE_PURPOSE_LOOKS_SENSITIVE, DESCRIPTION_TOO_LONG -> purposeField;
             default -> fieldFor(problem.field());
         };

@@ -66,3 +66,10 @@ Nada mais das fixtures/schemas 1.0.0 muda; os binários `.nekkora` congelados fi
 | D-S008-19 | Representação ≠ significado: `TextFormat.BRAZILIAN_CPF_MASKED` (fim do enum), `SemanticType.representations()`, aviso `VARIABLE_REPRESENTATION_UNSPECIFIED` (limita a avaliação) e incerteza `REPRESENTATION_UNSPECIFIED`; nunca bloqueio, nunca máscara imposta, nunca obrigatoriedade derivada do significado | P2: a IA não pode escolher entre `12345678909` e `123.456.789-09` |
 | D-S008-20 | Acréscimos aditivos nos contratos 1.1.0 (projeto, regras/relatório) e 1.0.0 (contrato semântico) sem nova versão | contratos introduzidos neste PR, ainda não integrados nem publicados; fixture do contrato semântico idêntica; fixture `validation-report/1.1.0` regenerada com autorização da usuária |
 | D-S008-21 | `VariableDraft.toString()` sem nome, finalidade nem valor | achado durante a reprodução do P1 (`draft().toString()` mostrava a finalidade) |
+
+## 6. Revisão 2 do PR #11 (2026-10-17) — ver `review-2.md`
+
+| Id | Decisão | Motivo |
+|---|---|---|
+| D-S008-22 | O domínio recusa formato de texto que nenhuma forma válida do significado satisfaz (`SemanticType.admits`, `ValidationProblem.VARIABLE_FORMAT_INCOMPATIBLE`): e-mail só com dígitos, com letras e dígitos ou com máscara de CPF; CPF com forma de e-mail. Lista explícita para CPF e e-mail; demais significados abertos; confirmado ou proposto | o contrato semântico vai alimentar geração assistida: uma declaração contraditória não pode chegar até ela. Mesmo mecanismo da moeda fora de "Valor monetário" (recusa, nunca correção silenciosa) |
+| D-S008-23 | Sem código novo na validação nem no contrato semântico; arquivos 1.1.0 com a combinação são recusados ao abrir (`INVALID_CONTENT`) | a combinação deixa de existir no modelo; o 1.1.0 só foi produzido por builds deste PR, ainda não integrado |

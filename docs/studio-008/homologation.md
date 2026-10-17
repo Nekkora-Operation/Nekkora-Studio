@@ -36,6 +36,12 @@ Homologação real focada, `Studio008Review1Homologation`: **12 verificações, 
 real, aviso no painel, contrato, Ctrl+Z/Ctrl+Y, gravação 1.1.0). Detalhes e justificativa para não repetir os 40 em
 `review-1.md`; evidências em `evidence/revisao-1/`.
 
+## Revisão 2 do PR #11
+
+Homologação real focada, `Studio008Review2Homologation`: **7 verificações, 0 falhas** (formato que contradiz o
+significado recusado no formulário real, ao criar e ao editar; formato coerente aceito; validação sem inconsistência).
+Detalhes e justificativa em `review-2.md`; evidências em `evidence/revisao-2/`.
+
 ## Ocorrências durante a homologação
 
 Execuções anteriores foram interrompidas por janelas de outros programas sobre o Studio (menu Iniciar do Windows e a

@@ -63,6 +63,23 @@ public enum SemanticType {
         return this == BRAZILIAN_CPF ? Set.of(TextFormat.DIGITS, TextFormat.BRAZILIAN_CPF_MASKED) : Set.of();
     }
 
+    /**
+     * O formato de texto pode descrever alguma forma válida deste significado (revisão 2 do PR #11). Só o manifestamente
+     * contraditório é recusado — nenhuma forma válida do significado satisfaz o formato: e-mail só com dígitos, com letras e
+     * dígitos ou com máscara de CPF; CPF com forma de e-mail. Admitir não é declarar a representação (CPF com letras e
+     * dígitos é admitido, mas continua sem representação: {@link #representationDeclared}). Significados sem forma
+     * conhecida admitem qualquer formato; para CPF e e-mail a lista é explícita (um formato novo entra recusado até ser
+     * avaliado).
+     */
+    public boolean admits(TextFormat format) {
+        return switch (this) {
+            case BRAZILIAN_CPF -> format == TextFormat.ANY || format == TextFormat.DIGITS || format == TextFormat.LETTERS_AND_DIGITS
+                    || format == TextFormat.BRAZILIAN_CPF_MASKED;
+            case EMAIL -> format == TextFormat.ANY || format == TextFormat.EMAIL_SHAPE;
+            default -> true;
+        };
+    }
+
     /** As restrições declaram a representação esperada (sempre verdadeiro quando o significado não exige uma). */
     public boolean representationDeclared(VariableConstraints constraints) {
         Set<TextFormat> accepted = representations();

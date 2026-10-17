@@ -85,6 +85,7 @@ public final class VariableRules {
             if (min < 0 || max < 0 || min > MAX_DECLARED_LENGTH || max > MAX_DECLARED_LENGTH || min > max) fail(ValidationProblem.VARIABLE_CONSTRAINT_INVALID);
         }
         if (c.textFormat() != TextFormat.ANY && !text) fail(ValidationProblem.VARIABLE_CONSTRAINT_INVALID);
+        if (!semantic.admits(c.textFormat())) fail(ValidationProblem.VARIABLE_FORMAT_INCOMPATIBLE); // revisão 2 do PR #11
         if (c.minimum() != null || c.maximum() != null) {
             if (!type.numeric()) fail(ValidationProblem.VARIABLE_CONSTRAINT_INVALID);
             if (type == VariableType.INTEGER && (!integral(c.minimum()) || !integral(c.maximum()))) fail(ValidationProblem.VARIABLE_CONSTRAINT_INVALID);

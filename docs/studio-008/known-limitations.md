@@ -15,6 +15,8 @@
 - **Contrato semântico não é exportado** pela interface; existe para consumo programático e testes.
 - **Menu Automação e barra de ferramentas** não têm a ação de variáveis (D-S008-10); ela está no painel de propriedades
   da automação, no atalho Ctrl+Shift+B e na aba do painel inferior.
+- **Coerência formato × significado só para CPF e e-mail** (revisão 2): são os únicos significados com forma
+  conhecida no vocabulário atual; os demais admitem qualquer formato de texto.
 - **Representação só para CPF** (revisão 1): porcentagem (`15` × `0.15`), identificador e texto livre não têm
   representação canônica no vocabulário atual e não recebem o aviso; ampliar exige novos campos de restrição (formato do
   projeto) numa missão própria. A máscara de CPF confere só a forma, não os dígitos verificadores.
