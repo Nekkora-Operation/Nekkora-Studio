@@ -34,7 +34,7 @@ Roteiro: `nekkora-studio-app/src/test/java/com/nekkora/studio/app/evidence/Studi
 - `S010-rascunho.json`.
 - Capturas da janela: `S010-P1…P8`, `S010-R1-mapeamento.png` (só a janela do Studio, à frente).
 
-Integração anterior (`Studio010SafeCaptureIT`, extensão, 6/6): imagens sanitizadas em
+Integração anterior (`Studio010SafeCaptureIT`, extensão, 7/7): imagens sanitizadas em
 `reports/evidence/S010-G4-01-login-sanitizado.png`, `S010-G4-02-sentinelas-sanitizado.png` e
 `S010-G5-01-login-150-sanitizado.png` (repositório da extensão).
 

@@ -20,7 +20,7 @@ Legenda: **U** = teste de unidade/contrato; **IT** = integração no Chrome for 
 | Aba errada / vencida / cancelada / página mudou / navegação | U `studio-pdd.test.js`; IT G4-04, G4-05; H P4 (TAB_MISMATCH e cancelar) |
 | Sanitização por lista de permissão; campo nunca recebe pixel bruto | U `visual-sanitizer` (3 testes); IT G4-01, G4-02 (sentinelas por classe: pseudo-elemento, fundo, imagem, SVG, canvas, tabela, toast, iframes, shadow, campos), G4-03 (modal) |
 | Verificação de pixels em 4 barreiras | U `studio-pdd.test.js` (SW), `PddVisualPrivacyTest` (6, host), `VisualAndStoreTest.quartaBarreira` (Studio), `PddPdfTest.recusas` (exportação com imagem adulterada) |
-| Marcadores pelo resolvedor, normalizados; omitidos com motivo | U `studio-pdd.test.js` (PLACED só do alvo comprovado); IT G4-01, G5-01 (150%); H P3 (login 3/3, consulta 2/2, resultado 0/1 = etapa declarada sem alvo) |
+| Marcadores pelo resolvedor, normalizados; omitidos com motivo | U `studio-pdd.test.js` (PLACED só do alvo comprovado); IT G4-01, G5-01 (150%), G5-02 (página rolada; alvos fora da área visível → `TARGET_OUTSIDE_VIEWPORT`); H P3 (login 3/3, consulta 2/2, resultado 0/1 = etapa declarada sem alvo) |
 | ≥ 2 imagens reais, diferentes, sanitizadas | IT G4-01; H P3 (3 imagens distintas, 0 pixel-sentinela) |
 | Prévia = PDF real | `PddUiTest`; H P3/P8 (capturas da janela) |
 | PDF: texto pesquisável, ordem, sem dados internos, metadados controlados | U `PddPdfTest.pdf`, `variasPaginas` (várias páginas, bloco que continua, rodapé n de N); H P6 (13 sentinelas ausentes, metadados, 3 imagens, páginas renderizadas sem cor-sentinela) |
