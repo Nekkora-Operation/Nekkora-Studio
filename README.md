@@ -23,6 +23,7 @@ nekkora-studio-recorder → RecorderController: gravação técnica confirmada p
 nekkora-studio-persistence → projeto .nekkora: formato versionado, validação, reconstrução e gravação atômica (Java puro)
 nekkora-studio-validation → Automation Validation Engine: diagnóstico estrutural, sem execução (Java puro)
 nekkora-studio-guided   → debug guiado: plano intermediário, regra de reuso e registro do debug (Java puro)
+nekkora-studio-pdd      → PDD visual: projeção somente leitura, rascunho revisável, verificação de imagens e PDF (PDFBox)
 nekkora-studio-ui       → peças visuais do Studio (navegação, automação, sessões, etapas, propriedades, diálogos,
                           Floating Recorder)
 nekkora-studio-app      → a aplicação Nekkora Studio (jar executável)
@@ -101,6 +102,19 @@ se desfaz com Ctrl+Z. Na próxima passagem, o que continua comprovado é reconfi
 - A prova do caso termina num script Python + Playwright gerado do modelo, conferido por um oráculo do laboratório.
 
 Veja [docs/studio-009](docs/studio-009/README.md) e o [relatório](reports/studio-009-final-report.md).
+
+**STUDIO-010 — PDD visual.** Menu **Automação → Gerar documentação → PDD visual…**: o Studio monta, a partir das
+sessões e etapas mapeadas, um documento com uma seção por sessão e um bloco por tela. Os textos vêm de modelos
+determinísticos (sem IA) e são revisáveis. Blocos podem ser divididos e juntados, e há desfazer/refazer. Cada bloco pode
+receber uma **captura real e sanitizada** do Chrome: o Studio arma a captura e o usuário pressiona **Alt+Shift+K** na
+aba do laboratório. A imagem é construída por lista de permissão (só rótulos de interface; campos viram molduras; o
+resto fica opaco) e verificada pixel a pixel em quatro pontos, com marcadores numerados ligados às instruções. A prévia é
+o próprio PDF; a exportação gera versões locais `pdd-visual-v001.pdf`, `v002`… sem sobrescrever nada.
+
+- Nesta versão, a captura só funciona em origens de **laboratório** (dados sintéticos).
+- O documento descreve o processo mapeado; não comprova resultado de negócio.
+
+Veja [docs/studio-010](docs/studio-010/README.md) e o [relatório](reports/studio-010-final-report.md).
 
 Camadas: **Tokens → Temas → Primitivas → Componentes → Padrões → Studio**. Detalhes em
 [docs/ARQUITETURA.md](docs/ARQUITETURA.md).

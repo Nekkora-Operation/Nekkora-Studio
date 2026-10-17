@@ -161,7 +161,56 @@ class PddPdfTest {
     }
 
     @Test
-    @DisplayName("G8 desatualizado: o processo mudou depois da exportação → o último PDF é indicado como desatualizado; o rascunho exige atualizar")
+    @DisplayName("G7 várias páginas: seções e instruções continuam na ordem, nada é desenhado fora da área útil, rodapé \"Página n de N\" em todas")
+    void variasPaginas() throws Exception {
+        Automation a = Automation.create("Processo longo", "", PddLab.CLOCK);
+        for (int s = 0; s < 6; s++) {
+            var session = a.addSession("Consulta " + (char) ('A' + s), "");
+            for (int i = 0; i < (s == 2 ? 40 : 3); i++) { // a sessão 3 tem um bloco maior que uma página
+                PddLab.recorded(a, session, "x", ActionType.CLICK, PddLab.el("tgt-" + s + "-" + i, "BUTTON", "button", "Consultar", "#c"),
+                        com.nekkora.studio.domain.action.ActionParameters.none(), "http://127.0.0.1/lab/p" + s + ".html", "Consulta");
+            }
+        }
+        ProcessProjection p = ProcessProjection.of(a);
+        DocumentDraft d = DraftBuilder.build(p);
+        for (DocumentDraft.Section s : d.sections()) {
+            d = DraftEdits.reviseSectionTitle(d, s.number(), "Consulta", "TEST_AGENT");
+            for (Block b : s.blocks()) d = DraftEdits.reviseBlockTitle(d, b.blockId(), "Consultar registros", "TEST_AGENT");
+        }
+        PddExporter.Exported e = PddExporter.export(d, p, new PddStore(tmp.resolve("dados")), tmp.resolve("saida"), fonts(), CLOCK, null);
+        try (PDDocument doc = Loader.loadPDF(e.pdf().toFile())) {
+            int pages = doc.getNumberOfPages();
+            assertTrue(pages >= 3, "páginas: " + pages);
+            List<Float> ys = new java.util.ArrayList<>();
+            PDFTextStripper stripper = new PDFTextStripper() {
+                @Override
+                protected void processTextPosition(org.apache.pdfbox.text.TextPosition t) {
+                    ys.add(t.getYDirAdj());
+                    super.processTextPosition(t);
+                }
+            };
+            String text = stripper.getText(doc);
+            float h = doc.getPage(0).getMediaBox().getHeight();
+            assertTrue(ys.stream().allMatch(y -> y > 20 && y < h - 20), "texto fora da página");
+            int last = -1;
+            for (int s = 1; s <= 6; s++) {
+                int at = text.indexOf(s + ". Consulta", last + 1);
+                assertTrue(at > last, "seção " + s + " fora de ordem");
+                last = at;
+            }
+            int from = text.indexOf("3. Consulta");
+            for (int i = 1; i <= 40; i++) {
+                int at = text.indexOf(i + ". Selecionar \"Consultar\"", from);
+                assertTrue(at > from || i == 1 && at >= from, "instrução " + i + " fora de ordem");
+                from = at;
+            }
+            for (int i = 1; i <= pages; i++) assertTrue(text.contains("Página " + i + " de " + pages), "rodapé da página " + i);
+            assertTrue(Files.readString(e.manifest()).contains("\"pages\": " + pages));
+        }
+    }
+
+    @Test
+    @DisplayName("G8 desatualizado:o processo mudou depois da exportação → o último PDF é indicado como desatualizado; o rascunho exige atualizar")
     void desatualizado() throws Exception {
         Fixture f = ready();
         Path dir = tmp.resolve("saida");
