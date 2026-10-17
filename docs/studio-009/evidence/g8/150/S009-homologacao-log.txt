@@ -1,0 +1,21 @@
+Tela: java.awt.Rectangle[x=0,y=0,width=1280,height=688] · java 21.0.12
+Operador: Claude como AGENTE DE TESTE (decisões TEST_AGENT; nenhuma confirmação humana) · ator do Studio: TEST_AGENT
+Native Host instalado pelo script oficial (install-host.ps1)
+Chrome for Testing: 155.0.8059.39
+OK    Conexão autenticada Studio ⇄ host ⇄ extensão
+OK    Ator das decisões no Studio = agente de teste
+  janela do debug em java.awt.Rectangle[x=24,y=24,width=420,height=656]
+captura S009-H14-150-sakura-dark.png (420x656)
+OK    H14 150% · Sakura Dark: janela inteira dentro da tela (java.awt.Rectangle[x=24,y=24,width=420,height=656])
+OK    H14 150% · Sakura Dark: ações visíveis (Corrigir/Encerrar)
+captura S009-H14-150-midnight-dark.png (420x656)
+OK    H14 150% · Midnight Dark: janela inteira dentro da tela (java.awt.Rectangle[x=24,y=24,width=420,height=656])
+OK    H14 150% · Midnight Dark: ações visíveis (Corrigir/Encerrar)
+captura S009-H14-150-porcelain-light.png (420x656)
+OK    H14 150% · Porcelain Light: janela inteira dentro da tela (java.awt.Rectangle[x=24,y=24,width=420,height=656])
+OK    H14 150% · Porcelain Light: ações visíveis (Corrigir/Encerrar)
+captura S009-H14-150-sage-light.png (420x656)
+OK    H14 150% · Sage Light: janela inteira dentro da tela (java.awt.Rectangle[x=24,y=24,width=420,height=656])
+OK    H14 150% · Sage Light: ações visíveis (Corrigir/Encerrar)
+OK    H14 150%: a janela do debug não cobre o elemento destacado
+RESULTADO: 11 verificações, 0 falha(s)

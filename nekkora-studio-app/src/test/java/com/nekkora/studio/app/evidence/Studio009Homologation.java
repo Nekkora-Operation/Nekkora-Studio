@@ -99,6 +99,11 @@ public final class Studio009Homologation {
     private final boolean compat = false;
     /** Execução em 150% (JVM com -Dsun.java2d.uiScale=1.5): só o mapeamento e as capturas por tema. */
     private boolean scale;
+    /** G9: Python + Playwright por último (depois do debug e do modelo homologados). */
+    private boolean python;
+    private int cdpPortUsed;
+    /** Escala da interface Java (1.0 ou 1.5): o Robot usa coordenadas lógicas; Chrome e página, px físicos. */
+    private double sc = 1;
     private final Robot robot;
     private final List<String> log = new ArrayList<>();
     private int failures;
@@ -129,6 +134,7 @@ public final class Studio009Homologation {
         out.mkdirs();
         Studio009Homologation h = new Studio009Homologation(out, Path.of(args[1]).toAbsolutePath().normalize());
         h.scale = args.length > 2 && "escala".equals(args[2]);
+        h.python = args.length > 2 && "python".equals(args[2]);
         int code = 1;
         try {
             h.run();
@@ -157,7 +163,9 @@ public final class Studio009Homologation {
         bridge = BridgeServer.start(BridgeServer.Options.defaults(StudioApplication.VERSION));
         window = edt(() -> StudioApplication.launch(Optional.of(NekkoraThemes.SAKURA_DARK), bridge, bridge::close));
         edt(() -> {
-            window.frame().setSize(870, 1000);
+            // 870×1000 px FÍSICOS (em 150% o tamanho lógico encolhe; senão a janela cobriria o Chrome à direita)
+            sc = window.frame().getGraphicsConfiguration().getDefaultTransform().getScaleX();
+            window.frame().setSize((int) Math.round(870 / sc), (int) Math.round(1000 / sc));
             window.frame().setLocation(0, 0);
             window.frame().toFront();
             return null;
@@ -166,6 +174,11 @@ public final class Studio009Homologation {
         launchChrome(PAGE + "?v=base");
         connect();
         check("Ator das decisões no Studio = agente de teste", edt(() -> window.studio().guidedDebug().actor()) == DecisionActor.TEST_AGENT);
+        if (scale) { // 150%: o que se homologa é a janela do debug; o projeto vem do arquivo salvo na rodada de 100%
+            openByDialog(Path.of(System.getProperty("nekkora.s009.project")));
+            themes("150");
+            return;
+        }
 
         // ================================================================ H1 — Mapeamento pelo Recorder (processo real)
         focusStudio();
@@ -200,6 +213,11 @@ public final class Studio009Homologation {
             return null;
         });
         captureStudio("H1-mapeamento");
+
+        if (python) {
+            g9Python();
+            return;
+        }
 
         // ================================================================ H2 — Plano intermediário
         String planJson = edt(() -> GuidedPlan.of(a, new AutomationValidator(RuleSet.V1_1).validate(a)).toJson());
@@ -290,6 +308,275 @@ public final class Studio009Homologation {
         h7Correction(file);
         themes("100");
         h15Privacy(file);
+    }
+
+    // ============================================================================== G9 — Python + Playwright por último
+
+    /**
+     * G9: o script nasce do plano CONGELADO (plano + registro da passagem de debug que o validou, mesma planRevision),
+     * roda de verdade no Chrome de teste contra o laboratório e é conferido por um ORÁCULO independente (servidor do
+     * laboratório) — nunca pelo código de saída. O 2º debug (--debug) mostra o mesmo destaque por StepId e é comparado
+     * com a caixa do debug do Studio. Quebra deliberada → diagnóstico → reparo NO MODELO (debug guiado) → nova
+     * validação → script gerado de novo (edição manual nunca sobrescrita) → nova execução → oráculo.
+     */
+    private void g9Python() throws Exception {
+        Path g9 = out.toPath().resolve("g9");
+        Files.createDirectories(g9);
+        Path script = g9.resolve("consulta_registro.py");
+
+        // P1 — passagem de debug que valida o plano (Continuar só sobre o elemento certo, comprovado)
+        oracle("/api/studio009/reset");
+        navigate(PAGE + "?v=base");
+        Map<String, Rectangle> studioBase = validationPass("P1", "base");
+        // P2 — congelar e gerar
+        String rev1 = freeze(g9, "v1");
+        G9Run gen = g9Exec(List.of(pythonExe(), generator().toString(), "--plano", g9.resolve("plano-v1.json").toString(), "--registro",
+                g9.resolve("registro-v1.json").toString(), "--saida", script.toString()), Map.of(), g9.resolve("gerar-v1.log"));
+        check("G9 P2: plano congelado (" + rev1.substring(0, 19) + "…) gera o script; uma função por StepId", gen.code == 0
+                && edt(() -> active().sessions().get(0).steps().stream().allMatch(st -> {
+                    try {
+                        return Files.readString(script).contains("# StepId: " + st.id().value());
+                    } catch (IOException e) {
+                        return false;
+                    }
+                })));
+        Files.copy(script, g9.resolve("consulta_registro.v1.py"), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+
+        // P3 — execução real com o 2º debug; oráculo independente; mesmo destaque do Studio
+        oracle("/api/studio009/reset");
+        navigate(PAGE + "?v=base");
+        G9Run r = runScript(script, "base", "P3", 5000);
+        String st3 = oracle("/api/studio009/estado");
+        check("G9 P3: script executou as 2 etapas (" + r.status + ")", r.code == 0 && "ETAPAS_EXECUTADAS".equals(r.status));
+        check("G9 P3: ORÁCULO independente — exatamente 1 consulta, com o código fictício fornecido na execução", st3.contains("\"total\":1")
+                && st3.contains(TYPED));
+        compareBoxes("G9 P3", g9.resolve("P3"), studioBase);
+        captureStudio("G9-P3-resultado");
+
+        // P4 — origem não autorizada: bloqueio antes de qualquer ação
+        oracle("/api/studio009/reset");
+        Cdp.Target other = cdp.open("http://site-x.nekkora.test:" + LAB_PORT + "/lab/studio009/consulta.html?v=base");
+        sleep(1500);
+        G9Run r4 = runScriptAt(script, "http://site-x.nekkora.test:" + LAB_PORT + "/lab/studio009/consulta.html", "P4", 5000);
+        check("G9 P4: origem fora do laboratório recusada sem conectar nem agir (" + r4.status + ")", r4.code == 3
+                && "ORIGEM_NAO_AUTORIZADA".equals(r4.status) && oracle("/api/studio009/estado").contains("\"total\":0"));
+        cdp.close(other);
+        cdp.activate(labTarget);
+
+        // P5 — o localizador casa, a identidade não: #consultar/data-testid agora é do botão Limpar
+        oracle("/api/studio009/reset");
+        navigate(PAGE + "?v=errado");
+        G9Run r5 = runScript(script, "errado", "P5", 5000);
+        check("G9 P5: botão errado com o mesmo localizador — recusado (IDENTITY_MISMATCH), Limpar NÃO clicado, nada consultado",
+                r5.code == 1 && r5.stepStatus(1).equals("IDENTITY_MISMATCH") && TYPED.equals(page.eval("document.getElementById('registro-codigo').value"))
+                        && oracle("/api/studio009/estado").contains("\"total\":0"));
+
+        // P6 — tempo esgotado e parada limpa (botão oculto)
+        oracle("/api/studio009/reset");
+        navigate(PAGE + "?v=oculto");
+        G9Run r6 = runScript(script, "oculto", "P6", 1500);
+        check("G9 P6: botão oculto — TIMEOUT na etapa 1.2, parada limpa, nada consultado", r6.code == 1 && r6.stepStatus(1).equals("TIMEOUT")
+                && oracle("/api/studio009/estado").contains("\"total\":0"));
+
+        // P7 — QUEBRA DELIBERADA: a página muda os ids (variante id-mudado)
+        oracle("/api/studio009/reset");
+        navigate(PAGE + "?v=id-mudado");
+        G9Run r7 = runScript(script, "id-mudado", "P7", 3000);
+        check("G9 P7: quebra deliberada — etapa 1.1 NOT_FOUND, 1.2 não executada, nada consultado (o oráculo confirma a falha)", r7.code == 1
+                && r7.stepStatus(0).equals("NOT_FOUND") && r7.stepStatus(1).equals("NOT_RUN") && oracle("/api/studio009/estado").contains("\"total\":0"));
+
+        // P8 — diagnóstico e reparo NO MODELO (debug guiado do Studio, agente de teste)
+        GuidedDebugPanel dp = openDebugAndStart();
+        String[] picks = {"document.querySelector('form input')", "document.querySelector('form button[type=submit]')"};
+        for (int i = 0; i < 2; i++) {
+            final int n = i;
+            GuidedDebugPanel.Card c = settled("id-mudado (reparo)", i);
+            GuidedDebugClient.Inspection ri = lastInspection();
+            log("  G9 diagnóstico etapa 1." + (i + 1) + ": " + describe(c, ri));
+            captureStudio("G9-P8-diagnostico-etapa" + (i + 1));
+            click(edt(dp::correctButton));
+            waitCard("corrigindo", x -> x.mode() == GuidedDebugPanel.Mode.CORRECTING);
+            click(edt(dp::pickButton));
+            waitCard("seleção no navegador", x -> x.mode() == GuidedDebugPanel.Mode.PICKING);
+            clickInPage(picks[i]);
+            GuidedDebugPanel.Card cmp = waitCard("comparação", x -> x.mode() == GuidedDebugPanel.Mode.COMPARING);
+            check("G9 P8 etapa 1." + (i + 1) + ": comparação compatível antes de aplicar", cmp.comparison().compatible());
+            click(edt(dp::applyButton));
+            waitCard("alvo novo verificado", x -> x.mode() == GuidedDebugPanel.Mode.FINISHED || x.mode() == GuidedDebugPanel.Mode.STEP
+                    && x.badge() != GuidedDebugPanel.Badge.CHECKING && (n == 1 || !x.progress().startsWith("1 de") || x.badge() == GuidedDebugPanel.Badge.PROPOSED
+                    || x.badge() == GuidedDebugPanel.Badge.REUSED));
+            GuidedDebugPanel.Card now = edt(dp::card);
+            if (now.mode() == GuidedDebugPanel.Mode.STEP && now.badge() == GuidedDebugPanel.Badge.PROPOSED && now.progress().startsWith((n + 1) + " de")) {
+                click(edt(dp::continueButton));
+            } else if (now.mode() == GuidedDebugPanel.Mode.STEP && now.badge() == GuidedDebugPanel.Badge.REUSED) {
+                waitCard("avanço", x -> x.mode() == GuidedDebugPanel.Mode.FINISHED || !x.progress().startsWith((n + 1) + " de"));
+            }
+            check("G9 P8 etapa 1." + (i + 1) + ": alvo substituído no MODELO, capturado original intacto, decisão do TEST_AGENT",
+                    edt(() -> step(n).replacementTarget().isPresent() && step(n).capturedElement().isPresent()
+                            && step(n).targetDecision().map(d -> d.confirmed() && d.actor() == DecisionActor.TEST_AGENT).orElse(false)));
+        }
+        click(edt(dp::finishButton));
+        waitDebugClosed();
+
+        // P9 — nova passagem de debug valida o modelo reparado (2º debug do Studio)
+        navigate(PAGE + "?v=id-mudado");
+        Map<String, Rectangle> studioRepaired = validationPass("P9", "id-mudado");
+        String rev2 = freeze(g9, "v2");
+        check("G9 P9: o reparo mudou a revisão do plano (" + rev1.substring(7, 15) + " → " + rev2.substring(7, 15) + ") e o registro marca os alvos substituídos",
+                !rev1.equals(rev2) && Files.readString(g9.resolve("registro-v2.json")).split("\"targetReplaced\": true", -1).length - 1 == 2);
+
+        // P10 — edição manual no script NUNCA é sobrescrita sem comparação
+        Path manual = g9.resolve("consulta_registro_editado.py");
+        Files.writeString(manual, Files.readString(script) + "# ajuste manual de quem mantém o script\n");
+        String before = Files.readString(manual);
+        G9Run m = g9Exec(List.of(pythonExe(), generator().toString(), "--plano", g9.resolve("plano-v2.json").toString(), "--registro",
+                g9.resolve("registro-v2.json").toString(), "--saida", manual.toString()), Map.of(), g9.resolve("gerar-editado.log"));
+        check("G9 P10: script editado à mão preservado; o novo vai para .novo.py com a comparação (.diff)", m.code == 3
+                && before.equals(Files.readString(manual)) && Files.exists(g9.resolve("consulta_registro_editado.novo.py"))
+                && Files.exists(g9.resolve("consulta_registro_editado.diff")));
+
+        // P11 — regenerar a partir do modelo reparado (comparação gravada)
+        G9Run gen2 = g9Exec(List.of(pythonExe(), generator().toString(), "--plano", g9.resolve("plano-v2.json").toString(), "--registro",
+                g9.resolve("registro-v2.json").toString(), "--saida", script.toString(), "--diff", g9.resolve("reparo.diff").toString()), Map.of(),
+                g9.resolve("gerar-v2.log"));
+        String diff = Files.readString(g9.resolve("reparo.diff"));
+        check("G9 P11: script gerado de novo do MODELO reparado; a comparação mostra os localizadores novos e os mesmos StepIds", gen2.code == 0
+                && diff.contains("codigo-v2") && edt(() -> active().sessions().get(0).steps().stream().noneMatch(st -> diff.contains("-    # StepId: "
+                + st.id().value()))));
+
+        // P12 — nova execução real, 2º debug e oráculo
+        oracle("/api/studio009/reset");
+        navigate(PAGE + "?v=id-mudado");
+        G9Run r12 = runScript(script, "id-mudado", "P12", 5000);
+        String st12 = oracle("/api/studio009/estado");
+        check("G9 P12: script reparado executou as 2 etapas (" + r12.status + ")", r12.code == 0 && "ETAPAS_EXECUTADAS".equals(r12.status));
+        check("G9 P12: ORÁCULO — exatamente 1 consulta com o código fictício", st12.contains("\"total\":1") && st12.contains(TYPED));
+        compareBoxes("G9 P12", g9.resolve("P12"), studioRepaired);
+        captureStudio("G9-P12-resultado");
+
+        // privacidade: nada do que o G9 grava tem o valor fornecido na execução
+        StringBuilder all = new StringBuilder();
+        try (Stream<Path> fs = Files.walk(g9)) {
+            for (Path p : fs.filter(Files::isRegularFile).filter(p -> !p.toString().endsWith(".png")).toList()) all.append(Files.readString(p));
+        }
+        check("G9: planos, registros, scripts, resultados, logs e depuração SEM o valor fornecido (ele só existe no ambiente da execução)",
+                !all.toString().contains(TYPED));
+    }
+
+    private record G9Run(int code, String status, List<String> steps) {
+        String stepStatus(int i) {
+            return i < steps.size() ? steps.get(i) : "";
+        }
+    }
+
+    private static Path generator() {
+        return Path.of("docs/studio-009/python/gerar.py").toAbsolutePath();
+    }
+
+    private static String pythonExe() {
+        return System.getProperty("nekkora.s009.python", "python");
+    }
+
+    private G9Run g9Exec(List<String> cmd, Map<String, String> env, Path logFile) throws Exception {
+        ProcessBuilder pb = new ProcessBuilder(cmd).redirectErrorStream(true).redirectOutput(logFile.toFile());
+        pb.environment().putAll(env);
+        pb.environment().put("PYTHONIOENCODING", "utf-8");
+        Process p = pb.start();
+        if (!p.waitFor(90, java.util.concurrent.TimeUnit.SECONDS)) {
+            p.destroyForcibly();
+            throw new IllegalStateException("processo Python sem resposta: " + logFile.getFileName());
+        }
+        String text = Files.readString(logFile);
+        log("  " + logFile.getFileName() + " → saída " + p.exitValue() + " · " + text.strip().lines().reduce((a, b) -> b).orElse(""));
+        return new G9Run(p.exitValue(), "", List.of());
+    }
+
+    private G9Run runScript(Path script, String variant, String label, int timeoutMs) throws Exception {
+        return runScriptAt(script, PAGE + "?v=" + variant, label, timeoutMs);
+    }
+
+    private G9Run runScriptAt(Path script, String url, String label, int timeoutMs) throws Exception {
+        Path dir = script.getParent();
+        Path result = dir.resolve(label + "-resultado.json");
+        G9Run r = g9Exec(List.of(pythonExe(), script.toString(), "--cdp", "http://127.0.0.1:" + cdpPortUsed, "--url-aba", url, "--debug",
+                dir.resolve(label).toString(), "--saida", result.toString(), "--timeout-ms", String.valueOf(timeoutMs)),
+                Map.of("NK_ENTRADA_REGISTRO_CODIGO", TYPED), dir.resolve(label + "-execucao.log"));
+        if (!Files.exists(result)) return r;
+        Map<String, Object> j = Json.parseObject(Files.readString(result));
+        List<String> steps = new ArrayList<>();
+        for (Object o : Json.array(j, "etapas")) {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> e = (Map<String, Object>) o;
+            steps.add(Json.string(e, "status"));
+        }
+        log("    " + label + ": " + Json.string(j, "status") + " " + steps);
+        return new G9Run(r.code, Json.string(j, "status"), steps);
+    }
+
+    /** Passagem de debug do Studio que valida o plano: Continuar SÓ sobre o elemento certo e comprovado; caixas por StepId. */
+    private Map<String, Rectangle> validationPass(String label, String variant) throws Exception {
+        Map<String, Rectangle> boxes = new LinkedHashMap<>();
+        GuidedDebugPanel dp = openDebugAndStart();
+        for (int i = 0; i < 2; i++) {
+            final int n = i;
+            GuidedDebugPanel.Card c = settled(variant + " (" + label + ")", i);
+            GuidedDebugClient.Inspection r = lastInspection();
+            boolean resolved = r != null && r.status() == GuidedDebugClient.Status.RESOLVED;
+            boolean right = resolved && boxOn(r.box(), expected(variant, i));
+            log("  " + label + " etapa 1." + (i + 1) + ": " + describe(c, r));
+            check("G9 " + label + " etapa 1." + (i + 1) + ": identidade comprovada sobre o elemento certo", right);
+            if (r != null && r.box() != null) {
+                boxes.put(edt(() -> step(n).id().value().toString()), new Rectangle(r.box().x(), r.box().y(), r.box().width(), r.box().height()));
+            }
+            if (c.badge() == GuidedDebugPanel.Badge.REUSED) {
+                waitCard("avanço", x -> x.mode() == GuidedDebugPanel.Mode.FINISHED || !x.progress().startsWith((n + 1) + " de"));
+            } else if (right && c.canContinue()) {
+                click(edt(dp::continueButton));
+            }
+        }
+        waitCard("fim da validação", x -> x.mode() == GuidedDebugPanel.Mode.FINISHED);
+        captureStudio("G9-" + label + "-validado");
+        click(edt(dp::finishButton));
+        waitDebugClosed();
+        return boxes;
+    }
+
+    /** Congela: plano (projeção do modelo) + registro da passagem que o validou. Devolve a planRevision. */
+    private String freeze(Path g9, String version) throws Exception {
+        String plan = edt(() -> GuidedPlan.of(active(), new AutomationValidator(RuleSet.V1_1).validate(active())).toJson());
+        String record = edt(() -> window.studio().guidedDebug().recordJson().orElseThrow());
+        Files.writeString(g9.resolve("plano-" + version + ".json"), plan, StandardCharsets.UTF_8);
+        Files.writeString(g9.resolve("registro-" + version + ".json"), record, StandardCharsets.UTF_8);
+        String rev = Json.string(Json.parseObject(plan), "planRevision");
+        check("G9 congelar " + version + ": registro da passagem de debug é da MESMA revisão do plano", rev.equals(Json.string(Json.parseObject(record),
+                "planRevision")));
+        return rev;
+    }
+
+    /** 2º debug: a caixa que o script destacou para cada StepId coincide com a caixa do debug do Studio para a mesma etapa. */
+    private void compareBoxes(String label, Path dir, Map<String, Rectangle> studio) throws Exception {
+        List<String> lines = Files.readAllLines(dir.resolve("depuracao.jsonl"));
+        int compared = 0;
+        boolean all = true;
+        for (String l : lines) {
+            Map<String, Object> e = Json.parseObject(l);
+            if (!"ANTES".equals(Json.string(e, "evento"))) continue;
+            Map<String, Object> b = Json.object(e, "caixa");
+            Rectangle s = studio.get(Json.string(e, "stepId"));
+            if (b == null || s == null) {
+                all = false;
+                continue;
+            }
+            double cx = Json.number(b, "x", 0) + Json.number(b, "width", 0) / 2;
+            double cy = Json.number(b, "y", 0) + Json.number(b, "height", 0) / 2;
+            boolean same = Math.abs(cx - (s.x + s.width / 2.0)) <= 4 && Math.abs(cy - (s.y + s.height / 2.0)) <= 4
+                    && Math.abs(Json.number(b, "width", 0) - s.width) <= 4 && Math.abs(Json.number(b, "height", 0) - s.height) <= 4;
+            log("    " + label + " " + Json.string(e, "posicao") + ": script " + b + " · Studio " + s + (same ? " · igual" : " · DIFERENTE")
+                    + " · captura " + Json.string(e, "captura"));
+            all &= same;
+            compared++;
+        }
+        check(label + ": 2º debug — o script destacou, para cada StepId, a MESMA caixa do debug do Studio (" + compared + " etapas)", all && compared == 2);
     }
 
     // ============================================================================== H5 — salvar 1.2.0 e reabrir
@@ -624,7 +911,14 @@ public final class Studio009Homologation {
         if (again.mode() == GuidedDebugPanel.Mode.STEP && again.badge() == GuidedDebugPanel.Badge.PROPOSED) click(edt(dp::continueButton));
         check("H7 etapa 2: alvo substituído; decisão CONFIRMED do TEST_AGENT; capturado original intacto", edt(() -> step(1).replacementTarget().isPresent()
                 && step(1).capturedElement().isPresent() && step(1).targetDecision().map(d -> d.confirmed() && d.actor() == DecisionActor.TEST_AGENT).orElse(false)));
-        waitCard("fim da correção", x -> x.mode() == GuidedDebugPanel.Mode.FINISHED);
+        // política da CHROME-SECURITY-001: elementos indistinguíveis nunca são "comprovados", nem depois da escolha explícita —
+        // a decisão fica registrada (selecionado no navegador), mas a verificação continua honesta e o reuso automático, recusado
+        GuidedDebugPanel.Card after = waitCard("verificação do alvo escolhido", x -> x.mode() == GuidedDebugPanel.Mode.FINISHED
+                || x.mode() == GuidedDebugPanel.Mode.STEP && x.badge() != GuidedDebugPanel.Badge.CHECKING);
+        GuidedDebugClient.Inspection ra = lastInspection();
+        check("H7 etapa 2: botão idêntico escolhido continua NÃO comprovado (" + (ra == null ? "-" : ra.status()) + "), sem reconfirmar nem Continuar",
+                after.mode() == GuidedDebugPanel.Mode.FINISHED ? false : ra != null && ra.status() != GuidedDebugClient.Status.RESOLVED
+                        && after.badge() != GuidedDebugPanel.Badge.REUSED && !after.canContinue());
         check("H7: escolher no navegador não clicou, não focou e não enviou nada na página", interactions() == touched);
         check("H7: oráculo — nenhuma consulta durante a correção", oracle("/api/studio009/estado").contains("\"total\":0"));
         captureStudio("H7-fim");
@@ -703,7 +997,7 @@ public final class Studio009Homologation {
         sources.put("dados do host", dirText(hostDataDir()));
         for (Map.Entry<String, String> e : sources.entrySet()) {
             String txt = e.getValue();
-            check("H15 " + e.getKey() + ": sem o valor digitado/sondado (REG-0001) e sem o nome fictício do rótulo suprimido", !txt.contains(TYPED)
+            check("H15 " + e.getKey() + ": sem o valor digitado/sondado e sem o nome fictício do rótulo suprimido", !txt.contains(TYPED)
                     && !txt.contains("Ana Souza"));
         }
     }
@@ -712,7 +1006,7 @@ public final class Studio009Homologation {
         StringBuilder b = new StringBuilder();
         if (!Files.isDirectory(dir)) return "";
         try (Stream<Path> s = Files.walk(dir)) {
-            for (Path p : s.filter(Files::isRegularFile).toList()) {
+            for (Path p : s.filter(Files::isRegularFile).filter(x -> !x.toString().endsWith(".lck")).toList()) { // .lck: trava vazia do log
                 if (p.toString().endsWith(".nekkora")) b.append(zipText(p));
                 else if (Files.size(p) < 20_000_000) b.append(new String(Files.readAllBytes(p), StandardCharsets.UTF_8));
             }
@@ -921,7 +1215,8 @@ public final class Studio009Homologation {
     }
 
     private boolean debugWindowCoversTarget() throws Exception {
-        Object r = harness.eval("window.nekkora.call('page.diagnostics', {tabId: " + labTab + "}).then(r => JSON.stringify(r.result.highlight.boxes.debug.rect))");
+        Object r = harness.eval("window.nekkora.call('page.diagnostics', {tabId: " + labTab + "}).then(r => { const b = r.result && r.result.highlight && r.result.highlight.boxes && r.result.highlight.boxes.debug;"
+                + " return b && b.visible && b.rect ? JSON.stringify(b.rect) : 'undefined'; })");
         if (r == null || "undefined".equals(String.valueOf(r))) return false;
         Map<String, Object> rect = Json.parseObject(String.valueOf(r));
         @SuppressWarnings("unchecked")
@@ -936,6 +1231,7 @@ public final class Studio009Homologation {
             }
             return new Rectangle();
         });
+        win = new Rectangle((int) (win.x * sc), (int) (win.y * sc), (int) (win.width * sc), (int) (win.height * sc)); // lógico → físico
         log("  alvo na tela " + target + " · janela do debug " + win);
         return win.intersects(target);
     }
@@ -1108,7 +1404,7 @@ public final class Studio009Homologation {
         guardForeground("clique na página");
         int x = (int) Math.round(((Number) xy.get(0)).doubleValue());
         int y = (int) Math.round(((Number) xy.get(1)).doubleValue());
-        robot.mouseMove(x, y);
+        robot.mouseMove((int) Math.round(x / sc), (int) Math.round(y / sc)); // página: px físicos → coordenadas do Robot
         sleep(120);
         robot.mousePress(InputEvent.BUTTON1_DOWN_MASK);
         robot.mouseRelease(InputEvent.BUTTON1_DOWN_MASK);
@@ -1118,7 +1414,18 @@ public final class Studio009Homologation {
 
     /** Dá o foco à janela do Chrome com um clique na barra de endereço (fora da página; nenhuma aba é trocada). */
     private void focusChrome() {
-        robot.mouseMove(CHROME_X + 400, 63);
+        if (sc > 1) { // em 150% Studio e Chrome não cabem lado a lado: o Studio vai para trás antes de mexer no Chrome
+            try {
+                edt(() -> {
+                    window.frame().toBack();
+                    return null;
+                });
+            } catch (Exception e) {
+                throw new IllegalStateException(e);
+            }
+            sleep(300);
+        }
+        robot.mouseMove((int) Math.round((CHROME_X + 400) / sc), (int) Math.round(63 / sc));
         robot.mousePress(InputEvent.BUTTON1_DOWN_MASK);
         robot.mouseRelease(InputEvent.BUTTON1_DOWN_MASK);
         robot.waitForIdle();
@@ -1207,6 +1514,7 @@ public final class Studio009Homologation {
         chromeBuilder.environment().put("NEKKORA_DATA_DIR", hostDataDir().toString()); // herdado pelo Native Host
         chrome = chromeBuilder.start();
         cdp = new Cdp(cdpPort);
+        cdpPortUsed = cdpPort;
         waitFor("Chrome com DevTools", 30, () -> {
             try {
                 return !cdp.targets().isEmpty();
@@ -1432,9 +1740,67 @@ public final class Studio009Homologation {
         sleep(400);
         guardForeground("captura " + name);
         Rectangle studio = edt(() -> window.frame().getBounds());
-        Rectangle chromeArea = new Rectangle(CHROME_X, 0, 1040, 1000);
+        Rectangle chromeArea = new Rectangle((int) (CHROME_X / sc), 0, (int) (1040 / sc), (int) (1000 / sc));
         Rectangle both = studio.union(chromeArea).intersection(GraphicsEnvironment.getLocalGraphicsEnvironment().getMaximumWindowBounds());
-        save(robot.createScreenCapture(both), name);
+        BufferedImage img = robot.createScreenCapture(both);
+        if (!maskFields(img, both)) {
+            log("captura " + name + " OMITIDA: não foi possível mascarar os campos da página");
+            return;
+        }
+        save(img, name);
+    }
+
+    /**
+     * Nenhum valor digitado em captura (nem fictício): cobre o retângulo de TODO campo editável da página do
+     * laboratório — documento, iframes da mesma origem e shadow roots abertos — antes de gravar a imagem.
+     */
+    private boolean maskFields(BufferedImage img, Rectangle area) {
+        if (page == null) return true;
+        Object r = null;
+        for (int attempt = 0; attempt < 3 && r == null; attempt++) {
+            try {
+                r = page.eval("(() => { const out = []; const bx = (window.outerWidth - window.innerWidth) / 2;"
+                        + " const by = window.outerHeight - window.innerHeight - bx;"
+                        + " const walk = (root, ox, oy) => { for (const e of root.querySelectorAll('input, textarea, [contenteditable=\"true\"], [contenteditable=\"\"], *')) {"
+                        + "   if (e.shadowRoot) walk(e.shadowRoot, ox, oy);"
+                        + "   if (e.tagName === 'IFRAME') { try { const d = e.contentDocument; if (d) { const fr = e.getBoundingClientRect(); walk(d, ox + fr.left + e.clientLeft, oy + fr.top + e.clientTop); } } catch (x) {} }"
+                        + "   const t = (e.type || '').toLowerCase();"
+                        + "   if (e.matches('textarea, [contenteditable=\"true\"], [contenteditable=\"\"]') || e.tagName === 'INPUT' && !['button','submit','reset','checkbox','radio','image','hidden'].includes(t)) {"
+                        + "     const b = e.getBoundingClientRect(); if (b.width > 0 && b.height > 0) out.push([window.screenX + bx + ox + b.left, window.screenY + by + oy + b.top, b.width, b.height]); } } };"
+                        + " walk(document, 0, 0); return JSON.stringify(out); })()");
+            } catch (Exception e) {
+                sleep(400);
+            }
+        }
+        if (r == null) return false;
+        double fx = img.getWidth() / (double) area.width;
+        double fy = img.getHeight() / (double) area.height;
+        java.awt.Graphics2D g = img.createGraphics();
+        // só onde a PÁGINA aparece: as janelas do Studio (sempre à frente do Chrome nas capturas) ficam intactas
+        java.awt.geom.Area clip = new java.awt.geom.Area(new Rectangle(0, 0, img.getWidth(), img.getHeight()));
+        try {
+            for (Rectangle w : edt(() -> {
+                List<Rectangle> ws = new ArrayList<>();
+                for (Window x : Window.getWindows()) if (x.isShowing()) ws.add(x.getBounds());
+                return ws;
+            })) {
+                clip.subtract(new java.awt.geom.Area(new Rectangle((int) ((w.x - area.x) * fx), (int) ((w.y - area.y) * fy), (int) Math.ceil(w.width * fx),
+                        (int) Math.ceil(w.height * fy))));
+            }
+        } catch (Exception e) {
+            return false;
+        }
+        g.setClip(clip);
+        g.setColor(new java.awt.Color(0x9A, 0xA0, 0xA6));
+        for (Object o : Json.parse(String.valueOf(r)) instanceof List<?> l ? l : List.of()) {
+            List<?> q = (List<?>) o;
+            double x = ((Number) q.get(0)).doubleValue() / sc - area.x;
+            double y = ((Number) q.get(1)).doubleValue() / sc - area.y;
+            g.fillRect((int) Math.floor(x * fx) + 2, (int) Math.floor(y * fy) + 2, (int) Math.ceil(((Number) q.get(2)).doubleValue() / sc * fx) - 4,
+                    (int) Math.ceil(((Number) q.get(3)).doubleValue() / sc * fy) - 4);
+        }
+        g.dispose();
+        return true;
     }
 
     private void captureWindow(Window w, String name) throws Exception {

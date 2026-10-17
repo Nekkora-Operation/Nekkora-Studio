@@ -286,16 +286,19 @@ public final class GuidedDebugPanel extends JPanel {
         limitsTitle.setVisible(!c.limits().isEmpty());
         candidates.removeAll();
         for (Candidate cand : c.candidates()) {
+            // nome em cima (quebra linha), ações embaixo: nada é cortado pela barra de rolagem nem em 150%
+            NekkoraStack item = NekkoraStack.vertical(Spacing.SPACE_1);
+            item.add(new NekkoraParagraph(cand.label() + (cand.confirmed() ? "" : " · plausível")));
             NekkoraStack row = NekkoraStack.horizontal(Spacing.SPACE_2).align(NekkoraStack.Align.CENTER);
-            row.add(new NekkoraText(cand.label() + (cand.confirmed() ? "" : " · plausível")));
-            row.addGlue();
             NekkoraButton look = NekkoraButton.ghost("Destacar").withSize(ControlSize.SMALL);
             look.addActionListener(e -> actions.examine(cand.ref()));
             NekkoraButton use = NekkoraButton.secondary("Usar este").withSize(ControlSize.SMALL);
             use.addActionListener(e -> actions.adopt(cand.ref()));
             row.add(look);
             row.add(use);
-            candidates.add(row);
+            row.addGlue();
+            item.add(row);
+            candidates.add(item);
         }
         boolean showCandidates = !c.candidates().isEmpty() && (c.mode() == Mode.CORRECTING || c.mode() == Mode.STEP && c.badge() == Badge.REVIEW);
         candidates.setVisible(showCandidates);
