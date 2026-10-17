@@ -302,6 +302,44 @@ class GuidedDebugUiTest {
     }
 
     @Test
+    @DisplayName("G8: comprovado mas oculto/desabilitado agora → requer revisão (nunca \"proposto\"); Continuar segue possível, com aviso")
+    void estadoInadequado() {
+        studio();
+        labCase();
+        browser.inspect = p -> FakeBrowser.inspection("RESOLVED", "TARGET_ID", "SEARCH_INPUT", "Pesquisar", "[]").replace("\"visible\":\"PASS\"",
+                "\"visible\":\"FAIL\"");
+        begin();
+        assertEquals(GuidedDebugPanel.Badge.REVIEW, card().badge());
+        assertTrue(card().message().startsWith("O elemento foi comprovado, mas agora não está em condição"), card().message());
+        assertTrue(card().canContinue(), "a identidade foi comprovada: a decisão continua possível, com aviso");
+    }
+
+    @Test
+    @DisplayName("G8: canal perdido no meio do debug → sessão encerrada, nada confirmável; a próxima abertura encerra a sessão órfã antes")
+    void canalPerdido() {
+        studio();
+        labCase();
+        begin();
+        assertTrue(card().canContinue());
+        String lost = browser.debugId;
+        browser.listeners.forEach(l -> l.statusChanged(LinkStatus.of(LinkStatus.State.WAITING, "teste")));
+        Edt.flush();
+        assertEquals(GuidedDebugPanel.Mode.FINISHED, card().mode());
+        assertFalse(card().canContinue(), "nada é confirmado com base numa verificação de antes da queda");
+        assertTrue(card().message().startsWith("A conexão com o navegador caiu"), card().message());
+        Edt.run(() -> debug().panel().finishButton().doClick());
+        int from = browser.commands.size();
+        begin();
+        List<String> after = browser.commands.subList(from, browser.commands.size());
+        int fin = -1;
+        for (int i = 0; i < after.size(); i++) {
+            if ("studio.debug.finish".equals(after.get(i)) && lost.equals(browser.payloads.get(from + i).get("debugId"))) fin = i;
+        }
+        assertTrue(fin >= 0 && fin < after.indexOf("studio.debug.start"), "a sessão órfã é encerrada antes da nova: " + after);
+        assertEquals(GuidedDebugPanel.Mode.STEP, card().mode());
+    }
+
+    @Test
     @DisplayName("navegador desligado: explica e não abre sessão; extensão antiga: mensagem de atualização")
     void indisponivel() {
         studio();

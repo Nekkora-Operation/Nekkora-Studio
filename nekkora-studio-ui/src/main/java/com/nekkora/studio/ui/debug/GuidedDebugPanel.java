@@ -164,19 +164,24 @@ public final class GuidedDebugPanel extends JPanel {
     private final NekkoraText limitsTitle = new NekkoraText("Limitações", TextTone.SECONDARY);
     private final NekkoraText candidatesTitle = new NekkoraText("Outros candidatos", TextTone.SECONDARY);
     private Card card;
+    private final com.nekkora.ui.container.NekkoraScrollPane scroll;
 
     public GuidedDebugPanel(Actions actions) {
-        super(new BorderLayout());
+        super(new BorderLayout(0, Spacing.SPACE_3.px()));
         this.actions = Objects.requireNonNull(actions);
         setOpaque(false);
+        // cabeçalho fixo · conteúdo rolável · ações fixas: com muito conteúdo (alerta, candidatos, detalhes) as ações
+        // (Continuar/Corrigir, Anterior/Próxima/Encerrar) nunca saem da tela
+        NekkoraStack top = NekkoraStack.vertical(Spacing.SPACE_3);
         NekkoraStack root = NekkoraStack.vertical(Spacing.SPACE_3);
+        NekkoraStack actionsStack = NekkoraStack.vertical(Spacing.SPACE_3);
         NekkoraStack head = NekkoraStack.horizontal(Spacing.SPACE_2).align(NekkoraStack.Align.CENTER);
         head.add(badge);
         head.addGlue();
         head.add(progress);
-        root.add(head);
-        root.add(title);
-        root.add(actor);
+        top.add(head);
+        top.add(title);
+        top.add(actor);
         root.add(recognized);
         root.add(message);
         root.add(whyTitle);
@@ -192,11 +197,11 @@ public final class GuidedDebugPanel extends JPanel {
         tabs.getAccessibleContext().setAccessibleName("Aba do Chrome para o debug");
         tabRow.add(tabs);
         tabRow.add(startButton);
-        root.add(tabRow);
+        actionsStack.add(tabRow);
 
         decisionRow.add(continueButton);
         decisionRow.add(correctButton);
-        root.add(decisionRow);
+        actionsStack.add(decisionRow);
 
         NekkoraStack correctionButtons = NekkoraStack.horizontal(Spacing.SPACE_2);
         correctionButtons.add(pickButton);
@@ -206,19 +211,19 @@ public final class GuidedDebugPanel extends JPanel {
         manual.add(locator);
         manual.add(locatorButton);
         correctionRow.add(manual);
-        root.add(correctionRow);
+        actionsStack.add(correctionRow);
 
         pickRow.add(cancelPickButton);
-        root.add(pickRow);
+        actionsStack.add(pickRow);
         compareRow.add(applyButton);
         compareRow.add(discardButton);
-        root.add(compareRow);
+        actionsStack.add(compareRow);
 
         probeKeys.getAccessibleContext().setAccessibleName("Dado fictício do laboratório");
         probeRow.add(probeKeys);
         probeRow.add(probeButton);
         probeRow.setVisible(false);
-        root.add(probeRow);
+        actionsStack.add(probeRow);
         probeButton.addActionListener(e -> actions.probe(probeKeys.isVisible() ? probeKeys.getSelectedValue() : null));
         probeButton.getAccessibleContext().setAccessibleDescription("Executa UMA operação no laboratório local com dado fictício. Nunca disponível fora do laboratório.");
 
@@ -226,8 +231,13 @@ public final class GuidedDebugPanel extends JPanel {
         navRow.add(nextButton);
         navRow.addGlue();
         navRow.add(finishButton);
-        root.add(navRow);
-        add(root, BorderLayout.CENTER);
+        actionsStack.add(navRow);
+        add(top, BorderLayout.NORTH);
+        scroll = com.nekkora.ui.container.NekkoraScrollPane.verticalOnly(root);
+        scroll.setOpaque(false);
+        scroll.getViewport().setOpaque(false);
+        add(scroll, BorderLayout.CENTER);
+        add(actionsStack, BorderLayout.SOUTH);
 
         startButton.addActionListener(e -> {
             Tab t = tabs.getSelectedValue();
@@ -253,7 +263,11 @@ public final class GuidedDebugPanel extends JPanel {
 
     /** Mostra um cartão (na EDT). */
     public void show(Card c) {
+        Card previous = this.card;
         this.card = Objects.requireNonNull(c);
+        if (previous == null || previous.mode() != c.mode() || !previous.title().equals(c.title())) {
+            javax.swing.SwingUtilities.invokeLater(() -> scroll.getVerticalScrollBar().setValue(0)); // outra etapa/modo: do topo
+        }
         badge.setStatus(c.badge().status, c.badge().label());
         progress.setText(c.progress());
         progress.setVisible(!c.progress().isEmpty());

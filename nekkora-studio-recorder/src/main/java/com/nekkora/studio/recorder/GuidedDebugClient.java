@@ -282,6 +282,15 @@ public final class GuidedDebugClient implements BrowserLink.Listener, AutoClosea
                 .thenApply(r -> update(Json.object(r, "debug")));
     }
 
+    /**
+     * G8: encerra explicitamente uma sessão que ESTE Studio perdeu com a queda do canal (o fim não pôde ser entregue). A
+     * extensão mantém "uma sessão por aba": sem isso, a aba ficaria ocupada até a concessão vencer. Melhor esforço —
+     * sessão já encerrada ou desconhecida é ignorada.
+     */
+    public static CompletableFuture<Void> finishOrphan(BrowserLink link, String debugId, Duration timeout) {
+        return link.send("studio.debug.finish", Map.of("debugId", debugId, "operationId", "op-" + UUID.randomUUID()), timeout).handle((r, e) -> null);
+    }
+
     @Override
     public void close() {
         if (session != null && !session.ended()) {
@@ -307,8 +316,17 @@ public final class GuidedDebugClient implements BrowserLink.Listener, AutoClosea
 
     @Override
     public void statusChanged(LinkStatus status) {
-        // a perda do canal aparece como falha dos comandos; a sessão do lado da extensão expira pela concessão
+        // G8: canal perdido = sessão encerrada DESTE lado (nenhuma verificação anterior vale mais; a sessão da extensão
+        // expira pela concessão ou é substituída quando este Studio abrir outra na mesma aba)
+        Session s = session;
+        if (status.connected() || s == null || s.ended()) return;
+        Session lost = new Session(s.debugId(), "ENDED", s.tabRef(), s.pageEpoch(), false, LINK_LOST);
+        session = lost;
+        listeners.forEach(l -> l.changed(lost));
     }
+
+    /** Motivo local (não vem da extensão): o canal com o navegador caiu durante a sessão. */
+    public static final String LINK_LOST = "LINK_LOST";
 
     @Override
     public void event(BridgeEvent event) {

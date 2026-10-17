@@ -124,6 +124,22 @@ class BridgeServerTest {
     }
 
     @Test
+    void eventosDoDebugGuiadoChegamAosOuvintes_foraDaListaFechadaNao() throws Exception {
+        // STUDIO-009 G8 (achado da homologação real): studio.debug.picked/changed eram descartados pelo servidor
+        BridgeServer s = start(BridgeServer.Transport.AUTO, 5000);
+        try (TestHostClient c = new TestHostClient(tmp.resolve("bridge"), TestHostClient.Mode.NORMAL)) {
+            waitFor(() -> s.status().connected(), 5000, "CONNECTED");
+            c.event("studio.debug.inventado", Json.obj().put("debugId", "dbg-1").build());
+            c.event("studio.debug.changed", Json.obj().put("debug", Json.obj().put("debugId", "dbg-1").put("pageEpoch", 2).build()).build());
+            c.event("studio.debug.picked", Json.obj().put("debugId", "dbg-1").put("requestId", "rq-1").build());
+            waitFor(() -> events.size() >= 2, 5000, "eventos do debug entregues");
+            Thread.sleep(200);
+            assertEquals(List.of("studio.debug.changed", "studio.debug.picked"), events.stream().map(BridgeEvent::type).toList(),
+                    "só os eventos do contrato, na ordem");
+        }
+    }
+
+    @Test
     void conexaoAutenticadaComandosEEventos() throws Exception {
         BridgeServer s = start(BridgeServer.Transport.AUTO, 5000);
         try (TestHostClient c = new TestHostClient(tmp.resolve("bridge"), TestHostClient.Mode.NORMAL)) {

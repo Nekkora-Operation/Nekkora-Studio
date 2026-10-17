@@ -62,6 +62,18 @@ public final class ReusePolicy {
     static final Set<String> CHANGE_MARKERS = Set.of("ID_ATTRIBUTE_CHANGED", "NAME_ATTRIBUTE_CHANGED", "KIND_INCOMPATIBLE_AT_ADDRESS",
             "INDISTINGUISHABLE_AT_REGISTRATION", "PAGE_CHANGED_DURING_CHECK");
     /** Verificações de estado que precisam passar para seguir sem perguntar (as não aplicáveis são ignoradas). */
+    /**
+     * O estado observado do alvo serve para a ação agora (único, visível, habilitado, editável quando preciso, tipo
+     * compatível, quadro/shadow alcançáveis). Identidade comprovada com estado inadequado pede revisão, nunca proposta.
+     */
+    public static boolean stateSuitable(Verification now) {
+        for (String c : STATE_CHECKS) {
+            String v = now.checks().getOrDefault(c, "UNKNOWN");
+            if (!"PASS".equals(v) && !"NOT_APPLICABLE".equals(v)) return false;
+        }
+        return true;
+    }
+
     static final List<String> STATE_CHECKS = List.of("unique", "visible", "enabled", "editable", "kindMatchesAction", "frameReachable", "shadowReachable");
 
     private ReusePolicy() {}
@@ -90,13 +102,7 @@ public final class ReusePolicy {
         if (now.reasons().stream().anyMatch(CHANGE_MARKERS::contains)) {
             r.add(now.reasons().contains("PAGE_CHANGED_DURING_CHECK") ? Reason.PAGE_CHANGED : Reason.ATTRIBUTES_CHANGED);
         }
-        for (String c : STATE_CHECKS) {
-            String v = now.checks().getOrDefault(c, "UNKNOWN");
-            if (!"PASS".equals(v) && !"NOT_APPLICABLE".equals(v)) {
-                r.add(Reason.STATE_NOT_SUITABLE);
-                break;
-            }
-        }
+        if (!stateSuitable(now)) r.add(Reason.STATE_NOT_SUITABLE);
         return r.isEmpty() ? new Outcome(Verdict.REUSE, List.of()) : new Outcome(Verdict.REVIEW, r);
     }
 }

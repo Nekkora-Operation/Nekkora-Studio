@@ -37,6 +37,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Function;
@@ -130,6 +131,8 @@ public final class GuidedDebugPresenter implements GuidedDebugPanel.Actions, Gui
     private GuidedDebugClient.Inspection beforeCorrection;
     private Timer advance;
     private int lastEpoch;
+    /** Sessão que este Studio perdeu com a queda do canal (a extensão ainda pode tê-la ativa). */
+    private String orphanDebugId;
     /** A aba escolhida é de laboratório (origem LAB): só então a sonda existe. */
     private boolean labTab;
     private final Map<String, Boolean> labTabs = new LinkedHashMap<>();
@@ -219,7 +222,11 @@ public final class GuidedDebugPresenter implements GuidedDebugPanel.Actions, Gui
         client.addListener(this);
         GuidedDebugClient c = client;
         show(Card.message(Mode.STEP, Badge.CHECKING, "Abrindo a sessão de debug…", actor.label(), ""));
-        c.start(tabRef).whenComplete((s, err) -> edt(() -> {
+        String orphan = orphanDebugId; // sessão perdida com a queda do canal: encerrada antes de abrir outra
+        orphanDebugId = null;
+        CompletableFuture<Void> before = orphan == null ? CompletableFuture.completedFuture(null)
+                : GuidedDebugClient.finishOrphan(link, orphan, Duration.ofSeconds(10));
+        before.thenCompose(x -> c.start(tabRef)).whenComplete((s, err) -> edt(() -> {
             if (c != client) return;
             if (err != null) {
                 stopClient();
@@ -300,6 +307,10 @@ public final class GuidedDebugPresenter implements GuidedDebugPanel.Actions, Gui
             badge = resolved ? Badge.REVIEW : notVerifiable(r) ? Badge.NOT_VERIFIABLE : Badge.REVIEW;
             for (ReusePolicy.Reason x : lastOutcome.reasons()) reuseLines.add(GuidedDebugText.reuse(x.name()));
             message = "Já havia uma decisão para este alvo, mas ela precisa de revisão.";
+        } else if (resolved && !ReusePolicy.stateSuitable(verification(r))) {
+            badge = Badge.REVIEW; // identidade comprovada, estado inadequado agora (oculto, desabilitado…): nunca "proposto"
+            message = "O elemento foi comprovado, mas agora não está em condição para a ação (veja os detalhes técnicos). Confirme só se esse "
+                    + "estado for o esperado neste ponto do processo.";
         } else if (resolved) {
             badge = Badge.PROPOSED;
         } else {
@@ -598,6 +609,7 @@ public final class GuidedDebugPresenter implements GuidedDebugPanel.Actions, Gui
         edt(() -> {
             if (client == null || !s.debugId().equals(client.debugId())) return;
             if (s.ended()) {
+                if (GuidedDebugClient.LINK_LOST.equals(s.reason())) orphanDebugId = s.debugId();
                 cancelAdvance();
                 GuidedDebugClient ended = client;
                 client = null;
@@ -610,6 +622,9 @@ public final class GuidedDebugPresenter implements GuidedDebugPanel.Actions, Gui
                 Mode mode = panel.card().mode();
                 if (mode == Mode.STEP) inspectCurrent(); // a página mudou: verifica de novo (nada vale da página anterior)
                 else if (mode == Mode.PICKING || mode == Mode.COMPARING) correcting(step(), "A página mudou: escolha o elemento de novo.");
+            } else if (!s.picking() && panel.card().mode() == Mode.PICKING && picked == null) {
+                // a extensão desarmou a seleção sem entregar o elemento (não foi possível descrevê-lo): nunca fica esperando
+                correcting(step(), "Não foi possível descrever o elemento escolhido. Tente de novo ou escolha outro elemento.");
             }
         });
     }
@@ -753,6 +768,7 @@ public final class GuidedDebugPresenter implements GuidedDebugPanel.Actions, Gui
             case "LEASE_EXPIRED" -> "O Studio parou de renovar a sessão.";
             case "RECORDING_STARTED" -> "Uma gravação começou nesta aba.";
             case "FINISHED" -> "Debug encerrado.";
+            case GuidedDebugClient.LINK_LOST -> "A conexão com o navegador caiu: nenhuma verificação anterior vale mais. Reconecte a extensão e depure de novo.";
             default -> "A sessão terminou (" + reason + ").";
         };
     }
