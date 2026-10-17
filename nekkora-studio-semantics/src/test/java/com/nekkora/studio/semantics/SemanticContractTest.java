@@ -200,6 +200,29 @@ class SemanticContractTest {
     }
 
     @Test
+    @DisplayName("revisão P2: CPF sem representação declarada → incerteza REPRESENTATION_UNSPECIFIED; só dígitos ou com máscara → nenhuma")
+    void representacao() throws Exception {
+        Automation a = Automation.create("Cadastro fictício", "", CLOCK);
+        a.addSession("Cadastro", null);
+        VariableDefinition semFormato = a.declareVariable(VariableDraft.of("cliente.cpf", VariableType.STRING)
+                .withSemantic(SemanticType.BRAZILIAN_CPF, SemanticStatus.USER_CONFIRMED).withSensitivity(Sensitivity.PERSONAL_DATA)
+                .withOrigin(VariableOrigin.input()));
+        VariableDefinition mascara = a.declareVariable(VariableDraft.of("titular.cpf", VariableType.STRING)
+                .withSemantic(SemanticType.BRAZILIAN_CPF, SemanticStatus.USER_CONFIRMED).withSensitivity(Sensitivity.PERSONAL_DATA)
+                .withOrigin(VariableOrigin.input())
+                .withConstraints(new VariableConstraints(false, 14, 14, TextFormat.valueOf("BRAZILIAN_CPF_MASKED"), null, null, null, null)));
+        SemanticContract c = SemanticContract.of(a);
+        List<String> semFormatoCodes = c.uncertainties().stream().filter(u -> semFormato.id().equals(u.variable())).map(u -> u.code().name()).toList();
+        List<String> mascaraCodes = c.uncertainties().stream().filter(u -> mascara.id().equals(u.variable())).map(u -> u.code().name()).toList();
+        assertTrue(semFormatoCodes.contains("REPRESENTATION_UNSPECIFIED"), semFormatoCodes.toString());
+        assertFalse(mascaraCodes.contains("REPRESENTATION_UNSPECIFIED"), mascaraCodes.toString());
+        assertTrue(mascaraCodes.contains("INPUT_VALUE_UNKNOWN"), "representação declarada não é valor validado");
+        assertEquals(List.of(), new Schemas.SchemaValidator(schema()).validate(Json.parse(c.toJson()), "Contract"));
+        // a fixture congelada (CPF só com dígitos) não muda: nenhuma incerteza nova nela
+        assertFalse(SemanticContract.of(exemplo()).toJson().contains("REPRESENTATION_UNSPECIFIED"));
+    }
+
+    @Test
     @DisplayName("separado do relatório de validação e só leitura: não altera a automação nem tem estado de validação")
     void separadoESoLeitura() {
         Automation a = exemplo();

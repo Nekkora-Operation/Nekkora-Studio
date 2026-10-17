@@ -13,6 +13,7 @@ import com.nekkora.studio.domain.variable.SemanticStatus;
 import com.nekkora.studio.domain.variable.SemanticType;
 import com.nekkora.studio.domain.variable.Sensitivity;
 import com.nekkora.studio.domain.variable.TextFormat;
+import com.nekkora.studio.domain.variable.VariableConstraints;
 import com.nekkora.studio.domain.variable.VariableDefinition;
 import com.nekkora.studio.domain.variable.VariableDraft;
 import com.nekkora.studio.domain.variable.VariableOrigin;
@@ -213,6 +214,23 @@ class ProjectFormat11ContractTest {
         Files.write(p, files.serialize(ProjectFiles.Snapshot.of(a, UUID.randomUUID().toString()), ProjectFormat.Kind.PROJECT, null, Instant.now()));
         assertEquals(ProjectFormat.FORMAT_VERSION, files.load(p, clock).manifest().formatVersion());
         assertFalse(Tamper.entries(p).containsKey(ProjectFormat.VARIABLES));
+    }
+
+    @Test
+    @DisplayName("revisão P2: CPF com máscara declarada é gravado no 1.1.0 conforme ao schema e lido de volta igual")
+    void cpfComMascara() throws Exception {
+        Automation a = RichAutomation.build(clock);
+        VariableDefinition v = a.declareVariable(VariableDraft.of("cliente.cpf", VariableType.STRING)
+                .withSemantic(SemanticType.BRAZILIAN_CPF, SemanticStatus.USER_CONFIRMED).withSensitivity(Sensitivity.PERSONAL_DATA)
+                .withOrigin(VariableOrigin.input())
+                .withConstraints(new VariableConstraints(true, 14, 14, TextFormat.valueOf("BRAZILIAN_CPF_MASKED"), null, null, null, null)));
+        Path p = dir.resolve("mascara.nekkora");
+        Files.write(p, files.serialize(ProjectFiles.Snapshot.of(a, UUID.randomUUID().toString()), ProjectFormat.Kind.PROJECT, null, Instant.now()));
+        byte[] variables = Tamper.entries(p).get(ProjectFormat.VARIABLES);
+        assertEquals(List.of(), new ProjectFormatContractTest.Validator(schema()).validate(Json.parse(new String(variables, StandardCharsets.UTF_8)),
+                definitionFor(ProjectFormat.VARIABLES)));
+        assertTrue(new String(variables, StandardCharsets.UTF_8).contains("\"textFormat\":\"BRAZILIAN_CPF_MASKED\""));
+        assertEquals(List.of(v), files.load(p, clock).automation().variables());
     }
 
     @Test
