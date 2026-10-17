@@ -77,7 +77,7 @@ public record DocumentDraft(AutomationId automationId, String processRevision, L
      * @param forSteps etapas do bloco no momento da captura (a captura não vale para outras etapas)
      */
     public record SafeCapture(String sha256, int width, int height, double devicePixelRatio, Instant observedAt, int pageEpoch, String policy,
-                              String screenKey, List<StepId> forSteps, List<Annotation> annotations, List<String> limitations) {
+                              String screenKey, List<StepId> forSteps, List<Annotation> annotations, List<String> limitations, List<Region> regions) {
         public SafeCapture {
             Objects.requireNonNull(sha256);
             if (!sha256.matches("sha256:[0-9a-f]{64}")) throw new IllegalArgumentException("sha256 inválido");
@@ -88,6 +88,18 @@ public record DocumentDraft(AutomationId automationId, String processRevision, L
             forSteps = List.copyOf(forSteps);
             annotations = List.copyOf(annotations);
             limitations = List.copyOf(limitations);
+            regions = regions == null ? List.of() : List.copyOf(regions);
+        }
+    }
+
+    /**
+     * Região da imagem sanitizada (px do dispositivo): {@code CARRIER} (pixels reais de um rótulo de interface) ou
+     * {@code FIELD} (moldura sintética). Guardada para REVERIFICAR os pixels antes de cada exportação.
+     */
+    public record Region(String kind, int x, int y, int width, int height) {
+        public Region {
+            if (!"CARRIER".equals(kind) && !"FIELD".equals(kind)) throw new IllegalArgumentException("tipo de região");
+            if (x < 0 || y < 0 || width <= 0 || height <= 0) throw new IllegalArgumentException("região inválida");
         }
     }
 

@@ -90,6 +90,17 @@ public final class DraftJson {
             }
             m.put("annotations", anns);
             m.put("limitations", new ArrayList<Object>(c.limitations()));
+            List<Object> regs = new ArrayList<>();
+            for (DocumentDraft.Region r : c.regions()) {
+                Map<String, Object> rm = new LinkedHashMap<>();
+                rm.put("kind", r.kind());
+                rm.put("x", r.x());
+                rm.put("y", r.y());
+                rm.put("width", r.width());
+                rm.put("height", r.height());
+                regs.add(rm);
+            }
+            m.put("regions", regs);
             captures.add(m);
         }
         root.put("captures", captures);
@@ -153,7 +164,7 @@ public final class DraftJson {
         for (Object o : Json.array(root, "captures")) {
             Map<String, Object> c = obj(o);
             only(c, Set.of("sha256", "width", "height", "devicePixelRatio", "observedAt", "pageEpoch", "policy", "screenKey", "forSteps", "annotations",
-                    "limitations"));
+                    "limitations", "regions"));
             List<Annotation> anns = new ArrayList<>();
             for (Object ao : Json.array(c, "annotations")) {
                 Map<String, Object> a = obj(ao);
@@ -163,9 +174,16 @@ public final class DraftJson {
             }
             List<String> limits = new ArrayList<>();
             for (Object l : Json.array(c, "limitations")) limits.add(code(String.valueOf(l)));
+            List<DocumentDraft.Region> regs = new ArrayList<>();
+            for (Object ro : Json.array(c, "regions")) {
+                Map<String, Object> r = obj(ro);
+                only(r, Set.of("kind", "x", "y", "width", "height"));
+                regs.add(new DocumentDraft.Region(req(r, "kind"), (int) Json.number(r, "x", -1), (int) Json.number(r, "y", -1), (int) Json.number(r, "width", 0),
+                        (int) Json.number(r, "height", 0)));
+            }
             SafeCapture sc = new SafeCapture(req(c, "sha256"), (int) Json.number(c, "width", 0), (int) Json.number(c, "height", 0),
                     dbl(c, "devicePixelRatio"), Instant.parse(req(c, "observedAt")), (int) Json.number(c, "pageEpoch", 0), req(c, "policy"),
-                    Json.string(c, "screenKey"), stepIds(Json.array(c, "forSteps")), anns, limits);
+                    Json.string(c, "screenKey"), stepIds(Json.array(c, "forSteps")), anns, limits, regs);
             captures.put(sc.sha256(), sc);
         }
         return new DocumentDraft(new AutomationId(UUID.fromString(req(root, "automationId"))), rev, sections, captures);

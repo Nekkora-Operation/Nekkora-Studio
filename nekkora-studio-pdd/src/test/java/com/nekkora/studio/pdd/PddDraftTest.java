@@ -284,7 +284,7 @@ class PddDraftTest {
 
     static SafeCapture capture(Block b, List<Annotation> anns) {
         return new SafeCapture("sha256:" + "a".repeat(64), 1280, 720, 1.0, Instant.parse("2026-10-17T12:00:00Z"), 1, "nekkora-visual/1", b.screenKey(),
-                b.stepIds(), anns, List.of());
+                b.stepIds(), anns, List.of(), List.of(new DocumentDraft.Region("CARRIER", 10, 10, 40, 20)));
     }
 
     @SuppressWarnings("unused")

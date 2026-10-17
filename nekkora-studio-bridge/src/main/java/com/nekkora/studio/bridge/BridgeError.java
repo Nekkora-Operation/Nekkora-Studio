@@ -11,6 +11,8 @@ public enum BridgeError {
     OPERATION_CONFLICT, INTERNAL_ERROR,
     // STUDIO-009 (guided-debug/1)
     DEBUG_NOT_FOUND, DEBUG_ENDED, CANDIDATE_EXPIRED, PROBE_NOT_ALLOWED,
+    // STUDIO-010 (pdd-capture/1)
+    VISUAL_CAPTURE_NOT_ALLOWED,
     /** Studio: o canal caiu antes da resposta. */
     LINK_LOST,
     /** Studio: outra instância já publica o Bridge neste usuário. */
