@@ -22,6 +22,7 @@ nekkora-studio-bridge   → Studio Bridge nekkora-bridge/1: canal local autentic
 nekkora-studio-recorder → RecorderController: gravação técnica confirmada pela extensão (Java puro)
 nekkora-studio-persistence → projeto .nekkora: formato versionado, validação, reconstrução e gravação atômica (Java puro)
 nekkora-studio-validation → Automation Validation Engine: diagnóstico estrutural, sem execução (Java puro)
+nekkora-studio-guided   → debug guiado: plano intermediário, regra de reuso e registro do debug (Java puro)
 nekkora-studio-ui       → peças visuais do Studio (navegação, automação, sessões, etapas, propriedades, diálogos,
                           Floating Recorder)
 nekkora-studio-app      → a aplicação Nekkora Studio (jar executável)
@@ -87,6 +88,19 @@ observado. Cada apontamento tem severidade (× bloqueio, ! aviso, i informação
 - Validar não altera a automação, o histórico de desfazer nem o arquivo `.nekkora`.
 
 Veja [docs/studio-007](docs/studio-007/architecture.md) e o [relatório](reports/studio-007-final-report.md).
+
+**STUDIO-009 — debug guiado no navegador.** Menu **Automação → Depurar no navegador…** (Ctrl+Shift+D): escolha a aba
+(laboratório local ou site autorizado) e o Studio verifica cada etapa no Chrome, **sem executar nada**. A extensão
+reencontra o elemento pela identidade registrada na gravação, destaca-o em rosa e a janela flutuante explica por quê,
+o que está comprovado e o que não está. **Continuar** registra a decisão (com o ator); **Corrigir** permite escolher o
+elemento certo no navegador, comparar antes × depois e aplicar — só o alvo muda, a captura original fica intacta e tudo
+se desfaz com Ctrl+Z. Na próxima passagem, o que continua comprovado é reconfirmado sem pergunta. As decisões vão para o
+`.nekkora` 1.2.0.
+
+- Um localizador que casa **não** é identidade; elementos indistinguíveis nunca são comprovados.
+- A prova do caso termina num script Python + Playwright gerado do modelo, conferido por um oráculo do laboratório.
+
+Veja [docs/studio-009](docs/studio-009/README.md) e o [relatório](reports/studio-009-final-report.md).
 
 Camadas: **Tokens → Temas → Primitivas → Componentes → Padrões → Studio**. Detalhes em
 [docs/ARQUITETURA.md](docs/ARQUITETURA.md).
