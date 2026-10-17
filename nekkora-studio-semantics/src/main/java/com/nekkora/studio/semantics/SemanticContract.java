@@ -10,10 +10,16 @@ import com.nekkora.studio.domain.action.ActionType;
 import com.nekkora.studio.domain.action.ValueSource;
 import com.nekkora.studio.domain.variable.SemanticStatus;
 import com.nekkora.studio.domain.variable.SemanticType;
+import com.nekkora.studio.domain.variable.Sensitivity;
+import com.nekkora.studio.domain.variable.TextFormat;
+import com.nekkora.studio.domain.variable.VariableConstraints;
 import com.nekkora.studio.domain.variable.VariableDefinition;
 import com.nekkora.studio.domain.variable.VariableId;
 import com.nekkora.studio.domain.variable.VariableOrigin;
+import com.nekkora.studio.domain.variable.VariableScope;
+import com.nekkora.studio.domain.variable.VariableType;
 import com.nekkora.studio.validation.DataFlowAnalysis;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -30,6 +36,9 @@ import java.util.Objects;
  *       ({@code constantDeclared} diz só que existe), nem literais de etapas, nem apelidos de credencial, nem nomes de
  *       etapas, sessões ou automação, nem a finalidade em texto livre, nem nomes de referências não declaradas, nem nada
  *       observado na página. A lista {@link #EXCLUSIONS} vai no próprio contrato.</li>
+ *   <li><b>Seguro também como API Java</b> (revisão 1 do PR #11): os objetos do contrato são CÓPIAS próprias, só com o
+ *       que o JSON publica — nenhum guarda a definição do domínio ({@link VariableDefinition}), a origem com o valor
+ *       ({@link VariableOrigin}) ou qualquer referência transitiva a eles. O que o JSON exclui, nenhum método alcança.</li>
  *   <li><b>Separado do relatório de validação</b>: o relatório diz o que falta; o contrato descreve o que está declarado.
  *       Nenhum dos dois certifica execução.</li>
  * </ul>
@@ -80,7 +89,12 @@ public final class SemanticContract {
         /** Etapa usa uma variável declarada fora do escopo dela. */
         OUT_OF_SCOPE_REFERENCE,
         /** Etapa usa uma credencial: só o apelido existe, sem cofre. */
-        CREDENTIAL_UNRESOLVED
+        CREDENTIAL_UNRESOLVED,
+        /**
+         * O significado admite mais de uma representação (CPF: só dígitos ou com máscara) e a variável não declara qual
+         * (revisão 1 do PR #11). Significado confirmado não é representação declarada, que não é valor validado.
+         */
+        REPRESENTATION_UNSPECIFIED
     }
 
     /** Uma incerteza, ligada a uma variável e/ou a uma etapa (só identidades). */
@@ -89,8 +103,41 @@ public final class SemanticContract {
     /** Produtora declarada. */
     public record Producer(StepId step, ProducerStatus status) {}
 
-    /** Variável declarada, com o uso derivado. */
-    public record Variable(VariableDefinition definition, Producer producer, List<StepId> consumers) {}
+    /** Escopo declarado: só o tipo e a sessão (identidade). */
+    public record Scope(VariableScope.Kind kind, SessionId session) {}
+
+    /** Origem declarada: o tipo, SE há valor fixo (nunca qual) e a produtora declarada. */
+    public record Origin(VariableOrigin.Kind kind, boolean constantDeclared, Producer producer) {}
+
+    /** Restrições tipadas declaradas (cópia própria; nenhuma é texto livre). */
+    public record Constraints(boolean required, Integer minLength, Integer maxLength, TextFormat textFormat, BigDecimal minimum, BigDecimal maximum,
+                              Integer scale, String currency) {
+        static Constraints of(VariableConstraints c) {
+            return new Constraints(c.required(), c.minLength(), c.maxLength(), c.textFormat(), c.minimum(), c.maximum(), c.scale(), c.currency());
+        }
+    }
+
+    /**
+     * Variável declarada, como o contrato a descreve, com o uso derivado. Cópia própria e imutável: sem finalidade, sem
+     * valor fixo, sem instantes e sem referência à definição do domínio.
+     */
+    public record Variable(VariableId id, String name, VariableType technicalType, SemanticType semanticType, SemanticStatus semanticStatus,
+                           Sensitivity sensitivity, Scope scope, Origin origin, Constraints constraints, List<StepId> consumers) {
+        public Variable {
+            consumers = List.copyOf(consumers);
+        }
+
+        /** Produtora declarada (só na origem saída de etapa). */
+        public Producer producer() {
+            return origin.producer();
+        }
+
+        static Variable of(VariableDefinition d, Producer producer, List<StepId> consumers) {
+            return new Variable(d.id(), d.name(), d.type(), d.semantic(), d.authority(), d.sensitivity(),
+                    new Scope(d.scope().kind(), d.scope().sessionId().orElse(null)),
+                    new Origin(d.origin().kind(), d.origin().constant() != null, producer), Constraints.of(d.constraints()), consumers);
+        }
+    }
 
     /** Etapa: identidade, posição e tipo de ação; do valor, só o tipo da origem. */
     public record Step(StepId id, SessionId session, int sessionNumber, int stepNumber, ActionType actionType, ValueKind value, VariableId variable,
@@ -119,7 +166,7 @@ public final class SemanticContract {
             List<DataFlowAnalysis.Consumption> uses = flow.consumersOf(v.id());
             Producer producer = null;
             if (v.origin().kind() == VariableOrigin.Kind.STEP_OUTPUT) producer = new Producer(v.origin().producer(), producerStatus(v, uses, flow));
-            vars.add(new Variable(v, producer, uses.stream().map(DataFlowAnalysis.Consumption::step).toList()));
+            vars.add(Variable.of(v, producer, uses.stream().map(DataFlowAnalysis.Consumption::step).toList()));
             switch (v.origin().kind()) {
                 case INPUT -> uncertain.add(new Uncertainty(UncertaintyCode.INPUT_VALUE_UNKNOWN, v.id(), null));
                 case STEP_OUTPUT -> uncertain.add(new Uncertainty(UncertaintyCode.STEP_OUTPUT_UNVERIFIED, v.id(), v.origin().producer()));
@@ -130,6 +177,9 @@ public final class SemanticContract {
             }
             if (v.authority() == SemanticStatus.PROPOSED_UNCONFIRMED) uncertain.add(new Uncertainty(UncertaintyCode.SEMANTIC_UNCONFIRMED, v.id(), null));
             if (v.semantic() == SemanticType.UNSPECIFIED) uncertain.add(new Uncertainty(UncertaintyCode.SEMANTIC_UNSPECIFIED, v.id(), null));
+            if (!v.semantic().representationDeclared(v.constraints())) {
+                uncertain.add(new Uncertainty(UncertaintyCode.REPRESENTATION_UNSPECIFIED, v.id(), null));
+            }
         }
         List<Step> list = new ArrayList<>();
         int s = 0;

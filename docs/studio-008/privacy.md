@@ -10,7 +10,8 @@ Regra: o Studio guarda **declarações**, nunca valores de execução.
 | Relatório de validação | códigos, severidades, identidades (`variableId`) | nomes de variáveis, valores, finalidade |
 | Contrato semântico | nome simbólico declarado, tipos, escopo, origem (`constantDeclared` true/false), sensibilidade, restrições, identidades | valor fixo, literais, apelidos de credencial, nomes de automação/sessões/etapas, finalidade, nomes não declarados, conteúdo de página, localizadores, evidências (lista `exclusions` no próprio contrato) |
 | Logs | códigos e contagens (como antes) | nomes, valores |
-| `toString()` de `VariableDefinition`, `VariableOrigin`, `VariableId`, `SemanticContract` | tipo/contagens | nome e valor |
+| `toString()` de `VariableDefinition`, `VariableDraft`, `VariableOrigin`, `VariableId`, `SemanticContract` | tipo/contagens | nome, finalidade e valor |
+| API Java do contrato semântico (revisão 1) | cópias com o mesmo conteúdo do JSON; do domínio, só identidades e enums | definição do domínio, valor fixo, finalidade (nenhum caminho público os alcança — testado por reflexão) |
 
 ## Defesas no domínio
 

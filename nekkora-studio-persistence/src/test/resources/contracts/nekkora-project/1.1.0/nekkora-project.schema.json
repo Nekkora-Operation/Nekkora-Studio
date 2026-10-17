@@ -529,6 +529,6 @@
     "Sensitivity": { "enum": ["PUBLIC", "INTERNAL", "PERSONAL_DATA", "SECRET"] },
     "VariableScopeKind": { "enum": ["AUTOMATION", "SESSION"] },
     "VariableOriginKind": { "enum": ["INPUT", "CONSTANT", "STEP_OUTPUT", "UNBOUND"] },
-    "TextFormat": { "enum": ["ANY", "DIGITS", "LETTERS_AND_DIGITS", "EMAIL_SHAPE"] }
+    "TextFormat": { "enum": ["ANY", "DIGITS", "LETTERS_AND_DIGITS", "EMAIL_SHAPE", "BRAZILIAN_CPF_MASKED"] }
   }
 }

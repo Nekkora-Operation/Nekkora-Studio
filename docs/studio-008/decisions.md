@@ -57,3 +57,12 @@ Nada mais das fixtures/schemas 1.0.0 muda; os binários `.nekkora` congelados fi
 | D-S008-14 | Migração 1.0→1.1 só ao gravar **sobre o próprio arquivo** 1.0: confirmação explícita; cópia conferida do original em `<nome> (formato 1.0.0).nekkora` (depois ` 2`, ` 3`…), nunca substituindo um arquivo existente; conflito (nada copiado nem gravado) se o original mudou. "Salvar como" em outro arquivo não toca no original | não reescrever destrutivamente o formato |
 | D-S008-15 | Homologação da 008 sem navegador | nenhum cenário grava, executa ou consulta página |
 | D-S008-16 | `Studio007Homologation` (roteiro histórico da 007, fora do `verify`) não foi alterado; com as regras 1.1.0 a verificação "variável → `VARIABLE_RESOLUTION_UNAVAILABLE`" daquele roteiro não vale mais | é o registro da 007; alterar não estava autorizado |
+
+## 5. Revisão 1 do PR #11 (2026-10-17) — ver `review-1.md`
+
+| Id | Decisão | Motivo |
+|---|---|---|
+| D-S008-18 | O contrato semântico guarda só cópias próprias (`Variable`, `Scope`, `Origin`, `Constraints`); do domínio, só identidades e enums. O JSON é escrito a partir dessas cópias | P1: a API Java alcançava valor fixo e finalidade pela `VariableDefinition`; a minimização tem de valer para a API, não só para o JSON |
+| D-S008-19 | Representação ≠ significado: `TextFormat.BRAZILIAN_CPF_MASKED` (fim do enum), `SemanticType.representations()`, aviso `VARIABLE_REPRESENTATION_UNSPECIFIED` (limita a avaliação) e incerteza `REPRESENTATION_UNSPECIFIED`; nunca bloqueio, nunca máscara imposta, nunca obrigatoriedade derivada do significado | P2: a IA não pode escolher entre `12345678909` e `123.456.789-09` |
+| D-S008-20 | Acréscimos aditivos nos contratos 1.1.0 (projeto, regras/relatório) e 1.0.0 (contrato semântico) sem nova versão | contratos introduzidos neste PR, ainda não integrados nem publicados; fixture do contrato semântico idêntica; fixture `validation-report/1.1.0` regenerada com autorização da usuária |
+| D-S008-21 | `VariableDraft.toString()` sem nome, finalidade nem valor | achado durante a reprodução do P1 (`draft().toString()` mostrava a finalidade) |

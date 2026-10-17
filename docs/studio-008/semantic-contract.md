@@ -8,6 +8,9 @@ Módulo `nekkora-studio-semantics`. `SemanticContract.of(automation).toJson()`.
 - **Separado do relatório de validação**: não tem estado, apontamentos nem severidades; o relatório diz o que falta, o
   contrato descreve o que foi declarado e derivado.
 - **Não certifica execução**: toda produtora declarada leva `"runtimeVerification": "UNVERIFIED_AT_RUNTIME"`.
+- **Seguro também como API Java** (revisão 1, D-S008-18): `variables()` devolve cópias próprias
+  (`Variable`, `Scope`, `Origin {kind, constantDeclared, producer}`, `Constraints`); nenhum caminho público alcança a
+  definição do domínio, o valor fixo ou a finalidade (`SemanticContractApiTest` percorre todos por reflexão).
 
 ## Estrutura
 
@@ -34,6 +37,8 @@ exclusions[]
 ## Incertezas (vocabulário fechado)
 
 `INPUT_VALUE_UNKNOWN`, `STEP_OUTPUT_UNVERIFIED`, `ORIGIN_UNBOUND`, `SEMANTIC_UNCONFIRMED`, `SEMANTIC_UNSPECIFIED`,
-`UNDECLARED_REFERENCE`, `OUT_OF_SCOPE_REFERENCE`, `CREDENTIAL_UNRESOLVED`. Ordem: variáveis (catálogo) e depois etapas.
+`UNDECLARED_REFERENCE`, `OUT_OF_SCOPE_REFERENCE`, `CREDENTIAL_UNRESOLVED`, `REPRESENTATION_UNSPECIFIED` (revisão 1:
+o significado admite mais de uma representação — CPF só dígitos ou com máscara — e a variável não declara qual). Ordem:
+variáveis (catálogo) e depois etapas.
 
 Schema e fixture: `nekkora-studio-semantics/src/test/resources/contracts/semantic-contract/1.0.0/`.

@@ -100,7 +100,7 @@ class ValidationRules11Test {
                 .withSemantic(SemanticType.BRAZILIAN_CPF, SemanticStatus.USER_CONFIRMED).withSensitivity(Sensitivity.PERSONAL_DATA)
                 .withOrigin(VariableOrigin.input()));
         assertEquals(Set.of(FindingCode.INPUT_VALUE_NOT_AVAILABLE, FindingCode.LOCATOR_VALIDATED_AT_CAPTURE), codes(a, s));
-        assertEquals(Set.of(), codes(a, v));
+        assertEquals(Set.of(FindingCode.VARIABLE_REPRESENTATION_UNSPECIFIED), codes(a, v), "revisão 1: CPF sem formato declarado (só dígitos ou com máscara)");
         Finding f = v11.validate(a).forStep(s.id()).stream().filter(x -> x.code() == FindingCode.INPUT_VALUE_NOT_AVAILABLE).findFirst().orElseThrow();
         assertEquals(v.id(), f.variable(), "o apontamento leva à variável (pela identidade)");
         assertEquals(ValidationStatus.NOT_FULLY_ASSESSABLE, v11.validate(a).status());

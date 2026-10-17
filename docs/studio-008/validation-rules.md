@@ -43,6 +43,7 @@ Mantidos de 1.0.0 na etapa: `SENSITIVE_FIELD_WITHOUT_CREDENTIAL`, `CREDENTIAL_RE
 | `VARIABLE_SEMANTIC_UNSPECIFIED` | Informação | — | significado não especificado |
 | `CONSTANT_STORED_UNENCRYPTED` | Informação | — | valor fixo gravado no arquivo (não criptografado) |
 | `VARIABLE_UNUSED` | Informação | — | nenhuma etapa usa |
+| `VARIABLE_REPRESENTATION_UNSPECIFIED` | Aviso | sim | revisão 1: o significado admite mais de uma representação (CPF: só dígitos ou com máscara) e o formato não foi declarado; o Studio não escolhe nem valida valores |
 
 ## Estados
 

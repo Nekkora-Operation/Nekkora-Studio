@@ -1,0 +1,19 @@
+Tela: java.awt.Rectangle[x=0,y=0,width=1920,height=1032] · java 21.0.12
+OK    aba Restrições oferece 'Somente dígitos' e 'Máscara de CPF (000.000.000-00)'; o Studio não escolhe: continua 'Qualquer texto' [ANY, DIGITS, LETTERS_AND_DIGITS, EMAIL_SHAPE, BRAZILIAN_CPF_MASKED]
+captura S008-R1-01-formato-nao-escolhido.png (760x652)
+OK    CPF declarado: significado confirmado, formato não declarado (Qualquer texto), sem valor
+OK    R1-1 Validar (Ctrl+Shift+V real): VARIABLE_REPRESENTATION_UNSPECIFIED como AVISO que limita a avaliação, nunca bloqueio; estado INCOMPLETE
+OK    painel: apontamento selecionado com a explicação controlada ('O significado da variável pode ser escrito de mais de uma forma e a forma esperada não foi declarada.') e 'Como corrigir' com a orientação, sem valores
+captura S008-R1-02-aviso-representacao.png (1350x891)
+OK    contrato semântico: incerteza REPRESENTATION_UNSPECIFIED ao lado de INPUT_VALUE_UNKNOWN
+captura S008-R1-03-mascara-de-cpf.png (760x635)
+OK    variável editada: formato 'Máscara de CPF'; linha Declaração do painel: Significado: CPF (confirmado) · Escopo: Automação inteira · Sensibilidade: Dados pessoais · Restrições: máscara de CPF (000.000.000-00)
+captura S008-R1-04-variavel-com-mascara.png (1350x891)
+OK    R1-2 Validar de novo: o aviso de representação some; a entrada continua NÃO disponível (representação declarada não é valor validado)
+captura S008-R1-05-representacao-declarada.png (1350x891)
+OK    contrato semântico: textFormat BRAZILIAN_CPF_MASKED, sem REPRESENTATION_UNSPECIFIED, entrada ainda desconhecida
+OK    Ctrl+Z real: formato volta a 'Qualquer texto' e o aviso reaparece
+OK    Ctrl+Y real: máscara de volta
+OK    salvo em 1.1.0 com textFormat BRAZILIAN_CPF_MASKED; sem campo de valor
+OK    logs só com códigos e contagens: sem nomes de variáveis
+RESULTADO: 12 verificações, 0 falha(s)

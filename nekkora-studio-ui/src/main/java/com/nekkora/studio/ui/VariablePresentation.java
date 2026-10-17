@@ -74,7 +74,10 @@ public final class VariablePresentation {
             parts.add(c.minLength() != null && c.minLength().equals(c.maxLength()) ? c.minLength() + " caracteres"
                     : "comprimento " + (c.minLength() == null ? "0" : c.minLength()) + "–" + (c.maxLength() == null ? "…" : c.maxLength()));
         }
-        if (c.textFormat() != com.nekkora.studio.domain.variable.TextFormat.ANY) parts.add(c.textFormat().label().toLowerCase(java.util.Locale.ROOT));
+        if (c.textFormat() != com.nekkora.studio.domain.variable.TextFormat.ANY) {
+            String label = c.textFormat().label(); // só a inicial em minúscula: "máscara de CPF", não "máscara de cpf"
+            parts.add(label.substring(0, 1).toLowerCase(java.util.Locale.ROOT) + label.substring(1));
+        }
         if (c.minimum() != null || c.maximum() != null) {
             parts.add("de " + (c.minimum() == null ? "…" : c.minimum().toPlainString()) + " a " + (c.maximum() == null ? "…" : c.maximum().toPlainString()));
         }

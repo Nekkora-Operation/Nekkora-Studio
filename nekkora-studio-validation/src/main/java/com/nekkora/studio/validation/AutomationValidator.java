@@ -137,6 +137,7 @@ public final class AutomationValidator {
             if (v.semantic() == SemanticType.UNSPECIFIED) codes.add(FindingCode.VARIABLE_SEMANTIC_UNSPECIFIED);
             if (v.origin().kind() == VariableOrigin.Kind.CONSTANT && !sensitiveConstant) codes.add(FindingCode.CONSTANT_STORED_UNENCRYPTED);
             if (flow.consumersOf(v.id()).isEmpty()) codes.add(FindingCode.VARIABLE_UNUSED);
+            if (!v.semantic().representationDeclared(v.constraints())) codes.add(FindingCode.VARIABLE_REPRESENTATION_UNSPECIFIED);
             SessionId session = v.scope().sessionId().filter(numbers::containsKey).orElse(null);
             int sessionNumber = session == null ? 0 : numbers.get(session);
             String vid = v.id().value().toString();

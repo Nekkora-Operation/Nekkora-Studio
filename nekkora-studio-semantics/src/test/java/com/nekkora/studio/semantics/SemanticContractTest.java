@@ -157,7 +157,7 @@ class SemanticContractTest {
         SemanticContract c = SemanticContract.of(a);
         assertEquals("1.1.0", c.modelVersion());
         SemanticContract.Variable protocolo = c.variables().get(2);
-        assertEquals("resultado.protocolo", protocolo.definition().name());
+        assertEquals("resultado.protocolo", protocolo.name());
         assertEquals(2, protocolo.consumers().size(), "uso derivado pelo nome exato (inclusive fora do escopo)");
         assertEquals(SemanticContract.ProducerStatus.INVALID, protocolo.producer().status(), "uma consumidora está fora do escopo da variável");
         SemanticContract.Step undeclared = c.steps().get(6);

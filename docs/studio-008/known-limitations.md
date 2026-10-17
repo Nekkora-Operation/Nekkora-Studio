@@ -15,6 +15,11 @@
 - **Contrato semântico não é exportado** pela interface; existe para consumo programático e testes.
 - **Menu Automação e barra de ferramentas** não têm a ação de variáveis (D-S008-10); ela está no painel de propriedades
   da automação, no atalho Ctrl+Shift+B e na aba do painel inferior.
+- **Representação só para CPF** (revisão 1): porcentagem (`15` × `0.15`), identificador e texto livre não têm
+  representação canônica no vocabulário atual e não recebem o aviso; ampliar exige novos campos de restrição (formato do
+  projeto) numa missão própria. A máscara de CPF confere só a forma, não os dígitos verificadores.
+- **Linha "Declaração" do painel de variáveis** é cortada com reticências a 1366 px quando há muitas restrições (o
+  texto completo está no componente e no formulário de edição).
 - **Credenciais** continuam só apelidos, sem cofre.
 - **Homologação sem navegador**: os cenários da 008 não envolvem gravação; a integração com o Recorder é a mesma da 007.
 - `Studio007Homologation` (roteiro histórico, fora do `verify`) espera o comportamento das regras 1.0.0 para variáveis

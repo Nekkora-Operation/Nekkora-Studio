@@ -227,6 +227,11 @@ public enum FindingCode {
     VARIABLE_UNUSED(Severity.INFO, FindingField.VARIABLE, false,
             "A variável está declarada, mas nenhuma etapa a usa.",
             "Use a variável numa etapa ou exclua a declaração, se não fizer parte do processo.",
+            RuleSet.V1_1),
+    /** Revisão 1 do PR #11: significado confirmado ≠ representação declarada ≠ valor validado. */
+    VARIABLE_REPRESENTATION_UNSPECIFIED(Severity.WARNING, FindingField.VARIABLE, true,
+            "O significado da variável pode ser escrito de mais de uma forma e a forma esperada não foi declarada.",
+            "Em Variáveis e dependências, escolha o formato que a etapa espera (por exemplo, CPF só com dígitos ou com máscara). O Studio não escolhe por você e não valida valores.",
             RuleSet.V1_1);
 
     private final Severity severity;

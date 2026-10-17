@@ -77,6 +77,7 @@ class VariableDomainTest {
         assertEquals(VariableOrigin.Kind.INPUT, v.origin().kind());
         assertTrue(v.origin().constantValue().isEmpty(), "entrada não tem valor");
         assertFalse(v.toString().contains("cliente") || v.origin().toString().contains("cliente"), "toString sem nome nem valor");
+        assertFalse(v.draft().toString().contains("cliente"), "toString do rascunho sem nome (revisão 1 do PR #11)");
     }
 
     @Test

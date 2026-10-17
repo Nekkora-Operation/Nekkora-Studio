@@ -12,7 +12,12 @@
 | Escopo | automação inteira ou uma sessão | ver `scopes-and-data-flow.md` |
 | Origem | `INPUT`, `CONSTANT`, `STEP_OUTPUT`, `UNBOUND` | ver abaixo |
 | Sensibilidade | `PUBLIC`, `INTERNAL`, `PERSONAL_DATA`, `SECRET` | nunca reclassificada automaticamente |
-| Restrições | obrigatória; comprimento e formato (texto); mínimo/máximo (número); escala (decimal); moeda (monetário) | decimais como texto, sem arredondamento |
+| Restrições | obrigatória; comprimento e formato (texto: `ANY`, `DIGITS`, `LETTERS_AND_DIGITS`, `EMAIL_SHAPE`, `BRAZILIAN_CPF_MASKED`); mínimo/máximo (número); escala (decimal); moeda (monetário) | decimais como texto, sem arredondamento |
+
+**Significado ≠ representação ≠ valor** (revisão 1): o significado confirmado diz o que a informação é; a representação
+(`textFormat`) diz como a etapa espera recebê-la; só uma verificação futura, na execução, valida um valor. Para CPF, a
+representação é `DIGITS` ou `BRAZILIAN_CPF_MASKED` (`SemanticType.representations()`); sem ela, a validação avisa
+`VARIABLE_REPRESENTATION_UNSPECIFIED`. Ver `review-1.md`.
 
 ## Compatibilidade significado × tipo
 

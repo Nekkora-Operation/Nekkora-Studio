@@ -10,6 +10,10 @@ import java.util.Set;
  *
  * <p>Cada significado declara os tipos técnicos compatíveis e a sensibilidade MÍNIMA (regra conservadora: um CPF ou um
  * e-mail é dado pessoal — logo nunca pode ser uma constante gravada no projeto).
+ *
+ * <p>Significado não é representação (revisão 1 do PR #11): um CPF pode ser escrito só com dígitos ou com máscara, e o
+ * significado sozinho não diz qual a etapa espera. {@link #representations()} lista os formatos que FIXAM a
+ * representação quando o significado admite mais de uma; o Studio aponta a falta, nunca escolhe uma.
  */
 public enum SemanticType {
     UNSPECIFIED("Não especificado", EnumSet.allOf(VariableType.class), Sensitivity.PUBLIC),
@@ -47,5 +51,21 @@ public enum SemanticType {
     /** Sensibilidade mínima exigida para este significado. */
     public Sensitivity minimumSensitivity() {
         return minimumSensitivity;
+    }
+
+    /**
+     * Formatos que declaram a representação deste significado quando ele admite mais de uma. Vazio quando a
+     * representação é única ou já é exigida por outras restrições: e-mail (uma forma), data ISO 8601 (a própria norma),
+     * valor monetário (escala e moeda obrigatórias pelas regras da variável), identificador, texto livre, porcentagem
+     * e não especificado (sem representação canônica no vocabulário atual — limitação documentada).
+     */
+    public Set<TextFormat> representations() {
+        return this == BRAZILIAN_CPF ? Set.of(TextFormat.DIGITS, TextFormat.BRAZILIAN_CPF_MASKED) : Set.of();
+    }
+
+    /** As restrições declaram a representação esperada (sempre verdadeiro quando o significado não exige uma). */
+    public boolean representationDeclared(VariableConstraints constraints) {
+        Set<TextFormat> accepted = representations();
+        return accepted.isEmpty() || accepted.contains(constraints.textFormat());
     }
 }

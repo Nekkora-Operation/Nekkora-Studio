@@ -55,4 +55,9 @@ public record VariableDraft(String name, VariableType type, SemanticType semanti
     public VariableDraft withType(VariableType t) {
         return new VariableDraft(name, t, semantic, authority, purpose, scope, origin, sensitivity, constraints);
     }
+
+    @Override
+    public String toString() {
+        return "VariableDraft[" + type + ", " + semantic + "]"; // nem nome, nem finalidade, nem valor em logs (revisão 1 do PR #11)
+    }
 }

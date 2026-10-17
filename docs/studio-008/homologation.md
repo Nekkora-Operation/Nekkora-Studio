@@ -30,6 +30,12 @@ duração, bytes e código — nenhum nome de variável nem valor. A recuperaç�
 nenhuma fotografia foi gerada; a verificação de recuperação passou por não haver o que varrer — a cobertura de
 recuperação com variáveis vem dos testes automatizados (a fotografia usa o mesmo codec do projeto).
 
+## Revisão 1 do PR #11
+
+Homologação real focada, `Studio008Review1Homologation`: **12 verificações, 0 falhas** (formato de CPF no formulário
+real, aviso no painel, contrato, Ctrl+Z/Ctrl+Y, gravação 1.1.0). Detalhes e justificativa para não repetir os 40 em
+`review-1.md`; evidências em `evidence/revisao-1/`.
+
 ## Ocorrências durante a homologação
 
 Execuções anteriores foram interrompidas por janelas de outros programas sobre o Studio (menu Iniciar do Windows e a

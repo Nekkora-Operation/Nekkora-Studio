@@ -76,7 +76,7 @@
             "required": { "type": "boolean" },
             "minLength": { "anyOf": [ { "type": "integer", "minimum": 0 }, { "type": "null" } ] },
             "maxLength": { "anyOf": [ { "type": "integer", "minimum": 0 }, { "type": "null" } ] },
-            "textFormat": { "enum": ["ANY", "DIGITS", "LETTERS_AND_DIGITS", "EMAIL_SHAPE"] },
+            "textFormat": { "enum": ["ANY", "DIGITS", "LETTERS_AND_DIGITS", "EMAIL_SHAPE", "BRAZILIAN_CPF_MASKED"] },
             "minimum": { "$ref": "#/$defs/DecimalTextOrNull" },
             "maximum": { "$ref": "#/$defs/DecimalTextOrNull" },
             "scale": { "anyOf": [ { "type": "integer", "minimum": 0, "maximum": 18 }, { "type": "null" } ] },
@@ -120,7 +120,7 @@
       "additionalProperties": false,
       "required": ["code", "variableId", "stepId"],
       "properties": {
-        "code": { "enum": ["INPUT_VALUE_UNKNOWN", "STEP_OUTPUT_UNVERIFIED", "ORIGIN_UNBOUND", "SEMANTIC_UNCONFIRMED", "SEMANTIC_UNSPECIFIED", "UNDECLARED_REFERENCE", "OUT_OF_SCOPE_REFERENCE", "CREDENTIAL_UNRESOLVED"] },
+        "code": { "enum": ["INPUT_VALUE_UNKNOWN", "STEP_OUTPUT_UNVERIFIED", "ORIGIN_UNBOUND", "SEMANTIC_UNCONFIRMED", "SEMANTIC_UNSPECIFIED", "UNDECLARED_REFERENCE", "OUT_OF_SCOPE_REFERENCE", "CREDENTIAL_UNRESOLVED", "REPRESENTATION_UNSPECIFIED"] },
         "variableId": { "$ref": "#/$defs/UuidOrNull" },
         "stepId": { "$ref": "#/$defs/UuidOrNull" }
       }

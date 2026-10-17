@@ -1,14 +1,12 @@
 package com.nekkora.studio.semantics;
 
-import com.nekkora.studio.domain.variable.VariableConstraints;
-import com.nekkora.studio.domain.variable.VariableDefinition;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
  * JSON canônico do {@link SemanticContract}: campos sempre presentes e na mesma ordem, ausência como {@code null}, recuo de
- * dois espaços, quebras {@code \n}. Escrito à mão (sem serialização automática dos objetos do domínio): só sai o que está
- * listado aqui — a finalidade, o valor fixo e os nomes de etapas e sessões nunca são lidos.
+ * dois espaços, quebras {@code \n}. Escrito à mão e só a partir das cópias do contrato (nunca dos objetos do domínio): a
+ * finalidade, o valor fixo e os nomes de etapas e sessões nem chegam aqui.
  */
 final class SemanticContractJson {
     private SemanticContractJson() {}
@@ -41,19 +39,18 @@ final class SemanticContractJson {
         return b.toString();
     }
 
-    private static String variable(SemanticContract.Variable v) {
-        VariableDefinition d = v.definition();
-        VariableConstraints c = d.constraints();
+    private static String variable(SemanticContract.Variable d) {
+        SemanticContract.Constraints c = d.constraints();
         List<String> consumers = new ArrayList<>();
-        for (var s : v.consumers()) consumers.add(str(s.value().toString()));
-        String producer = v.producer() == null ? "null"
-                : "{\"stepId\": " + str(v.producer().step().value().toString()) + ", \"status\": " + str(v.producer().status().name())
+        for (var s : d.consumers()) consumers.add(str(s.value().toString()));
+        String producer = d.producer() == null ? "null"
+                : "{\"stepId\": " + str(d.producer().step().value().toString()) + ", \"status\": " + str(d.producer().status().name())
                         + ", \"runtimeVerification\": \"UNVERIFIED_AT_RUNTIME\"}";
-        return "{\"variableId\": " + str(d.id().value().toString()) + ", \"name\": " + str(d.name()) + ", \"technicalType\": " + str(d.type().name())
-                + ", \"semanticType\": " + str(d.semantic().name()) + ", \"semanticStatus\": " + str(d.authority().name()) + ", \"sensitivity\": "
+        return "{\"variableId\": " + str(d.id().value().toString()) + ", \"name\": " + str(d.name()) + ", \"technicalType\": " + str(d.technicalType().name())
+                + ", \"semanticType\": " + str(d.semanticType().name()) + ", \"semanticStatus\": " + str(d.semanticStatus().name()) + ", \"sensitivity\": "
                 + str(d.sensitivity().name()) + ",\n      \"scope\": {\"kind\": " + str(d.scope().kind().name()) + ", \"sessionId\": "
-                + d.scope().sessionId().map(s -> str(s.value().toString())).orElse("null") + "}, \"origin\": {\"kind\": " + str(d.origin().kind().name())
-                + ", \"constantDeclared\": " + (d.origin().constant() != null) + ", \"producer\": " + producer + "},\n      \"constraints\": {\"required\": "
+                + (d.scope().session() == null ? "null" : str(d.scope().session().value().toString())) + "}, \"origin\": {\"kind\": "
+                + str(d.origin().kind().name()) + ", \"constantDeclared\": " + d.origin().constantDeclared() + ", \"producer\": " + producer + "},\n      \"constraints\": {\"required\": "
                 + c.required() + ", \"minLength\": " + c.minLength() + ", \"maxLength\": " + c.maxLength() + ", \"textFormat\": " + str(c.textFormat().name())
                 + ", \"minimum\": " + (c.minimum() == null ? "null" : str(c.minimum().toPlainString())) + ", \"maximum\": "
                 + (c.maximum() == null ? "null" : str(c.maximum().toPlainString())) + ", \"scale\": " + c.scale() + ", \"currency\": "

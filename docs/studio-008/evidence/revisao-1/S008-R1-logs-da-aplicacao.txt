@@ -1,0 +1,2 @@
+INFO com.nekkora.studio.app.workspace.ProjectService projeto operacao=salvar resultado=ok duracaoMs=30 bytes=3042 codigo=-
+INFO com.nekkora.studio.app.workspace.ProjectService projeto operacao=descartar-recuperacao resultado=ok duracaoMs=0 bytes=-1 codigo=-
