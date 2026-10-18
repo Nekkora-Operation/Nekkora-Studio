@@ -1,0 +1,1 @@
+{"execution_id": "ex-beab89266b764076b4f1", "status": "COMPLETED", "stop_code": null, "stop_detail": null, "counts": {"SUCCEEDED": 10}}

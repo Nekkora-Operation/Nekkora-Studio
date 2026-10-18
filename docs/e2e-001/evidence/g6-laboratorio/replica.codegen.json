@@ -1,0 +1,14 @@
+{"schema": "nekkora-studio/codegen-config", "version": "1.0.0", "processName": "rpa_challenge_replica_lab",
+ "environment": "lab", "allowedOrigins": ["http://127.0.0.1:18080"], "startUrl": "http://127.0.0.1:18080/desafio/index.html",
+ "sessions": {"init": [1], "perRecord": 2, "end": [3]}, "initAdvance": "REPLACED", "observations": true,
+ "input": {"format": "xlsx", "sheet": "Sheet1", "source": "DOWNLOAD", "downloadStep": "2e51e9b2-3313-44c4-ae53-c08164e3f811", "fileName": "challenge.xlsx",
+   "columns": [
+      {"header": "First Name", "variable": "first_name"},
+      {"header": "Last Name", "variable": "last_name"},
+      {"header": "Company Name", "variable": "company_name"},
+      {"header": "Role in Company", "variable": "role_in_company"},
+      {"header": "Address", "variable": "address"},
+      {"header": "Email", "variable": "email"},
+      {"header": "Phone Number", "variable": "phone_number", "integerAsText": true}]},
+ "textObservations": [{"stepId": "ed12c86a-ac06-431b-9e87-1e5216f01f11",
+   "pattern": "^Your success rate is \\d+(\\.\\d+)?% \\( \\d+ out of \\d+ fields\\) in \\d+ milliseconds$"}]}

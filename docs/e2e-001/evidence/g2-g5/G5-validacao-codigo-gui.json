@@ -1,0 +1,26 @@
+{
+  "venv_limpa": {
+    "compila": true,
+    "importa": true,
+    "registro_carrega": true,
+    "chaves": 10
+  },
+  "selectors_contrato": "selectors-1.1.0 válido",
+  "manifesto": {
+    "hashes_conferem": true,
+    "arquivos": 7,
+    "stepids_no_codigo": 11,
+    "stepids": 11,
+    "planRevision": "sha256:57fa8b8f285b676a4fcf72767e7972ad2f6bb07a3b87369d71309ee6bb1d64c6"
+  },
+  "ruff": "e-861b-a68895c20fd5\")\n67 |         a.click(self.k(\"submit\"), step_id=\"944a9801-8f21-4d2e-861b-a68895c20fd5\", postcondition=lambda: a.replaced(marca))\n   |                                                                                                                         ^^\n68 |         return obs\n   |\n\nE501 Line too long (216 > 120)\n  --> <trabalho>\\homolog\\codigo-gerado\\paginas.py:81:121\n   |\n79 | â€¦\n80 | â€¦\n81 | â€¦(\\\\.\\\\d+)?% \\\\( \\\\d+ out of \\\\d+ fields\\\\) in \\\\d+ milliseconds$\", step_id=\"ed12c86a-ac06-431b-9e87-1e5216f01f11\")\n   |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n82 | â€¦\n   |\n\nE501 Line too long (124 > 120)\n  --> <trabalho>\\homolog\\codigo-gerado\\processo.py:51:121\n   |\n49 |         \"\"\"ObservaÃ§Ãµes lidas da pÃ¡gina (etapas OBSERVE) + hash da planilha baixada; nunca valores de entrada.\"\"\"\n50 |         doc = {\"entrada_sha256\": self.entrada_sha256, \"observacoes\": self.observacoes}\n51 |         (self.saida / \"observacoes.json\").write_text(json.dumps(doc, ensure_ascii=False, indent=2) + \"\\n\", encoding=\"utf-8\")\n   |                                                                                                                         ^^^^\n\nFound 7 errors.\n[*] 1 fixable with `--fix`.\n",
+  "mypy_strict": "OK",
+  "saidas_execucao": {
+    "eventos": 383,
+    "eventos_validos": true,
+    "checkpoint_valido": true,
+    "resumo_valido": true,
+    "stepids_do_modelo_nos_eventos": 11,
+    "stepids_do_modelo": 11
+  }
+}

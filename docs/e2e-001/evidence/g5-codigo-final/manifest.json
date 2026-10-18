@@ -1,0 +1,151 @@
+{
+  "schema": "nekkora-studio/codegen-manifest",
+  "version": "1.0.0",
+  "generator": "nekkora-studio-codegen/1.0.0",
+  "framework": "nekkora-rpa[excel]==0.2.0",
+  "automationId": "a18ec786-e101-4686-b849-f58fa3f5f54a",
+  "modelVersion": "1.2.0",
+  "automationRevision": 60,
+  "planRevision": "sha256:57fa8b8f285b676a4fcf72767e7972ad2f6bb07a3b87369d71309ee6bb1d64c6",
+  "configRevision": "sha256:33b982fda01c377eb202955756e81d181022a1820803d0fa9b7a103169ad36a7",
+  "command": "python main.py --saida <pasta>",
+  "steps": [
+    {
+      "stepId": "2e51e9b2-3313-44c4-ae53-c08164e3f811",
+      "session": 1,
+      "role": "INIT",
+      "action": "CLICK",
+      "key": "processo.s1.download_excel_cloud_download",
+      "column": null,
+      "download": true,
+      "textPattern": false,
+      "decisionActor": "TEST_AGENT"
+    },
+    {
+      "stepId": "85dd950c-d3cf-4623-91ab-479f6144a1c3",
+      "session": 1,
+      "role": "INIT",
+      "action": "CLICK",
+      "key": "processo.s1.start",
+      "column": null,
+      "download": false,
+      "textPattern": false,
+      "decisionActor": "TEST_AGENT"
+    },
+    {
+      "stepId": "40a1f407-37e0-4c6e-8e6d-d6737e784d74",
+      "session": 2,
+      "role": "RECORD",
+      "action": "FILL",
+      "key": "processo.s2.first_name",
+      "column": "First Name",
+      "download": false,
+      "textPattern": false,
+      "decisionActor": "TEST_AGENT"
+    },
+    {
+      "stepId": "e50b8865-182d-4aed-8bd0-bd0b13fcbd9c",
+      "session": 2,
+      "role": "RECORD",
+      "action": "FILL",
+      "key": "processo.s2.last_name",
+      "column": "Last Name",
+      "download": false,
+      "textPattern": false,
+      "decisionActor": "TEST_AGENT"
+    },
+    {
+      "stepId": "a08c54bb-7bcd-44ad-885c-350a9bc6d7d3",
+      "session": 2,
+      "role": "RECORD",
+      "action": "FILL",
+      "key": "processo.s2.company_name",
+      "column": "Company Name",
+      "download": false,
+      "textPattern": false,
+      "decisionActor": "TEST_AGENT"
+    },
+    {
+      "stepId": "480db37e-e9ce-4ca4-b0c2-1f4856609d9a",
+      "session": 2,
+      "role": "RECORD",
+      "action": "FILL",
+      "key": "processo.s2.role_in_company",
+      "column": "Role in Company",
+      "download": false,
+      "textPattern": false,
+      "decisionActor": "TEST_AGENT"
+    },
+    {
+      "stepId": "11ab1956-5e1d-44f5-a917-5e964ed4018f",
+      "session": 2,
+      "role": "RECORD",
+      "action": "FILL",
+      "key": "processo.s2.address",
+      "column": "Address",
+      "download": false,
+      "textPattern": false,
+      "decisionActor": "TEST_AGENT"
+    },
+    {
+      "stepId": "e0f4c420-cbce-4199-b847-a81cd08eafdb",
+      "session": 2,
+      "role": "RECORD",
+      "action": "FILL",
+      "key": "processo.s2.email",
+      "column": "Email",
+      "download": false,
+      "textPattern": false,
+      "decisionActor": "TEST_AGENT"
+    },
+    {
+      "stepId": "070d6140-3769-4107-bdcd-4de0bcc5638c",
+      "session": 2,
+      "role": "RECORD",
+      "action": "FILL",
+      "key": "processo.s2.phone_number",
+      "column": "Phone Number",
+      "download": false,
+      "textPattern": false,
+      "decisionActor": "TEST_AGENT"
+    },
+    {
+      "stepId": "944a9801-8f21-4d2e-861b-a68895c20fd5",
+      "session": 2,
+      "role": "RECORD",
+      "action": "CLICK",
+      "key": "processo.s2.submit",
+      "column": null,
+      "download": false,
+      "textPattern": false,
+      "decisionActor": "TEST_AGENT"
+    },
+    {
+      "stepId": "ed12c86a-ac06-431b-9e87-1e5216f01f11",
+      "session": 3,
+      "role": "END",
+      "action": "OBSERVE",
+      "key": null,
+      "column": null,
+      "download": false,
+      "textPattern": true,
+      "decisionActor": null
+    }
+  ],
+  "files": {
+    "README.md": "sha256:d51c1d741f3cf46b0373488b9e9c6f3782effb3dc4df8ea7e7e4e4aac7441dc2",
+    "config/execucao.toml": "sha256:40e323cefb973cbaab2f1893a3c255cdf18074f9ca53f3192e3ec5529d9c40c8",
+    "main.py": "sha256:572f74d7e4b51dddc5a53b208bbc0bfb27268cd819f4c70e8101f67212df6818",
+    "paginas.py": "sha256:0aa545a3c86fa2f6eb24d2cf23c49e1a7082f4918822e6fd7802c57447c6e5f9",
+    "processo.py": "sha256:4aeb20d0d28fbedec62d9efc3c1e24184683e71a31fd4d304c5c0ab7e9d6756c",
+    "requirements.txt": "sha256:e2777dc65d1a87172623f77cf02cf5e4cea2133a3503315a3f41daf1b9078b25",
+    "selectors.json": "sha256:b9e913adde9cfc6125e70a60ca9eedd6be0a3442d585a47f2783cfb62fc2280d"
+  },
+  "exclusions": [
+    "CELL_VALUES",
+    "CREDENTIAL_VALUES",
+    "LITERAL_VALUES",
+    "HAND_WRITTEN_SELECTORS",
+    "POSITIONAL_LOCATORS"
+  ]
+}

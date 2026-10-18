@@ -1,0 +1,957 @@
+{
+  "schema": "nekkora-studio/guided-debug-plan",
+  "version": "1.0.0",
+  "automationId": "a18ec786-e101-4686-b849-f58fa3f5f54a",
+  "modelVersion": "1.2.0",
+  "automationRevision": 60,
+  "planRevision": "sha256:57fa8b8f285b676a4fcf72767e7972ad2f6bb07a3b87369d71309ee6bb1d64c6",
+  "staticValidation": {
+    "rules": "nekkora-validation-rules/1.1.0",
+    "status": "NOT_FULLY_ASSESSABLE",
+    "meaning": "STATIC_ONLY"
+  },
+  "summary": {
+    "steps": 11,
+    "inspectTarget": 10,
+    "noTargetRequired": 1,
+    "targetMissing": 0,
+    "variables": 7
+  },
+  "variables": [
+    {
+      "variableId": "1b47229f-0747-4429-9d4c-240e239aac15",
+      "name": "first_name",
+      "technicalType": "STRING",
+      "semanticType": "FREE_TEXT",
+      "semanticStatus": "USER_CONFIRMED",
+      "sensitivity": "PERSONAL_DATA",
+      "origin": "INPUT",
+      "producerStepId": null
+    },
+    {
+      "variableId": "d206fea3-b700-492f-97b9-11da1e2532b5",
+      "name": "last_name",
+      "technicalType": "STRING",
+      "semanticType": "FREE_TEXT",
+      "semanticStatus": "USER_CONFIRMED",
+      "sensitivity": "PERSONAL_DATA",
+      "origin": "INPUT",
+      "producerStepId": null
+    },
+    {
+      "variableId": "b21982e8-943f-4440-9d67-5b5d97a1ab8a",
+      "name": "company_name",
+      "technicalType": "STRING",
+      "semanticType": "FREE_TEXT",
+      "semanticStatus": "USER_CONFIRMED",
+      "sensitivity": "PERSONAL_DATA",
+      "origin": "INPUT",
+      "producerStepId": null
+    },
+    {
+      "variableId": "46b820ad-c9d6-4bae-a292-962f548e3358",
+      "name": "role_in_company",
+      "technicalType": "STRING",
+      "semanticType": "FREE_TEXT",
+      "semanticStatus": "USER_CONFIRMED",
+      "sensitivity": "PERSONAL_DATA",
+      "origin": "INPUT",
+      "producerStepId": null
+    },
+    {
+      "variableId": "7eef5e80-0ee8-4865-8ca0-8d7bbfcbd49f",
+      "name": "address",
+      "technicalType": "STRING",
+      "semanticType": "FREE_TEXT",
+      "semanticStatus": "USER_CONFIRMED",
+      "sensitivity": "PERSONAL_DATA",
+      "origin": "INPUT",
+      "producerStepId": null
+    },
+    {
+      "variableId": "e13afdd5-b921-4406-ba14-0893e56b5826",
+      "name": "email",
+      "technicalType": "STRING",
+      "semanticType": "FREE_TEXT",
+      "semanticStatus": "USER_CONFIRMED",
+      "sensitivity": "PERSONAL_DATA",
+      "origin": "INPUT",
+      "producerStepId": null
+    },
+    {
+      "variableId": "2ee35ddb-6a23-4318-ae87-d54ad664125d",
+      "name": "phone_number",
+      "technicalType": "STRING",
+      "semanticType": "FREE_TEXT",
+      "semanticStatus": "USER_CONFIRMED",
+      "sensitivity": "PERSONAL_DATA",
+      "origin": "INPUT",
+      "producerStepId": null
+    }
+  ],
+  "steps": [
+    {
+      "stepId": "2e51e9b2-3313-44c4-ae53-c08164e3f811",
+      "sessionId": "c29471a5-2ad0-4766-8edb-580428b5b789",
+      "position": {
+        "session": 1,
+        "step": 1
+      },
+      "origin": "RECORDED",
+      "intent": {
+        "actionType": "CLICK",
+        "targetRequirement": "EXPECTED",
+        "value": "NONE",
+        "variableId": null,
+        "variableName": null,
+        "key": null,
+        "optionDeclared": false
+      },
+      "target": {
+        "identitySource": "TARGET_ID",
+        "state": "AS_CAPTURED",
+        "kind": "LINK",
+        "tag": "a",
+        "name": "Download Excel cloud_download",
+        "sensitive": false,
+        "locators": [
+          {
+            "index": 0,
+            "strategy": "ROLE_NAME",
+            "description": "* {role=link} {name=\"Download Excel cloud_download\"}",
+            "expression": "",
+            "stability": "HEURISTIC_STABLE",
+            "matchCountAtCapture": 1,
+            "validatedAtCapture": true
+          },
+          {
+            "index": 1,
+            "strategy": "TEXT",
+            "description": "a {text=\"Download Excel cloud_download\"}",
+            "expression": "//a[normalize-space(.)=\"Download Excel cloud_download\"]",
+            "stability": "HEURISTIC_STABLE",
+            "matchCountAtCapture": 1,
+            "validatedAtCapture": true
+          },
+          {
+            "index": 2,
+            "strategy": "POSITIONAL",
+            "description": "html >> body >> app-root {nth-of-type 1} >> div {nth-of-type 2} >> * {nth-child 2} >> div {nth-of-type 1} >> div {nth-of-type 1} >> div {nth-of-type 6} >> a {nth-of-type 1}",
+            "expression": "html > body > app-root:nth-of-type(1) > div:nth-of-type(2) > :nth-child(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(6) > a:nth-of-type(1)",
+            "stability": "HEURISTIC_UNSTABLE",
+            "matchCountAtCapture": 1,
+            "validatedAtCapture": true
+          }
+        ],
+        "preferredLocator": 1,
+        "manualLocators": [],
+        "accessPath": [
+          {
+            "type": "MAIN_DOCUMENT",
+            "label": "Documento principal"
+          },
+          {
+            "type": "ELEMENT",
+            "label": "Download Excel cloud_download"
+          }
+        ],
+        "context": []
+      },
+      "context": {
+        "application": "Navegador",
+        "screenTitle": "",
+        "location": "https://rpachallenge.com/"
+      },
+      "applicability": "INSPECT_TARGET",
+      "criteria": ["CONTEXT_AUTHORIZED", "TARGET_IDENTITY_RESOLVED", "TARGET_UNIQUE", "TARGET_VISIBLE", "TARGET_ENABLED"],
+      "uncertainties": [],
+      "staticFindings": ["LOCATOR_VALIDATED_AT_CAPTURE", "OBSERVATION_INCOMPLETE"],
+      "semanticUncertainties": []
+    },
+    {
+      "stepId": "85dd950c-d3cf-4623-91ab-479f6144a1c3",
+      "sessionId": "c29471a5-2ad0-4766-8edb-580428b5b789",
+      "position": {
+        "session": 1,
+        "step": 2
+      },
+      "origin": "RECORDED",
+      "intent": {
+        "actionType": "CLICK",
+        "targetRequirement": "EXPECTED",
+        "value": "NONE",
+        "variableId": null,
+        "variableName": null,
+        "key": null,
+        "optionDeclared": false
+      },
+      "target": {
+        "identitySource": "TARGET_ID",
+        "state": "PREFERRED_LOCATOR_CHANGED",
+        "kind": "BUTTON",
+        "tag": "button",
+        "name": "Start",
+        "sensitive": false,
+        "locators": [
+          {
+            "index": 0,
+            "strategy": "ROLE_NAME",
+            "description": "* {role=button} {name=\"Start\"}",
+            "expression": "",
+            "stability": "HEURISTIC_STABLE",
+            "matchCountAtCapture": 1,
+            "validatedAtCapture": true
+          },
+          {
+            "index": 1,
+            "strategy": "TEXT",
+            "description": "button {text=\"Start\"}",
+            "expression": "//button[normalize-space(.)=\"Start\"]",
+            "stability": "HEURISTIC_STABLE",
+            "matchCountAtCapture": 1,
+            "validatedAtCapture": true
+          },
+          {
+            "index": 2,
+            "strategy": "POSITIONAL",
+            "description": "html >> body >> app-root {nth-of-type 1} >> div {nth-of-type 2} >> * {nth-child 2} >> div {nth-of-type 1} >> div {nth-of-type 1} >> div {nth-of-type 6} >> button {nth-of-type 1}",
+            "expression": "html > body > app-root:nth-of-type(1) > div:nth-of-type(2) > :nth-child(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(6) > button:nth-of-type(1)",
+            "stability": "HEURISTIC_UNSTABLE",
+            "matchCountAtCapture": 1,
+            "validatedAtCapture": true
+          }
+        ],
+        "preferredLocator": 1,
+        "manualLocators": [],
+        "accessPath": [
+          {
+            "type": "MAIN_DOCUMENT",
+            "label": "Documento principal"
+          },
+          {
+            "type": "ELEMENT",
+            "label": "Start"
+          }
+        ],
+        "context": []
+      },
+      "context": {
+        "application": "Navegador",
+        "screenTitle": "",
+        "location": "https://rpachallenge.com/"
+      },
+      "applicability": "INSPECT_TARGET",
+      "criteria": ["CONTEXT_AUTHORIZED", "TARGET_IDENTITY_RESOLVED", "TARGET_UNIQUE", "TARGET_VISIBLE", "TARGET_ENABLED"],
+      "uncertainties": [],
+      "staticFindings": ["LOCATOR_VALIDATED_AT_CAPTURE", "OBSERVATION_INCOMPLETE"],
+      "semanticUncertainties": []
+    },
+    {
+      "stepId": "40a1f407-37e0-4c6e-8e6d-d6737e784d74",
+      "sessionId": "9ae8f97c-a66f-42f2-a2e4-f7cfc20ebed6",
+      "position": {
+        "session": 2,
+        "step": 1
+      },
+      "origin": "RECORDED",
+      "intent": {
+        "actionType": "FILL",
+        "targetRequirement": "EXPECTED",
+        "value": "VARIABLE",
+        "variableId": "1b47229f-0747-4429-9d4c-240e239aac15",
+        "variableName": "first_name",
+        "key": null,
+        "optionDeclared": false
+      },
+      "target": {
+        "identitySource": "TARGET_ID",
+        "state": "AS_CAPTURED",
+        "kind": "TEXT_INPUT",
+        "tag": "input",
+        "name": "",
+        "sensitive": false,
+        "locators": [
+          {
+            "index": 0,
+            "strategy": "LABEL",
+            "description": "* {has child <label> \"First Name\"} >> input",
+            "expression": "//*[label[normalize-space(.)=\"First Name\"]]/input",
+            "stability": "HEURISTIC_STABLE",
+            "matchCountAtCapture": 1,
+            "validatedAtCapture": true
+          },
+          {
+            "index": 1,
+            "strategy": "POSITIONAL",
+            "description": "",
+            "expression": "html > body > app-root:nth-of-type(1) > div:nth-of-type(2) > :nth-child(2) > div:nth-of-type(1) > div:nth-of-type(2) > form:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(6) > :nth-child(1) > div:nth-of-type(1) > input:nth-of-type(1)",
+            "stability": "HEURISTIC_UNSTABLE",
+            "matchCountAtCapture": 1,
+            "validatedAtCapture": true
+          },
+          {
+            "index": 2,
+            "strategy": "CONTEXTUAL",
+            "description": "form >> input",
+            "expression": "form input",
+            "stability": "HEURISTIC_STABLE",
+            "matchCountAtCapture": 8,
+            "validatedAtCapture": false
+          }
+        ],
+        "preferredLocator": 0,
+        "manualLocators": [],
+        "accessPath": [
+          {
+            "type": "MAIN_DOCUMENT",
+            "label": "Documento principal"
+          },
+          {
+            "type": "ELEMENT",
+            "label": "input"
+          }
+        ],
+        "context": [
+          {
+            "relation": "IN_FORM",
+            "kind": "FORM",
+            "name": ""
+          }
+        ]
+      },
+      "context": {
+        "application": "Navegador",
+        "screenTitle": "",
+        "location": "https://rpachallenge.com/"
+      },
+      "applicability": "INSPECT_TARGET",
+      "criteria": ["CONTEXT_AUTHORIZED", "TARGET_IDENTITY_RESOLVED", "TARGET_UNIQUE", "TARGET_VISIBLE", "TARGET_ENABLED", "TARGET_EDITABLE", "TARGET_KIND_MATCHES_ACTION"],
+      "uncertainties": [],
+      "staticFindings": ["LOCATOR_VALIDATED_AT_CAPTURE", "OBSTACLE_MEDIUM", "INPUT_VALUE_NOT_AVAILABLE"],
+      "semanticUncertainties": ["INPUT_VALUE_UNKNOWN"]
+    },
+    {
+      "stepId": "e50b8865-182d-4aed-8bd0-bd0b13fcbd9c",
+      "sessionId": "9ae8f97c-a66f-42f2-a2e4-f7cfc20ebed6",
+      "position": {
+        "session": 2,
+        "step": 2
+      },
+      "origin": "RECORDED",
+      "intent": {
+        "actionType": "FILL",
+        "targetRequirement": "EXPECTED",
+        "value": "VARIABLE",
+        "variableId": "d206fea3-b700-492f-97b9-11da1e2532b5",
+        "variableName": "last_name",
+        "key": null,
+        "optionDeclared": false
+      },
+      "target": {
+        "identitySource": "TARGET_ID",
+        "state": "AS_CAPTURED",
+        "kind": "TEXT_INPUT",
+        "tag": "input",
+        "name": "",
+        "sensitive": false,
+        "locators": [
+          {
+            "index": 0,
+            "strategy": "LABEL",
+            "description": "* {has child <label> \"Last Name\"} >> input",
+            "expression": "//*[label[normalize-space(.)=\"Last Name\"]]/input",
+            "stability": "HEURISTIC_STABLE",
+            "matchCountAtCapture": 1,
+            "validatedAtCapture": true
+          },
+          {
+            "index": 1,
+            "strategy": "POSITIONAL",
+            "description": "",
+            "expression": "html > body > app-root:nth-of-type(1) > div:nth-of-type(2) > :nth-child(2) > div:nth-of-type(1) > div:nth-of-type(2) > form:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(5) > :nth-child(1) > div:nth-of-type(1) > input:nth-of-type(1)",
+            "stability": "HEURISTIC_UNSTABLE",
+            "matchCountAtCapture": 1,
+            "validatedAtCapture": true
+          },
+          {
+            "index": 2,
+            "strategy": "CONTEXTUAL",
+            "description": "form >> input",
+            "expression": "form input",
+            "stability": "HEURISTIC_STABLE",
+            "matchCountAtCapture": 8,
+            "validatedAtCapture": false
+          }
+        ],
+        "preferredLocator": 0,
+        "manualLocators": [],
+        "accessPath": [
+          {
+            "type": "MAIN_DOCUMENT",
+            "label": "Documento principal"
+          },
+          {
+            "type": "ELEMENT",
+            "label": "input"
+          }
+        ],
+        "context": [
+          {
+            "relation": "IN_FORM",
+            "kind": "FORM",
+            "name": ""
+          }
+        ]
+      },
+      "context": {
+        "application": "Navegador",
+        "screenTitle": "",
+        "location": "https://rpachallenge.com/"
+      },
+      "applicability": "INSPECT_TARGET",
+      "criteria": ["CONTEXT_AUTHORIZED", "TARGET_IDENTITY_RESOLVED", "TARGET_UNIQUE", "TARGET_VISIBLE", "TARGET_ENABLED", "TARGET_EDITABLE", "TARGET_KIND_MATCHES_ACTION"],
+      "uncertainties": [],
+      "staticFindings": ["LOCATOR_VALIDATED_AT_CAPTURE", "OBSTACLE_MEDIUM", "INPUT_VALUE_NOT_AVAILABLE"],
+      "semanticUncertainties": ["INPUT_VALUE_UNKNOWN"]
+    },
+    {
+      "stepId": "a08c54bb-7bcd-44ad-885c-350a9bc6d7d3",
+      "sessionId": "9ae8f97c-a66f-42f2-a2e4-f7cfc20ebed6",
+      "position": {
+        "session": 2,
+        "step": 3
+      },
+      "origin": "RECORDED",
+      "intent": {
+        "actionType": "FILL",
+        "targetRequirement": "EXPECTED",
+        "value": "VARIABLE",
+        "variableId": "b21982e8-943f-4440-9d67-5b5d97a1ab8a",
+        "variableName": "company_name",
+        "key": null,
+        "optionDeclared": false
+      },
+      "target": {
+        "identitySource": "TARGET_ID",
+        "state": "AS_CAPTURED",
+        "kind": "TEXT_INPUT",
+        "tag": "input",
+        "name": "",
+        "sensitive": false,
+        "locators": [
+          {
+            "index": 0,
+            "strategy": "LABEL",
+            "description": "* {has child <label> \"Company Name\"} >> input",
+            "expression": "//*[label[normalize-space(.)=\"Company Name\"]]/input",
+            "stability": "HEURISTIC_STABLE",
+            "matchCountAtCapture": 1,
+            "validatedAtCapture": true
+          },
+          {
+            "index": 1,
+            "strategy": "POSITIONAL",
+            "description": "",
+            "expression": "html > body > app-root:nth-of-type(1) > div:nth-of-type(2) > :nth-child(2) > div:nth-of-type(1) > div:nth-of-type(2) > form:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(4) > :nth-child(1) > div:nth-of-type(1) > input:nth-of-type(1)",
+            "stability": "HEURISTIC_UNSTABLE",
+            "matchCountAtCapture": 1,
+            "validatedAtCapture": true
+          },
+          {
+            "index": 2,
+            "strategy": "CONTEXTUAL",
+            "description": "form >> input",
+            "expression": "form input",
+            "stability": "HEURISTIC_STABLE",
+            "matchCountAtCapture": 8,
+            "validatedAtCapture": false
+          }
+        ],
+        "preferredLocator": 0,
+        "manualLocators": [],
+        "accessPath": [
+          {
+            "type": "MAIN_DOCUMENT",
+            "label": "Documento principal"
+          },
+          {
+            "type": "ELEMENT",
+            "label": "input"
+          }
+        ],
+        "context": [
+          {
+            "relation": "IN_FORM",
+            "kind": "FORM",
+            "name": ""
+          }
+        ]
+      },
+      "context": {
+        "application": "Navegador",
+        "screenTitle": "",
+        "location": "https://rpachallenge.com/"
+      },
+      "applicability": "INSPECT_TARGET",
+      "criteria": ["CONTEXT_AUTHORIZED", "TARGET_IDENTITY_RESOLVED", "TARGET_UNIQUE", "TARGET_VISIBLE", "TARGET_ENABLED", "TARGET_EDITABLE", "TARGET_KIND_MATCHES_ACTION"],
+      "uncertainties": [],
+      "staticFindings": ["LOCATOR_VALIDATED_AT_CAPTURE", "OBSTACLE_MEDIUM", "INPUT_VALUE_NOT_AVAILABLE"],
+      "semanticUncertainties": ["INPUT_VALUE_UNKNOWN"]
+    },
+    {
+      "stepId": "480db37e-e9ce-4ca4-b0c2-1f4856609d9a",
+      "sessionId": "9ae8f97c-a66f-42f2-a2e4-f7cfc20ebed6",
+      "position": {
+        "session": 2,
+        "step": 4
+      },
+      "origin": "RECORDED",
+      "intent": {
+        "actionType": "FILL",
+        "targetRequirement": "EXPECTED",
+        "value": "VARIABLE",
+        "variableId": "46b820ad-c9d6-4bae-a292-962f548e3358",
+        "variableName": "role_in_company",
+        "key": null,
+        "optionDeclared": false
+      },
+      "target": {
+        "identitySource": "TARGET_ID",
+        "state": "AS_CAPTURED",
+        "kind": "TEXT_INPUT",
+        "tag": "input",
+        "name": "",
+        "sensitive": false,
+        "locators": [
+          {
+            "index": 0,
+            "strategy": "LABEL",
+            "description": "* {has child <label> \"Role in Company\"} >> input",
+            "expression": "//*[label[normalize-space(.)=\"Role in Company\"]]/input",
+            "stability": "HEURISTIC_STABLE",
+            "matchCountAtCapture": 1,
+            "validatedAtCapture": true
+          },
+          {
+            "index": 1,
+            "strategy": "POSITIONAL",
+            "description": "",
+            "expression": "html > body > app-root:nth-of-type(1) > div:nth-of-type(2) > :nth-child(2) > div:nth-of-type(1) > div:nth-of-type(2) > form:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(2) > :nth-child(1) > div:nth-of-type(1) > input:nth-of-type(1)",
+            "stability": "HEURISTIC_UNSTABLE",
+            "matchCountAtCapture": 1,
+            "validatedAtCapture": true
+          },
+          {
+            "index": 2,
+            "strategy": "CONTEXTUAL",
+            "description": "form >> input",
+            "expression": "form input",
+            "stability": "HEURISTIC_STABLE",
+            "matchCountAtCapture": 8,
+            "validatedAtCapture": false
+          }
+        ],
+        "preferredLocator": 0,
+        "manualLocators": [],
+        "accessPath": [
+          {
+            "type": "MAIN_DOCUMENT",
+            "label": "Documento principal"
+          },
+          {
+            "type": "ELEMENT",
+            "label": "input"
+          }
+        ],
+        "context": [
+          {
+            "relation": "IN_FORM",
+            "kind": "FORM",
+            "name": ""
+          }
+        ]
+      },
+      "context": {
+        "application": "Navegador",
+        "screenTitle": "",
+        "location": "https://rpachallenge.com/"
+      },
+      "applicability": "INSPECT_TARGET",
+      "criteria": ["CONTEXT_AUTHORIZED", "TARGET_IDENTITY_RESOLVED", "TARGET_UNIQUE", "TARGET_VISIBLE", "TARGET_ENABLED", "TARGET_EDITABLE", "TARGET_KIND_MATCHES_ACTION"],
+      "uncertainties": [],
+      "staticFindings": ["LOCATOR_VALIDATED_AT_CAPTURE", "OBSTACLE_MEDIUM", "INPUT_VALUE_NOT_AVAILABLE"],
+      "semanticUncertainties": ["INPUT_VALUE_UNKNOWN"]
+    },
+    {
+      "stepId": "11ab1956-5e1d-44f5-a917-5e964ed4018f",
+      "sessionId": "9ae8f97c-a66f-42f2-a2e4-f7cfc20ebed6",
+      "position": {
+        "session": 2,
+        "step": 5
+      },
+      "origin": "RECORDED",
+      "intent": {
+        "actionType": "FILL",
+        "targetRequirement": "EXPECTED",
+        "value": "VARIABLE",
+        "variableId": "7eef5e80-0ee8-4865-8ca0-8d7bbfcbd49f",
+        "variableName": "address",
+        "key": null,
+        "optionDeclared": false
+      },
+      "target": {
+        "identitySource": "TARGET_ID",
+        "state": "AS_CAPTURED",
+        "kind": "TEXT_INPUT",
+        "tag": "input",
+        "name": "",
+        "sensitive": false,
+        "locators": [
+          {
+            "index": 0,
+            "strategy": "LABEL",
+            "description": "* {has child <label> \"Address\"} >> input",
+            "expression": "//*[label[normalize-space(.)=\"Address\"]]/input",
+            "stability": "HEURISTIC_STABLE",
+            "matchCountAtCapture": 1,
+            "validatedAtCapture": true
+          },
+          {
+            "index": 1,
+            "strategy": "POSITIONAL",
+            "description": "",
+            "expression": "html > body > app-root:nth-of-type(1) > div:nth-of-type(2) > :nth-child(2) > div:nth-of-type(1) > div:nth-of-type(2) > form:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > :nth-child(1) > div:nth-of-type(1) > input:nth-of-type(1)",
+            "stability": "HEURISTIC_UNSTABLE",
+            "matchCountAtCapture": 1,
+            "validatedAtCapture": true
+          },
+          {
+            "index": 2,
+            "strategy": "CONTEXTUAL",
+            "description": "form >> input",
+            "expression": "form input",
+            "stability": "HEURISTIC_STABLE",
+            "matchCountAtCapture": 8,
+            "validatedAtCapture": false
+          }
+        ],
+        "preferredLocator": 0,
+        "manualLocators": [],
+        "accessPath": [
+          {
+            "type": "MAIN_DOCUMENT",
+            "label": "Documento principal"
+          },
+          {
+            "type": "ELEMENT",
+            "label": "input"
+          }
+        ],
+        "context": [
+          {
+            "relation": "IN_FORM",
+            "kind": "FORM",
+            "name": ""
+          }
+        ]
+      },
+      "context": {
+        "application": "Navegador",
+        "screenTitle": "",
+        "location": "https://rpachallenge.com/"
+      },
+      "applicability": "INSPECT_TARGET",
+      "criteria": ["CONTEXT_AUTHORIZED", "TARGET_IDENTITY_RESOLVED", "TARGET_UNIQUE", "TARGET_VISIBLE", "TARGET_ENABLED", "TARGET_EDITABLE", "TARGET_KIND_MATCHES_ACTION"],
+      "uncertainties": [],
+      "staticFindings": ["LOCATOR_VALIDATED_AT_CAPTURE", "OBSTACLE_MEDIUM", "INPUT_VALUE_NOT_AVAILABLE"],
+      "semanticUncertainties": ["INPUT_VALUE_UNKNOWN"]
+    },
+    {
+      "stepId": "e0f4c420-cbce-4199-b847-a81cd08eafdb",
+      "sessionId": "9ae8f97c-a66f-42f2-a2e4-f7cfc20ebed6",
+      "position": {
+        "session": 2,
+        "step": 6
+      },
+      "origin": "RECORDED",
+      "intent": {
+        "actionType": "FILL",
+        "targetRequirement": "EXPECTED",
+        "value": "VARIABLE",
+        "variableId": "e13afdd5-b921-4406-ba14-0893e56b5826",
+        "variableName": "email",
+        "key": null,
+        "optionDeclared": false
+      },
+      "target": {
+        "identitySource": "TARGET_ID",
+        "state": "AS_CAPTURED",
+        "kind": "TEXT_INPUT",
+        "tag": "input",
+        "name": "",
+        "sensitive": false,
+        "locators": [
+          {
+            "index": 0,
+            "strategy": "LABEL",
+            "description": "* {has child <label> \"Email\"} >> input",
+            "expression": "//*[label[normalize-space(.)=\"Email\"]]/input",
+            "stability": "HEURISTIC_STABLE",
+            "matchCountAtCapture": 1,
+            "validatedAtCapture": true
+          },
+          {
+            "index": 1,
+            "strategy": "POSITIONAL",
+            "description": "",
+            "expression": "html > body > app-root:nth-of-type(1) > div:nth-of-type(2) > :nth-child(2) > div:nth-of-type(1) > div:nth-of-type(2) > form:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > :nth-child(1) > div:nth-of-type(1) > input:nth-of-type(1)",
+            "stability": "HEURISTIC_UNSTABLE",
+            "matchCountAtCapture": 1,
+            "validatedAtCapture": true
+          },
+          {
+            "index": 2,
+            "strategy": "CONTEXTUAL",
+            "description": "form >> input",
+            "expression": "form input",
+            "stability": "HEURISTIC_STABLE",
+            "matchCountAtCapture": 8,
+            "validatedAtCapture": false
+          }
+        ],
+        "preferredLocator": 0,
+        "manualLocators": [],
+        "accessPath": [
+          {
+            "type": "MAIN_DOCUMENT",
+            "label": "Documento principal"
+          },
+          {
+            "type": "ELEMENT",
+            "label": "input"
+          }
+        ],
+        "context": [
+          {
+            "relation": "IN_FORM",
+            "kind": "FORM",
+            "name": ""
+          }
+        ]
+      },
+      "context": {
+        "application": "Navegador",
+        "screenTitle": "",
+        "location": "https://rpachallenge.com/"
+      },
+      "applicability": "INSPECT_TARGET",
+      "criteria": ["CONTEXT_AUTHORIZED", "TARGET_IDENTITY_RESOLVED", "TARGET_UNIQUE", "TARGET_VISIBLE", "TARGET_ENABLED", "TARGET_EDITABLE", "TARGET_KIND_MATCHES_ACTION"],
+      "uncertainties": [],
+      "staticFindings": ["LOCATOR_VALIDATED_AT_CAPTURE", "OBSTACLE_MEDIUM", "INPUT_VALUE_NOT_AVAILABLE"],
+      "semanticUncertainties": ["INPUT_VALUE_UNKNOWN"]
+    },
+    {
+      "stepId": "070d6140-3769-4107-bdcd-4de0bcc5638c",
+      "sessionId": "9ae8f97c-a66f-42f2-a2e4-f7cfc20ebed6",
+      "position": {
+        "session": 2,
+        "step": 7
+      },
+      "origin": "RECORDED",
+      "intent": {
+        "actionType": "FILL",
+        "targetRequirement": "EXPECTED",
+        "value": "VARIABLE",
+        "variableId": "2ee35ddb-6a23-4318-ae87-d54ad664125d",
+        "variableName": "phone_number",
+        "key": null,
+        "optionDeclared": false
+      },
+      "target": {
+        "identitySource": "TARGET_ID",
+        "state": "AS_CAPTURED",
+        "kind": "TEXT_INPUT",
+        "tag": "input",
+        "name": "",
+        "sensitive": false,
+        "locators": [
+          {
+            "index": 0,
+            "strategy": "LABEL",
+            "description": "* {has child <label> \"Phone Number\"} >> input",
+            "expression": "//*[label[normalize-space(.)=\"Phone Number\"]]/input",
+            "stability": "HEURISTIC_STABLE",
+            "matchCountAtCapture": 1,
+            "validatedAtCapture": true
+          },
+          {
+            "index": 1,
+            "strategy": "POSITIONAL",
+            "description": "",
+            "expression": "html > body > app-root:nth-of-type(1) > div:nth-of-type(2) > :nth-child(2) > div:nth-of-type(1) > div:nth-of-type(2) > form:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(7) > :nth-child(1) > div:nth-of-type(1) > input:nth-of-type(1)",
+            "stability": "HEURISTIC_UNSTABLE",
+            "matchCountAtCapture": 1,
+            "validatedAtCapture": true
+          },
+          {
+            "index": 2,
+            "strategy": "CONTEXTUAL",
+            "description": "form >> input",
+            "expression": "form input",
+            "stability": "HEURISTIC_STABLE",
+            "matchCountAtCapture": 8,
+            "validatedAtCapture": false
+          }
+        ],
+        "preferredLocator": 0,
+        "manualLocators": [],
+        "accessPath": [
+          {
+            "type": "MAIN_DOCUMENT",
+            "label": "Documento principal"
+          },
+          {
+            "type": "ELEMENT",
+            "label": "input"
+          }
+        ],
+        "context": [
+          {
+            "relation": "IN_FORM",
+            "kind": "FORM",
+            "name": ""
+          }
+        ]
+      },
+      "context": {
+        "application": "Navegador",
+        "screenTitle": "",
+        "location": "https://rpachallenge.com/"
+      },
+      "applicability": "INSPECT_TARGET",
+      "criteria": ["CONTEXT_AUTHORIZED", "TARGET_IDENTITY_RESOLVED", "TARGET_UNIQUE", "TARGET_VISIBLE", "TARGET_ENABLED", "TARGET_EDITABLE", "TARGET_KIND_MATCHES_ACTION"],
+      "uncertainties": [],
+      "staticFindings": ["LOCATOR_VALIDATED_AT_CAPTURE", "OBSTACLE_MEDIUM", "INPUT_VALUE_NOT_AVAILABLE"],
+      "semanticUncertainties": ["INPUT_VALUE_UNKNOWN"]
+    },
+    {
+      "stepId": "944a9801-8f21-4d2e-861b-a68895c20fd5",
+      "sessionId": "9ae8f97c-a66f-42f2-a2e4-f7cfc20ebed6",
+      "position": {
+        "session": 2,
+        "step": 8
+      },
+      "origin": "RECORDED",
+      "intent": {
+        "actionType": "CLICK",
+        "targetRequirement": "EXPECTED",
+        "value": "NONE",
+        "variableId": null,
+        "variableName": null,
+        "key": null,
+        "optionDeclared": false
+      },
+      "target": {
+        "identitySource": "TARGET_ID",
+        "state": "AS_CAPTURED",
+        "kind": "BUTTON",
+        "tag": "input",
+        "name": "Submit",
+        "sensitive": false,
+        "locators": [
+          {
+            "index": 0,
+            "strategy": "CONTEXTUAL",
+            "description": "form >> input {type=submit}",
+            "expression": "form input[type=\"submit\"]",
+            "stability": "HEURISTIC_STABLE",
+            "matchCountAtCapture": 1,
+            "validatedAtCapture": true
+          },
+          {
+            "index": 1,
+            "strategy": "ROLE_NAME",
+            "description": "* {role=button} {name=\"Submit\"}",
+            "expression": "",
+            "stability": "HEURISTIC_STABLE",
+            "matchCountAtCapture": 1,
+            "validatedAtCapture": true
+          },
+          {
+            "index": 2,
+            "strategy": "ATTRIBUTE",
+            "description": "input {type=submit}",
+            "expression": "input[type=\"submit\"]",
+            "stability": "HEURISTIC_STABLE",
+            "matchCountAtCapture": 1,
+            "validatedAtCapture": true
+          },
+          {
+            "index": 3,
+            "strategy": "POSITIONAL",
+            "description": "html >> body >> app-root {nth-of-type 1} >> div {nth-of-type 2} >> * {nth-child 2} >> div {nth-of-type 1} >> div {nth-of-type 2} >> form {nth-of-type 1} >> input {nth-of-type 1}",
+            "expression": "html > body > app-root:nth-of-type(1) > div:nth-of-type(2) > :nth-child(2) > div:nth-of-type(1) > div:nth-of-type(2) > form:nth-of-type(1) > input:nth-of-type(1)",
+            "stability": "HEURISTIC_UNSTABLE",
+            "matchCountAtCapture": 1,
+            "validatedAtCapture": true
+          }
+        ],
+        "preferredLocator": 0,
+        "manualLocators": [],
+        "accessPath": [
+          {
+            "type": "MAIN_DOCUMENT",
+            "label": "Documento principal"
+          },
+          {
+            "type": "ELEMENT",
+            "label": "Submit"
+          }
+        ],
+        "context": [
+          {
+            "relation": "IN_FORM",
+            "kind": "FORM",
+            "name": ""
+          }
+        ]
+      },
+      "context": {
+        "application": "Navegador",
+        "screenTitle": "",
+        "location": "https://rpachallenge.com/"
+      },
+      "applicability": "INSPECT_TARGET",
+      "criteria": ["CONTEXT_AUTHORIZED", "TARGET_IDENTITY_RESOLVED", "TARGET_UNIQUE", "TARGET_VISIBLE", "TARGET_ENABLED"],
+      "uncertainties": [],
+      "staticFindings": ["LOCATOR_VALIDATED_AT_CAPTURE", "OBSERVATION_INCOMPLETE"],
+      "semanticUncertainties": []
+    },
+    {
+      "stepId": "ed12c86a-ac06-431b-9e87-1e5216f01f11",
+      "sessionId": "fe638155-769d-41aa-ad07-cac08b25fefb",
+      "position": {
+        "session": 3,
+        "step": 1
+      },
+      "origin": "MANUAL",
+      "intent": {
+        "actionType": "OBSERVE",
+        "targetRequirement": "OPTIONAL",
+        "value": "NONE",
+        "variableId": null,
+        "variableName": null,
+        "key": null,
+        "optionDeclared": false
+      },
+      "target": null,
+      "context": null,
+      "applicability": "NO_TARGET_REQUIRED",
+      "criteria": [],
+      "uncertainties": [],
+      "staticFindings": ["OBSERVE_IS_NOT_VALIDATION"],
+      "semanticUncertainties": []
+    }
+  ],
+  "exclusions": ["LITERAL_VALUES", "CONSTANT_VALUES", "CREDENTIAL_ALIASES", "PURPOSES", "NAMES_AND_DESCRIPTIONS", "COMMENTS", "CORRELATION_KEYS", "RUNTIME_VALUES", "RUNTIME_RESULTS"]
+}

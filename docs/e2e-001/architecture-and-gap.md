@@ -65,3 +65,19 @@ Ambiente: Windows 11 Pro 10.0.26200; Google Chrome 155.0.8059.80; Chrome for Tes
 G2–G6 exigem o Studio real (Swing) operado por mouse/teclado do sistema (Robot) e o Chrome for Testing com a extensão
 desta branch; os gestos na página (digitar, clicar, Alt+Shift+K) são do TEST_AGENT via CDP/Robot e ficam registrados
 como tal. Isso exige máquina livre e "Não incomodar" (solicitação à usuária antes de rodar).
+
+## 6. Estado ao final da missão (G8)
+
+Todas as lacunas da §4 foram implementadas nas branches `feat/e2e-001-rpa-challenge` (sem merge). Achados que a §3
+não previa e que precisaram de correção para a cadeia ficar verdadeira:
+
+- o texto do link de download ("Download Excel cloud_download") era retido pelo vocabulário fechado — revisão
+  versionada aprovada pela usuária (+"excel", +"cloud"), ver `security.md` §2;
+- o contrato `selectors-1.1.0` do framework não descrevia a estratégia `label` que o runtime já aceitava;
+- o diálogo do gerador abria 0×0; o código gerado não passava no ruff do perfil do framework;
+- o identificador do debug não sobrevive à recriação dos campos sem nome (correção guiada a cada passagem) —
+  limitação declarada em `known-limitations.md`.
+
+Fluxo comprovado: Recorder → `.nekkora` → PDD → debug guiado → gerador do Studio → `nekkora_rpa` em venv limpa →
+réplica (oráculo) → site real (placar lido da página). Detalhes em `homologation.md` e
+`reports/e2e-001-final-report.md`.

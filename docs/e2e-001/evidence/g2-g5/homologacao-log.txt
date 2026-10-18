@@ -1,0 +1,183 @@
+Tela: java.awt.Rectangle[x=0,y=0,width=1920,height=1032] · java 21.0.12
+Operador: Claude como AGENTE DE TESTE (TEST_AGENT; nenhuma confirmação humana) · ator do Studio: TEST_AGENT
+Site: https://rpachallenge.com/ (autorizado pela usuária na missão NEKKORA-E2E-001; perfil BENCHMARK; LAB inalterado)
+Valores do registro demonstrativo carregados de arquivo transitório (nunca registrados): 7 campos
+Native Host instalado pelo script oficial (install-host.ps1)
+Chrome for Testing: 155.0.8059.39
+Acesso ao site https://rpachallenge.com/* → concedido pelo controle do Chrome
+  abas vistas pela extensão: [{"u":null,"p":null,"s":"complete"},{"u":"https://rpachallenge.com/","p":null,"s":"complete"},{"u":"chrome-extension://dceigcmhbihcigneokmpmbocdclkhcaj/src/ui/harness.html","p":null,"s":"complete"}]
+OK    Conexão autenticada Studio ⇄ host ⇄ extensão
+OK    G2: aba do desafio AUTORIZADA (permissão do próprio Chrome para a origem exata)
+  automação: RPA Challenge — Input Forms · sessões 3 · Gravar habilitado: true
+captura S010-G2-antes-de-gravar.png (1920x1000)
+  etapas: [CLICK, CLICK] · [FILL, FILL, FILL, FILL, FILL, FILL, FILL, CLICK] · [OBSERVE]
+OK    G2: Preparação = clicar (download), clicar (Start); Preenchimento = 7 × preencher + clicar (Submit); Conclusão = observar (declarada)
+OK    G2: etapas de página com proveniência RECORDER
+OK    G2: nenhum valor digitado no modelo
+  FILL · preferido LABEL (validado)
+  FILL · preferido LABEL (validado)
+  FILL · preferido LABEL (validado)
+  FILL · preferido LABEL (validado)
+  FILL · preferido LABEL (validado)
+  FILL · preferido LABEL (validado)
+  FILL · preferido LABEL (validado)
+  CLICK · preferido CONTEXTUAL (validado)
+OK    G2: os 7 campos têm candidato LABEL validado (não posicional) gravado
+  campos cujo preferido gravado NÃO é LABEL (id aleatório aceito pela heurística): 0 — tratados no G4, no modelo
+  variável de entrada declarada e ligada à etapa 1 (40a1f407…)
+  variável de entrada declarada e ligada à etapa 2 (e50b8865…)
+  variável de entrada declarada e ligada à etapa 3 (a08c54bb…)
+  variável de entrada declarada e ligada à etapa 4 (480db37e…)
+  variável de entrada declarada e ligada à etapa 5 (11ab1956…)
+  variável de entrada declarada e ligada à etapa 6 (e0f4c420…)
+  variável de entrada declarada e ligada à etapa 7 (070d6140…)
+OK    G2: projeto salvo (.nekkora)
+OK    G2: reaberto íntegro (mesmas etapas, StepIds e variáveis)
+captura S010-G2-mapeamento.png (1164x991)
+  itens do PDD: [1. Sessão 1 (revisar),     Etapas 1 a 2 (revisar), 2. Sessão 2 (revisar),     Preencher os campos e selecionar “Submit”, 3. Sessão 3 (revisar),     Observar a tela exibida]
+  PDD: Revisado (agente de teste) · pode exportar: true · pendências [Sem imagem: o PDF dirá "Imagem indisponível".] · 
+OK    G3: textos revisados pelo AGENTE DE TESTE; exportação liberada
+  No Chrome, deixe a aba do laboratório no estado desta etapa e pressione Alt+Shift+K. Nada é clicado ou enviado; só rótulos de interface aparecem na imagem.
+  Imagem sanitizada associada: 9 rótulo(s) de interface visíveis; 1 de 2 marcador(es) posicionados. Campos e o restante da tela ficam ocultos.
+  No Chrome, deixe a aba do laboratório no estado desta etapa e pressione Alt+Shift+K. Nada é clicado ou enviado; só rótulos de interface aparecem na imagem.
+  Imagem sanitizada associada: 9 rótulo(s) de interface visíveis; 1 de 8 marcador(es) posicionados. Campos e o restante da tela ficam ocultos.
+OK    G3: duas capturas reais do Chrome no perfil BENCHMARK aceitas pela 4ª barreira
+  PDD item 1. Preparação · título Revisado (agente de teste) · pendências [] · instruções []
+  PDD item Baixar a planilha e iniciar o desafio · título Revisado (agente de teste) · pendências [Instrução 2 sem marcador na imagem (alvo não comprovado).] · instruções [Revisado (agente de teste), Derivado do processo]
+  PDD item 2. Preenchimento por registro · título Revisado (agente de teste) · pendências [] · instruções []
+  PDD item Preencher o formulário com um registro e enviar · título Revisado (agente de teste) · pendências [Instrução 1 sem marcador na imagem (alvo não comprovado)., Instrução 2 sem marcador na imagem (alvo não comprovado)., Instrução 3 sem marcador na imagem (alvo não comprovado)., Instrução 4 sem marcador na imagem (alvo não comprovado)., Instrução 5 sem marcador na imagem (alvo não comprovado)., Instrução 6 sem marcador na imagem (alvo não comprovado)., Instrução 7 sem marcador na imagem (alvo não comprovado).] · instruções [Revisado (agente de teste), Revisado (agente de teste), Revisado (agente de teste), Revisado (agente de teste), Revisado (agente de teste), Revisado (agente de teste), Revisado (agente de teste), Derivado do processo]
+  PDD item 3. Conclusão · título Revisado (agente de teste) · pendências [] · instruções []
+  PDD item Ler o resultado exibido · título Revisado (agente de teste) · pendências [Sem imagem: o PDF dirá "Imagem indisponível".] · instruções [Derivado do processo]
+  PDD pode exportar: true
+OK    G3: PDF sem nenhum valor do registro demonstrativo
+  PDF: 2 página(s), 2 imagem(ns)
+OK    G3: 2 imagens sanitizadas no PDF
+OK    G3: metadados controlados
+  abas do debug: [rpachallenge.com · Autorizada]
+  1ª passagem etapa 1 (CLICK): Proposto · verificado tecnicamente · RESOLVED · [NODE_REPLACED]
+  1ª passagem etapa 2 (CLICK): Não verificável · NOT_FOUND · [DESCRIPTOR_ONLY]
+OK    G4 1ª passagem etapa 2: sem prova de identidade, o debug oferece Corrigir (nunca Continuar sobre alvo incerto)
+    comparação: Compatível com "Clicar". Aplicar troca só o alvo desta etapa; a ação e os parâmetros continuam como estão. · compatível true
+OK    G4 1ª passagem etapa 2: elemento escolhido no navegador compatível com a ação
+  1ª passagem etapa 3 (FILL): Requer revisão · AMBIGUOUS · [TARGET_AMBIGUOUS, INDISTINGUISHABLE_AT_REGISTRATION, LOOKALIKES_PRESENT]
+OK    G4 1ª passagem etapa 3: sem prova de identidade, o debug oferece Corrigir (nunca Continuar sobre alvo incerto)
+    comparação: Compatível com "Preencher". Aplicar troca só o alvo desta etapa; a ação e os parâmetros continuam como estão. · compatível true
+OK    G4 1ª passagem etapa 3: elemento escolhido no navegador compatível com a ação
+    após a correção: Requer revisão · Já havia uma decisão para este alvo, mas ela precisa de revisão. — avança com Próxima
+  1ª passagem etapa 4 (FILL): Requer revisão · AMBIGUOUS · [TARGET_AMBIGUOUS, INDISTINGUISHABLE_AT_REGISTRATION, LOOKALIKES_PRESENT]
+OK    G4 1ª passagem etapa 4: sem prova de identidade, o debug oferece Corrigir (nunca Continuar sobre alvo incerto)
+    comparação: Compatível com "Preencher". Aplicar troca só o alvo desta etapa; a ação e os parâmetros continuam como estão. · compatível true
+OK    G4 1ª passagem etapa 4: elemento escolhido no navegador compatível com a ação
+    após a correção: Requer revisão · Já havia uma decisão para este alvo, mas ela precisa de revisão. — avança com Próxima
+  1ª passagem etapa 5 (FILL): Requer revisão · AMBIGUOUS · [TARGET_AMBIGUOUS, INDISTINGUISHABLE_AT_REGISTRATION, LOOKALIKES_PRESENT]
+OK    G4 1ª passagem etapa 5: sem prova de identidade, o debug oferece Corrigir (nunca Continuar sobre alvo incerto)
+    comparação: Compatível com "Preencher". Aplicar troca só o alvo desta etapa; a ação e os parâmetros continuam como estão. · compatível true
+OK    G4 1ª passagem etapa 5: elemento escolhido no navegador compatível com a ação
+    após a correção: Requer revisão · Já havia uma decisão para este alvo, mas ela precisa de revisão. — avança com Próxima
+  1ª passagem etapa 6 (FILL): Requer revisão · AMBIGUOUS · [TARGET_AMBIGUOUS, INDISTINGUISHABLE_AT_REGISTRATION, LOOKALIKES_PRESENT]
+OK    G4 1ª passagem etapa 6: sem prova de identidade, o debug oferece Corrigir (nunca Continuar sobre alvo incerto)
+    comparação: Compatível com "Preencher". Aplicar troca só o alvo desta etapa; a ação e os parâmetros continuam como estão. · compatível true
+OK    G4 1ª passagem etapa 6: elemento escolhido no navegador compatível com a ação
+    após a correção: Requer revisão · Já havia uma decisão para este alvo, mas ela precisa de revisão. — avança com Próxima
+  1ª passagem etapa 7 (FILL): Requer revisão · AMBIGUOUS · [TARGET_AMBIGUOUS, INDISTINGUISHABLE_AT_REGISTRATION, LOOKALIKES_PRESENT]
+OK    G4 1ª passagem etapa 7: sem prova de identidade, o debug oferece Corrigir (nunca Continuar sobre alvo incerto)
+    comparação: Compatível com "Preencher". Aplicar troca só o alvo desta etapa; a ação e os parâmetros continuam como estão. · compatível true
+OK    G4 1ª passagem etapa 7: elemento escolhido no navegador compatível com a ação
+    após a correção: Requer revisão · Já havia uma decisão para este alvo, mas ela precisa de revisão. — avança com Próxima
+  1ª passagem etapa 8 (FILL): Requer revisão · AMBIGUOUS · [TARGET_AMBIGUOUS, INDISTINGUISHABLE_AT_REGISTRATION, LOOKALIKES_PRESENT]
+OK    G4 1ª passagem etapa 8: sem prova de identidade, o debug oferece Corrigir (nunca Continuar sobre alvo incerto)
+    comparação: Compatível com "Preencher". Aplicar troca só o alvo desta etapa; a ação e os parâmetros continuam como estão. · compatível true
+OK    G4 1ª passagem etapa 8: elemento escolhido no navegador compatível com a ação
+    após a correção: Requer revisão · Já havia uma decisão para este alvo, mas ela precisa de revisão. — avança com Próxima
+  1ª passagem etapa 9 (FILL): Requer revisão · AMBIGUOUS · [TARGET_AMBIGUOUS, INDISTINGUISHABLE_AT_REGISTRATION, LOOKALIKES_PRESENT]
+OK    G4 1ª passagem etapa 9: sem prova de identidade, o debug oferece Corrigir (nunca Continuar sobre alvo incerto)
+    comparação: Compatível com "Preencher". Aplicar troca só o alvo desta etapa; a ação e os parâmetros continuam como estão. · compatível true
+OK    G4 1ª passagem etapa 9: elemento escolhido no navegador compatível com a ação
+    após a correção: Requer revisão · Já havia uma decisão para este alvo, mas ela precisa de revisão. — avança com Próxima
+  1ª passagem etapa 10 (CLICK): Proposto · verificado tecnicamente · RESOLVED · [NODE_REPLACED]
+  1ª passagem: 2 confirmada(s) diretamente, 8 por correção guiada
+captura S010-G4-1-passagem.png (1920x1000)
+OK    G4: preferidos instáveis corrigidos NO MODELO (0) — nenhum FILL fica com preferido diferente de LABEL
+  abas do debug: [rpachallenge.com · Autorizada]
+  2ª passagem (posições trocadas) etapa 1 (CLICK): Reconfirmado tecnicamente · RESOLVED · [NODE_REPLACED]
+  2ª passagem (posições trocadas) etapa 2 (CLICK): Reconfirmado tecnicamente · RESOLVED · []
+  2ª passagem (posições trocadas) etapa 3 (FILL): Requer revisão · AMBIGUOUS · [TARGET_AMBIGUOUS, INDISTINGUISHABLE_AT_REGISTRATION, LOOKALIKES_PRESENT]
+OK    G4 2ª passagem (posições trocadas) etapa 3: sem prova de identidade, o debug oferece Corrigir (nunca Continuar sobre alvo incerto)
+    comparação: Compatível com "Preencher". Aplicar troca só o alvo desta etapa; a ação e os parâmetros continuam como estão. · compatível true
+OK    G4 2ª passagem (posições trocadas) etapa 3: elemento escolhido no navegador compatível com a ação
+    após a correção: Requer revisão · Já havia uma decisão para este alvo, mas ela precisa de revisão. — avança com Próxima
+  2ª passagem (posições trocadas) etapa 4 (FILL): Requer revisão · AMBIGUOUS · [TARGET_AMBIGUOUS, INDISTINGUISHABLE_AT_REGISTRATION, LOOKALIKES_PRESENT]
+OK    G4 2ª passagem (posições trocadas) etapa 4: sem prova de identidade, o debug oferece Corrigir (nunca Continuar sobre alvo incerto)
+    comparação: Compatível com "Preencher". Aplicar troca só o alvo desta etapa; a ação e os parâmetros continuam como estão. · compatível true
+OK    G4 2ª passagem (posições trocadas) etapa 4: elemento escolhido no navegador compatível com a ação
+    após a correção: Requer revisão · Já havia uma decisão para este alvo, mas ela precisa de revisão. — avança com Próxima
+  2ª passagem (posições trocadas) etapa 5 (FILL): Requer revisão · AMBIGUOUS · [TARGET_AMBIGUOUS, INDISTINGUISHABLE_AT_REGISTRATION, LOOKALIKES_PRESENT]
+OK    G4 2ª passagem (posições trocadas) etapa 5: sem prova de identidade, o debug oferece Corrigir (nunca Continuar sobre alvo incerto)
+    comparação: Compatível com "Preencher". Aplicar troca só o alvo desta etapa; a ação e os parâmetros continuam como estão. · compatível true
+OK    G4 2ª passagem (posições trocadas) etapa 5: elemento escolhido no navegador compatível com a ação
+    após a correção: Requer revisão · Já havia uma decisão para este alvo, mas ela precisa de revisão. — avança com Próxima
+  2ª passagem (posições trocadas) etapa 6 (FILL): Requer revisão · AMBIGUOUS · [TARGET_AMBIGUOUS, INDISTINGUISHABLE_AT_REGISTRATION, LOOKALIKES_PRESENT]
+OK    G4 2ª passagem (posições trocadas) etapa 6: sem prova de identidade, o debug oferece Corrigir (nunca Continuar sobre alvo incerto)
+    comparação: Compatível com "Preencher". Aplicar troca só o alvo desta etapa; a ação e os parâmetros continuam como estão. · compatível true
+OK    G4 2ª passagem (posições trocadas) etapa 6: elemento escolhido no navegador compatível com a ação
+    após a correção: Requer revisão · Já havia uma decisão para este alvo, mas ela precisa de revisão. — avança com Próxima
+  2ª passagem (posições trocadas) etapa 7 (FILL): Requer revisão · AMBIGUOUS · [TARGET_AMBIGUOUS, INDISTINGUISHABLE_AT_REGISTRATION, LOOKALIKES_PRESENT]
+OK    G4 2ª passagem (posições trocadas) etapa 7: sem prova de identidade, o debug oferece Corrigir (nunca Continuar sobre alvo incerto)
+    comparação: Compatível com "Preencher". Aplicar troca só o alvo desta etapa; a ação e os parâmetros continuam como estão. · compatível true
+OK    G4 2ª passagem (posições trocadas) etapa 7: elemento escolhido no navegador compatível com a ação
+    após a correção: Requer revisão · Já havia uma decisão para este alvo, mas ela precisa de revisão. — avança com Próxima
+  2ª passagem (posições trocadas) etapa 8 (FILL): Requer revisão · AMBIGUOUS · [TARGET_AMBIGUOUS, INDISTINGUISHABLE_AT_REGISTRATION, LOOKALIKES_PRESENT]
+OK    G4 2ª passagem (posições trocadas) etapa 8: sem prova de identidade, o debug oferece Corrigir (nunca Continuar sobre alvo incerto)
+    comparação: Compatível com "Preencher". Aplicar troca só o alvo desta etapa; a ação e os parâmetros continuam como estão. · compatível true
+OK    G4 2ª passagem (posições trocadas) etapa 8: elemento escolhido no navegador compatível com a ação
+    após a correção: Requer revisão · Já havia uma decisão para este alvo, mas ela precisa de revisão. — avança com Próxima
+  2ª passagem (posições trocadas) etapa 9 (FILL): Requer revisão · AMBIGUOUS · [TARGET_AMBIGUOUS, INDISTINGUISHABLE_AT_REGISTRATION, LOOKALIKES_PRESENT]
+OK    G4 2ª passagem (posições trocadas) etapa 9: sem prova de identidade, o debug oferece Corrigir (nunca Continuar sobre alvo incerto)
+    comparação: Compatível com "Preencher". Aplicar troca só o alvo desta etapa; a ação e os parâmetros continuam como estão. · compatível true
+OK    G4 2ª passagem (posições trocadas) etapa 9: elemento escolhido no navegador compatível com a ação
+    após a correção: Requer revisão · Já havia uma decisão para este alvo, mas ela precisa de revisão. — avança com Próxima
+  2ª passagem (posições trocadas) etapa 10 (CLICK): Reconfirmado tecnicamente · RESOLVED · [NODE_REPLACED]
+  2ª passagem (posições trocadas): 3 confirmada(s) diretamente, 7 por correção guiada
+captura S010-G4-2-passagem-posi-es-trocadas-.png (1920x1000)
+  campos com outra posição na 2ª passagem: 10 de 10
+OK    G4: posições efetivamente trocadas entre as passagens (campos em outro lugar da tela)
+  revisão do plano: no início da 2ª sessão sha256:fa00b31ee5b0722d8f6a556a7bf3c1dc03ee48c30c7d59217971ad0ea90f836f · no registro sha256:fa00b31ee5b0722d8f6a556a7bf3c1dc03ee48c30c7d59217971ad0ea90f836f · após as decisões sha256:57fa8b8f285b676a4fcf72767e7972ad2f6bb07a3b87369d71309ee6bb1d64c6
+OK    G4: registro do debug é da revisão do plano que a sessão recebeu
+  após as decisões da sessão o plano tem outra revisão: true (decisões fazem parte do conteúdo do plano)
+OK    G4: todas as etapas de página com decisão CONFIRMED (TEST_AGENT)
+  salvar: o Studio pede para atualizar o formato do projeto (decisões de alvo) — Atualizar e salvar
+  diálogo de geração: java.awt.Rectangle[x=580,y=221,width=760,height=591] modal=true · Gerar java.awt.Point[x=1244,y=758] java.awt.Dimension[width=68,height=34] habilitado=true
+captura S010-G5-dialogo-1.png (760x591)
+captura S010-G5-gerar-1.png (760x591)
+  resultado da geração:
+    Revisão do plano: sha256:57fa8b8f285b676a4fcf72767e7972ad2f6bb07a3b87369d71309ee6bb1d64c6
+    Configuração: sha256:33b982fda01c377eb202955756e81d181022a1820803d0fa9b7a103169ad36a7
+    GERADO em <trabalho>\homolog\codigo-gerado:
+      WRITTEN  README.md
+      WRITTEN  config/execucao.toml
+      WRITTEN  main.py
+      WRITTEN  paginas.py
+      WRITTEN  processo.py
+      WRITTEN  requirements.txt
+      WRITTEN  selectors.json
+      WRITTEN  manifest.json
+
+OK    G5: projeto gerado pelo Studio (menu Automação → Gerar código Python…)
+OK    G5: revisão do plano no relatório = revisão do debug
+  diálogo de geração: java.awt.Rectangle[x=580,y=221,width=760,height=591] modal=true · Gerar java.awt.Point[x=1244,y=758] java.awt.Dimension[width=68,height=34] habilitado=true
+captura S010-G5-dialogo-2.png (760x591)
+captura S010-G5-gerar-2.png (760x591)
+OK    G5: gerar de novo → nada muda (determinístico)
+  diálogo de geração: java.awt.Rectangle[x=580,y=221,width=760,height=591] modal=true · Gerar java.awt.Point[x=1244,y=758] java.awt.Dimension[width=68,height=34] habilitado=true
+captura S010-G5-dialogo-3.png (760x591)
+captura S010-G5-gerar-3.png (760x591)
+OK    G5: arquivo gerado editado à mão é PROTEGIDO (.novo + .diff), não sobrescrito
+  diálogo de geração: java.awt.Rectangle[x=580,y=221,width=760,height=591] modal=true · Gerar java.awt.Point[x=1244,y=758] java.awt.Dimension[width=68,height=34] habilitado=true
+captura S010-G5-dialogo-4.png (760x591)
+captura S010-G5-gerar-4.png (760x591)
+OK    G5: depois de desfazer a edição, a geração volta a ficar limpa
+OK    G5: código gerado sem valores do Excel
+OK    G5: código gerado sem localizador posicional
+OK    G5/privacidade: .nekkora sem valores do registro
+OK    G5/privacidade: log da homologação sem valores
+RESULTADO: 56 verificações, 0 falha(s)
