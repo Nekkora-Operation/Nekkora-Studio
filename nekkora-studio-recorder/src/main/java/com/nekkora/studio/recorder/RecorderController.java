@@ -199,8 +199,10 @@ public final class RecorderController implements AutoCloseable {
                 if (o instanceof Map<?, ?> raw) {
                     @SuppressWarnings("unchecked")
                     Map<String, Object> t = (Map<String, Object>) raw;
+                    TabAccess access = TabAccess.of(Json.string(t, "access"));
+                    String visual = t.containsKey("visualCapture") ? Json.string(t, "visualCapture") : (access == TabAccess.LAB ? "LAB" : null);
                     out.add(new BrowserTab(Json.string(t, "tabRef"), tabTitle(Json.string(t, "title")), safe(Json.string(t, "host")),
-                            TabAccess.of(Json.string(t, "access")), Json.bool(t, "active", false), Json.bool(t, "recording", false)));
+                            access, Json.bool(t, "active", false), Json.bool(t, "recording", false), visual));
                 }
             }
             return out;
@@ -1186,6 +1188,9 @@ public final class RecorderController implements AutoCloseable {
         }
         evSyncing = true;
         String rid = recording.recordingId();
+        // NEKKORA-E2E-001: o estado "aguardando reemissão" fica visível ANTES de o pedido sair (antes, quem observava o
+        // comando podia ler o instantâneo antigo — corrida que o RecorderEvidenceTest acusava de forma intermitente)
+        publish();
         link.send("studio.recording.evidence.sync", Map.of("recordingId", rid, "afterSequence", evInbox.released()), options.commandTimeout())
                 .whenComplete((r, e) -> run(() -> evSyncing = false));
     }
