@@ -275,7 +275,7 @@ public final class GuidedDebugPresenter implements GuidedDebugPanel.Actions, Gui
         show(stepCard(step, Badge.CHECKING, "", List.of(), List.of(), false));
         GuidedDebugClient c = client;
         StepId id = step.id();
-        c.inspect(id, step.actionType(), target, true).whenComplete((r, err) -> edt(() -> {
+        c.inspect(id, step.actionType(), target, true, configuredOption(step)).whenComplete((r, err) -> edt(() -> {
             if (c != client || index >= steps.size() || !steps.get(index).equals(id)) return; // resposta de outra etapa/sessão
             if (err != null) {
                 last = null;
@@ -311,17 +311,60 @@ public final class GuidedDebugPresenter implements GuidedDebugPanel.Actions, Gui
             badge = Badge.REVIEW; // identidade comprovada, estado inadequado agora (oculto, desabilitado…): nunca "proposto"
             message = "O elemento foi comprovado, mas agora não está em condição para a ação (veja os detalhes técnicos). Confirme só se esse "
                     + "estado for o esperado neste ponto do processo.";
+        } else if (resolved && optionBlocks(step, r)) {
+            badge = Badge.REVIEW; // STUDIO-012: lista comprovada, mas a opção falta, não existe ou é ambígua
         } else if (resolved) {
             badge = Badge.PROPOSED;
         } else {
             badge = notVerifiable(r) ? Badge.NOT_VERIFIABLE : Badge.REVIEW;
         }
+        String option = optionLine(step, r);
+        if (option != null) message = message.isEmpty() ? option : message + " " + option;
         show(stepCard(step, badge, message, reuseLines, candidatesOf(r), resolved));
         if (r.box() != null) {
             GuidedDebugClient.Box b = r.box();
             host.avoid(new Rectangle(b.screenX(), b.screenY(), Math.max(1, b.width()), Math.max(1, b.height())));
         }
         if (lastOutcome.reuse()) scheduleAdvance();
+    }
+
+    /** STUDIO-012: a opção CONFIGURADA na etapa (rótulo; o valor técnico se não houver rótulo) — nunca lida da página. */
+    static String configuredOption(AutomationStep step) {
+        if (step.actionType() != com.nekkora.studio.domain.action.ActionType.SELECT_OPTION) return null;
+        return step.parameters().option().map(o -> o.label().isBlank() ? o.value() : o.label()).filter(s -> !s.isBlank()).orElse(null);
+    }
+
+    /**
+     * STUDIO-012: o que a extensão conferiu sobre a opção configurada (só contagem e sim/não). {@code null} = nada a dizer.
+     * Opção ausente, repetida ou não configurada mantém a etapa em revisão.
+     */
+    static String optionLine(AutomationStep step, GuidedDebugClient.Inspection r) {
+        if (step.actionType() != com.nekkora.studio.domain.action.ActionType.SELECT_OPTION) return null;
+        String want = configuredOption(step);
+        if (want == null) {
+            return "Opção não configurada: a gravação não registra a opção escolhida (privacidade). Configure a opção na etapa.";
+        }
+        if (r.status() != GuidedDebugClient.Status.RESOLVED) {
+            return "Opção «" + want + "» não conferida: a lista não foi comprovada nesta página.";
+        }
+        GuidedDebugClient.OptionState o = r.option();
+        if (o == null) {
+            return "Opção «" + want + "» não conferida: a lista não é uma lista de seleção padrão.";
+        }
+        if (o.matches() == 0) {
+            return "A opção «" + want + "» não existe nesta lista: revise a opção configurada.";
+        }
+        if (o.matches() > 1) {
+            return "Há " + o.matches() + " opções «" + want + "» nesta lista: a escolha seria ambígua.";
+        }
+        return o.selected() ? "Opção «" + want + "»: existe na lista e está selecionada agora."
+                : "Opção «" + want + "»: existe na lista; ainda não está selecionada (é o que a ação fará).";
+    }
+
+    private static boolean optionBlocks(AutomationStep step, GuidedDebugClient.Inspection r) {
+        if (step.actionType() != com.nekkora.studio.domain.action.ActionType.SELECT_OPTION || r.status() != GuidedDebugClient.Status.RESOLVED) return false;
+        GuidedDebugClient.OptionState o = r.option();
+        return configuredOption(step) == null || (o != null && o.matches() != 1);
     }
 
     private static boolean notVerifiable(GuidedDebugClient.Inspection r) {

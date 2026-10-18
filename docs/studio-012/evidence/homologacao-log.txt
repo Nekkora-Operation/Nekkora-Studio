@@ -1,0 +1,53 @@
+Tela: java.awt.Rectangle[x=0,y=0,width=1920,height=1032] · java 21.0.12
+Operador: Claude como AGENTE DE TESTE (TEST_AGENT; nenhuma confirmação humana) · ator do Studio: TEST_AGENT
+Laboratório sintético STUDIO-012 (http://127.0.0.1:18765/lab/studio012/): estrutura do caso de reprodução, dados FICTÍCIOS
+Native Host instalado pelo script oficial (install-host.ps1)
+Laboratório local na porta 18765
+Chrome for Testing: 155.0.8059.39
+  abas vistas pela extensão: [{"u":null,"p":null,"s":"complete"},{"u":"http://127.0.0.1:18765/lab/studio012/login.html","p":null,"s":"complete"},{"u":"chrome-extension://dceigcmhbihcigneokmpmbocdclkhcaj/src/ui/harness.html","p":null,"s":"complete"}]
+OK    Conexão autenticada Studio ⇄ host ⇄ extensão
+OK    G4: aba do laboratório reconhecida como LAB (loopback)
+captura S012-01-antes-de-gravar.png (1920x1000)
+  etapas: [FILL, FILL, CLICK, CLICK, CLICK, SELECT_OPTION, CLICK]
+OK    G4 oráculo: a PÁGINA registrou o nível Auditoria Carefy (independente da gravação)
+OK    G1: login → menu (iframe que recarrega) → tela no outro iframe → nível → Gravar gravados COM interação, na ordem
+OK    G1: todas as etapas observadas com interação (nenhuma proposta sem interação)
+  FILL · preferido ID · Documento principal
+  FILL · preferido ID · Documento principal
+  CLICK · preferido ID · Documento principal
+  CLICK · preferido POSITIONAL · Dentro de iframe
+  CLICK · preferido POSITIONAL · Dentro de iframe
+  SELECT_OPTION · preferido XPATH_RELATIVE · Dentro de iframe
+  CLICK · preferido NAME · Dentro de iframe
+OK    G2: usuário (descendente de envoltórios, id técnico 'ds…') com ID preferido, não XPath
+OK    G2: senha localizada por id/name (não posicional); id fora do descritor por ser sensível
+OK    G1: Auditoria e Solicitação em estudo DENTRO do iframe do menu; nível e Gravar no iframe de conteúdo
+OK    G1: opção escolhida identificada e RETIDA (privacidade): configure no Studio
+OK    privacidade: nenhum valor digitado no modelo
+captura S012-02-login-por-id.png (1920x1000)
+captura S012-03-nivel-no-iframe.png (1920x1000)
+captura S012-06-segredo-sem-valor-constante.png (760x604)
+captura S012-07-segredo-entrada-na-execucao.png (760x604)
+captura S012-08-finalidade-com-valor-recusada.png (760x604)
+captura S012-09-finalidade-descritiva.png (760x604)
+OK    G3: Finalidade com forma de valor recusada no campo (nada declarado)
+OK    G3: segredo sem campo de valor; ajuda da fonte de segredo (NK_SECRET_<NOME>)
+OK    G3: segredo declarado com Finalidade descritiva
+OK    G3: vínculo explícito da etapa Preencher senha à variável aparece em "onde é usada"
+OK    projeto salvo (.nekkora)
+OK    reaberto íntegro: mesmas etapas, StepIds, opção configurada e variável
+OK    privacidade: .nekkora sem valores digitados
+OK    G2: lista com name técnico ('ddl' + vocabulário) preferida por NAME
+  abas do debug: [Solicitação · Laboratório local]
+  debug: PROPOSED · Opção «Auditoria Carefy»: existe na lista e está selecionada agora.
+OK    G4: debug confirma a opção configurada — existe e está selecionada agora (só contagem e sim/não vieram da página)
+captura S012-04-debug-confirma-nivel.png (1920x1000)
+OK    G1: só o clique observado vira etapa (passar o mouse não é inventado como ação)
+OK    G1: alvo revelado por :hover declarado como dependência de outra interação (revisão)
+captura S012-05-hover-requer-revisao.png (1920x1000)
+OK    trilha da usuária: cópia do projeto de reprodução abre no Studio novo (9 etapas)
+OK    trilha da usuária: nada a salvar ao fechar (somente leitura)
+OK    trilha da usuária: arquivo da cópia inalterado (hash)
+  nenhuma captura de tela da cópia do projeto real (pode conter dados de negócio)
+OK    privacidade: log da homologação sem valores
+RESULTADO: 25 verificações, 0 falha(s)

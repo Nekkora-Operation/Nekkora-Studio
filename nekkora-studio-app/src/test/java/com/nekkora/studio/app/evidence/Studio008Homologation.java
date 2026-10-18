@@ -205,7 +205,7 @@ public final class Studio008Homologation {
         check("formulário sem campo de valor de execução: só a declaração", edt(() -> !texts(form).toLowerCase().contains("valor de execução")
                 && form.originInput().getSelectedValue() == VariableOrigin.Kind.INPUT));
         captureWindow(d, "01-nova-variavel-cpf");
-        clickTab(form.tabs(), 1);
+        clickTab(form.tabs(), 0); // STUDIO-012: origem e valor ficam na aba Nome e valor
         edt(() -> {
             form.originInput().setSelectedItem(VariableOrigin.Kind.CONSTANT);
             return null;

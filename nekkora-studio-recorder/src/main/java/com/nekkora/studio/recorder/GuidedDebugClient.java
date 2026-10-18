@@ -70,10 +70,16 @@ public final class GuidedDebugClient implements BrowserLink.Listener, AutoClosea
     /** Resumo do elemento observado nesta verificação. */
     public record Observed(String kind, String name, String tag, boolean sensitive) {}
 
-    /** Resultado de uma inspeção — situado: vale para {@link #pageEpoch()} e {@link #observedAt()}. */
+    /**
+     * NEKKORA-STUDIO-012: conferência da opção CONFIGURADA no Studio numa lista de seleção — da página só voltam quantas
+     * opções têm esse rótulo/valor ({@code matches}, 1 = inequívoca) e se a selecionada agora é uma delas.
+     */
+    public record OptionState(int matches, boolean selected) {}
+
+    /** Resultado de uma inspeção — situado: vale para {@link #pageEpoch()} e {@link #observedAt()}. {@code option} nulo: não pedida/não aplicável. */
     public record Inspection(String requestId, String stepRef, Instant observedAt, int pageEpoch, IdentitySource identitySource, Status status, double score,
                              List<String> reasons, Map<String, Check> checks, Observed element, List<Candidate> candidates, boolean highlighted, Box box,
-                             String continuity) {
+                             String continuity, OptionState option) {
         public Inspection {
             reasons = List.copyOf(reasons);
             checks = Map.copyOf(checks);
@@ -190,6 +196,14 @@ public final class GuidedDebugClient implements BrowserLink.Listener, AutoClosea
      * EFETIVA. Somente leitura — nada acontece na página além do destaque (quando pedido).
      */
     public CompletableFuture<Inspection> inspect(StepId step, ActionType action, ElementReference target, boolean highlight) {
+        return inspect(step, action, target, highlight, null);
+    }
+
+    /**
+     * Como {@link #inspect(StepId, ActionType, ElementReference, boolean)}; para SELECT_OPTION, {@code expectedOption} é o
+     * rótulo (ou valor) configurado NA ETAPA — a extensão devolve só {@link OptionState}, nunca texto da página.
+     */
+    public CompletableFuture<Inspection> inspect(StepId step, ActionType action, ElementReference target, boolean highlight, String expectedOption) {
         Map<String, Object> p = new LinkedHashMap<>();
         p.put("debugId", debugId);
         p.put("requestId", nextRequest());
@@ -198,6 +212,9 @@ public final class GuidedDebugClient implements BrowserLink.Listener, AutoClosea
         p.put("targetId", target.correlation().get(CorrelationKeys.Key.TARGET_ID).orElse(null));
         p.put("descriptor", descriptor(target));
         p.put("highlight", highlight);
+        if (action == ActionType.SELECT_OPTION && expectedOption != null && !expectedOption.isBlank() && expectedOption.length() <= 120) {
+            p.put("expectedOption", expectedOption);
+        }
         return link.send("studio.debug.inspect", p, timeout).thenApply(this::inspection);
     }
 
@@ -393,7 +410,15 @@ public final class GuidedDebugClient implements BrowserLink.Listener, AutoClosea
         return new Inspection(Json.string(r, "requestId"), Json.string(r, "stepRef"), instant(Json.string(r, "observedAt")), (int) Json.number(r, "pageEpoch", 0),
                 enumOr(IdentitySource.class, Json.string(r, "identitySource"), IdentitySource.DESCRIPTOR),
                 enumOr(Status.class, Json.string(r, "status"), Status.CONTEXT_UNAVAILABLE), number(r, "score"), reasons, checks(Json.object(r, "checks")),
-                observed, candidates, Json.bool(r, "highlighted", false), box(Json.object(r, "box")), Json.string(r, "continuity"));
+                observed, candidates, Json.bool(r, "highlighted", false), box(Json.object(r, "box")), Json.string(r, "continuity"),
+                optionState(Json.object(r, "option")));
+    }
+
+    private static OptionState optionState(Map<String, Object> o) {
+        if (o == null) {
+            return null;
+        }
+        return new OptionState((int) Math.max(0, Math.min(9, Json.number(o, "matches", 0))), Json.bool(o, "selected", false));
     }
 
     private static Map<String, Check> checks(Map<String, Object> c) {

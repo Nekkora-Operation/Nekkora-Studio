@@ -100,6 +100,25 @@ class PythonGeneratorTest {
     }
 
     @Test
+    void preVooBloqueiaAlvoDentroDeIframe() {
+        // NEKKORA-STUDIO-012: o runtime resolve só no documento principal — gerar para um alvo em iframe seria agir no documento errado
+        FormCase c = FormCase.confirmed();
+        com.nekkora.studio.domain.element.ElementReference inFrame = com.nekkora.studio.domain.element.ElementReference.builder()
+                .semanticKind("TEXT_INPUT").tag("input").accessibleName("").privacyPolicy(com.nekkora.studio.domain.privacy.CapturePrivacy.VERSION)
+                .addLocator(new com.nekkora.studio.domain.element.LocatorCandidate(com.nekkora.studio.domain.element.LocatorStrategy.ID, "", "#dsLogin",
+                        com.nekkora.studio.domain.element.LocatorStability.HEURISTIC_STABLE, 1, true)).preferLastLocator()
+                .addAccessStep(com.nekkora.studio.domain.element.AccessStep.of(com.nekkora.studio.domain.element.AccessStep.Type.MAIN_DOCUMENT, ""))
+                .addAccessStep(com.nekkora.studio.domain.element.AccessStep.of(com.nekkora.studio.domain.element.AccessStep.Type.IFRAME, "iframe"))
+                .build();
+        c.a.replaceTarget(c.fill(0), inFrame, com.nekkora.studio.domain.target.DecisionActor.TEST_AGENT,
+                new com.nekkora.studio.domain.target.TargetDecision.Basis("DESCRIPTOR", "RESOLVED", List.of(), FormCase.CLOCK.instant(), ""));
+        c.decide(c.fill(0));
+        List<String> codes = codes(gen(c));
+        assertTrue(codes.contains("TARGET_IN_FRAME_NOT_SUPPORTED"), codes.toString());
+        assertTrue(gen(c).files().isEmpty(), "com bloqueio, nada é gerado");
+    }
+
+    @Test
     void preVooBloqueiaValorLiteralEAcaoNaoSuportada() {
         FormCase c = FormCase.confirmed();
         c.a.setStepParameters(c.fill(1), ActionParameters.withValue(new ValueSource.LiteralValue("valor-gravado")));

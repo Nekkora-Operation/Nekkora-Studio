@@ -137,6 +137,31 @@ class RecordedStepsTest {
     }
 
     @Test
+    void s012IdentificadorTecnicoAceitoRetidoExplicadoEHoverComoDependencia() {
+        // id/name do desenvolvedor com termo técnico aprovado: aceito como veio (4ª barreira = mesma regra da extensão)
+        ElementReference login = RecordedStepDrafts.draft(parse(step("rec-1", 1, "route-1", "FILL", element("TEXT_INPUT", "Usuário", "input", "dsLogin", false),
+                "CAPTURE_AND_INTERACT"))).element();
+        assertEquals("dsLogin", login.displayableHtmlId().orElseThrow());
+        assertEquals("#dsLogin", login.preferredLocator().orElseThrow().expression(), "id técnico estável e único é o preferido");
+        // fora das listas: o Studio também retém (e o localizador com o id não sobrevive)
+        Map<String, Object> other = element("TEXT_INPUT", "Usuário", "input", "dsJoao", false);
+        Map<String, Object> p = step("rec-1", 2, "route-1", "FILL", other, "CAPTURE_AND_INTERACT");
+        p.put("notes", List.of("IDENTIFIER_WITHHELD"));
+        ElementReference e = RecordedStepDrafts.draft(parse(p)).element();
+        assertTrue(e.htmlId().isEmpty(), "id fora das listas não é aceito pela 4ª barreira");
+        assertTrue(e.locators().stream().noneMatch(l -> l.expression().contains("dsJoao")), e.locators().toString());
+        assertTrue(e.stabilityNotes().stream().anyMatch(n -> n.contains("tem id/name") && n.contains("reteve")), e.stabilityNotes().toString());
+        // alvo revelado por :hover: obstáculo de dependência de outra interação (revisão), nenhuma etapa inventada
+        Map<String, Object> hover = step("rec-1", 3, "route-1", "CLICK", element("LINK", "Prestadores", "a", "prestadores", false), "CAPTURE_AND_INTERACT");
+        hover.put("notes", List.of("REVEALED_BY_HOVER"));
+        StepDraft h = RecordedStepDrafts.draft(parse(hover));
+        assertEquals(ActionType.CLICK, h.actionType());
+        assertTrue(h.element().obstacles().stream().anyMatch(o -> o.type().equals("INTERACTION_DEPENDENCY") && o.description().contains(":hover")),
+                h.element().obstacles().toString());
+        assertTrue(h.provenance().recordingObservation().orElseThrow().limitations().contains("REVEALED_BY_HOVER"));
+    }
+
+    @Test
     void s003016NomesDeTodasAsAcoes() {
         Map<String, Object> sel = step("rec-1", 1, "route-1", "SELECT_OPTION", element("SELECT", "Estado", "select", "estado", false), "CAPTURE_AND_INTERACT");
         sel.put("parameters", Json.obj().put("valueCaptured", false).put("option", Json.obj().put("label", "São Paulo").put("value", "SP").build()).put("key", null).build());

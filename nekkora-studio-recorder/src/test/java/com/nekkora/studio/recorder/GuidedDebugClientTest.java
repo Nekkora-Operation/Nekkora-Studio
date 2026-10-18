@@ -141,6 +141,30 @@ class GuidedDebugClientTest {
     }
 
     @Test
+    @DisplayName("STUDIO-012 — opção configurada: expectedOption só em SELECT_OPTION; volta só contagem e sim/não; ausente = não pedida")
+    void opcaoConfigurada() throws Exception {
+        String base = "{\"debug\":" + SESSION + ",\"requestId\":\"rq-1\",\"stepRef\":\"x\",\"observedAt\":\"2026-10-18T12:00:03.000Z\",\"pageEpoch\":1,"
+                + "\"identitySource\":\"TARGET_ID\",\"status\":\"RESOLVED\",\"score\":0.9,\"reasons\":[],\"checks\":{},\"element\":null,\"candidates\":[],"
+                + "\"highlighted\":false,\"box\":null,\"continuity\":null";
+        Link link = new Link(Map.of("studio.debug.inspect", base + ",\"option\":{\"matches\":1,\"selected\":true}}"));
+        try (GuidedDebugClient c = new GuidedDebugClient(link, Duration.ofSeconds(30), Duration.ofSeconds(5))) {
+            c.start("t-Q2f9LmZx7Kp1").get();
+            GuidedDebugClient.Inspection r = c.inspect(new StepId(UUID.randomUUID()), ActionType.SELECT_OPTION, field(false), false, "Auditoria Carefy").get();
+            assertEquals("Auditoria Carefy", link.sent.get(1).get("expectedOption"));
+            assertEquals(new GuidedDebugClient.OptionState(1, true), r.option());
+            c.inspect(new StepId(UUID.randomUUID()), ActionType.CLICK, field(false), false, "Auditoria Carefy").get();
+            assertFalse(link.sent.get(2).containsKey("expectedOption"), "só lista de seleção leva a opção");
+            c.inspect(new StepId(UUID.randomUUID()), ActionType.SELECT_OPTION, field(false), false, "x".repeat(121)).get();
+            assertFalse(link.sent.get(3).containsKey("expectedOption"), "acima do limite do contrato não vai");
+        }
+        Link sem = new Link(Map.of("studio.debug.inspect", base + "}"));
+        try (GuidedDebugClient c = new GuidedDebugClient(sem, Duration.ofSeconds(30), Duration.ofSeconds(5))) {
+            c.start("t-Q2f9LmZx7Kp1").get();
+            assertNull(c.inspect(new StepId(UUID.randomUUID()), ActionType.SELECT_OPTION, field(false), false).get().option(), "extensão anterior: sem conferência");
+        }
+    }
+
+    @Test
     @DisplayName("seleção: o evento vira ElementReference pelas regras de etapa (4ª barreira), só para a própria sessão; changed atualiza o estado")
     void selecao() throws Exception {
         Link link = new Link(Map.of());

@@ -205,6 +205,12 @@ public final class PythonGenerator {
     // ------------------------------------------------------------------------------------------------ alvos
     /** Registro do framework para o alvo (nekkora-rpa/selectors 1.1.0) ou {@code null} com bloqueio. */
     static Map<String, Object> target(ElementReference el, StepId id, List<Blocker> blockers) {
+        // NEKKORA-STUDIO-012: nekkora_rpa 0.2.0 resolve só no documento principal. Um alvo dentro de iframe geraria código
+        // que procura no documento ERRADO (queda silenciosa) — bloqueado até o runtime ter escopo de frame.
+        if (el.accessPath().stream().anyMatch(s -> s.type() == com.nekkora.studio.domain.element.AccessStep.Type.IFRAME)) {
+            blockers.add(new Blocker("TARGET_IN_FRAME_NOT_SUPPORTED", id));
+            return null;
+        }
         Optional<LocatorCandidate> preferred = el.preferredLocator();
         if (preferred.isEmpty() || !preferred.get().validated()) {
             blockers.add(new Blocker("LOCATOR_NOT_VALIDATED", id));

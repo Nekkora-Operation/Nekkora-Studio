@@ -222,6 +222,13 @@ public final class RecordedStepDrafts {
                 case "SAFE_LOCATOR_UNAVAILABLE" -> b.addStabilityNote(
                         "Elemento identificado parcialmente: não foi possível produzir um localizador seguro e único");
                 case "LIVE_CHECK_UNAVAILABLE" -> b.addStabilityNote("Verificação na página real indisponível (o documento mudou)");
+                // NEKKORA-STUDIO-012
+                case "IDENTIFIER_WITHHELD" -> b.addStabilityNote(
+                        "O elemento tem id/name, mas a política de privacidade reteve o valor (termo fora do vocabulário e da lista técnica): "
+                                + "não há localizador por id/name");
+                case "REVEALED_BY_HOVER" -> b.addObstacle(new ObservedObstacle("INTERACTION_DEPENDENCY", ObservedObstacle.Severity.MEDIUM,
+                        "O alvo só aparece com o ponteiro sobre outro item (regra :hover da própria página). A reprodução precisa desse "
+                                + "gesto, que o Studio não registra como etapa: revise antes de executar."));
                 default -> {
                 }
             }
