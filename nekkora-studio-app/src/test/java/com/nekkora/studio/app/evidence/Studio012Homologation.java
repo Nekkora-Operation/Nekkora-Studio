@@ -189,9 +189,9 @@ public final class Studio012Homologation {
         captureStudio("S012-01-antes-de-gravar");
         startRecordingOn("127.0.0.1", RecordingMode.CAPTURE_AND_INTERACT);
         moveFloatingAway();
-        clickInPage("document.getElementById('dsLogin')");
+        clickInPage("document.getElementById('ds_login')");
         insertText(USER);
-        clickInPage("document.getElementById('dsSenhaTemp')");
+        clickInPage("document.getElementById('passwordTemp')");
         insertText(PASSWORD);
         clickInPage("document.getElementById('Button_DoLogin')");
         waitPage("portal.html");
