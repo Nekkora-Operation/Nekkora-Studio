@@ -79,7 +79,12 @@ public final class PythonGenerator {
 
     /** Etapa pronta para gerar. */
     record Step(AutomationStep step, int session, Role role, String key, Map<String, Object> target, String column, String credential,
-                String navigateUrl, boolean download) {}
+                String navigateUrl, boolean download, String textPattern) {
+        Step(AutomationStep step, int session, Role role, String key, Map<String, Object> target, String column, String credential,
+             String navigateUrl, boolean download) {
+            this(step, session, role, key, target, column, credential, navigateUrl, download, null);
+        }
+    }
 
     private PythonGenerator() {}
 
@@ -154,6 +159,12 @@ public final class PythonGenerator {
                     if (value.isPresent() && value.get() instanceof ValueSource.LiteralValue lit && allowed(cfg, lit.text())) url = lit.text();
                     else blockers.add(new Blocker("NAVIGATE_URL_NOT_ALLOWED", id));
                     steps.add(new Step(s, n, role, null, null, null, null, url, false));
+                    continue;
+                }
+                String pattern = cfg.textObservations().get(id.value().toString());
+                if (action == ActionType.OBSERVE && s.element().isEmpty() && pattern != null) {
+                    if (!cfg.observations()) blockers.add(new Blocker("OBSERVATIONS_DISABLED", id));
+                    steps.add(new Step(s, n, role, null, null, null, null, null, false, pattern));
                     continue;
                 }
                 boolean needsTarget = action != ActionType.WAIT_FOR && action != ActionType.OBSERVE || s.element().isPresent();

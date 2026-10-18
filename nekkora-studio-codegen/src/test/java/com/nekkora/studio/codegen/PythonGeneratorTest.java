@@ -155,6 +155,21 @@ class PythonGeneratorTest {
         }
     }
 
+    @Test
+    void observacaoPorPadraoDeTextoSemAlvo() {
+        FormCase c = FormCase.confirmed();
+        var end = c.a.sessions().get(2);
+        var obs = c.a.appendStep(end.id(), StepDraft.builder().name("Ler resultado").actionType(ActionType.OBSERVE).build());
+        String sem = c.config();
+        assertTrue(codes(PythonGenerator.generate(c.a, new AutomationValidator().validate(c.a), CodegenConfig.parse(sem))).contains("OBSERVE_WITHOUT_TARGET"));
+        String com = sem.substring(0, sem.lastIndexOf('}')) + ", \"textObservations\": [{\"stepId\": \"" + obs.id().value() + "\", \"pattern\": \"^Resultado: \\\\d+%$\"}]}";
+        PythonGenerator.Result r = PythonGenerator.generate(c.a, new AutomationValidator().validate(c.a), CodegenConfig.parse(com));
+        assertTrue(r.ok(), r.blockers().toString());
+        assertTrue(r.files().get("paginas.py").contains("a.read_text_matching(\"^Resultado: \\\\d+%$\""), r.files().get("paginas.py"));
+        assertEquals("CONFIG_TEXT_PATTERN", assertThrows(CodegenConfig.Invalid.class,
+                () -> CodegenConfig.parse(com.replace("^Resultado", "Resultado"))).code());
+    }
+
     @SuppressWarnings("unused")
     private static StepDraft unused(StepEdit e) {
         return null;

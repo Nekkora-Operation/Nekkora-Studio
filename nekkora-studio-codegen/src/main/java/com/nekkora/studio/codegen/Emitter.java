@@ -133,7 +133,9 @@ final class Emitter {
                     }
                     case WAIT_FOR -> b.append("        a.wait_visible(").append(k).append(", step_id=").append(sid).append(")\n");
                     case OBSERVE -> {
-                        if (cfg.observations()) b.append("        obs[").append(sid).append("] = a.read_text(").append(k).append(", step_id=").append(sid).append(")\n");
+                        if (s.textPattern() != null)
+                            b.append("        obs[").append(sid).append("] = a.read_text_matching(").append(Py.str(s.textPattern())).append(", step_id=").append(sid).append(")\n");
+                        else if (cfg.observations()) b.append("        obs[").append(sid).append("] = a.read_text(").append(k).append(", step_id=").append(sid).append(")\n");
                         else b.append("        a.wait_visible(").append(k).append(", step_id=").append(sid).append(")\n");
                     }
                     default -> throw new IllegalStateException("ação não suportada passou pelo pré-voo");
@@ -274,6 +276,7 @@ final class Emitter {
             e.put("key", s.key());
             e.put("column", s.column());
             e.put("download", s.download());
+            e.put("textPattern", s.textPattern() != null);
             e.put("decisionActor", s.step().targetDecision().map(d -> d.actor().name()).orElse(null));
             list.add(e);
         }

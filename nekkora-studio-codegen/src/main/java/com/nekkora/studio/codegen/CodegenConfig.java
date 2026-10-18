@@ -24,7 +24,8 @@ import java.util.regex.Pattern;
  * com um código; o conteúdo do arquivo não entra na mensagem.
  */
 public record CodegenConfig(String processName, String environment, List<String> allowedOrigins, String startUrl, List<Integer> initSessions,
-                            int perRecordSession, List<Integer> endSessions, Input input, boolean observations, Advance initAdvance, String revision) {
+                            int perRecordSession, List<Integer> endSessions, Input input, boolean observations, Advance initAdvance,
+                            java.util.Map<String, String> textObservations, String revision) {
 
     public static final String SCHEMA = "nekkora-studio/codegen-config";
     public static final String VERSION = "1.0.0";
@@ -75,7 +76,7 @@ public record CodegenConfig(String processName, String environment, List<String>
             throw new Invalid("CONFIG_JSON");
         }
         only(m, Set.of("schema", "version", "processName", "environment", "allowedOrigins", "startUrl", "sessions", "input", "observations",
-                "initAdvance"), "CONFIG");
+                "initAdvance", "textObservations"), "CONFIG");
         if (!SCHEMA.equals(m.get("schema"))) throw new Invalid("CONFIG_SCHEMA");
         if (!VERSION.equals(m.get("version"))) throw new Invalid("CONFIG_VERSION");
         String processName = str(m, "processName");
@@ -146,8 +147,29 @@ public record CodegenConfig(String processName, String environment, List<String>
         } catch (IllegalArgumentException e) {
             throw new Invalid("CONFIG_INIT_ADVANCE");
         }
+        // observação por PADRÃO de texto (contrato de conteúdo, não seletor) para etapa OBSERVE sem alvo exportável
+        java.util.Map<String, String> textObs = new java.util.LinkedHashMap<>();
+        if (m.containsKey("textObservations")) {
+            for (Object o : list(m, "textObservations")) {
+                if (!(o instanceof Map<?, ?> raw)) throw new Invalid("CONFIG_TEXT_OBSERVATIONS");
+                @SuppressWarnings("unchecked")
+                Map<String, Object> t = (Map<String, Object>) raw;
+                only(t, Set.of("stepId", "pattern"), "CONFIG_TEXT_OBSERVATIONS");
+                String step = str(t, "stepId");
+                String pattern = str(t, "pattern");
+                if (!UUID.matcher(step).matches() || textObs.containsKey(step)) throw new Invalid("CONFIG_TEXT_OBSERVATIONS");
+                if (!pattern.startsWith("^") || !pattern.endsWith("$") || pattern.length() > 300) throw new Invalid("CONFIG_TEXT_PATTERN");
+                try {
+                    Pattern.compile(pattern);
+                } catch (java.util.regex.PatternSyntaxException e) {
+                    throw new Invalid("CONFIG_TEXT_PATTERN");
+                }
+                textObs.put(step, pattern);
+            }
+        }
         return new CodegenConfig(processName, environment, origins, startUrl, init, perRecord, end,
-                new Input(format, sheet, source, downloadStep, fileName, List.copyOf(columns)), observations, advance, "sha256:" + sha256(text.strip()));
+                new Input(format, sheet, source, downloadStep, fileName, List.copyOf(columns)), observations, advance,
+                java.util.Map.copyOf(textObs), "sha256:" + sha256(text.strip()));
     }
 
     private static <T> T bad(String code) {

@@ -61,15 +61,16 @@ public final class LabReplicaSample {
         }
         step(a, rec, ActionType.CLICK, page, FormCase.el("BUTTON", "input", "Submit",
                 new LocatorCandidate(LocatorStrategy.CONTEXTUAL, "", "#form-desafio input[type=\"submit\"]", LocatorStability.HEURISTIC_STABLE, 1, true)), null);
-        step(a, end, ActionType.OBSERVE, page, FormCase.el("STATUS", "p", "",
-                new LocatorCandidate(LocatorStrategy.ID, "", "p#resultado", LocatorStability.HEURISTIC_STABLE, 1, true)), null);
+        AutomationStep obs = a.appendStep(end.id(), StepDraft.builder().name("Ler resultado").actionType(ActionType.OBSERVE).context(page).build());
         String config = """
                 {"schema": "nekkora-studio/codegen-config", "version": "1.0.0", "processName": "replica_laboratorio",
                  "environment": "lab", "allowedOrigins": ["%s"], "startUrl": "%s/desafio/index.html",
                  "sessions": {"init": [1], "perRecord": 2, "end": [3]}, "initAdvance": "REPLACED", "observations": true,
                  "input": {"format": "xlsx", "sheet": null, "source": "DOWNLOAD", "downloadStep": "%s", "fileName": "entrada.xlsx",
-                   "columns": [%s]}}
-                """.formatted(origin, origin, dl.id().value(), cols);
+                   "columns": [%s]},
+                 "textObservations": [{"stepId": "%s",
+                   "pattern": "^Congratulations! Your success rate is \\\\d+%% \\\\( \\\\d+ out of \\\\d+ fields\\\\) in \\\\d+ milliseconds$"}]}
+                """.formatted(origin, origin, dl.id().value(), cols, obs.id().value());
         PythonGenerator.Result r = PythonGenerator.generate(a, new AutomationValidator().validate(a), CodegenConfig.parse(config));
         if (!r.ok()) throw new IllegalStateException(r.blockers().toString());
         System.out.println(OutputWriter.write(out, r.files()));
