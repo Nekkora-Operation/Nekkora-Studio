@@ -80,8 +80,7 @@ public final class CodegenPresenter {
             result.setCaretPosition(0);
             return false; // continua aberto para ler o resultado
         }).setName("codegen.generate");
-        dialog.setLocationRelativeTo(owner.get());
-        dialog.setVisible(true);
+        dialog.showDialog(); // dimensiona (pack + largura do tamanho escolhido) e centraliza; setVisible direto abria 0×0
     }
 
     /** Geração (também usada pela homologação sem janela). Devolve o relatório em texto, só com códigos e caminhos. */
