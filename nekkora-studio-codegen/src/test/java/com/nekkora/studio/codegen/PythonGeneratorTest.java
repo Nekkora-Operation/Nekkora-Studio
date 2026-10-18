@@ -59,6 +59,32 @@ class PythonGeneratorTest {
     }
 
     @Test
+    void linhasDentroDoLimiteDoPerfilDoFramework() {
+        // E2E-001: ruff E501 (perfil do framework, 120) no projeto gerado — chamadas com StepId passavam de 200 colunas
+        PythonGenerator.Result r = gen(FormCase.confirmed());
+        for (String f : List.of("main.py", "processo.py", "paginas.py")) {
+            for (String l : r.files().get(f).split("\n")) assertTrue(l.length() <= PyWrap.MAX, f + ": " + l);
+        }
+        String longa = "        x = a.f(self.k(\"y\"), \"texto, com (vírgula) e # cerquilha\", step_id=\"" + "0".repeat(80) + "\")  # nota";
+        assertEquals("        # nota\n        x = a.f(\n            self.k(\"y\"),\n            \"texto, com (vírgula) e # cerquilha\",\n"
+                + "            step_id=\"" + "0".repeat(80) + "\",\n        )", PyWrap.wrap(longa));
+        assertEquals("curta(a, b)", PyWrap.wrap("curta(a, b)"));
+    }
+
+    @Test
+    void importsSemSobraEOrdenados() {
+        // E2E-001: ruff no projeto gerado acusou F401 (provedor importado sem uso) e I001 (módulo local antes de nekkora_rpa)
+        PythonGenerator.Result r = gen(FormCase.confirmed());
+        String main = r.files().get("main.py");
+        assertTrue(main.contains("DeferredTabularInputProvider") && !main.contains(" TabularInputProvider"), "só o provedor usado");
+        for (String f : List.of("main.py", "processo.py")) {
+            String s = r.files().get(f);
+            int local = Math.max(s.indexOf("\nfrom processo import"), s.indexOf("\nfrom paginas import"));
+            assertTrue(local > s.lastIndexOf("\nfrom nekkora_rpa"), f + ": terceiros antes dos módulos do projeto");
+        }
+    }
+
+    @Test
     void preVooBloqueiaAlvoSemDecisaoConfirmada() {
         FormCase c = FormCase.undecided();
         assertTrue(codes(gen(c)).contains("TARGET_NOT_CONFIRMED"));
@@ -165,7 +191,8 @@ class PythonGeneratorTest {
         String com = sem.substring(0, sem.lastIndexOf('}')) + ", \"textObservations\": [{\"stepId\": \"" + obs.id().value() + "\", \"pattern\": \"^Resultado: \\\\d+%$\"}]}";
         PythonGenerator.Result r = PythonGenerator.generate(c.a, new AutomationValidator().validate(c.a), CodegenConfig.parse(com));
         assertTrue(r.ok(), r.blockers().toString());
-        assertTrue(r.files().get("paginas.py").contains("a.read_text_matching(\"^Resultado: \\\\d+%$\""), r.files().get("paginas.py"));
+        String pg = r.files().get("paginas.py");
+        assertTrue(pg.contains("a.read_text_matching(") && pg.contains("\"^Resultado: \\\\d+%$\","), pg); // linha longa: um argumento por linha
         assertEquals("CONFIG_TEXT_PATTERN", assertThrows(CodegenConfig.Invalid.class,
                 () -> CodegenConfig.parse(com.replace("^Resultado", "Resultado"))).code());
     }

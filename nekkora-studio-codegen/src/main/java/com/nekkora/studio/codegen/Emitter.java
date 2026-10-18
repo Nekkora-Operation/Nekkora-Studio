@@ -24,9 +24,9 @@ final class Emitter {
         for (Step s : steps) bySession.computeIfAbsent(s.session(), k -> new ArrayList<>()).add(s);
         files.put("selectors.json", selectors(steps));
         files.put("config/execucao.toml", toml(cfg, steps));
-        files.put("paginas.py", pages(cfg, bySession));
-        files.put("processo.py", process(cfg, bySession, steps));
-        files.put("main.py", main(cfg));
+        files.put("paginas.py", PyWrap.wrap(pages(cfg, bySession)));
+        files.put("processo.py", PyWrap.wrap(process(cfg, bySession, steps)));
+        files.put("main.py", PyWrap.wrap(main(cfg)));
         files.put("requirements.txt", "# GERADO pelo Nekkora Studio (STUDIO-011). Instale o wheel do framework com as versões travadas:\n"
                 + "#   pip install <nekkora_rpa-0.2.0-py3-none-any.whl>[excel] -c <constraints/lab.txt>\n" + PythonGenerator.FRAMEWORK_REQUIREMENT + "\n");
         files.put("README.md", readme(cfg));
@@ -73,7 +73,7 @@ final class Emitter {
         b.append("from nekkora_rpa.libs.actions import DownloadedFile\nfrom nekkora_rpa.pages import BasePage\nfrom nekkora_rpa.security.secrets import SecretProvider\n\n");
         b.append("XLSX_MAGIC = b\"PK\\x03\\x04\"\n\n\n");
         b.append("def _valor(dados: Mapping[str, object], coluna: str) -> str:\n");
-        b.append("    v = dados.get(coluna)\n    if not isinstance(v, str):\n        raise ValueError(\"coluna sem texto\")  # o processo já recusou linhas com problema\n    return v\n");
+        b.append("    v = dados.get(coluna)\n    if not isinstance(v, str):\n        raise TypeError(\"coluna sem texto\")  # o processo já recusou linhas com problema\n    return v\n");
         String firstRecordFill = null;
         for (Map.Entry<Integer, List<Step>> e : bySession.entrySet()) {
             for (Step s : e.getValue()) {
@@ -159,9 +159,10 @@ final class Emitter {
         b.append(PythonGenerator.HEADER);
         b.append("\"\"\"Processo gerado: INIT (sessões de inicialização) → uma transação por linha da planilha → END (conclusão).\"\"\"\n\n");
         b.append("from __future__ import annotations\n\nimport json\nfrom pathlib import Path\n\n");
-        b.append("from paginas import ").append(String.join(", ", bySession.keySet().stream().map(n -> "Sessao" + n).toList())).append("\n\n");
+        // ordem do isort (ruff I001): terceiros (nekkora_rpa) antes dos módulos do próprio projeto
         b.append("from nekkora_rpa import ProcessResult, RpaProcess, Runtime, TransactionItem\nfrom nekkora_rpa.errors import BusinessRuleRejected\n");
         b.append("from nekkora_rpa.tabular import PROBLEMS_KEY\n\n");
+        b.append("from paginas import ").append(String.join(", ", bySession.keySet().stream().map(n -> "Sessao" + n).toList())).append("\n\n");
         b.append("URL_INICIAL = ").append(Py.str(cfg.startUrl())).append("\n\n\n");
         b.append("class Processo(RpaProcess):\n");
         b.append("    name = ").append(Py.str(cfg.processName())).append('\n');
@@ -207,9 +208,11 @@ final class Emitter {
         b.append("\"\"\"Execução: python main.py --saida <pasta> [--channel chrome|chromium] [--headless] [--console]").append(
                 cfg.input().source() == CodegenConfig.Source.FILE ? " --entrada <arquivo>" : "").append("\"\"\"\n\n");
         b.append("from __future__ import annotations\n\nimport argparse\nimport json\nimport sys\nfrom pathlib import Path\n\n");
-        b.append("from processo import Processo\n\n");
         b.append("from nekkora_rpa import Engine, EnvSecretProvider, load_config\nfrom nekkora_rpa.data import JsonDirectoryResultSink\n");
-        b.append("from nekkora_rpa.tabular import Column, DeferredTabularInputProvider, TabularInputProvider, TabularSchema\n\n");
+        // só o provedor que este projeto usa (ruff F401: nada importado sem uso)
+        b.append("from nekkora_rpa.tabular import Column, ").append(cfg.input().source() == CodegenConfig.Source.FILE
+                ? "TabularInputProvider" : "DeferredTabularInputProvider").append(", TabularSchema\n\n");
+        b.append("from processo import Processo\n\n");
         b.append("AQUI = Path(__file__).resolve().parent\n");
         b.append("ESQUEMA = TabularSchema(\n    (\n");
         for (CodegenConfig.Column c : cfg.input().columns()) {
