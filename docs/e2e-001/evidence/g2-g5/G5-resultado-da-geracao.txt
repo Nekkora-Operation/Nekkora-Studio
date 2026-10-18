@@ -1,0 +1,50 @@
+Revisão do plano: sha256:57fa8b8f285b676a4fcf72767e7972ad2f6bb07a3b87369d71309ee6bb1d64c6
+Configuração: sha256:33b982fda01c377eb202955756e81d181022a1820803d0fa9b7a103169ad36a7
+GERADO em <trabalho>\homolog\codigo-gerado:
+  WRITTEN  README.md
+  WRITTEN  config/execucao.toml
+  WRITTEN  main.py
+  WRITTEN  paginas.py
+  WRITTEN  processo.py
+  WRITTEN  requirements.txt
+  WRITTEN  selectors.json
+  WRITTEN  manifest.json
+
+---
+Revisão do plano: sha256:57fa8b8f285b676a4fcf72767e7972ad2f6bb07a3b87369d71309ee6bb1d64c6
+Configuração: sha256:33b982fda01c377eb202955756e81d181022a1820803d0fa9b7a103169ad36a7
+GERADO em <trabalho>\homolog\codigo-gerado:
+  UNCHANGED  README.md
+  UNCHANGED  config/execucao.toml
+  UNCHANGED  main.py
+  UNCHANGED  paginas.py
+  UNCHANGED  processo.py
+  UNCHANGED  requirements.txt
+  UNCHANGED  selectors.json
+  UNCHANGED  manifest.json
+
+---
+Revisão do plano: sha256:57fa8b8f285b676a4fcf72767e7972ad2f6bb07a3b87369d71309ee6bb1d64c6
+Configuração: sha256:33b982fda01c377eb202955756e81d181022a1820803d0fa9b7a103169ad36a7
+GERADO COM PENDÊNCIA — arquivo(s) editado(s) à mão preservado(s); veja .novo e .diff:
+  UNCHANGED  README.md
+  UNCHANGED  config/execucao.toml
+  UNCHANGED  main.py
+  PROTECTED  paginas.py
+  UNCHANGED  processo.py
+  UNCHANGED  requirements.txt
+  UNCHANGED  selectors.json
+  PROTECTED  manifest.json
+
+---
+Revisão do plano: sha256:57fa8b8f285b676a4fcf72767e7972ad2f6bb07a3b87369d71309ee6bb1d64c6
+Configuração: sha256:33b982fda01c377eb202955756e81d181022a1820803d0fa9b7a103169ad36a7
+GERADO em <trabalho>\homolog\codigo-gerado:
+  UNCHANGED  README.md
+  UNCHANGED  config/execucao.toml
+  UNCHANGED  main.py
+  UNCHANGED  paginas.py
+  UNCHANGED  processo.py
+  UNCHANGED  requirements.txt
+  UNCHANGED  selectors.json
+  UNCHANGED  manifest.json

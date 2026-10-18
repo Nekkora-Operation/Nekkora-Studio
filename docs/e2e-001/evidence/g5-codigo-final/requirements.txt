@@ -1,0 +1,3 @@
+# GERADO pelo Nekkora Studio (STUDIO-011). Instale o wheel do framework com as versões travadas:
+#   pip install <nekkora_rpa-0.2.0-py3-none-any.whl>[excel] -c <constraints/lab.txt>
+nekkora-rpa[excel]==0.2.0

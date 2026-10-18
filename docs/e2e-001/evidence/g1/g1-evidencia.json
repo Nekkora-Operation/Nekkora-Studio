@@ -1,0 +1,72 @@
+{
+  "origem": "https://rpachallenge.com",
+  "instrucoes_confirmadas": true,
+  "arquivo": {
+    "nome_destino": "challenge.xlsx",
+    "bytes": 34124,
+    "sha256": "cf1a8c04a298cc12cb481a0a6c88b078b209dc59c4983f6ca78714d611c04d37"
+  },
+  "abas": [
+    "Sheet1"
+  ],
+  "cabecalhos_brutos": [
+    "'First Name'",
+    "'Last Name '",
+    "'Company Name'",
+    "'Role in Company'",
+    "'Address'",
+    "'Email'",
+    "'Phone Number'",
+    "None"
+  ],
+  "cabecalhos_normalizados": [
+    "First Name",
+    "Last Name",
+    "Company Name",
+    "Role in Company",
+    "Address",
+    "Email",
+    "Phone Number"
+  ],
+  "registros": 10,
+  "tipos_por_coluna": {
+    "First Name": [
+      "str"
+    ],
+    "Last Name ": [
+      "str"
+    ],
+    "Company Name": [
+      "str"
+    ],
+    "Role in Company": [
+      "str"
+    ],
+    "Address": [
+      "str"
+    ],
+    "Email": [
+      "str"
+    ],
+    "Phone Number": [
+      "int"
+    ],
+    "None": [
+      "NoneType"
+    ]
+  },
+  "linhas_com_problema": 0,
+  "rede": {
+    "requisicoes_bloqueadas": 3,
+    "navegacoes_bloqueadas": 0
+  },
+  "eventos": [
+    "ACTION_STARTED",
+    "ACTION_COMPLETED",
+    "ACTION_STARTED",
+    "ACTION_STARTED",
+    "TARGET_RESOLVED",
+    "ACTION_COMPLETED",
+    "ACTION_COMPLETED"
+  ]
+}

@@ -1,0 +1,115 @@
+--- homolog/codigo-gerado/main.py	2026-10-18 03:10:34.540966400 -0300
++++ regen/main.py	2026-10-18 03:26:59.831622100 -0300
+@@ -9,11 +9,11 @@
+ import sys
+ from pathlib import Path
+ 
+-from processo import Processo
+-
+ from nekkora_rpa import Engine, EnvSecretProvider, load_config
+ from nekkora_rpa.data import JsonDirectoryResultSink
+-from nekkora_rpa.tabular import Column, DeferredTabularInputProvider, TabularInputProvider, TabularSchema
++from nekkora_rpa.tabular import Column, DeferredTabularInputProvider, TabularSchema
++
++from processo import Processo
+ 
+ AQUI = Path(__file__).resolve().parent
+ ESQUEMA = TabularSchema(
+--- homolog/codigo-gerado/processo.py	2026-10-18 03:10:34.542985500 -0300
++++ regen/processo.py	2026-10-18 03:28:43.526798800 -0300
+@@ -7,12 +7,12 @@
+ import json
+ from pathlib import Path
+ 
+-from paginas import Sessao1, Sessao2, Sessao3
+-
+ from nekkora_rpa import ProcessResult, RpaProcess, Runtime, TransactionItem
+ from nekkora_rpa.errors import BusinessRuleRejected
+ from nekkora_rpa.tabular import PROBLEMS_KEY
+ 
++from paginas import Sessao1, Sessao2, Sessao3
++
+ URL_INICIAL = "https://rpachallenge.com/"
+ 
+ 
+@@ -48,4 +48,7 @@
+     def gravar_observacoes(self) -> None:
+         """Observações lidas da página (etapas OBSERVE) + hash da planilha baixada; nunca valores de entrada."""
+         doc = {"entrada_sha256": self.entrada_sha256, "observacoes": self.observacoes}
+-        (self.saida / "observacoes.json").write_text(json.dumps(doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
++        (self.saida / "observacoes.json").write_text(
++            json.dumps(doc, ensure_ascii=False, indent=2) + "\n",
++            encoding="utf-8",
++        )
+--- homolog/codigo-gerado/paginas.py	2026-10-18 03:10:46.693695300 -0300
++++ regen/paginas.py	2026-10-18 03:28:43.524251600 -0300
+@@ -17,7 +17,7 @@
+ def _valor(dados: Mapping[str, object], coluna: str) -> str:
+     v = dados.get(coluna)
+     if not isinstance(v, str):
+-        raise ValueError("coluna sem texto")  # o processo já recusou linhas com problema
++        raise TypeError("coluna sem texto")  # o processo já recusou linhas com problema
+     return v
+ 
+ 
+@@ -32,10 +32,20 @@
+         baixado: DownloadedFile | None = None
+         obs: dict[str, str] = {}
+         # etapa 2e51e9b2-3313-44c4-ae53-c08164e3f811 · CLICK
+-        baixado = a.download(self.k("download_excel_cloud_download"), dest_dir=destino, file_name="challenge.xlsx", magic=XLSX_MAGIC, step_id="2e51e9b2-3313-44c4-ae53-c08164e3f811")
++        baixado = a.download(
++            self.k("download_excel_cloud_download"),
++            dest_dir=destino,
++            file_name="challenge.xlsx",
++            magic=XLSX_MAGIC,
++            step_id="2e51e9b2-3313-44c4-ae53-c08164e3f811",
++        )
+         # etapa 85dd950c-d3cf-4623-91ab-479f6144a1c3 · CLICK
+         marca = a.mark("processo.s2.first_name", step_id="85dd950c-d3cf-4623-91ab-479f6144a1c3")
+-        a.click(self.k("start"), step_id="85dd950c-d3cf-4623-91ab-479f6144a1c3", postcondition=lambda: a.replaced(marca))
++        a.click(
++            self.k("start"),
++            step_id="85dd950c-d3cf-4623-91ab-479f6144a1c3",
++            postcondition=lambda: a.replaced(marca),
++        )
+         return baixado, obs
+ 
+ 
+@@ -55,7 +65,11 @@
+         # etapa a08c54bb-7bcd-44ad-885c-350a9bc6d7d3 · FILL
+         a.fill(self.k("company_name"), _valor(dados, "Company Name"), step_id="a08c54bb-7bcd-44ad-885c-350a9bc6d7d3")
+         # etapa 480db37e-e9ce-4ca4-b0c2-1f4856609d9a · FILL
+-        a.fill(self.k("role_in_company"), _valor(dados, "Role in Company"), step_id="480db37e-e9ce-4ca4-b0c2-1f4856609d9a")
++        a.fill(
++            self.k("role_in_company"),
++            _valor(dados, "Role in Company"),
++            step_id="480db37e-e9ce-4ca4-b0c2-1f4856609d9a",
++        )
+         # etapa 11ab1956-5e1d-44f5-a917-5e964ed4018f · FILL
+         a.fill(self.k("address"), _valor(dados, "Address"), step_id="11ab1956-5e1d-44f5-a917-5e964ed4018f")
+         # etapa e0f4c420-cbce-4199-b847-a81cd08eafdb · FILL
+@@ -64,7 +78,11 @@
+         a.fill(self.k("phone_number"), _valor(dados, "Phone Number"), step_id="070d6140-3769-4107-bdcd-4de0bcc5638c")
+         # etapa 944a9801-8f21-4d2e-861b-a68895c20fd5 · CLICK
+         marca = a.mark(self.k("first_name"), step_id="944a9801-8f21-4d2e-861b-a68895c20fd5")
+-        a.click(self.k("submit"), step_id="944a9801-8f21-4d2e-861b-a68895c20fd5", postcondition=lambda: a.replaced(marca))
++        a.click(
++            self.k("submit"),
++            step_id="944a9801-8f21-4d2e-861b-a68895c20fd5",
++            postcondition=lambda: a.replaced(marca),
++        )
+         return obs
+ 
+ 
+@@ -78,7 +96,10 @@
+         a = self.act
+         obs: dict[str, str] = {}
+         # etapa ed12c86a-ac06-431b-9e87-1e5216f01f11 · OBSERVE
+-        obs["ed12c86a-ac06-431b-9e87-1e5216f01f11"] = a.read_text_matching("^Your success rate is \\d+(\\.\\d+)?% \\( \\d+ out of \\d+ fields\\) in \\d+ milliseconds$", step_id="ed12c86a-ac06-431b-9e87-1e5216f01f11")
++        obs["ed12c86a-ac06-431b-9e87-1e5216f01f11"] = a.read_text_matching(
++            "^Your success rate is \\d+(\\.\\d+)?% \\( \\d+ out of \\d+ fields\\) in \\d+ milliseconds$",
++            step_id="ed12c86a-ac06-431b-9e87-1e5216f01f11",
++        )
+         return obs
+ 
+ 

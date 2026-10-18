@@ -29,7 +29,6 @@ import com.nekkora.studio.pdd.VisualVerifier;
 import com.nekkora.studio.recorder.BrowserTab;
 import com.nekkora.studio.recorder.PddCaptureClient;
 import com.nekkora.studio.recorder.RecorderController;
-import com.nekkora.studio.recorder.TabAccess;
 import com.nekkora.studio.ui.pdd.PddPanel;
 import com.nekkora.studio.ui.pdd.PddPanel.InstructionRow;
 import com.nekkora.studio.ui.pdd.PddPanel.Item;
@@ -184,7 +183,12 @@ public final class PddPresenter implements PddPanel.Actions {
         recorder.listTabs().whenComplete((list, err) -> edt(() -> {
             List<PddPanel.Tab> out = new ArrayList<>();
             if (list != null) {
-                for (BrowserTab t : list) if (t.access() == TabAccess.LAB && !t.recording()) out.add(new PddPanel.Tab(t.tabRef(), t.label() + " · laboratório"));
+                // LAB, ou origem de benchmark autorizada (perfil da extensão, NEKKORA-E2E-001); o resto nem é oferecido
+                for (BrowserTab t : list) {
+                    if (t.visualCapture() != null && !t.recording()) {
+                        out.add(new PddPanel.Tab(t.tabRef(), t.label() + ("BENCHMARK".equals(t.visualCapture()) ? " · benchmark autorizado" : " · laboratório")));
+                    }
+                }
             }
             tabs = out;
             render();

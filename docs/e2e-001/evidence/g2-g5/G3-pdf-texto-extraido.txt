@@ -1,0 +1,48 @@
+Processo documentado (PDD visual)
+Versão v001 · 18/10/2026 · Nekkora Studio
+Gerado pelo Nekkora Studio a partir das sessões e etapas mapeadas. As imagens são capturas do navegador
+sanitizadas: só rótulos de interface aparecem; campos e o restante da tela foram ocultados. Este documento descreve
+o processo mapeado e não comprova resultado de negócio.
+1. Preparação
+Baixar a planilha e iniciar o desafio
+1
+Ações observadas na gravação
+1. Selecionar o link de download da
+     planilha
+2. Selecionar "Start"
+     (marcador indisponível)
+2. Preenchimento por registro
+Página 1 de 2Nekkora Studio · PDD visual · descreve o processo mapeado; não comprova resultado de negócio.
+Preencher o formulário com um registro e enviar
+8
+Ações observadas na gravação
+1. Informar o campo "First Name" com a
+     coluna correspondente da planilha
+     (marcador indisponível)
+2. Informar o campo "Last Name" com a
+     coluna correspondente da planilha
+     (marcador indisponível)
+3. Informar o campo "Company Name"
+     com a coluna correspondente da planilha
+     (marcador indisponível)
+4. Informar o campo "Role in Company"
+     com a coluna correspondente da planilha
+     (marcador indisponível)
+5. Informar o campo "Address" com a
+     coluna correspondente da planilha
+     (marcador indisponível)
+6. Informar o campo "Email" com a coluna
+     correspondente da planilha
+     (marcador indisponível)
+7. Informar o campo "Phone Number"
+     com a coluna correspondente da planilha
+     (marcador indisponível)
+8. Selecionar "Submit"
+3. Conclusão
+Ler o resultado exibido
+Imagem indisponível
+Nenhuma captura sanitizada foi associada a este bloco. Nenhuma
+imagem de outra etapa ou tela é usada no lugar.
+Etapas declaradas no Studio
+1. Observar a tela exibida
+Página 2 de 2Nekkora Studio · PDD visual · descreve o processo mapeado; não comprova resultado de negócio.

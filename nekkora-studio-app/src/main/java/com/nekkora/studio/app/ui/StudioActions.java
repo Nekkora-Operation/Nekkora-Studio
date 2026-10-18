@@ -44,6 +44,8 @@ public final class StudioActions {
     public static final String GUIDED_DEBUG = "studio.automation.guidedDebug";
     /** STUDIO-010: Automação → Gerar documentação → PDD visual. */
     public static final String VISUAL_PDD = "studio.automation.visualPdd";
+    /** STUDIO-011 (NEKKORA-E2E-001): Automação → Gerar código Python. */
+    public static final String PYTHON_CODEGEN = "studio.automation.pythonCodegen";
 
     /** Ações que dependem de missões futuras e permanecem desabilitadas. */
     public static final List<String> FUTURE = List.of(RUN);
@@ -105,9 +107,11 @@ public final class StudioActions {
                 .description("Reencontrar e destacar no Chrome o alvo de cada etapa, com Continuar ou Corrigir. Nada é clicado, preenchido ou enviado."));
         registry.register(NekkoraAction.of(VISUAL_PDD, "PDD visual…", () -> visualPddHandler.run()).icon(IconName.FILE).category("Automação")
                 .description("Documento PDF do processo mapeado: sessões, instruções e capturas sanitizadas do laboratório. Não altera a automação."));
+        registry.register(NekkoraAction.of(PYTHON_CODEGEN, "Gerar código Python…", () -> pythonCodegenHandler.run()).icon(IconName.FILE).category("Automação")
+                .description("Projeto Python (nekkora_rpa) gerado do modelo validado e das decisões do debug guiado. Nada é executado."));
         future(RUN, "Executar", IconName.PLAY, "A execução de automações chega em uma próxima versão do Studio.");
         for (String id : List.of(NEW_SESSION, NEW_STEP, RENAME_SESSION, RECORD, EDIT, UNDO, REDO, SAVE, SAVE_AS, CLOSE_PROJECT, VALIDATE, VARIABLES,
-                GUIDED_DEBUG, VISUAL_PDD)) {
+                GUIDED_DEBUG, VISUAL_PDD, PYTHON_CODEGEN)) {
             get(id).setEnabled(false);
         }
     }
@@ -121,6 +125,13 @@ public final class StudioActions {
     }
 
     private Runnable visualPddHandler = () -> { };
+
+    /** STUDIO-011: abre a geração do código Python. */
+    public void onPythonCodegen(Runnable handler) {
+        this.pythonCodegenHandler = handler == null ? () -> { } : handler;
+    }
+
+    private Runnable pythonCodegenHandler = () -> { };
 
     public void onGuidedDebug(Runnable handler) {
         this.guidedDebugHandler = handler == null ? () -> { } : handler;

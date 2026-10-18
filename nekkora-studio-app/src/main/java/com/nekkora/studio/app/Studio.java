@@ -67,6 +67,15 @@ public final class Studio {
         view.actions().onGuidedDebug(() -> guidedDebug().open());
         // STUDIO-010: PDD visual (rascunho e imagens sanitizadas no diretório de dados; nunca no .nekkora)
         view.actions().onVisualPdd(() -> visualPdd().open());
+        // STUDIO-011: geração do código Python (janela dona configurada pela aplicação)
+        view.actions().onPythonCodegen(() -> new com.nekkora.studio.app.codegen.CodegenPresenter(service, codegenOwner).open());
+    }
+
+    private java.util.function.Supplier<java.awt.Window> codegenOwner = () -> null;
+
+    /** Janela dona do diálogo de geração (a aplicação configura). */
+    public void useCodegenOwner(java.util.function.Supplier<java.awt.Window> owner) {
+        this.codegenOwner = java.util.Objects.requireNonNull(owner);
     }
 
     private java.util.function.Function<com.nekkora.studio.ui.pdd.PddPanel, com.nekkora.studio.app.pdd.PddPresenter.Host> pddHosts =

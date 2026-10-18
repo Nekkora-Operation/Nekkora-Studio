@@ -1,0 +1,383 @@
+06:12:04.722 -                 ENGINE_STARTED
+06:12:04.722 INIT              PHASE_STARTED
+06:12:06.145 INIT              ACTION_STARTED step=INICIO acao=navigate
+06:12:07.301 INIT              ACTION_COMPLETED step=INICIO acao=navigate tentativa=1 resultado=OK ms=1155
+06:12:07.301 INIT              ACTION_STARTED step=2e51e9b2-3313-44c4-ae53-c08164e3f811 key=processo.s1.download_excel_cloud_download acao=download
+06:12:07.303 INIT              ACTION_STARTED step=2e51e9b2-3313-44c4-ae53-c08164e3f811 key=processo.s1.download_excel_cloud_download acao=click
+06:12:07.360 INIT              TARGET_RESOLVED step=2e51e9b2-3313-44c4-ae53-c08164e3f811 key=processo.s1.download_excel_cloud_download
+06:12:07.464 INIT              ACTION_COMPLETED step=2e51e9b2-3313-44c4-ae53-c08164e3f811 key=processo.s1.download_excel_cloud_download acao=click tentativa=1 resultado=OK ms=157
+06:12:07.663 INIT              ACTION_COMPLETED step=2e51e9b2-3313-44c4-ae53-c08164e3f811 key=processo.s1.download_excel_cloud_download acao=download tentativa=1 resultado=OK ms=359
+06:12:07.663 INIT              ACTION_STARTED step=85dd950c-d3cf-4623-91ab-479f6144a1c3 key=processo.s2.first_name acao=mark
+06:12:07.686 INIT              TARGET_RESOLVED step=85dd950c-d3cf-4623-91ab-479f6144a1c3 key=processo.s2.first_name
+06:12:07.686 INIT              ACTION_COMPLETED step=85dd950c-d3cf-4623-91ab-479f6144a1c3 key=processo.s2.first_name acao=mark tentativa=1 resultado=OK ms=31
+06:12:07.687 INIT              ACTION_STARTED step=85dd950c-d3cf-4623-91ab-479f6144a1c3 key=processo.s1.start acao=click
+06:12:07.715 INIT              TARGET_RESOLVED step=85dd950c-d3cf-4623-91ab-479f6144a1c3 key=processo.s1.start
+06:12:07.758 INIT              ACTION_COMPLETED step=85dd950c-d3cf-4623-91ab-479f6144a1c3 key=processo.s1.start acao=click tentativa=1 resultado=OK ms=61
+06:12:07.760 INIT              PHASE_COMPLETED
+06:12:07.760 TRANSFER_DATA_IN  PHASE_STARTED
+06:12:08.024 TRANSFER_DATA_IN  PHASE_COMPLETED tx=tx-d7b8215c120641f0aca4
+06:12:08.024 PROCESS           PHASE_STARTED
+06:12:08.024 PROCESS           TRANSACTION_STARTED tx=tx-d7b8215c120641f0aca4 tentativa=1
+06:12:08.026 PROCESS           CHECKPOINT_SAVED tx=tx-d7b8215c120641f0aca4 resultado=IN_PROGRESS
+06:12:08.026 PROCESS           ACTION_STARTED tx=tx-d7b8215c120641f0aca4 step=40a1f407-37e0-4c6e-8e6d-d6737e784d74 key=processo.s2.first_name acao=fill
+06:12:08.034 PROCESS           TARGET_RESOLVED tx=tx-d7b8215c120641f0aca4 step=40a1f407-37e0-4c6e-8e6d-d6737e784d74 key=processo.s2.first_name
+06:12:08.055 PROCESS           ACTION_COMPLETED tx=tx-d7b8215c120641f0aca4 step=40a1f407-37e0-4c6e-8e6d-d6737e784d74 key=processo.s2.first_name acao=fill tentativa=1 resultado=OK ms=30
+06:12:08.055 PROCESS           ACTION_STARTED tx=tx-d7b8215c120641f0aca4 step=e50b8865-182d-4aed-8bd0-bd0b13fcbd9c key=processo.s2.last_name acao=fill
+06:12:08.064 PROCESS           TARGET_RESOLVED tx=tx-d7b8215c120641f0aca4 step=e50b8865-182d-4aed-8bd0-bd0b13fcbd9c key=processo.s2.last_name
+06:12:08.079 PROCESS           ACTION_COMPLETED tx=tx-d7b8215c120641f0aca4 step=e50b8865-182d-4aed-8bd0-bd0b13fcbd9c key=processo.s2.last_name acao=fill tentativa=1 resultado=OK ms=32
+06:12:08.079 PROCESS           ACTION_STARTED tx=tx-d7b8215c120641f0aca4 step=a08c54bb-7bcd-44ad-885c-350a9bc6d7d3 key=processo.s2.company_name acao=fill
+06:12:08.089 PROCESS           TARGET_RESOLVED tx=tx-d7b8215c120641f0aca4 step=a08c54bb-7bcd-44ad-885c-350a9bc6d7d3 key=processo.s2.company_name
+06:12:08.105 PROCESS           ACTION_COMPLETED tx=tx-d7b8215c120641f0aca4 step=a08c54bb-7bcd-44ad-885c-350a9bc6d7d3 key=processo.s2.company_name acao=fill tentativa=1 resultado=OK ms=30
+06:12:08.107 PROCESS           ACTION_STARTED tx=tx-d7b8215c120641f0aca4 step=480db37e-e9ce-4ca4-b0c2-1f4856609d9a key=processo.s2.role_in_company acao=fill
+06:12:08.114 PROCESS           TARGET_RESOLVED tx=tx-d7b8215c120641f0aca4 step=480db37e-e9ce-4ca4-b0c2-1f4856609d9a key=processo.s2.role_in_company
+06:12:08.130 PROCESS           ACTION_COMPLETED tx=tx-d7b8215c120641f0aca4 step=480db37e-e9ce-4ca4-b0c2-1f4856609d9a key=processo.s2.role_in_company acao=fill tentativa=1 resultado=OK ms=15
+06:12:08.131 PROCESS           ACTION_STARTED tx=tx-d7b8215c120641f0aca4 step=11ab1956-5e1d-44f5-a917-5e964ed4018f key=processo.s2.address acao=fill
+06:12:08.141 PROCESS           TARGET_RESOLVED tx=tx-d7b8215c120641f0aca4 step=11ab1956-5e1d-44f5-a917-5e964ed4018f key=processo.s2.address
+06:12:08.158 PROCESS           ACTION_COMPLETED tx=tx-d7b8215c120641f0aca4 step=11ab1956-5e1d-44f5-a917-5e964ed4018f key=processo.s2.address acao=fill tentativa=1 resultado=OK ms=32
+06:12:08.158 PROCESS           ACTION_STARTED tx=tx-d7b8215c120641f0aca4 step=e0f4c420-cbce-4199-b847-a81cd08eafdb key=processo.s2.email acao=fill
+06:12:08.169 PROCESS           TARGET_RESOLVED tx=tx-d7b8215c120641f0aca4 step=e0f4c420-cbce-4199-b847-a81cd08eafdb key=processo.s2.email
+06:12:08.186 PROCESS           ACTION_COMPLETED tx=tx-d7b8215c120641f0aca4 step=e0f4c420-cbce-4199-b847-a81cd08eafdb key=processo.s2.email acao=fill tentativa=1 resultado=OK ms=31
+06:12:08.186 PROCESS           ACTION_STARTED tx=tx-d7b8215c120641f0aca4 step=070d6140-3769-4107-bdcd-4de0bcc5638c key=processo.s2.phone_number acao=fill
+06:12:08.197 PROCESS           TARGET_RESOLVED tx=tx-d7b8215c120641f0aca4 step=070d6140-3769-4107-bdcd-4de0bcc5638c key=processo.s2.phone_number
+06:12:08.211 PROCESS           ACTION_COMPLETED tx=tx-d7b8215c120641f0aca4 step=070d6140-3769-4107-bdcd-4de0bcc5638c key=processo.s2.phone_number acao=fill tentativa=1 resultado=OK ms=15
+06:12:08.211 PROCESS           ACTION_STARTED tx=tx-d7b8215c120641f0aca4 step=944a9801-8f21-4d2e-861b-a68895c20fd5 key=processo.s2.first_name acao=mark
+06:12:08.219 PROCESS           TARGET_RESOLVED tx=tx-d7b8215c120641f0aca4 step=944a9801-8f21-4d2e-861b-a68895c20fd5 key=processo.s2.first_name
+06:12:08.219 PROCESS           ACTION_COMPLETED tx=tx-d7b8215c120641f0aca4 step=944a9801-8f21-4d2e-861b-a68895c20fd5 key=processo.s2.first_name acao=mark tentativa=1 resultado=OK ms=15
+06:12:08.219 PROCESS           ACTION_STARTED tx=tx-d7b8215c120641f0aca4 step=944a9801-8f21-4d2e-861b-a68895c20fd5 key=processo.s2.submit acao=click
+06:12:08.247 PROCESS           TARGET_RESOLVED tx=tx-d7b8215c120641f0aca4 step=944a9801-8f21-4d2e-861b-a68895c20fd5 key=processo.s2.submit
+06:12:08.277 PROCESS           ACTION_COMPLETED tx=tx-d7b8215c120641f0aca4 step=944a9801-8f21-4d2e-861b-a68895c20fd5 key=processo.s2.submit acao=click tentativa=1 resultado=OK ms=62
+06:12:08.277 TRANSFER_DATA_OUT PHASE_STARTED
+06:12:08.280 TRANSFER_DATA_OUT SINK_COMMITTED tx=tx-d7b8215c120641f0aca4 resultado=SUCCEEDED
+06:12:08.281 TRANSFER_DATA_OUT CHECKPOINT_SAVED tx=tx-d7b8215c120641f0aca4 resultado=SUCCEEDED
+06:12:08.281 TRANSFER_DATA_OUT TRANSACTION_COMPLETED tx=tx-d7b8215c120641f0aca4 tentativa=1 resultado=SUCCEEDED
+06:12:08.281 TRANSFER_DATA_IN  PHASE_STARTED
+06:12:08.281 TRANSFER_DATA_IN  PHASE_COMPLETED tx=tx-a426149c5649ddc782a0
+06:12:08.283 PROCESS           PHASE_STARTED
+06:12:08.283 PROCESS           TRANSACTION_STARTED tx=tx-a426149c5649ddc782a0 tentativa=1
+06:12:08.284 PROCESS           CHECKPOINT_SAVED tx=tx-a426149c5649ddc782a0 resultado=IN_PROGRESS
+06:12:08.284 PROCESS           ACTION_STARTED tx=tx-a426149c5649ddc782a0 step=40a1f407-37e0-4c6e-8e6d-d6737e784d74 key=processo.s2.first_name acao=fill
+06:12:08.293 PROCESS           TARGET_RESOLVED tx=tx-a426149c5649ddc782a0 step=40a1f407-37e0-4c6e-8e6d-d6737e784d74 key=processo.s2.first_name
+06:12:08.304 PROCESS           ACTION_COMPLETED tx=tx-a426149c5649ddc782a0 step=40a1f407-37e0-4c6e-8e6d-d6737e784d74 key=processo.s2.first_name acao=fill tentativa=1 resultado=OK ms=15
+06:12:08.304 PROCESS           ACTION_STARTED tx=tx-a426149c5649ddc782a0 step=e50b8865-182d-4aed-8bd0-bd0b13fcbd9c key=processo.s2.last_name acao=fill
+06:12:08.310 PROCESS           TARGET_RESOLVED tx=tx-a426149c5649ddc782a0 step=e50b8865-182d-4aed-8bd0-bd0b13fcbd9c key=processo.s2.last_name
+06:12:08.324 PROCESS           ACTION_COMPLETED tx=tx-a426149c5649ddc782a0 step=e50b8865-182d-4aed-8bd0-bd0b13fcbd9c key=processo.s2.last_name acao=fill tentativa=1 resultado=OK ms=32
+06:12:08.324 PROCESS           ACTION_STARTED tx=tx-a426149c5649ddc782a0 step=a08c54bb-7bcd-44ad-885c-350a9bc6d7d3 key=processo.s2.company_name acao=fill
+06:12:08.331 PROCESS           TARGET_RESOLVED tx=tx-a426149c5649ddc782a0 step=a08c54bb-7bcd-44ad-885c-350a9bc6d7d3 key=processo.s2.company_name
+06:12:08.345 PROCESS           ACTION_COMPLETED tx=tx-a426149c5649ddc782a0 step=a08c54bb-7bcd-44ad-885c-350a9bc6d7d3 key=processo.s2.company_name acao=fill tentativa=1 resultado=OK ms=15
+06:12:08.345 PROCESS           ACTION_STARTED tx=tx-a426149c5649ddc782a0 step=480db37e-e9ce-4ca4-b0c2-1f4856609d9a key=processo.s2.role_in_company acao=fill
+06:12:08.352 PROCESS           TARGET_RESOLVED tx=tx-a426149c5649ddc782a0 step=480db37e-e9ce-4ca4-b0c2-1f4856609d9a key=processo.s2.role_in_company
+06:12:08.364 PROCESS           ACTION_COMPLETED tx=tx-a426149c5649ddc782a0 step=480db37e-e9ce-4ca4-b0c2-1f4856609d9a key=processo.s2.role_in_company acao=fill tentativa=1 resultado=OK ms=15
+06:12:08.364 PROCESS           ACTION_STARTED tx=tx-a426149c5649ddc782a0 step=11ab1956-5e1d-44f5-a917-5e964ed4018f key=processo.s2.address acao=fill
+06:12:08.374 PROCESS           TARGET_RESOLVED tx=tx-a426149c5649ddc782a0 step=11ab1956-5e1d-44f5-a917-5e964ed4018f key=processo.s2.address
+06:12:08.389 PROCESS           ACTION_COMPLETED tx=tx-a426149c5649ddc782a0 step=11ab1956-5e1d-44f5-a917-5e964ed4018f key=processo.s2.address acao=fill tentativa=1 resultado=OK ms=31
+06:12:08.389 PROCESS           ACTION_STARTED tx=tx-a426149c5649ddc782a0 step=e0f4c420-cbce-4199-b847-a81cd08eafdb key=processo.s2.email acao=fill
+06:12:08.394 PROCESS           TARGET_RESOLVED tx=tx-a426149c5649ddc782a0 step=e0f4c420-cbce-4199-b847-a81cd08eafdb key=processo.s2.email
+06:12:08.408 PROCESS           ACTION_COMPLETED tx=tx-a426149c5649ddc782a0 step=e0f4c420-cbce-4199-b847-a81cd08eafdb key=processo.s2.email acao=fill tentativa=1 resultado=OK ms=15
+06:12:08.408 PROCESS           ACTION_STARTED tx=tx-a426149c5649ddc782a0 step=070d6140-3769-4107-bdcd-4de0bcc5638c key=processo.s2.phone_number acao=fill
+06:12:08.415 PROCESS           TARGET_RESOLVED tx=tx-a426149c5649ddc782a0 step=070d6140-3769-4107-bdcd-4de0bcc5638c key=processo.s2.phone_number
+06:12:08.427 PROCESS           ACTION_COMPLETED tx=tx-a426149c5649ddc782a0 step=070d6140-3769-4107-bdcd-4de0bcc5638c key=processo.s2.phone_number acao=fill tentativa=1 resultado=OK ms=15
+06:12:08.427 PROCESS           ACTION_STARTED tx=tx-a426149c5649ddc782a0 step=944a9801-8f21-4d2e-861b-a68895c20fd5 key=processo.s2.first_name acao=mark
+06:12:08.434 PROCESS           TARGET_RESOLVED tx=tx-a426149c5649ddc782a0 step=944a9801-8f21-4d2e-861b-a68895c20fd5 key=processo.s2.first_name
+06:12:08.434 PROCESS           ACTION_COMPLETED tx=tx-a426149c5649ddc782a0 step=944a9801-8f21-4d2e-861b-a68895c20fd5 key=processo.s2.first_name acao=mark tentativa=1 resultado=OK ms=16
+06:12:08.434 PROCESS           ACTION_STARTED tx=tx-a426149c5649ddc782a0 step=944a9801-8f21-4d2e-861b-a68895c20fd5 key=processo.s2.submit acao=click
+06:12:08.457 PROCESS           TARGET_RESOLVED tx=tx-a426149c5649ddc782a0 step=944a9801-8f21-4d2e-861b-a68895c20fd5 key=processo.s2.submit
+06:12:08.489 PROCESS           ACTION_COMPLETED tx=tx-a426149c5649ddc782a0 step=944a9801-8f21-4d2e-861b-a68895c20fd5 key=processo.s2.submit acao=click tentativa=1 resultado=OK ms=46
+06:12:08.490 TRANSFER_DATA_OUT PHASE_STARTED
+06:12:08.491 TRANSFER_DATA_OUT SINK_COMMITTED tx=tx-a426149c5649ddc782a0 resultado=SUCCEEDED
+06:12:08.494 TRANSFER_DATA_OUT CHECKPOINT_SAVED tx=tx-a426149c5649ddc782a0 resultado=SUCCEEDED
+06:12:08.494 TRANSFER_DATA_OUT TRANSACTION_COMPLETED tx=tx-a426149c5649ddc782a0 tentativa=1 resultado=SUCCEEDED
+06:12:08.494 TRANSFER_DATA_IN  PHASE_STARTED
+06:12:08.494 TRANSFER_DATA_IN  PHASE_COMPLETED tx=tx-a05ea01461de2b6456d0
+06:12:08.494 PROCESS           PHASE_STARTED
+06:12:08.494 PROCESS           TRANSACTION_STARTED tx=tx-a05ea01461de2b6456d0 tentativa=1
+06:12:08.496 PROCESS           CHECKPOINT_SAVED tx=tx-a05ea01461de2b6456d0 resultado=IN_PROGRESS
+06:12:08.496 PROCESS           ACTION_STARTED tx=tx-a05ea01461de2b6456d0 step=40a1f407-37e0-4c6e-8e6d-d6737e784d74 key=processo.s2.first_name acao=fill
+06:12:08.504 PROCESS           TARGET_RESOLVED tx=tx-a05ea01461de2b6456d0 step=40a1f407-37e0-4c6e-8e6d-d6737e784d74 key=processo.s2.first_name
+06:12:08.516 PROCESS           ACTION_COMPLETED tx=tx-a05ea01461de2b6456d0 step=40a1f407-37e0-4c6e-8e6d-d6737e784d74 key=processo.s2.first_name acao=fill tentativa=1 resultado=OK ms=31
+06:12:08.516 PROCESS           ACTION_STARTED tx=tx-a05ea01461de2b6456d0 step=e50b8865-182d-4aed-8bd0-bd0b13fcbd9c key=processo.s2.last_name acao=fill
+06:12:08.524 PROCESS           TARGET_RESOLVED tx=tx-a05ea01461de2b6456d0 step=e50b8865-182d-4aed-8bd0-bd0b13fcbd9c key=processo.s2.last_name
+06:12:08.537 PROCESS           ACTION_COMPLETED tx=tx-a05ea01461de2b6456d0 step=e50b8865-182d-4aed-8bd0-bd0b13fcbd9c key=processo.s2.last_name acao=fill tentativa=1 resultado=OK ms=15
+06:12:08.537 PROCESS           ACTION_STARTED tx=tx-a05ea01461de2b6456d0 step=a08c54bb-7bcd-44ad-885c-350a9bc6d7d3 key=processo.s2.company_name acao=fill
+06:12:08.545 PROCESS           TARGET_RESOLVED tx=tx-a05ea01461de2b6456d0 step=a08c54bb-7bcd-44ad-885c-350a9bc6d7d3 key=processo.s2.company_name
+06:12:08.558 PROCESS           ACTION_COMPLETED tx=tx-a05ea01461de2b6456d0 step=a08c54bb-7bcd-44ad-885c-350a9bc6d7d3 key=processo.s2.company_name acao=fill tentativa=1 resultado=OK ms=15
+06:12:08.558 PROCESS           ACTION_STARTED tx=tx-a05ea01461de2b6456d0 step=480db37e-e9ce-4ca4-b0c2-1f4856609d9a key=processo.s2.role_in_company acao=fill
+06:12:08.567 PROCESS           TARGET_RESOLVED tx=tx-a05ea01461de2b6456d0 step=480db37e-e9ce-4ca4-b0c2-1f4856609d9a key=processo.s2.role_in_company
+06:12:08.582 PROCESS           ACTION_COMPLETED tx=tx-a05ea01461de2b6456d0 step=480db37e-e9ce-4ca4-b0c2-1f4856609d9a key=processo.s2.role_in_company acao=fill tentativa=1 resultado=OK ms=32
+06:12:08.582 PROCESS           ACTION_STARTED tx=tx-a05ea01461de2b6456d0 step=11ab1956-5e1d-44f5-a917-5e964ed4018f key=processo.s2.address acao=fill
+06:12:08.589 PROCESS           TARGET_RESOLVED tx=tx-a05ea01461de2b6456d0 step=11ab1956-5e1d-44f5-a917-5e964ed4018f key=processo.s2.address
+06:12:08.603 PROCESS           ACTION_COMPLETED tx=tx-a05ea01461de2b6456d0 step=11ab1956-5e1d-44f5-a917-5e964ed4018f key=processo.s2.address acao=fill tentativa=1 resultado=OK ms=15
+06:12:08.604 PROCESS           ACTION_STARTED tx=tx-a05ea01461de2b6456d0 step=e0f4c420-cbce-4199-b847-a81cd08eafdb key=processo.s2.email acao=fill
+06:12:08.611 PROCESS           TARGET_RESOLVED tx=tx-a05ea01461de2b6456d0 step=e0f4c420-cbce-4199-b847-a81cd08eafdb key=processo.s2.email
+06:12:08.626 PROCESS           ACTION_COMPLETED tx=tx-a05ea01461de2b6456d0 step=e0f4c420-cbce-4199-b847-a81cd08eafdb key=processo.s2.email acao=fill tentativa=1 resultado=OK ms=30
+06:12:08.626 PROCESS           ACTION_STARTED tx=tx-a05ea01461de2b6456d0 step=070d6140-3769-4107-bdcd-4de0bcc5638c key=processo.s2.phone_number acao=fill
+06:12:08.634 PROCESS           TARGET_RESOLVED tx=tx-a05ea01461de2b6456d0 step=070d6140-3769-4107-bdcd-4de0bcc5638c key=processo.s2.phone_number
+06:12:08.649 PROCESS           ACTION_COMPLETED tx=tx-a05ea01461de2b6456d0 step=070d6140-3769-4107-bdcd-4de0bcc5638c key=processo.s2.phone_number acao=fill tentativa=1 resultado=OK ms=16
+06:12:08.649 PROCESS           ACTION_STARTED tx=tx-a05ea01461de2b6456d0 step=944a9801-8f21-4d2e-861b-a68895c20fd5 key=processo.s2.first_name acao=mark
+06:12:08.657 PROCESS           TARGET_RESOLVED tx=tx-a05ea01461de2b6456d0 step=944a9801-8f21-4d2e-861b-a68895c20fd5 key=processo.s2.first_name
+06:12:08.657 PROCESS           ACTION_COMPLETED tx=tx-a05ea01461de2b6456d0 step=944a9801-8f21-4d2e-861b-a68895c20fd5 key=processo.s2.first_name acao=mark tentativa=1 resultado=OK ms=15
+06:12:08.657 PROCESS           ACTION_STARTED tx=tx-a05ea01461de2b6456d0 step=944a9801-8f21-4d2e-861b-a68895c20fd5 key=processo.s2.submit acao=click
+06:12:08.682 PROCESS           TARGET_RESOLVED tx=tx-a05ea01461de2b6456d0 step=944a9801-8f21-4d2e-861b-a68895c20fd5 key=processo.s2.submit
+06:12:08.714 PROCESS           ACTION_COMPLETED tx=tx-a05ea01461de2b6456d0 step=944a9801-8f21-4d2e-861b-a68895c20fd5 key=processo.s2.submit acao=click tentativa=1 resultado=OK ms=47
+06:12:08.714 TRANSFER_DATA_OUT PHASE_STARTED
+06:12:08.717 TRANSFER_DATA_OUT SINK_COMMITTED tx=tx-a05ea01461de2b6456d0 resultado=SUCCEEDED
+06:12:08.719 TRANSFER_DATA_OUT CHECKPOINT_SAVED tx=tx-a05ea01461de2b6456d0 resultado=SUCCEEDED
+06:12:08.719 TRANSFER_DATA_OUT TRANSACTION_COMPLETED tx=tx-a05ea01461de2b6456d0 tentativa=1 resultado=SUCCEEDED
+06:12:08.719 TRANSFER_DATA_IN  PHASE_STARTED
+06:12:08.719 TRANSFER_DATA_IN  PHASE_COMPLETED tx=tx-dceab935bafd138c9433
+06:12:08.719 PROCESS           PHASE_STARTED
+06:12:08.719 PROCESS           TRANSACTION_STARTED tx=tx-dceab935bafd138c9433 tentativa=1
+06:12:08.722 PROCESS           CHECKPOINT_SAVED tx=tx-dceab935bafd138c9433 resultado=IN_PROGRESS
+06:12:08.722 PROCESS           ACTION_STARTED tx=tx-dceab935bafd138c9433 step=40a1f407-37e0-4c6e-8e6d-d6737e784d74 key=processo.s2.first_name acao=fill
+06:12:08.729 PROCESS           TARGET_RESOLVED tx=tx-dceab935bafd138c9433 step=40a1f407-37e0-4c6e-8e6d-d6737e784d74 key=processo.s2.first_name
+06:12:08.739 PROCESS           ACTION_COMPLETED tx=tx-dceab935bafd138c9433 step=40a1f407-37e0-4c6e-8e6d-d6737e784d74 key=processo.s2.first_name acao=fill tentativa=1 resultado=OK ms=15
+06:12:08.740 PROCESS           ACTION_STARTED tx=tx-dceab935bafd138c9433 step=e50b8865-182d-4aed-8bd0-bd0b13fcbd9c key=processo.s2.last_name acao=fill
+06:12:08.747 PROCESS           TARGET_RESOLVED tx=tx-dceab935bafd138c9433 step=e50b8865-182d-4aed-8bd0-bd0b13fcbd9c key=processo.s2.last_name
+06:12:08.759 PROCESS           ACTION_COMPLETED tx=tx-dceab935bafd138c9433 step=e50b8865-182d-4aed-8bd0-bd0b13fcbd9c key=processo.s2.last_name acao=fill tentativa=1 resultado=OK ms=15
+06:12:08.759 PROCESS           ACTION_STARTED tx=tx-dceab935bafd138c9433 step=a08c54bb-7bcd-44ad-885c-350a9bc6d7d3 key=processo.s2.company_name acao=fill
+06:12:08.766 PROCESS           TARGET_RESOLVED tx=tx-dceab935bafd138c9433 step=a08c54bb-7bcd-44ad-885c-350a9bc6d7d3 key=processo.s2.company_name
+06:12:08.778 PROCESS           ACTION_COMPLETED tx=tx-dceab935bafd138c9433 step=a08c54bb-7bcd-44ad-885c-350a9bc6d7d3 key=processo.s2.company_name acao=fill tentativa=1 resultado=OK ms=32
+06:12:08.778 PROCESS           ACTION_STARTED tx=tx-dceab935bafd138c9433 step=480db37e-e9ce-4ca4-b0c2-1f4856609d9a key=processo.s2.role_in_company acao=fill
+06:12:08.785 PROCESS           TARGET_RESOLVED tx=tx-dceab935bafd138c9433 step=480db37e-e9ce-4ca4-b0c2-1f4856609d9a key=processo.s2.role_in_company
+06:12:08.797 PROCESS           ACTION_COMPLETED tx=tx-dceab935bafd138c9433 step=480db37e-e9ce-4ca4-b0c2-1f4856609d9a key=processo.s2.role_in_company acao=fill tentativa=1 resultado=OK ms=15
+06:12:08.797 PROCESS           ACTION_STARTED tx=tx-dceab935bafd138c9433 step=11ab1956-5e1d-44f5-a917-5e964ed4018f key=processo.s2.address acao=fill
+06:12:08.804 PROCESS           TARGET_RESOLVED tx=tx-dceab935bafd138c9433 step=11ab1956-5e1d-44f5-a917-5e964ed4018f key=processo.s2.address
+06:12:08.817 PROCESS           ACTION_COMPLETED tx=tx-dceab935bafd138c9433 step=11ab1956-5e1d-44f5-a917-5e964ed4018f key=processo.s2.address acao=fill tentativa=1 resultado=OK ms=16
+06:12:08.817 PROCESS           ACTION_STARTED tx=tx-dceab935bafd138c9433 step=e0f4c420-cbce-4199-b847-a81cd08eafdb key=processo.s2.email acao=fill
+06:12:08.824 PROCESS           TARGET_RESOLVED tx=tx-dceab935bafd138c9433 step=e0f4c420-cbce-4199-b847-a81cd08eafdb key=processo.s2.email
+06:12:08.836 PROCESS           ACTION_COMPLETED tx=tx-dceab935bafd138c9433 step=e0f4c420-cbce-4199-b847-a81cd08eafdb key=processo.s2.email acao=fill tentativa=1 resultado=OK ms=15
+06:12:08.836 PROCESS           ACTION_STARTED tx=tx-dceab935bafd138c9433 step=070d6140-3769-4107-bdcd-4de0bcc5638c key=processo.s2.phone_number acao=fill
+06:12:08.844 PROCESS           TARGET_RESOLVED tx=tx-dceab935bafd138c9433 step=070d6140-3769-4107-bdcd-4de0bcc5638c key=processo.s2.phone_number
+06:12:08.856 PROCESS           ACTION_COMPLETED tx=tx-dceab935bafd138c9433 step=070d6140-3769-4107-bdcd-4de0bcc5638c key=processo.s2.phone_number acao=fill tentativa=1 resultado=OK ms=30
+06:12:08.856 PROCESS           ACTION_STARTED tx=tx-dceab935bafd138c9433 step=944a9801-8f21-4d2e-861b-a68895c20fd5 key=processo.s2.first_name acao=mark
+06:12:08.862 PROCESS           TARGET_RESOLVED tx=tx-dceab935bafd138c9433 step=944a9801-8f21-4d2e-861b-a68895c20fd5 key=processo.s2.first_name
+06:12:08.862 PROCESS           ACTION_COMPLETED tx=tx-dceab935bafd138c9433 step=944a9801-8f21-4d2e-861b-a68895c20fd5 key=processo.s2.first_name acao=mark tentativa=1 resultado=OK ms=0
+06:12:08.862 PROCESS           ACTION_STARTED tx=tx-dceab935bafd138c9433 step=944a9801-8f21-4d2e-861b-a68895c20fd5 key=processo.s2.submit acao=click
+06:12:08.884 PROCESS           TARGET_RESOLVED tx=tx-dceab935bafd138c9433 step=944a9801-8f21-4d2e-861b-a68895c20fd5 key=processo.s2.submit
+06:12:08.914 PROCESS           ACTION_COMPLETED tx=tx-dceab935bafd138c9433 step=944a9801-8f21-4d2e-861b-a68895c20fd5 key=processo.s2.submit acao=click tentativa=1 resultado=OK ms=47
+06:12:08.915 TRANSFER_DATA_OUT PHASE_STARTED
+06:12:08.916 TRANSFER_DATA_OUT SINK_COMMITTED tx=tx-dceab935bafd138c9433 resultado=SUCCEEDED
+06:12:08.918 TRANSFER_DATA_OUT CHECKPOINT_SAVED tx=tx-dceab935bafd138c9433 resultado=SUCCEEDED
+06:12:08.918 TRANSFER_DATA_OUT TRANSACTION_COMPLETED tx=tx-dceab935bafd138c9433 tentativa=1 resultado=SUCCEEDED
+06:12:08.918 TRANSFER_DATA_IN  PHASE_STARTED
+06:12:08.918 TRANSFER_DATA_IN  PHASE_COMPLETED tx=tx-e6b1d6c3b40f4558adbf
+06:12:08.918 PROCESS           PHASE_STARTED
+06:12:08.918 PROCESS           TRANSACTION_STARTED tx=tx-e6b1d6c3b40f4558adbf tentativa=1
+06:12:08.919 PROCESS           CHECKPOINT_SAVED tx=tx-e6b1d6c3b40f4558adbf resultado=IN_PROGRESS
+06:12:08.919 PROCESS           ACTION_STARTED tx=tx-e6b1d6c3b40f4558adbf step=40a1f407-37e0-4c6e-8e6d-d6737e784d74 key=processo.s2.first_name acao=fill
+06:12:08.928 PROCESS           TARGET_RESOLVED tx=tx-e6b1d6c3b40f4558adbf step=40a1f407-37e0-4c6e-8e6d-d6737e784d74 key=processo.s2.first_name
+06:12:08.940 PROCESS           ACTION_COMPLETED tx=tx-e6b1d6c3b40f4558adbf step=40a1f407-37e0-4c6e-8e6d-d6737e784d74 key=processo.s2.first_name acao=fill tentativa=1 resultado=OK ms=16
+06:12:08.940 PROCESS           ACTION_STARTED tx=tx-e6b1d6c3b40f4558adbf step=e50b8865-182d-4aed-8bd0-bd0b13fcbd9c key=processo.s2.last_name acao=fill
+06:12:08.947 PROCESS           TARGET_RESOLVED tx=tx-e6b1d6c3b40f4558adbf step=e50b8865-182d-4aed-8bd0-bd0b13fcbd9c key=processo.s2.last_name
+06:12:08.959 PROCESS           ACTION_COMPLETED tx=tx-e6b1d6c3b40f4558adbf step=e50b8865-182d-4aed-8bd0-bd0b13fcbd9c key=processo.s2.last_name acao=fill tentativa=1 resultado=OK ms=15
+06:12:08.959 PROCESS           ACTION_STARTED tx=tx-e6b1d6c3b40f4558adbf step=a08c54bb-7bcd-44ad-885c-350a9bc6d7d3 key=processo.s2.company_name acao=fill
+06:12:08.965 PROCESS           TARGET_RESOLVED tx=tx-e6b1d6c3b40f4558adbf step=a08c54bb-7bcd-44ad-885c-350a9bc6d7d3 key=processo.s2.company_name
+06:12:08.977 PROCESS           ACTION_COMPLETED tx=tx-e6b1d6c3b40f4558adbf step=a08c54bb-7bcd-44ad-885c-350a9bc6d7d3 key=processo.s2.company_name acao=fill tentativa=1 resultado=OK ms=15
+06:12:08.977 PROCESS           ACTION_STARTED tx=tx-e6b1d6c3b40f4558adbf step=480db37e-e9ce-4ca4-b0c2-1f4856609d9a key=processo.s2.role_in_company acao=fill
+06:12:08.984 PROCESS           TARGET_RESOLVED tx=tx-e6b1d6c3b40f4558adbf step=480db37e-e9ce-4ca4-b0c2-1f4856609d9a key=processo.s2.role_in_company
+06:12:08.996 PROCESS           ACTION_COMPLETED tx=tx-e6b1d6c3b40f4558adbf step=480db37e-e9ce-4ca4-b0c2-1f4856609d9a key=processo.s2.role_in_company acao=fill tentativa=1 resultado=OK ms=15
+06:12:08.996 PROCESS           ACTION_STARTED tx=tx-e6b1d6c3b40f4558adbf step=11ab1956-5e1d-44f5-a917-5e964ed4018f key=processo.s2.address acao=fill
+06:12:09.003 PROCESS           TARGET_RESOLVED tx=tx-e6b1d6c3b40f4558adbf step=11ab1956-5e1d-44f5-a917-5e964ed4018f key=processo.s2.address
+06:12:09.015 PROCESS           ACTION_COMPLETED tx=tx-e6b1d6c3b40f4558adbf step=11ab1956-5e1d-44f5-a917-5e964ed4018f key=processo.s2.address acao=fill tentativa=1 resultado=OK ms=31
+06:12:09.015 PROCESS           ACTION_STARTED tx=tx-e6b1d6c3b40f4558adbf step=e0f4c420-cbce-4199-b847-a81cd08eafdb key=processo.s2.email acao=fill
+06:12:09.021 PROCESS           TARGET_RESOLVED tx=tx-e6b1d6c3b40f4558adbf step=e0f4c420-cbce-4199-b847-a81cd08eafdb key=processo.s2.email
+06:12:09.033 PROCESS           ACTION_COMPLETED tx=tx-e6b1d6c3b40f4558adbf step=e0f4c420-cbce-4199-b847-a81cd08eafdb key=processo.s2.email acao=fill tentativa=1 resultado=OK ms=15
+06:12:09.033 PROCESS           ACTION_STARTED tx=tx-e6b1d6c3b40f4558adbf step=070d6140-3769-4107-bdcd-4de0bcc5638c key=processo.s2.phone_number acao=fill
+06:12:09.040 PROCESS           TARGET_RESOLVED tx=tx-e6b1d6c3b40f4558adbf step=070d6140-3769-4107-bdcd-4de0bcc5638c key=processo.s2.phone_number
+06:12:09.052 PROCESS           ACTION_COMPLETED tx=tx-e6b1d6c3b40f4558adbf step=070d6140-3769-4107-bdcd-4de0bcc5638c key=processo.s2.phone_number acao=fill tentativa=1 resultado=OK ms=15
+06:12:09.052 PROCESS           ACTION_STARTED tx=tx-e6b1d6c3b40f4558adbf step=944a9801-8f21-4d2e-861b-a68895c20fd5 key=processo.s2.first_name acao=mark
+06:12:09.059 PROCESS           TARGET_RESOLVED tx=tx-e6b1d6c3b40f4558adbf step=944a9801-8f21-4d2e-861b-a68895c20fd5 key=processo.s2.first_name
+06:12:09.059 PROCESS           ACTION_COMPLETED tx=tx-e6b1d6c3b40f4558adbf step=944a9801-8f21-4d2e-861b-a68895c20fd5 key=processo.s2.first_name acao=mark tentativa=1 resultado=OK ms=16
+06:12:09.059 PROCESS           ACTION_STARTED tx=tx-e6b1d6c3b40f4558adbf step=944a9801-8f21-4d2e-861b-a68895c20fd5 key=processo.s2.submit acao=click
+06:12:09.081 PROCESS           TARGET_RESOLVED tx=tx-e6b1d6c3b40f4558adbf step=944a9801-8f21-4d2e-861b-a68895c20fd5 key=processo.s2.submit
+06:12:09.114 PROCESS           ACTION_COMPLETED tx=tx-e6b1d6c3b40f4558adbf step=944a9801-8f21-4d2e-861b-a68895c20fd5 key=processo.s2.submit acao=click tentativa=1 resultado=OK ms=46
+06:12:09.114 TRANSFER_DATA_OUT PHASE_STARTED
+06:12:09.117 TRANSFER_DATA_OUT SINK_COMMITTED tx=tx-e6b1d6c3b40f4558adbf resultado=SUCCEEDED
+06:12:09.119 TRANSFER_DATA_OUT CHECKPOINT_SAVED tx=tx-e6b1d6c3b40f4558adbf resultado=SUCCEEDED
+06:12:09.119 TRANSFER_DATA_OUT TRANSACTION_COMPLETED tx=tx-e6b1d6c3b40f4558adbf tentativa=1 resultado=SUCCEEDED
+06:12:09.119 TRANSFER_DATA_IN  PHASE_STARTED
+06:12:09.119 TRANSFER_DATA_IN  PHASE_COMPLETED tx=tx-528db76f926140bb5f6f
+06:12:09.119 PROCESS           PHASE_STARTED
+06:12:09.119 PROCESS           TRANSACTION_STARTED tx=tx-528db76f926140bb5f6f tentativa=1
+06:12:09.121 PROCESS           CHECKPOINT_SAVED tx=tx-528db76f926140bb5f6f resultado=IN_PROGRESS
+06:12:09.121 PROCESS           ACTION_STARTED tx=tx-528db76f926140bb5f6f step=40a1f407-37e0-4c6e-8e6d-d6737e784d74 key=processo.s2.first_name acao=fill
+06:12:09.127 PROCESS           TARGET_RESOLVED tx=tx-528db76f926140bb5f6f step=40a1f407-37e0-4c6e-8e6d-d6737e784d74 key=processo.s2.first_name
+06:12:09.139 PROCESS           ACTION_COMPLETED tx=tx-528db76f926140bb5f6f step=40a1f407-37e0-4c6e-8e6d-d6737e784d74 key=processo.s2.first_name acao=fill tentativa=1 resultado=OK ms=31
+06:12:09.139 PROCESS           ACTION_STARTED tx=tx-528db76f926140bb5f6f step=e50b8865-182d-4aed-8bd0-bd0b13fcbd9c key=processo.s2.last_name acao=fill
+06:12:09.146 PROCESS           TARGET_RESOLVED tx=tx-528db76f926140bb5f6f step=e50b8865-182d-4aed-8bd0-bd0b13fcbd9c key=processo.s2.last_name
+06:12:09.156 PROCESS           ACTION_COMPLETED tx=tx-528db76f926140bb5f6f step=e50b8865-182d-4aed-8bd0-bd0b13fcbd9c key=processo.s2.last_name acao=fill tentativa=1 resultado=OK ms=15
+06:12:09.158 PROCESS           ACTION_STARTED tx=tx-528db76f926140bb5f6f step=a08c54bb-7bcd-44ad-885c-350a9bc6d7d3 key=processo.s2.company_name acao=fill
+06:12:09.165 PROCESS           TARGET_RESOLVED tx=tx-528db76f926140bb5f6f step=a08c54bb-7bcd-44ad-885c-350a9bc6d7d3 key=processo.s2.company_name
+06:12:09.178 PROCESS           ACTION_COMPLETED tx=tx-528db76f926140bb5f6f step=a08c54bb-7bcd-44ad-885c-350a9bc6d7d3 key=processo.s2.company_name acao=fill tentativa=1 resultado=OK ms=15
+06:12:09.178 PROCESS           ACTION_STARTED tx=tx-528db76f926140bb5f6f step=480db37e-e9ce-4ca4-b0c2-1f4856609d9a key=processo.s2.role_in_company acao=fill
+06:12:09.185 PROCESS           TARGET_RESOLVED tx=tx-528db76f926140bb5f6f step=480db37e-e9ce-4ca4-b0c2-1f4856609d9a key=processo.s2.role_in_company
+06:12:09.198 PROCESS           ACTION_COMPLETED tx=tx-528db76f926140bb5f6f step=480db37e-e9ce-4ca4-b0c2-1f4856609d9a key=processo.s2.role_in_company acao=fill tentativa=1 resultado=OK ms=16
+06:12:09.198 PROCESS           ACTION_STARTED tx=tx-528db76f926140bb5f6f step=11ab1956-5e1d-44f5-a917-5e964ed4018f key=processo.s2.address acao=fill
+06:12:09.205 PROCESS           TARGET_RESOLVED tx=tx-528db76f926140bb5f6f step=11ab1956-5e1d-44f5-a917-5e964ed4018f key=processo.s2.address
+06:12:09.229 PROCESS           ACTION_COMPLETED tx=tx-528db76f926140bb5f6f step=11ab1956-5e1d-44f5-a917-5e964ed4018f key=processo.s2.address acao=fill tentativa=1 resultado=OK ms=30
+06:12:09.229 PROCESS           ACTION_STARTED tx=tx-528db76f926140bb5f6f step=e0f4c420-cbce-4199-b847-a81cd08eafdb key=processo.s2.email acao=fill
+06:12:09.237 PROCESS           TARGET_RESOLVED tx=tx-528db76f926140bb5f6f step=e0f4c420-cbce-4199-b847-a81cd08eafdb key=processo.s2.email
+06:12:09.247 PROCESS           ACTION_COMPLETED tx=tx-528db76f926140bb5f6f step=e0f4c420-cbce-4199-b847-a81cd08eafdb key=processo.s2.email acao=fill tentativa=1 resultado=OK ms=30
+06:12:09.249 PROCESS           ACTION_STARTED tx=tx-528db76f926140bb5f6f step=070d6140-3769-4107-bdcd-4de0bcc5638c key=processo.s2.phone_number acao=fill
+06:12:09.256 PROCESS           TARGET_RESOLVED tx=tx-528db76f926140bb5f6f step=070d6140-3769-4107-bdcd-4de0bcc5638c key=processo.s2.phone_number
+06:12:09.268 PROCESS           ACTION_COMPLETED tx=tx-528db76f926140bb5f6f step=070d6140-3769-4107-bdcd-4de0bcc5638c key=processo.s2.phone_number acao=fill tentativa=1 resultado=OK ms=16
+06:12:09.268 PROCESS           ACTION_STARTED tx=tx-528db76f926140bb5f6f step=944a9801-8f21-4d2e-861b-a68895c20fd5 key=processo.s2.first_name acao=mark
+06:12:09.274 PROCESS           TARGET_RESOLVED tx=tx-528db76f926140bb5f6f step=944a9801-8f21-4d2e-861b-a68895c20fd5 key=processo.s2.first_name
+06:12:09.274 PROCESS           ACTION_COMPLETED tx=tx-528db76f926140bb5f6f step=944a9801-8f21-4d2e-861b-a68895c20fd5 key=processo.s2.first_name acao=mark tentativa=1 resultado=OK ms=0
+06:12:09.274 PROCESS           ACTION_STARTED tx=tx-528db76f926140bb5f6f step=944a9801-8f21-4d2e-861b-a68895c20fd5 key=processo.s2.submit acao=click
+06:12:09.297 PROCESS           TARGET_RESOLVED tx=tx-528db76f926140bb5f6f step=944a9801-8f21-4d2e-861b-a68895c20fd5 key=processo.s2.submit
+06:12:09.326 PROCESS           ACTION_COMPLETED tx=tx-528db76f926140bb5f6f step=944a9801-8f21-4d2e-861b-a68895c20fd5 key=processo.s2.submit acao=click tentativa=1 resultado=OK ms=62
+06:12:09.326 TRANSFER_DATA_OUT PHASE_STARTED
+06:12:09.328 TRANSFER_DATA_OUT SINK_COMMITTED tx=tx-528db76f926140bb5f6f resultado=SUCCEEDED
+06:12:09.331 TRANSFER_DATA_OUT CHECKPOINT_SAVED tx=tx-528db76f926140bb5f6f resultado=SUCCEEDED
+06:12:09.331 TRANSFER_DATA_OUT TRANSACTION_COMPLETED tx=tx-528db76f926140bb5f6f tentativa=1 resultado=SUCCEEDED
+06:12:09.331 TRANSFER_DATA_IN  PHASE_STARTED
+06:12:09.331 TRANSFER_DATA_IN  PHASE_COMPLETED tx=tx-86821169eb76b8754458
+06:12:09.331 PROCESS           PHASE_STARTED
+06:12:09.331 PROCESS           TRANSACTION_STARTED tx=tx-86821169eb76b8754458 tentativa=1
+06:12:09.331 PROCESS           CHECKPOINT_SAVED tx=tx-86821169eb76b8754458 resultado=IN_PROGRESS
+06:12:09.331 PROCESS           ACTION_STARTED tx=tx-86821169eb76b8754458 step=40a1f407-37e0-4c6e-8e6d-d6737e784d74 key=processo.s2.first_name acao=fill
+06:12:09.339 PROCESS           TARGET_RESOLVED tx=tx-86821169eb76b8754458 step=40a1f407-37e0-4c6e-8e6d-d6737e784d74 key=processo.s2.first_name
+06:12:09.348 PROCESS           ACTION_COMPLETED tx=tx-86821169eb76b8754458 step=40a1f407-37e0-4c6e-8e6d-d6737e784d74 key=processo.s2.first_name acao=fill tentativa=1 resultado=OK ms=15
+06:12:09.348 PROCESS           ACTION_STARTED tx=tx-86821169eb76b8754458 step=e50b8865-182d-4aed-8bd0-bd0b13fcbd9c key=processo.s2.last_name acao=fill
+06:12:09.356 PROCESS           TARGET_RESOLVED tx=tx-86821169eb76b8754458 step=e50b8865-182d-4aed-8bd0-bd0b13fcbd9c key=processo.s2.last_name
+06:12:09.369 PROCESS           ACTION_COMPLETED tx=tx-86821169eb76b8754458 step=e50b8865-182d-4aed-8bd0-bd0b13fcbd9c key=processo.s2.last_name acao=fill tentativa=1 resultado=OK ms=15
+06:12:09.369 PROCESS           ACTION_STARTED tx=tx-86821169eb76b8754458 step=a08c54bb-7bcd-44ad-885c-350a9bc6d7d3 key=processo.s2.company_name acao=fill
+06:12:09.376 PROCESS           TARGET_RESOLVED tx=tx-86821169eb76b8754458 step=a08c54bb-7bcd-44ad-885c-350a9bc6d7d3 key=processo.s2.company_name
+06:12:09.388 PROCESS           ACTION_COMPLETED tx=tx-86821169eb76b8754458 step=a08c54bb-7bcd-44ad-885c-350a9bc6d7d3 key=processo.s2.company_name acao=fill tentativa=1 resultado=OK ms=31
+06:12:09.388 PROCESS           ACTION_STARTED tx=tx-86821169eb76b8754458 step=480db37e-e9ce-4ca4-b0c2-1f4856609d9a key=processo.s2.role_in_company acao=fill
+06:12:09.395 PROCESS           TARGET_RESOLVED tx=tx-86821169eb76b8754458 step=480db37e-e9ce-4ca4-b0c2-1f4856609d9a key=processo.s2.role_in_company
+06:12:09.406 PROCESS           ACTION_COMPLETED tx=tx-86821169eb76b8754458 step=480db37e-e9ce-4ca4-b0c2-1f4856609d9a key=processo.s2.role_in_company acao=fill tentativa=1 resultado=OK ms=15
+06:12:09.406 PROCESS           ACTION_STARTED tx=tx-86821169eb76b8754458 step=11ab1956-5e1d-44f5-a917-5e964ed4018f key=processo.s2.address acao=fill
+06:12:09.413 PROCESS           TARGET_RESOLVED tx=tx-86821169eb76b8754458 step=11ab1956-5e1d-44f5-a917-5e964ed4018f key=processo.s2.address
+06:12:09.426 PROCESS           ACTION_COMPLETED tx=tx-86821169eb76b8754458 step=11ab1956-5e1d-44f5-a917-5e964ed4018f key=processo.s2.address acao=fill tentativa=1 resultado=OK ms=15
+06:12:09.426 PROCESS           ACTION_STARTED tx=tx-86821169eb76b8754458 step=e0f4c420-cbce-4199-b847-a81cd08eafdb key=processo.s2.email acao=fill
+06:12:09.431 PROCESS           TARGET_RESOLVED tx=tx-86821169eb76b8754458 step=e0f4c420-cbce-4199-b847-a81cd08eafdb key=processo.s2.email
+06:12:09.444 PROCESS           ACTION_COMPLETED tx=tx-86821169eb76b8754458 step=e0f4c420-cbce-4199-b847-a81cd08eafdb key=processo.s2.email acao=fill tentativa=1 resultado=OK ms=16
+06:12:09.444 PROCESS           ACTION_STARTED tx=tx-86821169eb76b8754458 step=070d6140-3769-4107-bdcd-4de0bcc5638c key=processo.s2.phone_number acao=fill
+06:12:09.451 PROCESS           TARGET_RESOLVED tx=tx-86821169eb76b8754458 step=070d6140-3769-4107-bdcd-4de0bcc5638c key=processo.s2.phone_number
+06:12:09.462 PROCESS           ACTION_COMPLETED tx=tx-86821169eb76b8754458 step=070d6140-3769-4107-bdcd-4de0bcc5638c key=processo.s2.phone_number acao=fill tentativa=1 resultado=OK ms=15
+06:12:09.464 PROCESS           ACTION_STARTED tx=tx-86821169eb76b8754458 step=944a9801-8f21-4d2e-861b-a68895c20fd5 key=processo.s2.first_name acao=mark
+06:12:09.469 PROCESS           TARGET_RESOLVED tx=tx-86821169eb76b8754458 step=944a9801-8f21-4d2e-861b-a68895c20fd5 key=processo.s2.first_name
+06:12:09.469 PROCESS           ACTION_COMPLETED tx=tx-86821169eb76b8754458 step=944a9801-8f21-4d2e-861b-a68895c20fd5 key=processo.s2.first_name acao=mark tentativa=1 resultado=OK ms=15
+06:12:09.469 PROCESS           ACTION_STARTED tx=tx-86821169eb76b8754458 step=944a9801-8f21-4d2e-861b-a68895c20fd5 key=processo.s2.submit acao=click
+06:12:09.491 PROCESS           TARGET_RESOLVED tx=tx-86821169eb76b8754458 step=944a9801-8f21-4d2e-861b-a68895c20fd5 key=processo.s2.submit
+06:12:09.526 PROCESS           ACTION_COMPLETED tx=tx-86821169eb76b8754458 step=944a9801-8f21-4d2e-861b-a68895c20fd5 key=processo.s2.submit acao=click tentativa=1 resultado=OK ms=47
+06:12:09.526 TRANSFER_DATA_OUT PHASE_STARTED
+06:12:09.527 TRANSFER_DATA_OUT SINK_COMMITTED tx=tx-86821169eb76b8754458 resultado=SUCCEEDED
+06:12:09.530 TRANSFER_DATA_OUT CHECKPOINT_SAVED tx=tx-86821169eb76b8754458 resultado=SUCCEEDED
+06:12:09.530 TRANSFER_DATA_OUT TRANSACTION_COMPLETED tx=tx-86821169eb76b8754458 tentativa=1 resultado=SUCCEEDED
+06:12:09.530 TRANSFER_DATA_IN  PHASE_STARTED
+06:12:09.530 TRANSFER_DATA_IN  PHASE_COMPLETED tx=tx-37413fdb6fb5457b9c39
+06:12:09.530 PROCESS           PHASE_STARTED
+06:12:09.530 PROCESS           TRANSACTION_STARTED tx=tx-37413fdb6fb5457b9c39 tentativa=1
+06:12:09.532 PROCESS           CHECKPOINT_SAVED tx=tx-37413fdb6fb5457b9c39 resultado=IN_PROGRESS
+06:12:09.533 PROCESS           ACTION_STARTED tx=tx-37413fdb6fb5457b9c39 step=40a1f407-37e0-4c6e-8e6d-d6737e784d74 key=processo.s2.first_name acao=fill
+06:12:09.539 PROCESS           TARGET_RESOLVED tx=tx-37413fdb6fb5457b9c39 step=40a1f407-37e0-4c6e-8e6d-d6737e784d74 key=processo.s2.first_name
+06:12:09.549 PROCESS           ACTION_COMPLETED tx=tx-37413fdb6fb5457b9c39 step=40a1f407-37e0-4c6e-8e6d-d6737e784d74 key=processo.s2.first_name acao=fill tentativa=1 resultado=OK ms=15
+06:12:09.549 PROCESS           ACTION_STARTED tx=tx-37413fdb6fb5457b9c39 step=e50b8865-182d-4aed-8bd0-bd0b13fcbd9c key=processo.s2.last_name acao=fill
+06:12:09.558 PROCESS           TARGET_RESOLVED tx=tx-37413fdb6fb5457b9c39 step=e50b8865-182d-4aed-8bd0-bd0b13fcbd9c key=processo.s2.last_name
+06:12:09.569 PROCESS           ACTION_COMPLETED tx=tx-37413fdb6fb5457b9c39 step=e50b8865-182d-4aed-8bd0-bd0b13fcbd9c key=processo.s2.last_name acao=fill tentativa=1 resultado=OK ms=16
+06:12:09.569 PROCESS           ACTION_STARTED tx=tx-37413fdb6fb5457b9c39 step=a08c54bb-7bcd-44ad-885c-350a9bc6d7d3 key=processo.s2.company_name acao=fill
+06:12:09.576 PROCESS           TARGET_RESOLVED tx=tx-37413fdb6fb5457b9c39 step=a08c54bb-7bcd-44ad-885c-350a9bc6d7d3 key=processo.s2.company_name
+06:12:09.588 PROCESS           ACTION_COMPLETED tx=tx-37413fdb6fb5457b9c39 step=a08c54bb-7bcd-44ad-885c-350a9bc6d7d3 key=processo.s2.company_name acao=fill tentativa=1 resultado=OK ms=15
+06:12:09.588 PROCESS           ACTION_STARTED tx=tx-37413fdb6fb5457b9c39 step=480db37e-e9ce-4ca4-b0c2-1f4856609d9a key=processo.s2.role_in_company acao=fill
+06:12:09.595 PROCESS           TARGET_RESOLVED tx=tx-37413fdb6fb5457b9c39 step=480db37e-e9ce-4ca4-b0c2-1f4856609d9a key=processo.s2.role_in_company
+06:12:09.607 PROCESS           ACTION_COMPLETED tx=tx-37413fdb6fb5457b9c39 step=480db37e-e9ce-4ca4-b0c2-1f4856609d9a key=processo.s2.role_in_company acao=fill tentativa=1 resultado=OK ms=30
+06:12:09.607 PROCESS           ACTION_STARTED tx=tx-37413fdb6fb5457b9c39 step=11ab1956-5e1d-44f5-a917-5e964ed4018f key=processo.s2.address acao=fill
+06:12:09.614 PROCESS           TARGET_RESOLVED tx=tx-37413fdb6fb5457b9c39 step=11ab1956-5e1d-44f5-a917-5e964ed4018f key=processo.s2.address
+06:12:09.625 PROCESS           ACTION_COMPLETED tx=tx-37413fdb6fb5457b9c39 step=11ab1956-5e1d-44f5-a917-5e964ed4018f key=processo.s2.address acao=fill tentativa=1 resultado=OK ms=15
+06:12:09.625 PROCESS           ACTION_STARTED tx=tx-37413fdb6fb5457b9c39 step=e0f4c420-cbce-4199-b847-a81cd08eafdb key=processo.s2.email acao=fill
+06:12:09.633 PROCESS           TARGET_RESOLVED tx=tx-37413fdb6fb5457b9c39 step=e0f4c420-cbce-4199-b847-a81cd08eafdb key=processo.s2.email
+06:12:09.645 PROCESS           ACTION_COMPLETED tx=tx-37413fdb6fb5457b9c39 step=e0f4c420-cbce-4199-b847-a81cd08eafdb key=processo.s2.email acao=fill tentativa=1 resultado=OK ms=16
+06:12:09.645 PROCESS           ACTION_STARTED tx=tx-37413fdb6fb5457b9c39 step=070d6140-3769-4107-bdcd-4de0bcc5638c key=processo.s2.phone_number acao=fill
+06:12:09.652 PROCESS           TARGET_RESOLVED tx=tx-37413fdb6fb5457b9c39 step=070d6140-3769-4107-bdcd-4de0bcc5638c key=processo.s2.phone_number
+06:12:09.664 PROCESS           ACTION_COMPLETED tx=tx-37413fdb6fb5457b9c39 step=070d6140-3769-4107-bdcd-4de0bcc5638c key=processo.s2.phone_number acao=fill tentativa=1 resultado=OK ms=15
+06:12:09.664 PROCESS           ACTION_STARTED tx=tx-37413fdb6fb5457b9c39 step=944a9801-8f21-4d2e-861b-a68895c20fd5 key=processo.s2.first_name acao=mark
+06:12:09.669 PROCESS           TARGET_RESOLVED tx=tx-37413fdb6fb5457b9c39 step=944a9801-8f21-4d2e-861b-a68895c20fd5 key=processo.s2.first_name
+06:12:09.669 PROCESS           ACTION_COMPLETED tx=tx-37413fdb6fb5457b9c39 step=944a9801-8f21-4d2e-861b-a68895c20fd5 key=processo.s2.first_name acao=mark tentativa=1 resultado=OK ms=15
+06:12:09.669 PROCESS           ACTION_STARTED tx=tx-37413fdb6fb5457b9c39 step=944a9801-8f21-4d2e-861b-a68895c20fd5 key=processo.s2.submit acao=click
+06:12:09.691 PROCESS           TARGET_RESOLVED tx=tx-37413fdb6fb5457b9c39 step=944a9801-8f21-4d2e-861b-a68895c20fd5 key=processo.s2.submit
+06:12:09.722 PROCESS           ACTION_COMPLETED tx=tx-37413fdb6fb5457b9c39 step=944a9801-8f21-4d2e-861b-a68895c20fd5 key=processo.s2.submit acao=click tentativa=1 resultado=OK ms=47
+06:12:09.724 TRANSFER_DATA_OUT PHASE_STARTED
+06:12:09.725 TRANSFER_DATA_OUT SINK_COMMITTED tx=tx-37413fdb6fb5457b9c39 resultado=SUCCEEDED
+06:12:09.727 TRANSFER_DATA_OUT CHECKPOINT_SAVED tx=tx-37413fdb6fb5457b9c39 resultado=SUCCEEDED
+06:12:09.728 TRANSFER_DATA_OUT TRANSACTION_COMPLETED tx=tx-37413fdb6fb5457b9c39 tentativa=1 resultado=SUCCEEDED
+06:12:09.728 TRANSFER_DATA_IN  PHASE_STARTED
+06:12:09.728 TRANSFER_DATA_IN  PHASE_COMPLETED tx=tx-64b293a155f1c54c779b
+06:12:09.728 PROCESS           PHASE_STARTED
+06:12:09.728 PROCESS           TRANSACTION_STARTED tx=tx-64b293a155f1c54c779b tentativa=1
+06:12:09.729 PROCESS           CHECKPOINT_SAVED tx=tx-64b293a155f1c54c779b resultado=IN_PROGRESS
+06:12:09.729 PROCESS           ACTION_STARTED tx=tx-64b293a155f1c54c779b step=40a1f407-37e0-4c6e-8e6d-d6737e784d74 key=processo.s2.first_name acao=fill
+06:12:09.739 PROCESS           TARGET_RESOLVED tx=tx-64b293a155f1c54c779b step=40a1f407-37e0-4c6e-8e6d-d6737e784d74 key=processo.s2.first_name
+06:12:09.752 PROCESS           ACTION_COMPLETED tx=tx-64b293a155f1c54c779b step=40a1f407-37e0-4c6e-8e6d-d6737e784d74 key=processo.s2.first_name acao=fill tentativa=1 resultado=OK ms=30
+06:12:09.752 PROCESS           ACTION_STARTED tx=tx-64b293a155f1c54c779b step=e50b8865-182d-4aed-8bd0-bd0b13fcbd9c key=processo.s2.last_name acao=fill
+06:12:09.759 PROCESS           TARGET_RESOLVED tx=tx-64b293a155f1c54c779b step=e50b8865-182d-4aed-8bd0-bd0b13fcbd9c key=processo.s2.last_name
+06:12:09.773 PROCESS           ACTION_COMPLETED tx=tx-64b293a155f1c54c779b step=e50b8865-182d-4aed-8bd0-bd0b13fcbd9c key=processo.s2.last_name acao=fill tentativa=1 resultado=OK ms=16
+06:12:09.773 PROCESS           ACTION_STARTED tx=tx-64b293a155f1c54c779b step=a08c54bb-7bcd-44ad-885c-350a9bc6d7d3 key=processo.s2.company_name acao=fill
+06:12:09.782 PROCESS           TARGET_RESOLVED tx=tx-64b293a155f1c54c779b step=a08c54bb-7bcd-44ad-885c-350a9bc6d7d3 key=processo.s2.company_name
+06:12:09.797 PROCESS           ACTION_COMPLETED tx=tx-64b293a155f1c54c779b step=a08c54bb-7bcd-44ad-885c-350a9bc6d7d3 key=processo.s2.company_name acao=fill tentativa=1 resultado=OK ms=30
+06:12:09.797 PROCESS           ACTION_STARTED tx=tx-64b293a155f1c54c779b step=480db37e-e9ce-4ca4-b0c2-1f4856609d9a key=processo.s2.role_in_company acao=fill
+06:12:09.806 PROCESS           TARGET_RESOLVED tx=tx-64b293a155f1c54c779b step=480db37e-e9ce-4ca4-b0c2-1f4856609d9a key=processo.s2.role_in_company
+06:12:09.820 PROCESS           ACTION_COMPLETED tx=tx-64b293a155f1c54c779b step=480db37e-e9ce-4ca4-b0c2-1f4856609d9a key=processo.s2.role_in_company acao=fill tentativa=1 resultado=OK ms=16
+06:12:09.820 PROCESS           ACTION_STARTED tx=tx-64b293a155f1c54c779b step=11ab1956-5e1d-44f5-a917-5e964ed4018f key=processo.s2.address acao=fill
+06:12:09.828 PROCESS           TARGET_RESOLVED tx=tx-64b293a155f1c54c779b step=11ab1956-5e1d-44f5-a917-5e964ed4018f key=processo.s2.address
+06:12:09.843 PROCESS           ACTION_COMPLETED tx=tx-64b293a155f1c54c779b step=11ab1956-5e1d-44f5-a917-5e964ed4018f key=processo.s2.address acao=fill tentativa=1 resultado=OK ms=30
+06:12:09.843 PROCESS           ACTION_STARTED tx=tx-64b293a155f1c54c779b step=e0f4c420-cbce-4199-b847-a81cd08eafdb key=processo.s2.email acao=fill
+06:12:09.851 PROCESS           TARGET_RESOLVED tx=tx-64b293a155f1c54c779b step=e0f4c420-cbce-4199-b847-a81cd08eafdb key=processo.s2.email
+06:12:09.866 PROCESS           ACTION_COMPLETED tx=tx-64b293a155f1c54c779b step=e0f4c420-cbce-4199-b847-a81cd08eafdb key=processo.s2.email acao=fill tentativa=1 resultado=OK ms=15
+06:12:09.866 PROCESS           ACTION_STARTED tx=tx-64b293a155f1c54c779b step=070d6140-3769-4107-bdcd-4de0bcc5638c key=processo.s2.phone_number acao=fill
+06:12:09.875 PROCESS           TARGET_RESOLVED tx=tx-64b293a155f1c54c779b step=070d6140-3769-4107-bdcd-4de0bcc5638c key=processo.s2.phone_number
+06:12:09.889 PROCESS           ACTION_COMPLETED tx=tx-64b293a155f1c54c779b step=070d6140-3769-4107-bdcd-4de0bcc5638c key=processo.s2.phone_number acao=fill tentativa=1 resultado=OK ms=31
+06:12:09.889 PROCESS           ACTION_STARTED tx=tx-64b293a155f1c54c779b step=944a9801-8f21-4d2e-861b-a68895c20fd5 key=processo.s2.first_name acao=mark
+06:12:09.896 PROCESS           TARGET_RESOLVED tx=tx-64b293a155f1c54c779b step=944a9801-8f21-4d2e-861b-a68895c20fd5 key=processo.s2.first_name
+06:12:09.896 PROCESS           ACTION_COMPLETED tx=tx-64b293a155f1c54c779b step=944a9801-8f21-4d2e-861b-a68895c20fd5 key=processo.s2.first_name acao=mark tentativa=1 resultado=OK ms=0
+06:12:09.897 PROCESS           ACTION_STARTED tx=tx-64b293a155f1c54c779b step=944a9801-8f21-4d2e-861b-a68895c20fd5 key=processo.s2.submit acao=click
+06:12:09.921 PROCESS           TARGET_RESOLVED tx=tx-64b293a155f1c54c779b step=944a9801-8f21-4d2e-861b-a68895c20fd5 key=processo.s2.submit
+06:12:09.952 PROCESS           ACTION_COMPLETED tx=tx-64b293a155f1c54c779b step=944a9801-8f21-4d2e-861b-a68895c20fd5 key=processo.s2.submit acao=click tentativa=1 resultado=OK ms=62
+06:12:09.952 TRANSFER_DATA_OUT PHASE_STARTED
+06:12:09.955 TRANSFER_DATA_OUT SINK_COMMITTED tx=tx-64b293a155f1c54c779b resultado=SUCCEEDED
+06:12:09.956 TRANSFER_DATA_OUT CHECKPOINT_SAVED tx=tx-64b293a155f1c54c779b resultado=SUCCEEDED
+06:12:09.956 TRANSFER_DATA_OUT TRANSACTION_COMPLETED tx=tx-64b293a155f1c54c779b tentativa=1 resultado=SUCCEEDED
+06:12:09.956 TRANSFER_DATA_IN  PHASE_STARTED
+06:12:09.956 TRANSFER_DATA_IN  PHASE_COMPLETED tx=tx-b240df4d03249063f14f
+06:12:09.956 PROCESS           PHASE_STARTED
+06:12:09.958 PROCESS           TRANSACTION_STARTED tx=tx-b240df4d03249063f14f tentativa=1
+06:12:09.959 PROCESS           CHECKPOINT_SAVED tx=tx-b240df4d03249063f14f resultado=IN_PROGRESS
+06:12:09.959 PROCESS           ACTION_STARTED tx=tx-b240df4d03249063f14f step=40a1f407-37e0-4c6e-8e6d-d6737e784d74 key=processo.s2.first_name acao=fill
+06:12:09.967 PROCESS           TARGET_RESOLVED tx=tx-b240df4d03249063f14f step=40a1f407-37e0-4c6e-8e6d-d6737e784d74 key=processo.s2.first_name
+06:12:09.979 PROCESS           ACTION_COMPLETED tx=tx-b240df4d03249063f14f step=40a1f407-37e0-4c6e-8e6d-d6737e784d74 key=processo.s2.first_name acao=fill tentativa=1 resultado=OK ms=15
+06:12:09.979 PROCESS           ACTION_STARTED tx=tx-b240df4d03249063f14f step=e50b8865-182d-4aed-8bd0-bd0b13fcbd9c key=processo.s2.last_name acao=fill
+06:12:09.987 PROCESS           TARGET_RESOLVED tx=tx-b240df4d03249063f14f step=e50b8865-182d-4aed-8bd0-bd0b13fcbd9c key=processo.s2.last_name
+06:12:09.999 PROCESS           ACTION_COMPLETED tx=tx-b240df4d03249063f14f step=e50b8865-182d-4aed-8bd0-bd0b13fcbd9c key=processo.s2.last_name acao=fill tentativa=1 resultado=OK ms=30
+06:12:09.999 PROCESS           ACTION_STARTED tx=tx-b240df4d03249063f14f step=a08c54bb-7bcd-44ad-885c-350a9bc6d7d3 key=processo.s2.company_name acao=fill
+06:12:10.006 PROCESS           TARGET_RESOLVED tx=tx-b240df4d03249063f14f step=a08c54bb-7bcd-44ad-885c-350a9bc6d7d3 key=processo.s2.company_name
+06:12:10.019 PROCESS           ACTION_COMPLETED tx=tx-b240df4d03249063f14f step=a08c54bb-7bcd-44ad-885c-350a9bc6d7d3 key=processo.s2.company_name acao=fill tentativa=1 resultado=OK ms=16
+06:12:10.019 PROCESS           ACTION_STARTED tx=tx-b240df4d03249063f14f step=480db37e-e9ce-4ca4-b0c2-1f4856609d9a key=processo.s2.role_in_company acao=fill
+06:12:10.026 PROCESS           TARGET_RESOLVED tx=tx-b240df4d03249063f14f step=480db37e-e9ce-4ca4-b0c2-1f4856609d9a key=processo.s2.role_in_company
+06:12:10.037 PROCESS           ACTION_COMPLETED tx=tx-b240df4d03249063f14f step=480db37e-e9ce-4ca4-b0c2-1f4856609d9a key=processo.s2.role_in_company acao=fill tentativa=1 resultado=OK ms=15
+06:12:10.037 PROCESS           ACTION_STARTED tx=tx-b240df4d03249063f14f step=11ab1956-5e1d-44f5-a917-5e964ed4018f key=processo.s2.address acao=fill
+06:12:10.043 PROCESS           TARGET_RESOLVED tx=tx-b240df4d03249063f14f step=11ab1956-5e1d-44f5-a917-5e964ed4018f key=processo.s2.address
+06:12:10.055 PROCESS           ACTION_COMPLETED tx=tx-b240df4d03249063f14f step=11ab1956-5e1d-44f5-a917-5e964ed4018f key=processo.s2.address acao=fill tentativa=1 resultado=OK ms=15
+06:12:10.055 PROCESS           ACTION_STARTED tx=tx-b240df4d03249063f14f step=e0f4c420-cbce-4199-b847-a81cd08eafdb key=processo.s2.email acao=fill
+06:12:10.062 PROCESS           TARGET_RESOLVED tx=tx-b240df4d03249063f14f step=e0f4c420-cbce-4199-b847-a81cd08eafdb key=processo.s2.email
+06:12:10.074 PROCESS           ACTION_COMPLETED tx=tx-b240df4d03249063f14f step=e0f4c420-cbce-4199-b847-a81cd08eafdb key=processo.s2.email acao=fill tentativa=1 resultado=OK ms=16
+06:12:10.076 PROCESS           ACTION_STARTED tx=tx-b240df4d03249063f14f step=070d6140-3769-4107-bdcd-4de0bcc5638c key=processo.s2.phone_number acao=fill
+06:12:10.083 PROCESS           TARGET_RESOLVED tx=tx-b240df4d03249063f14f step=070d6140-3769-4107-bdcd-4de0bcc5638c key=processo.s2.phone_number
+06:12:10.096 PROCESS           ACTION_COMPLETED tx=tx-b240df4d03249063f14f step=070d6140-3769-4107-bdcd-4de0bcc5638c key=processo.s2.phone_number acao=fill tentativa=1 resultado=OK ms=15
+06:12:10.096 PROCESS           ACTION_STARTED tx=tx-b240df4d03249063f14f step=944a9801-8f21-4d2e-861b-a68895c20fd5 key=processo.s2.first_name acao=mark
+06:12:10.106 PROCESS           TARGET_RESOLVED tx=tx-b240df4d03249063f14f step=944a9801-8f21-4d2e-861b-a68895c20fd5 key=processo.s2.first_name
+06:12:10.106 PROCESS           ACTION_COMPLETED tx=tx-b240df4d03249063f14f step=944a9801-8f21-4d2e-861b-a68895c20fd5 key=processo.s2.first_name acao=mark tentativa=1 resultado=OK ms=15
+06:12:10.106 PROCESS           ACTION_STARTED tx=tx-b240df4d03249063f14f step=944a9801-8f21-4d2e-861b-a68895c20fd5 key=processo.s2.submit acao=click
+06:12:10.128 PROCESS           TARGET_RESOLVED tx=tx-b240df4d03249063f14f step=944a9801-8f21-4d2e-861b-a68895c20fd5 key=processo.s2.submit
+06:12:10.162 PROCESS           ACTION_COMPLETED tx=tx-b240df4d03249063f14f step=944a9801-8f21-4d2e-861b-a68895c20fd5 key=processo.s2.submit acao=click tentativa=1 resultado=OK ms=47
+06:12:10.162 TRANSFER_DATA_OUT PHASE_STARTED
+06:12:10.165 TRANSFER_DATA_OUT SINK_COMMITTED tx=tx-b240df4d03249063f14f resultado=SUCCEEDED
+06:12:10.166 TRANSFER_DATA_OUT CHECKPOINT_SAVED tx=tx-b240df4d03249063f14f resultado=SUCCEEDED
+06:12:10.166 TRANSFER_DATA_OUT TRANSACTION_COMPLETED tx=tx-b240df4d03249063f14f tentativa=1 resultado=SUCCEEDED
+06:12:10.166 TRANSFER_DATA_IN  PHASE_STARTED
+06:12:10.166 TRANSFER_DATA_IN  PHASE_COMPLETED resultado=NO_MORE_ITEMS
+06:12:10.166 END               PHASE_STARTED
+06:12:10.166 END               ACTION_STARTED step=ed12c86a-ac06-431b-9e87-1e5216f01f11 acao=read_text_matching
+06:12:10.172 END               ACTION_COMPLETED step=ed12c86a-ac06-431b-9e87-1e5216f01f11 acao=read_text_matching tentativa=1 resultado=OK ms=15
+06:12:10.356 END               CLEANUP_COMPLETED detalhe=browser
+06:12:10.356 END               ENGINE_COMPLETED resultado=COMPLETED

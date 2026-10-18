@@ -56,6 +56,10 @@
     </dependency>
     <dependency>
       <groupId>com.nekkora</groupId>
+      <artifactId>nekkora-studio-codegen</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.nekkora</groupId>
       <artifactId>nekkora-studio-bridge</artifactId>
     </dependency>
     <dependency>

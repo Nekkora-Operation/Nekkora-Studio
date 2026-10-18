@@ -5,3 +5,5 @@
 *.sh text eol=lf
 mvnw text eol=lf
 *.nekkora binary
+# evidências da E2E-001: byte a byte (o manifesto do código gerado confere SHA-256 de cada arquivo)
+docs/e2e-001/evidence/** -text

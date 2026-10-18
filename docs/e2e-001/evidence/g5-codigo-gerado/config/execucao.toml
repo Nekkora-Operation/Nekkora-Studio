@@ -1,0 +1,28 @@
+# GERADO pelo Nekkora Studio (STUDIO-011). Sem credenciais nem valores: segredos vêm de NK_SECRET_<NOME>.
+[runtime]
+environment = "benchmark"
+allowed_origins = ["https://rpachallenge.com"]
+base_url = "https://rpachallenge.com/"
+process_name = "rpa_challenge_input_forms"
+
+[timeouts]
+action_ms = 8000
+navigation_ms = 30000
+transaction_ms = 60000
+
+[retry]
+max_attempts = 2
+initial_backoff_ms = 200
+max_backoff_ms = 1000
+
+[batch]
+max_transaction_attempts = 1
+max_consecutive_technical_failures = 2
+
+[browser]
+channel = "chrome"
+headless = false
+accept_downloads = true
+
+[paths]
+selectors = "../selectors.json"
