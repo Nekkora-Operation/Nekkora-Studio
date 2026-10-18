@@ -27,6 +27,9 @@ import java.util.concurrent.CompletableFuture;
  * no host), regiões só por tipo/retângulo e marcadores normalizados por etapa — ou só o código da falha. O que vai à
  * extensão é o {@code targetId} e o descritor recuperável já persistido de cada etapa; nunca valores. Quem recebe a
  * imagem ainda aplica a 4ª barreira (verificação de pixels no Studio) antes de guardá-la.
+ *
+ * <p>STUDIO-012 PDD-01: o Studio pode pedir {@code nekkora-visual/2} (representação documental) ao armar — só para uma
+ * extensão que a declare ({@link #supportsV2}); sem pedido, o contrato é exatamente o da v1.
  */
 public final class PddCaptureClient implements BrowserLink.Listener, AutoCloseable {
 
@@ -39,17 +42,34 @@ public final class PddCaptureClient implements BrowserLink.Listener, AutoCloseab
     }
 
     /** Captura armada: a extensão espera o atalho ({@code shortcut} vazio = o usuário precisa definir um no Chrome). */
-    public record Armed(String captureId, String shortcut) {}
+    public record Armed(String captureId, String shortcut, String policy) {}
 
-    /** Região da imagem sanitizada (px do dispositivo). */
-    public record Region(String kind, int x, int y, int width, int height) {}
+    /** Região da imagem sanitizada (px do dispositivo); {@code tone} só em SURFACE da v2. */
+    public record Region(String kind, int x, int y, int width, int height, String tone) {
+        public Region(String kind, int x, int y, int width, int height) {
+            this(kind, x, y, width, height, null);
+        }
+    }
+
+    /** Política visual pedida ao armar. */
+    public static final String POLICY_V1 = "nekkora-visual/1";
+    public static final String POLICY_V2 = "nekkora-visual/2";
+
+    /** A extensão conectada entende a v2? (0.5.0 em diante; versão desconhecida = não). */
+    public static boolean supportsV2(String extensionVersion) {
+        if (extensionVersion == null || !extensionVersion.matches("\\d+\\.\\d+\\.\\d+.*")) return false;
+        String[] v = extensionVersion.split("[.-]");
+        int major = Integer.parseInt(v[0]);
+        int minor = Integer.parseInt(v[1]);
+        return major > 0 || minor >= 5;
+    }
 
     /** Marcador de uma etapa: retângulo normalizado e situação ({@code PLACED}/{@code OMITTED} com motivo em código). */
     public record Marker(StepId step, String status, double x, double y, double width, double height, String reason) {}
 
     /** Resultado: imagem sanitizada ou código da falha. */
     public record Result(String captureId, boolean captured, String failureCode, byte[] png, String sha256, int width, int height,
-                         double devicePixelRatio, Instant observedAt, List<Region> regions, List<Marker> markers, List<String> limitations) {
+                         double devicePixelRatio, Instant observedAt, List<Region> regions, List<Marker> markers, List<String> limitations, String policy) {
         public Result {
             regions = regions == null ? List.of() : List.copyOf(regions);
             markers = markers == null ? List.of() : List.copyOf(markers);
@@ -57,7 +77,7 @@ public final class PddCaptureClient implements BrowserLink.Listener, AutoCloseab
         }
 
         static Result failed(String captureId, String code) {
-            return new Result(captureId, false, code, null, null, 0, 0, 0, null, List.of(), List.of(), List.of());
+            return new Result(captureId, false, code, null, null, 0, 0, 0, null, List.of(), List.of(), List.of(), null);
         }
     }
 
@@ -77,12 +97,18 @@ public final class PddCaptureClient implements BrowserLink.Listener, AutoCloseab
         return captureId;
     }
 
-    /** Arma a captura para as etapas do bloco, na aba indicada (referência opaca da listagem de abas). */
+    /** Arma a captura para as etapas do bloco, na aba indicada (referência opaca da listagem de abas), na política v1. */
     public CompletableFuture<Armed> arm(String tabRef, List<StepTarget> steps, Duration lease) {
+        return arm(tabRef, steps, lease, null);
+    }
+
+    /** Arma pedindo a política ({@code null} = sem pedido: v1, compatível com extensões anteriores). */
+    public CompletableFuture<Armed> arm(String tabRef, List<StepTarget> steps, Duration lease, String policy) {
         Map<String, Object> p = new LinkedHashMap<>();
         p.put("captureId", captureId);
         p.put("tabRef", tabRef);
         p.put("leaseMs", (int) lease.toMillis());
+        if (policy != null) p.put("policy", policy);
         List<Object> list = new ArrayList<>();
         for (StepTarget s : steps) {
             Map<String, Object> m = new LinkedHashMap<>();
@@ -96,7 +122,8 @@ public final class PddCaptureClient implements BrowserLink.Listener, AutoCloseab
         return link.send("studio.pdd.capture.arm", p, timeout).thenApply(r -> {
             armed = true;
             String sc = Json.string(r, "shortcut");
-            return new Armed(captureId, sc == null ? "" : sc);
+            String armedPolicy = Json.string(r, "policy");
+            return new Armed(captureId, sc == null ? "" : sc, armedPolicy == null ? POLICY_V1 : armedPolicy);
         });
     }
 
@@ -131,7 +158,7 @@ public final class PddCaptureClient implements BrowserLink.Listener, AutoCloseab
                 @SuppressWarnings("unchecked")
                 Map<String, Object> r = (Map<String, Object>) o;
                 regions.add(new Region(Json.string(r, "kind"), (int) Json.number(r, "x", -1), (int) Json.number(r, "y", -1), (int) Json.number(r, "width", 0),
-                        (int) Json.number(r, "height", 0)));
+                        (int) Json.number(r, "height", 0), Json.string(r, "tone")));
             }
             List<Marker> markers = new ArrayList<>();
             for (Object o : Json.array(p, "annotations")) {
@@ -145,7 +172,7 @@ public final class PddCaptureClient implements BrowserLink.Listener, AutoCloseab
             String at = Json.string(p, "observedAt");
             result.complete(new Result(captureId, true, null, Base64.getDecoder().decode(Json.string(p, "png")), Json.string(p, "sha256"),
                     (int) Json.number(p, "width", 0), (int) Json.number(p, "height", 0), dbl(p, "devicePixelRatio"), at == null ? Instant.now() : Instant.parse(at),
-                    regions, markers, limits));
+                    regions, markers, limits, Json.string(p, "policy")));
         } catch (RuntimeException e) {
             result.complete(Result.failed(captureId, "SANITIZATION_CHECK_FAILED"));
         }

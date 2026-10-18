@@ -84,6 +84,12 @@ public final class PdfRenderer {
     public static final String PROVENANCE = "Gerado pelo Nekkora Studio a partir das sessões e etapas mapeadas. As imagens são capturas do navegador "
             + "sanitizadas: só rótulos de interface aparecem; campos e o restante da tela foram ocultados. Este documento descreve o processo "
             + "mapeado e não comprova resultado de negócio.";
+    /** STUDIO-012 PDD-01: documento com alguma imagem nekkora-visual/2 (representação documental). */
+    public static final String PROVENANCE_V2 = "Gerado pelo Nekkora Studio a partir das sessões e etapas mapeadas. As imagens são representações "
+            + "sanitizadas da tela: a estrutura (blocos, campos e botões) é redesenhada sem conteúdo e só rótulos de interface aparecem como na "
+            + "página. Este documento descreve o processo mapeado e não comprova resultado de negócio.";
+    /** Acrescentado quando o documento tem algum marcador manual. */
+    public static final String MANUAL_NOTE = "Marcadores tracejados foram posicionados manualmente na revisão e não comprovam o elemento.";
 
     private final PDDocument doc;
     private boolean preview;
@@ -133,7 +139,11 @@ public final class PdfRenderer {
         text(regular, 9.5f, MUTED, M, y - 9.5f, "Versão " + o.versionLabel() + " · " + o.date().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
                 + " · Nekkora Studio");
         y -= 22;
-        for (String line : wrap(regular, 9, PROVENANCE, W - 2 * M)) {
+        boolean v2 = d.blocks().stream().map(b -> b.capture().map(d.captures()::get).orElse(null)).anyMatch(c -> c != null
+                && !VisualVerifier.POLICY.equals(c.policy()));
+        boolean manual = d.blocks().stream().map(b -> b.capture().map(d.captures()::get).orElse(null)).anyMatch(c -> c != null && c.annotations().stream()
+                .anyMatch(Annotation::manual));
+        for (String line : wrap(regular, 9, (v2 ? PROVENANCE_V2 : PROVENANCE) + (manual ? " " + MANUAL_NOTE : ""), W - 2 * M)) {
             text(regular, 9, MUTED, M, y - 9, line);
             y -= 12.5f;
         }
@@ -163,7 +173,10 @@ public final class PdfRenderer {
         for (Instruction i : b.instructions()) {
             List<String> w = wrap(regular, 10, i.ordinal() + ". " + exportable(i.text(), preview), LEFT_W);
             for (int k = 0; k < w.size(); k++) lines.add(new String[] {(k == 0 ? "" : "     ") + w.get(k), "texto"});
-            if (cap != null && !placed(cap, i.stepId())) lines.add(new String[] {"     (marcador indisponível)", "nota"});
+            Annotation mk = cap == null ? null : Pendings.marker(cap, i.stepId());
+            if (cap != null && mk == null) lines.add(new String[] {"     (marcador indisponível)", "nota"});
+            else if (mk != null && !Pendings.visibleInCrop(cap, mk)) lines.add(new String[] {"     (marcador fora do recorte)", "nota"});
+            else if (mk != null && mk.manual()) lines.add(new String[] {"     (marcador posicionado manualmente)", "nota"});
         }
         float textH = 0;
         for (String[] l : lines) textH += "nota".equals(l[1]) ? 13 : 14.5f;
@@ -186,12 +199,12 @@ public final class PdfRenderer {
             float sx = imgW / crop.w;
             float sy = imgH / crop.h;
             for (Region r : cap.regions()) {
+                if (!Crop.INTERACTIVE.contains(r.kind())) continue; // superfícies, mídia e frames não impedem o número do marcador
                 taken.add(new float[] {ix + (r.x() - crop.x) * sx, top - (r.y() - crop.y + r.height()) * sy, r.width() * sx, r.height() * sy});
             }
             for (Instruction i : b.instructions()) {
-                Annotation a = cap.annotations().stream().filter(z -> z.stepId().equals(i.stepId()) && z.status() == Annotation.Status.PLACED)
-                        .findFirst().orElse(null);
-                if (a != null) marker(crop, a, i.ordinal(), ix, top, imgW, imgH, taken);
+                Annotation a = Pendings.marker(cap, i.stepId());
+                if (a != null && Pendings.visibleInCrop(cap, a)) marker(crop, a, i.ordinal(), ix, top, imgW, imgH, taken);
             }
         } else {
             fill(PANEL, IMG_X, top - imgH, IMG_W, imgH);
@@ -228,7 +241,15 @@ public final class PdfRenderer {
         float ryTop = top - (float) ((a.y() * crop.full.height - crop.y) * sy);
         float rw = (float) (a.width() * crop.full.width * sx);
         float rh = (float) (a.height() * crop.full.height * sy);
+        // o contorno não passa da imagem (recorte manual pode cortar o alvo)
+        float cx0 = Math.max(rx, ix), cy0 = Math.max(ryTop - rh, top - ih), cx1 = Math.min(rx + rw, ix + iw), cy1 = Math.min(ryTop, top);
+        rx = cx0;
+        rw = Math.max(1, cx1 - cx0);
+        ryTop = cy1;
+        rh = Math.max(1, cy1 - cy0);
+        if (a.manual()) cs.setLineDashPattern(new float[] {3, 2}, 0); // manual: tracejado (decisão visual, não prova do alvo)
         stroke(PINK, 1.2f, rx - 1.5f, ryTop - rh - 1.5f, rw + 3, rh + 3);
+        if (a.manual()) cs.setLineDashPattern(new float[] {}, 0);
         float r = 7;
         float[][] options = {{rx - r - 4, ryTop - rh / 2}, {rx + r, ryTop + r + 3}, {rx + rw + r + 4, ryTop - rh / 2}, {rx + r, ryTop - rh - r - 3},
             {rx - r - 4, ryTop + r + 3}, {rx + rw + r + 4, ryTop + r + 3}, {rx - r - 4, ryTop - rh - r - 3}, {rx + rw + r + 4, ryTop - rh - r - 3}};
@@ -252,10 +273,6 @@ public final class PdfRenderer {
         text(bold, 8, Color.WHITE, cx - tw / 2, cy - 2.9f, s);
     }
 
-    private static boolean placed(SafeCapture c, StepId step) {
-        return c.annotations().stream().anyMatch(a -> a.stepId().equals(step) && a.status() == Annotation.Status.PLACED);
-    }
-
     private static String exportable(DocText t, boolean preview) {
         if (!t.exportable()) {
             if (!preview) throw new IllegalStateException("texto não exportável no documento");
@@ -276,9 +293,18 @@ public final class PdfRenderer {
 
     /** Recorte da imagem: união das regiões e dos marcadores, com margem; nunca maior que a imagem. */
     record Crop(BufferedImage image, int x, int y, int w, int h, java.awt.Dimension full) {
+        /** Regiões que definem o recorte automático: o que a pessoa usa (na v2, a estrutura em volta é contexto). */
+        static final List<String> INTERACTIVE = List.of("CARRIER", "FIELD", "CONTROL");
+
         static Crop of(BufferedImage img, SafeCapture c) {
+            if (c.crop() != null) { // recorte escolhido no Studio: exatamente o que foi revisado
+                DocumentDraft.Crop k = c.crop();
+                return new Crop(img.getSubimage(k.x(), k.y(), k.width(), k.height()), k.x(), k.y(), k.width(), k.height(),
+                        new java.awt.Dimension(img.getWidth(), img.getHeight()));
+            }
             int x0 = Integer.MAX_VALUE, y0 = Integer.MAX_VALUE, x1 = 0, y1 = 0;
             for (Region r : c.regions()) {
+                if (!INTERACTIVE.contains(r.kind())) continue;
                 x0 = Math.min(x0, r.x());
                 y0 = Math.min(y0, r.y());
                 x1 = Math.max(x1, r.x() + r.width());
@@ -292,7 +318,7 @@ public final class PdfRenderer {
                 y1 = Math.max(y1, (int) Math.ceil((a.y() + a.height()) * img.getHeight()));
             }
             if (x0 == Integer.MAX_VALUE) return new Crop(img, 0, 0, img.getWidth(), img.getHeight(), new java.awt.Dimension(img.getWidth(), img.getHeight()));
-            int m = (int) Math.round(32 * c.devicePixelRatio());
+            int m = (int) Math.round((VisualVerifier.POLICY.equals(c.policy()) ? 32 : 48) * c.devicePixelRatio()); // v2: mais contexto em volta
             x0 = Math.max(0, x0 - m);
             y0 = Math.max(0, y0 - m);
             x1 = Math.min(img.getWidth(), Math.max(x1 + m, x0 + 240));

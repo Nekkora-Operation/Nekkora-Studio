@@ -1,0 +1,133 @@
+Tela: java.awt.Rectangle[x=0,y=0,width=1920,height=1032] · java 21.0.12
+Operador: Claude como AGENTE DE TESTE (revisões, recortes e marcadores manuais TEST_AGENT; nenhuma confirmação humana) · ator do Studio: TEST_AGENT
+Native Host instalado pelo script oficial (install-host.ps1)
+Chrome for Testing: 155.0.8059.39
+OK    Conexão autenticada Studio ⇄ host ⇄ extensão
+OK    A0: extensão anterior conectada (0.4.0: o Studio não pede a nekkora-visual/2)
+  etapas: [Preencher campo Usuário:, Preencher campo Senha:, Clicar no botão Entrar] · [Clicar no botão Consultar]
+OK    A1: Autenticação = preencher, preencher, clicar; Consulta = clicar
+OK    A1: nenhum valor digitado no modelo
+captura PDD01-A1-mapeamento.png (1008x991)
+  itens: [1. Sessão 1 (revisar),     Preencher os campos e selecionar “Entrar”, 2. Consulta,     Selecionar “Consultar”]
+OK    A2: bloco sem imagem oferece "Capturar tela…"
+  No Chrome, deixe a aba do laboratório no estado desta etapa e pressione Alt+Shift+K. Nada é clicado ou enviado; só rótulos de interface aparecem na imagem.
+  Imagem sanitizada associada: 2 rótulo(s) de interface visíveis; 3 de 3 marcador(es) posicionados. Campos e o restante da tela ficam ocultos.
+OK    A2: login capturado pela política anterior (extensão 0.4.0)
+  No Chrome, deixe a aba do laboratório no estado desta etapa e pressione Alt+Shift+K. Nada é clicado ou enviado; só rótulos de interface aparecem na imagem.
+  Imagem indisponível: A captura não pôde ser feita com segurança (CARRIER_TOO_LARGE). Nenhuma imagem foi usada.
+OK    A2: a v1 recusa a página adversarial inteira (CARRIER_TOO_LARGE, botão grande) e não inventa imagem
+OK    A2: capturas nekkora-visual/1 e rascunho 1.0.0
+captura PDD01-antes-imagem-login.png (1024x849)
+  antes: 96,8% da imagem do login em #D5D8DD (ocultação da v1)
+OK    A2: reproduz a vistoria — imagem do login majoritariamente cinza de ocultação
+OK    A2: com imagem, a ação passa a ser "Capturar novamente…"
+captura PDD01-A2-pdd-antes.png (1244x811)
+OK    A2: rascunho gravado como 1.0.0 (nenhuma novidade usada)
+captura PDD01-antes-pdf-pagina-1.png (793x1122)
+Chrome for Testing: 155.0.8059.39
+Chrome relançado com a extensão test-extension-050
+OK    Conexão autenticada Studio ⇄ host ⇄ extensão
+OK    B0: extensão 0.5.0 conectada (declara a nekkora-visual/2)
+  Nova captura pronta para revisão: 3 rótulo(s) de interface visíveis. A prévia já mostra a nova imagem; use "Selecionar área" se quiser recortar e então "Aplicar". "Cancelar" mantém a imagem anterior.
+OK    B1: nova captura vira CANDIDATA para revisão
+OK    B1: a candidata é nekkora-visual/2
+OK    B1: o bloco continua com a imagem anterior enquanto a nova é revisada
+OK    B1: exportar e capturar de novo ficam bloqueados com a candidata pendente
+captura PDD01-depois-imagem-login.png (1024x849)
+OK    B1: a candidata não tem o cinza de ocultação da v1
+captura PDD01-B1-revisao-candidata.png (1244x811)
+OK    B1: Cancelar descarta a candidata; a anterior continua
+  Imagem indisponível: O atalho foi pressionado em outra aba.
+OK    B2: atalho em outra aba → recusado, nenhuma candidata, imagem anterior mantida
+  Nova captura pronta para revisão: 3 rótulo(s) de interface visíveis. A prévia já mostra a nova imagem; use "Selecionar área" se quiser recortar e então "Aplicar". "Cancelar" mantém a imagem anterior.
+OK    B3: candidata pronta
+OK    B3: recorte pequeno demais recusado
+  recorte pedido java.awt.Rectangle[x=216,y=143,width=592,height=245] · obtido java.awt.Rectangle[x=217,y=143,width=590,height=244] · imagem 1024×849 dpr 1.0
+OK    B3: recorte pelo mouse sobre a candidata (px do dispositivo, dentro da imagem)
+OK    B3: o mesmo recorte pelo TECLADO (setas + Enter)
+OK    B3: Esc sai da seleção sem mudar nada
+captura PDD01-B3-candidata-recortada.png (1244x811)
+  Imagem substituída: A nova captura passou a ilustrar este bloco. Desfazer volta à anterior. O rascunho do documento passou ao formato 1.1.0; a automação não muda.
+OK    B3: Aplicar substitui SÓ a imagem do bloco selecionado
+OK    B3: rascunho sobe para 1.1.0 (política v2 + recorte)
+OK    B3: recorte gravado com quem revisou (TEST_AGENT)
+OK    B3: marcadores 1/2/3 posicionados automaticamente (Usuário, Senha, Entrar)
+OK    B3: a automação não mudou
+captura PDD01-B3-aplicada.png (1244x811)
+OK    B3: Desfazer volta à imagem anterior, e o arquivo dela continua no disco
+OK    B3: Refazer reaplica a nova
+  Imagem sanitizada associada: 6 rótulo(s) de interface visíveis; 0 de 1 marcador(es) posicionados. Campos e o restante da tela ficam ocultos.
+OK    B4: bloco SEM imagem anterior: a 1ª captura v2 da página adversarial associa direto (não há o que substituir)
+  consulta: 1024×849 · marcadores [OMITTED/AMBIGUOUS] · limitações [SOME_LABELS_HIDDEN, FRAMES_HIDDEN]
+OK    B4: iframe de outra origem fica inacessível (FRAMES_HIDDEN), sem conteúdo inventado
+OK    B4: com o sósia, o Studio NÃO inventa marcador (OMITTED)
+OK    B4: aviso claro de marcador indisponível
+captura PDD01-depois-imagem-consulta.png (1024x849)
+OK    B4: a instrução sem marcador aceita marcador manual
+OK    B4: marcador MANUAL + TEST_AGENT na etapa certa
+OK    B4: marcador manual não muda a automação (StepId, localizadores, .nekkora)
+captura PDD01-B4-marcador-manual.png (1244x811)
+OK    B5: v001 e v002 lado a lado; v001 intacto
+captura PDD01-depois-pdf-pagina-1.png (793x1122)
+OK    B5: a prévia tem as mesmas páginas do PDF exportado
+  prévia × PDF exportado (mesma resolução, abaixo do cabeçalho "Versão prévia"/"Versão v002"): diferença média 0,0000/255
+OK    B5: a prévia É a renderização do PDF exportado: pixel a pixel igual fora do cabeçalho de versão
+OK    B5: 2 imagens no PDF (uma por bloco, na seção certa)
+OK    B5: metadados controlados
+OK    B5: marcador manual identificado no PDF e sem valor de prova
+OK    B5: seções na ordem
+OK    B5: PDF sem a sentinela nº 1
+OK    B5: PDF sem a sentinela nº 2
+OK    B5: PDF sem a sentinela nº 3
+OK    B5: PDF sem a sentinela nº 4
+OK    B5: PDF sem a sentinela nº 5
+OK    B5: PDF sem a sentinela nº 6
+OK    B5: PDF sem a sentinela nº 7
+OK    B5: PDF sem a sentinela nº 8
+OK    B5: PDF sem a sentinela nº 9
+OK    B5: PDF sem a sentinela nº 10
+OK    B5: PDF sem a sentinela nº 11
+OK    B5: PDF sem a sentinela nº 12
+OK    B5: PDF sem a sentinela nº 13
+OK    B5: PDF sem a sentinela nº 14
+OK    B5: PDF sem a sentinela nº 15
+OK    B5: PDF sem a sentinela nº 16
+OK    B5: PDF sem a sentinela nº 17
+OK    B5: nenhuma cor-sentinela nas páginas renderizadas (antes e depois)
+captura PDD01-comparacao-pagina-1.png (1610x1122)
+  página 1 do PDF: cinza de ocultação 5,84% (antes) → 0,11% (depois); pixels escuros no depois 3,54%
+OK    B5: o cinza de ocultação some do PDF (antes ≥ 3% da página; depois ≥ 20× menor e < 0,5%, só suavização de bordas)
+OK    B5: o depois é claro (menos de 5% da página com pixels escuros)
+  Nova captura pronta para revisão: 5 rótulo(s) de interface visíveis. A prévia já mostra a nova imagem; use "Selecionar área" se quiser recortar e então "Aplicar". "Cancelar" mantém a imagem anterior.
+OK    B6: candidata pendente
+  Nova captura descartada: O processo ou o bloco mudou desde a captura; a imagem anterior continua.
+OK    B6: processo mudou → a candidata é descartada, nada é trocado
+  blocos depois da etapa nova: [3 etapa(s) com imagem, 2 etapa(s) sem imagem]
+OK    B6: a etapa nova entrou no bloco da Consulta (o bloco mudou)
+OK    B6: bloco alterado → marcador manual removido junto com a imagem
+OK    B6: o bloco do login, que não mudou, mantém a imagem nova e o recorte
+  PDF desatualizado: pdd-visual-v002.pdf foi exportado antes da última alteração da automação.
+OK    B7: imagem adulterada no disco → exportação recusada, nenhum PDF novo
+  PDF desatualizado: pdd-visual-v002.pdf foi exportado antes da última alteração da automação.
+captura PDD01-B8-tema-sakura-dark.png (1244x811)
+captura PDD01-B8-tema-midnight-dark.png (1244x811)
+captura PDD01-B8-tema-porcelain-light.png (1244x811)
+captura PDD01-B8-tema-sage-light.png (1244x811)
+captura PDD01-B8-1366x768.png (1310x719)
+OK    B8: em 1366×768, Selecionar área, Aplicar, Cancelar e Exportar alcançáveis dentro da janela
+OK    B8: Tab alcança "Aplicar" a partir do editor de imagem
+OK    B8: candidata cancelada ao fim; imagem do login intacta
+OK    B9: ao reabrir, a sessão continua: Desfazer disponível e as imagens que ele alcança seguem no disco
+  imagens no disco: 3 com o histórico → 1 depois dele; referenciadas 1
+OK    B9: fim do histórico → só as imagens referenciadas ficam no disco (anterior e candidatas descartadas)
+OK    B9: rascunho 1.1.0 reaberto íntegro
+OK    B9: arquivos do rascunho só com nome técnico
+OK    B9 rascunho: sem valores digitados e sem conteúdo de negócio do laboratório
+OK    B9 manifesto v001: sem valores digitados e sem conteúdo de negócio do laboratório
+OK    B9 manifesto v002: sem valores digitados e sem conteúdo de negócio do laboratório
+OK    B9 log da homologação: sem valores digitados e sem conteúdo de negócio do laboratório
+OK    B9 logs do host: sem valores digitados e sem conteúdo de negócio do laboratório
+OK    B9 automação: sem valores digitados e sem conteúdo de negócio do laboratório
+OK    B9: nenhuma evidência PNG desta rodada com a cor-sentinela
+OK    B9: a automação nunca mudou pelo PDD (só a etapa declarada em B6)
+RESULTADO: 87 verificações, 0 falha(s)

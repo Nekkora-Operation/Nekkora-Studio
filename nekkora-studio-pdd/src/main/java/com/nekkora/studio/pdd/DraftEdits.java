@@ -109,15 +109,95 @@ public final class DraftEdits {
     }
 
     /**
-     * Associa uma captura JÁ sanitizada ao bloco. Recusada se não foi feita para estas etapas ou se a tela é outra: uma
-     * imagem de outra etapa ou de outra tela nunca ilustra este bloco.
+     * Associa uma captura JÁ sanitizada ao bloco (substitui a anterior, se houver: recorte e marcadores manuais da anterior
+     * ficam com ela). Recusada se não foi feita para estas etapas ou se a tela é outra: uma imagem de outra etapa ou de
+     * outra tela nunca ilustra este bloco. Se OUTRO bloco já usa uma captura com a mesma referência (a mesma imagem), esta
+     * recebe uma referência própria — os dois blocos não colidem.
      */
     public static DocumentDraft attachCapture(DocumentDraft d, String blockId, SafeCapture c) {
         Block b = d.block(blockId).orElseThrow(() -> new DraftException("BLOCK_NOT_FOUND"));
         if (!matches(c, b)) throw new DraftException("CAPTURE_DOES_NOT_MATCH_BLOCK");
-        DocumentDraft withCapture = new DocumentDraft(d.automationId(), d.processRevision(), d.sections(), DocumentDraft.with(d.captures(), c));
+        boolean taken = d.blocks().stream().anyMatch(o -> !o.blockId().equals(blockId) && o.captureSha().equals(c.ref()));
+        SafeCapture own = taken ? withRef(c, freshRef(c, blockId)) : c;
+        DocumentDraft withCapture = new DocumentDraft(d.automationId(), d.processRevision(), d.sections(), DocumentDraft.with(d.captures(), own));
         return replace(withCapture, blockId, List.of(new Block(b.blockId(), b.sessionId(), b.stepIds(), b.title(), b.instructions(), b.screenKey(),
-                c.sha256())));
+                own.ref())));
+    }
+
+    /** Referência própria ({@code cap-…}) para uma captura: depende da imagem, do bloco e do instante, nunca de conteúdo. */
+    public static String freshRef(SafeCapture c, String blockId) {
+        return "cap-" + Canonical.sha256(c.sha256() + "|" + blockId + "|" + c.observedAt() + "|" + c.policy()).substring(7, 39);
+    }
+
+    static SafeCapture withRef(SafeCapture c, String ref) {
+        return new SafeCapture(ref, c.sha256(), c.width(), c.height(), c.devicePixelRatio(), c.observedAt(), c.pageEpoch(), c.policy(), c.screenKey(),
+                c.forSteps(), c.annotations(), c.limitations(), c.regions(), c.crop());
+    }
+
+    /**
+     * STUDIO-012 PDD-01 — recorte manual da imagem do bloco ({@code null} volta ao recorte automático). Só reduz a área
+     * mostrada: limites da imagem, tamanho mínimo e inteiros em px do dispositivo. Marcadores manuais fora do recorte
+     * novo são descartados (não apontariam para nada visível).
+     */
+    public static DocumentDraft setCrop(DocumentDraft d, String blockId, DocumentDraft.Crop crop) {
+        SafeCapture c = captureOf(d, blockId);
+        if (crop != null && (crop.x() + crop.width() > c.width() || crop.y() + crop.height() > c.height())) throw new DraftException("CROP_OUT_OF_IMAGE");
+        List<DocumentDraft.Annotation> kept = new ArrayList<>();
+        for (DocumentDraft.Annotation a : c.annotations()) if (!a.manual() || insideCrop(c, crop, a.x(), a.y(), a.width(), a.height())) kept.add(a);
+        return withCapture(d, c.withCrop(crop).withAnnotations(kept));
+    }
+
+    /**
+     * STUDIO-012 PDD-01 — marcador MANUAL para uma instrução do bloco que NÃO tem marcador automático. Retângulo
+     * normalizado sobre a imagem inteira, dentro do recorte. Substitui o manual anterior da mesma etapa. Não comprova o
+     * alvo e não muda etapa, localizador nem automação.
+     */
+    public static DocumentDraft placeManualMarker(DocumentDraft d, String blockId, StepId step, double x, double y, double width, double height,
+            String reviewer) {
+        SafeCapture c = captureOf(d, blockId);
+        if (!c.forSteps().contains(step)) throw new DraftException("STEP_NOT_IN_BLOCK");
+        if (c.annotations().stream().anyMatch(a -> a.stepId().equals(step) && a.status() == DocumentDraft.Annotation.Status.PLACED && !a.manual())) {
+            throw new DraftException("MARKER_ALREADY_PLACED");
+        }
+        DocumentDraft.Annotation m;
+        try {
+            m = DocumentDraft.Annotation.manual(step, x, y, width, height, reviewer);
+        } catch (IllegalArgumentException e) {
+            throw new DraftException("MARKER_INVALID"); // fora da imagem ou revisor fora do vocabulário
+        }
+        if (!insideCrop(c, c.crop(), x, y, width, height)) throw new DraftException("MARKER_OUTSIDE_CROP");
+        List<DocumentDraft.Annotation> list = new ArrayList<>();
+        for (DocumentDraft.Annotation a : c.annotations()) if (!(a.manual() && a.stepId().equals(step))) list.add(a);
+        list.add(m);
+        return withCapture(d, c.withAnnotations(list));
+    }
+
+    /** Remove o marcador manual da etapa (o automático, se houver, nunca é tocado). */
+    public static DocumentDraft removeManualMarker(DocumentDraft d, String blockId, StepId step) {
+        SafeCapture c = captureOf(d, blockId);
+        List<DocumentDraft.Annotation> list = new ArrayList<>();
+        for (DocumentDraft.Annotation a : c.annotations()) if (!(a.manual() && a.stepId().equals(step))) list.add(a);
+        if (list.size() == c.annotations().size()) throw new DraftException("MARKER_NOT_FOUND");
+        return withCapture(d, c.withAnnotations(list));
+    }
+
+    /** O retângulo normalizado cai inteiro dentro do recorte (ou da imagem, sem recorte)? */
+    static boolean insideCrop(SafeCapture c, DocumentDraft.Crop crop, double x, double y, double width, double height) {
+        if (crop == null) return true;
+        double px = x * c.width(), py = y * c.height(), px2 = (x + width) * c.width(), py2 = (y + height) * c.height();
+        return px >= crop.x() - 0.5 && py >= crop.y() - 0.5 && px2 <= crop.x() + crop.width() + 0.5 && py2 <= crop.y() + crop.height() + 0.5;
+    }
+
+    private static SafeCapture captureOf(DocumentDraft d, String blockId) {
+        Block b = d.block(blockId).orElseThrow(() -> new DraftException("BLOCK_NOT_FOUND"));
+        SafeCapture c = b.capture().map(d.captures()::get).orElse(null);
+        if (c == null) throw new DraftException("CAPTURE_MISSING");
+        return c;
+    }
+
+    /** Troca os metadados de uma captura existente (mesma referência). */
+    private static DocumentDraft withCapture(DocumentDraft d, SafeCapture c) {
+        return new DocumentDraft(d.automationId(), d.processRevision(), d.sections(), DocumentDraft.with(d.captures(), c));
     }
 
     public static DocumentDraft detachCapture(DocumentDraft d, String blockId) {
@@ -162,7 +242,7 @@ public final class DraftEdits {
                 boolean same = prev != null && b.stepIds().stream().allMatch(id -> before.get(id) != null && sameFacts(before.get(id), after.get(id)));
                 if (same) {
                     blocks.add(prev);
-                    prev.capture().map(old.captures()::get).ifPresent(c -> captures.put(c.sha256(), c));
+                    prev.capture().map(old.captures()::get).ifPresent(c -> captures.put(c.ref(), c));
                 } else {
                     blocks.add(b);
                 }

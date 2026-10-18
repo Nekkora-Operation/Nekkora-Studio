@@ -61,10 +61,19 @@ public final class PddStore {
 
     /** Apaga as imagens que o rascunho não referencia mais. Devolve quantas foram apagadas. */
     public int retain(DocumentDraft d) throws IOException {
+        return retain(d, Set.of());
+    }
+
+    /**
+     * Apaga as imagens que nem o rascunho nem {@code alsoKeep} (sha-256 de PNGs ainda alcançáveis, ex.: pelo desfazer da
+     * sessão) referenciam. A chave é o sha-256 do PNG — não a referência do bloco (no rascunho 1.1.0 elas diferem).
+     */
+    public int retain(DocumentDraft d, Set<String> alsoKeep) throws IOException {
         Path dir = folder(d.automationId()).resolve("capturas");
         if (!Files.isDirectory(dir)) return 0;
         Set<String> keep = new HashSet<>();
-        d.blocks().forEach(b -> b.capture().ifPresent(s -> keep.add(s.substring(7) + ".png")));
+        d.referencedImages().forEach(s -> keep.add(s.substring(7) + ".png"));
+        alsoKeep.stream().filter(s -> s.matches("sha256:[0-9a-f]{64}")).forEach(s -> keep.add(s.substring(7) + ".png"));
         int n = 0;
         try (DirectoryStream<Path> ds = Files.newDirectoryStream(dir)) {
             for (Path f : ds) {
