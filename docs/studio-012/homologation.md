@@ -65,6 +65,6 @@ O log saneado está em `evidence/homologacao-log.txt`. Resultado: 25 verificaç�
 |---|---|
 | Extensão: Node (`node --test`) | 181/181 |
 | Extensão: Java (núcleo, host, contrato) | 295/295 |
-| Extensão: Chrome for Testing (todas as classes, em grupos, headless) | 266/266 (`Studio010SafeCaptureIT` exige janela: rodada à parte) |
+| Extensão: Chrome for Testing (todas as classes) | 278/278 (266 headless em grupos + `Studio010SafeCaptureIT` 12/12 com janela) |
 | Studio: Windows (`./mvnw test`) | 608/608 |
 | Studio: homologação real | 25/25 |

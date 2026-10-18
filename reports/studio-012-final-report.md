@@ -38,7 +38,7 @@ Documentos: `docs/studio-012/{diagnostico,decisions,homologation,security,known-
 |---|---|
 | Extensão: Node | 181/181 |
 | Extensão: Java (núcleo, host, contrato) | 295/295 |
-| Extensão: Chrome for Testing, todas as classes em 10 grupos, headless | 266/266, incluindo `Studio012RecorderIT` 4/4 (`Studio010SafeCaptureIT` exige janela e se desliga em headless: rodada com janela à parte) |
+| Extensão: Chrome for Testing, todas as classes | 278/278: 266 em 10 grupos headless (inclui `Studio012RecorderIT` 4/4) + `Studio010SafeCaptureIT` 12/12 com janela |
 | Studio: Windows `./mvnw test` | 608/608 |
 | Studio: homologação real (Studio, Chrome, Robot) | 25/25 |
 
