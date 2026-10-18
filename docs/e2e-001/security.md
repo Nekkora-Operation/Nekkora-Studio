@@ -34,8 +34,10 @@ novos: passa "Download Excel cloud_download"; recusa "Excel Quixadá". O `href` 
   ligadas a variáveis de entrada.
 - Varreduras (palavra inteira, valores com ≥ 3 caracteres, os 65 valores distintos da planilha):
   evidências versionadas, código gerado, `.nekkora`, log da homologação, eventos JSONL, checkpoint, resumo,
-  observações — **0 ocorrências**. Nos arquivos alterados das três branches, a única ocorrência é um cargo genérico
-  nos dados SINTÉTICOS da réplica do laboratório (preexistente, não é dado pessoal).
+  observações — **0 ocorrências**. No histórico completo das três branches (`git log -p main..HEAD`), a única
+  coincidência é um nome de cargo genérico na lista de cargos dos dados SINTÉTICOS da réplica do laboratório
+  (criada no FRAMEWORK-002 desta missão, ao lado de "Manager", "Engineer"…); não é dado pessoal nem foi copiado da
+  planilha.
 - O PDF e as duas imagens do PDD foram inspecionados: só rótulos de interface e campos vazios.
 
 ## 4. O que NÃO entra em evidência
