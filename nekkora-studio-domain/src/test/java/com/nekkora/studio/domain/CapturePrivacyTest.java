@@ -12,6 +12,7 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * CHROME-SECURITY-001 — 4ª barreira: a política do Studio produz exatamente os resultados dos vetores compartilhados com a
@@ -39,6 +40,11 @@ class CapturePrivacyTest {
         for (Object o : MiniJson.arr(v.get("identifiers"))) {
             Map<String, Object> c = MiniJson.obj(o);
             assertEquals(text(c.get("out")), CapturePrivacy.identifier(text(c.get("in"))), "identifier " + c.get("in"));
+        }
+        assertTrue(MiniJson.arr(v.get("developerIdentifiers")).size() > 10, "vetores da lista técnica (STUDIO-012)");
+        for (Object o : MiniJson.arr(v.get("developerIdentifiers"))) {
+            Map<String, Object> c = MiniJson.obj(o);
+            assertEquals(text(c.get("out")), CapturePrivacy.developerIdentifier(text(c.get("in"))), "developerIdentifier " + c.get("in"));
         }
         for (Object o : MiniJson.arr(v.get("classes"))) {
             Map<String, Object> c = MiniJson.obj(o);
@@ -79,6 +85,8 @@ class CapturePrivacyTest {
         assertEquals(lf(Files.readString(SIBLING.resolve("privacy-v2-vectors.json"))), lf(Files.readString(LOCAL_VECTORS)));
         assertEquals(lf(Files.readString(SIBLING.resolve("structural-attributes.json"))),
                 lf(Files.readString(Path.of("src", "main", "resources", "privacy", "structural-attributes.json"))), "rode a cópia de contracts/privacy");
+        assertEquals(lf(Files.readString(SIBLING.resolve("identifier-terms.json"))),
+                lf(Files.readString(Path.of("src", "main", "resources", "privacy", "identifier-terms.json"))), "rode a cópia de contracts/privacy");
     }
 
     private static String lf(String s) {

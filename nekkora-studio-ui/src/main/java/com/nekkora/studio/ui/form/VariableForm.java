@@ -64,6 +64,7 @@ public final class VariableForm extends StudioForm<VariableForm.Values> {
          *                                   {@link ValidationProblem#VARIABLE_PRODUCER_NOT_FOUND} sem etapa produtora escolhida
          */
         public VariableDraft toDraft() {
+            if (purposeLooksLikeValue(purpose, sensitivity)) throw new DomainValidationException(ValidationProblem.VARIABLE_PURPOSE_LOOKS_SENSITIVE);
             SemanticStatus authority = semantic == SemanticType.UNSPECIFIED ? SemanticStatus.UNSPECIFIED
                     : confirmed ? SemanticStatus.USER_CONFIRMED : SemanticStatus.PROPOSED_UNCONFIRMED;
             VariableOrigin o = switch (origin) {
@@ -79,6 +80,18 @@ public final class VariableForm extends StudioForm<VariableForm.Values> {
                     integer(scale), currency == null || currency.isBlank() ? null : currency.strip());
             VariableScope s = scope == null || scope.session() == null ? VariableScope.automation() : VariableScope.session(scope.session());
             return new VariableDraft(name == null ? "" : name.strip(), type, semantic, authority, purpose, s, o, sensitivity, c);
+        }
+
+        /**
+         * NEKKORA-STUDIO-012: a Finalidade é uma DESCRIÇÃO. Uma palavra única com dígito ou símbolo (forma de senha, código,
+         * usuário) — ou qualquer palavra única numa variável de dados pessoais ou segredo — parece o próprio valor e é
+         * recusada aqui, no formulário (projetos antigos continuam abrindo; a correção acontece ao editar).
+         */
+        static boolean purposeLooksLikeValue(String purpose, Sensitivity sensitivity) {
+            String s = purpose == null ? "" : purpose.strip();
+            if (s.isEmpty() || s.chars().anyMatch(Character::isWhitespace)) return false;
+            boolean sensitive = sensitivity == Sensitivity.SECRET || sensitivity == Sensitivity.PERSONAL_DATA;
+            return sensitive || (s.length() >= 4 && s.chars().anyMatch(c -> Character.isDigit(c) || "!@#$%&*+=?/\\|~^".indexOf(c) >= 0));
         }
 
         private static Integer integer(String t) {
@@ -108,7 +121,7 @@ public final class VariableForm extends StudioForm<VariableForm.Values> {
     private final NekkoraComboBox<SemanticType> semantic = new NekkoraComboBox<>(SemanticType.values());
     private final NekkoraFormField semanticField;
     private final NekkoraCheckBox confirmed = new NekkoraCheckBox("Confirmo o significado desta variável");
-    private final NekkoraTextArea purpose = FormKeys.tabMovesFocus(new NekkoraTextArea("Para que serve a variável (sem exemplos reais).", 2));
+    private final NekkoraTextArea purpose = FormKeys.tabMovesFocus(new NekkoraTextArea("Ex.: usuário de acesso ao portal (descrição, não o valor).", 2));
     private final NekkoraFormField purposeField;
     private final NekkoraComboBox<Sensitivity> sensitivity = new NekkoraComboBox<>(Sensitivity.values());
     private final NekkoraFormField sensitivityField;
@@ -117,6 +130,8 @@ public final class VariableForm extends StudioForm<VariableForm.Values> {
     private final NekkoraComboBox<VariableOrigin.Kind> origin = new NekkoraComboBox<>(VariableOrigin.Kind.values());
     private final NekkoraFormField originField;
     private final NekkoraTextField constant = new NekkoraTextField("Valor público ou interno");
+    /** STUDIO-012: onde a variável é usada e como vincular — criar a variável NÃO a liga a nenhuma etapa. */
+    private final NekkoraParagraph usage = new NekkoraParagraph("", TextTone.SECONDARY);
     private final NekkoraFormField constantField;
     private final NekkoraInlineAlert constantWarning = new NekkoraInlineAlert(Severity.WARNING, "Não criptografado", CONSTANT_WARNING);
     private final NekkoraComboBox<ProducerChoice> producer;
@@ -144,7 +159,7 @@ public final class VariableForm extends StudioForm<VariableForm.Values> {
         type.setLabelProvider(t -> t == null ? "" : t.label());
         semantic.setLabelProvider(t -> t == null ? "" : t.label());
         sensitivity.setLabelProvider(t -> t == null ? "" : t.label());
-        origin.setLabelProvider(t -> t == null ? "" : t.label());
+        origin.setLabelProvider(VariableForm::originLabel);
         textFormat.setLabelProvider(t -> t == null ? "" : t.label());
         List<ScopeChoice> scopes = new ArrayList<>();
         scopes.add(new ScopeChoice(null, "Automação inteira"));
@@ -161,40 +176,45 @@ public final class VariableForm extends StudioForm<VariableForm.Values> {
         producer = new NekkoraComboBox<>(producers);
         producer.setLabelProvider(c -> c == null ? "" : c.label());
 
-        // ------------------------------------------------ Declaração
+        // ------------------------------------------------ Nome e valor (STUDIO-012: o VALOR vem da origem, aqui; a finalidade é só descrição)
         nameField = new NekkoraFormField("Nome", name).required()
                 .helper("Letras, números, ponto, hífen ou sublinhado, começando por letra. As etapas usam a variável por este nome.");
         typeField = new NekkoraFormField("Tipo técnico", type).required();
+        sensitivityField = new NekkoraFormField("Sensibilidade", sensitivity).required()
+                .helper("CPF e e-mail exigem no mínimo Dados pessoais. Dados pessoais e segredos nunca têm valor gravado no projeto.");
+        originField = new NekkoraFormField("Origem do valor", origin).required()
+                .helper("De onde vem o valor que as etapas vão usar.");
+        constantField = new NekkoraFormField("Valor constante", constant).optional()
+                .helper("Gravado no projeto. Não use credenciais nem dados pessoais.");
+        producerField = new NekkoraFormField("Etapa de origem", producer).optional()
+                .helper("Declaração sua: o Studio não comprova que esta etapa produz o valor.");
+        NekkoraStack valueTab = NekkoraStack.vertical(Spacing.SPACE_5);
+        valueTab.add(nameField);
+        valueTab.add(typeField);
+        valueTab.add(sensitivityField);
+        valueTab.add(originField);
+        valueTab.add(originHelp);
+        valueTab.add(constantField);
+        valueTab.add(constantWarning);
+        valueTab.add(producerField);
+        tabs.addTab("Nome e valor", IconName.EDIT, valueTab);
+
+        // ------------------------------------------------ Descrição e escopo
         semanticField = new NekkoraFormField("Significado", semantic).optional()
                 .helper("Vocabulário fechado. O Studio não deduz o significado pelo nome nem pela página.");
         confirmed.getAccessibleContext().setAccessibleDescription("Sem a confirmação, o significado fica como proposto e a validação aponta.");
-        purposeField = new NekkoraFormField("Finalidade", purpose.scrollable()).optional()
-                .helper("Contexto para quem revisa. Até " + Texts.DESCRIPTION_MAX + " caracteres; não escreva dados reais.");
-        sensitivityField = new NekkoraFormField("Sensibilidade", sensitivity).required()
-                .helper("CPF e e-mail exigem no mínimo Dados pessoais. Dados pessoais e segredos não podem ter valor fixo.");
-        NekkoraStack declaration = NekkoraStack.vertical(Spacing.SPACE_5);
-        declaration.add(nameField);
-        declaration.add(typeField);
-        declaration.add(semanticField);
-        declaration.add(confirmed);
-        declaration.add(sensitivityField);
-        declaration.add(purposeField);
-        tabs.addTab("Declaração", IconName.EDIT, declaration);
-
-        // ------------------------------------------------ Origem e escopo
+        purposeField = new NekkoraFormField("Finalidade (descrição)", purpose.scrollable()).optional()
+                .helper("Para que serve a variável, para quem revisa. NÃO é o valor: o valor vem de «Origem do valor», na aba Nome e valor. "
+                        + "Até " + Texts.DESCRIPTION_MAX + " caracteres; sem dados reais.");
         scopeField = new NekkoraFormField("Escopo", scope).required().helper("Onde a variável é visível: na automação inteira ou numa sessão.");
-        originField = new NekkoraFormField("Origem", origin).required();
-        constantField = new NekkoraFormField("Valor fixo", constant).optional();
-        producerField = new NekkoraFormField("Etapa de origem", producer).optional()
-                .helper("Declaração sua: o Studio não comprova que esta etapa produz o valor.");
-        NekkoraStack originTab = NekkoraStack.vertical(Spacing.SPACE_5);
-        originTab.add(scopeField);
-        originTab.add(originField);
-        originTab.add(originHelp);
-        originTab.add(constantField);
-        originTab.add(constantWarning);
-        originTab.add(producerField);
-        tabs.addTab("Origem e escopo", IconName.LAYERS, originTab);
+        usage.setText(usageText(automation, existing));
+        NekkoraStack describeTab = NekkoraStack.vertical(Spacing.SPACE_5);
+        describeTab.add(purposeField);
+        describeTab.add(semanticField);
+        describeTab.add(confirmed);
+        describeTab.add(scopeField);
+        describeTab.add(usage);
+        tabs.addTab("Descrição e escopo", IconName.LAYERS, describeTab);
 
         // ------------------------------------------------ Restrições
         NekkoraStack lengths = NekkoraStack.horizontal(Spacing.SPACE_4);
@@ -223,6 +243,7 @@ public final class VariableForm extends StudioForm<VariableForm.Values> {
         add(tabs);
 
         origin.addActionListener(e -> refreshOrigin());
+        sensitivity.addActionListener(e -> refreshOrigin());
         semantic.addActionListener(e -> refreshSemantic());
         type.addActionListener(e -> refreshType());
         load(existing);
@@ -261,20 +282,66 @@ public final class VariableForm extends StudioForm<VariableForm.Values> {
         refreshType();
     }
 
+    /** STUDIO-012: cada origem diz, no próprio item, de onde vem o valor. */
+    public static String originLabel(VariableOrigin.Kind k) {
+        if (k == null) return "";
+        return switch (k) {
+            case INPUT -> "Entrada na execução — fornecido ao rodar";
+            case CONSTANT -> "Constante — valor fixo gravado no projeto";
+            case STEP_OUTPUT -> "Saída de etapa — produzido por uma etapa anterior";
+            case UNBOUND -> "Sem origem — ainda não definido";
+        };
+    }
+
+    private boolean sensitiveSelected() {
+        Sensitivity s = sensitivity.getSelectedValue();
+        return s == Sensitivity.SECRET || s == Sensitivity.PERSONAL_DATA;
+    }
+
     private void refreshOrigin() {
         VariableOrigin.Kind k = origin.getSelectedValue();
         boolean isConstant = k == VariableOrigin.Kind.CONSTANT;
+        boolean sensitive = sensitiveSelected();
         constantField.setVisible(isConstant);
+        constant.setEnabled(isConstant && !sensitive); // dados pessoais e segredos: nunca valor no projeto (o domínio recusa)
         constantWarning.setVisible(isConstant);
         producerField.setVisible(k == VariableOrigin.Kind.STEP_OUTPUT);
         originHelp.setText(k == null ? "" : switch (k) {
-            case INPUT -> "O valor será fornecido na execução. O Studio não conhece nem guarda esse valor.";
-            case CONSTANT -> "Valor fixo declarado por você, na forma canônica do tipo.";
+            case INPUT -> sensitive
+                    ? "Valor fornecido na execução por uma fonte de segredo (no código gerado, a variável de ambiente NK_SECRET_<NOME>). "
+                            + "Não fica gravado no projeto e o Studio não pede nem guarda esse valor."
+                    : "O valor será fornecido na execução. O Studio não conhece nem guarda esse valor.";
+            case CONSTANT -> sensitive
+                    ? "Dados pessoais e segredos não podem ter valor constante no projeto: escolha Entrada na execução."
+                    : "Valor fixo declarado por você, na forma canônica do tipo, e gravado no arquivo do projeto.";
             case STEP_OUTPUT -> "O valor vem de uma etapa anterior. A ligação é declarada, não comprovada.";
             case UNBOUND -> "Ainda sem origem: a validação aponta bloqueio nas etapas que usam a variável.";
         });
         revalidate();
         repaint();
+    }
+
+    /**
+     * STUDIO-012: onde a variável é usada (etapas cujo parâmetro referencia o nome dela) e como vincular. Criar ou editar a
+     * variável não liga nada sozinho.
+     */
+    public static String usageText(Automation automation, VariableDefinition v) {
+        String how = "Criar a variável não a vincula a nenhuma etapa: em cada etapa que deve usá-la (ex.: Preencher), edite a etapa e "
+                + "escolha esta variável no parâmetro Valor.";
+        if (v == null) return how;
+        java.util.Map<StepId, String> places = com.nekkora.studio.ui.VariablePresentation.places(automation);
+        List<String> used = new ArrayList<>();
+        for (LogicalSession s : automation.sessions()) {
+            for (AutomationStep st : s.steps()) {
+                boolean refs = st.parameters().value().filter(x -> x instanceof com.nekkora.studio.domain.action.ValueSource.VariableReference r
+                        && r.name().equals(v.name())).isPresent();
+                if (refs) used.add(places.get(st.id()));
+            }
+        }
+        if (used.isEmpty()) return "Ainda não usada por nenhuma etapa. " + how;
+        int max = 6;
+        String list = String.join("; ", used.subList(0, Math.min(max, used.size()))) + (used.size() > max ? "; e mais " + (used.size() - max) : "");
+        return "Usada em " + used.size() + (used.size() == 1 ? " etapa: " : " etapas: ") + list + ". " + how;
     }
 
     private void refreshSemantic() {
@@ -388,6 +455,18 @@ public final class VariableForm extends StudioForm<VariableForm.Values> {
 
     public NekkoraInlineAlert constantWarning() {
         return constantWarning;
+    }
+
+    public NekkoraParagraph usage() {
+        return usage;
+    }
+
+    public NekkoraParagraph originHelp() {
+        return originHelp;
+    }
+
+    public NekkoraTextArea purposeInput() {
+        return purpose;
     }
 
     public NekkoraComboBox<ProducerChoice> producerInput() {

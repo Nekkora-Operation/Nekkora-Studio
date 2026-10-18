@@ -208,6 +208,76 @@ class GuidedDebugUiTest {
         assertTrue(fill.targetDecision().isEmpty(), "Ctrl+Z desfaz a decisão");
     }
 
+    /** Lista de seleção com a opção configurada na etapa (ou nenhuma). */
+    private Automation selectCase(String option) {
+        return Edt.call(() -> {
+            Automation a = studio.service().createAutomation("Nível de auditoria (laboratório)", "");
+            LogicalSession s = studio.service().addSession(a.id(), "Solicitação", "");
+            ElementReference e = field("tgt-9", "SELECT", "select", "", "select[name=\"ddlTipo\"]");
+            studio.service().appendStep(a.id(), s.id(), StepDraft.builder().name("Selecionar nível").actionType(ActionType.SELECT_OPTION).element(e)
+                    .provenance(StepProvenance.recorded(e.correlation().with(CorrelationKeys.Key.RECORDING_ID, "rec-9")
+                            .with(CorrelationKeys.Key.RECORDED_EVENT_ID, "ev-9"), new RecordingObservation(RecordingObservation.CaptureMode.CAPTURE_AND_INTERACT,
+                            RecordingObservation.Observation.INTERACTION_OBSERVED, null, List.of(), List.of("OPTION_WITHHELD"))))
+                    .parameters(option == null ? ActionParameters.none() : ActionParameters.withOption(new com.nekkora.studio.domain.action.OptionChoice(option, "")))
+                    .build());
+            return studio.state().activeAutomation().orElseThrow();
+        });
+    }
+
+    private void optionReply(String status, String option) {
+        browser.inspect = p -> {
+            String base = FakeBrowser.inspection(status, "TARGET_ID", "SELECT", "", "[]");
+            return option == null ? base : base.substring(0, base.length() - 1) + ",\"option\":" + option + "}";
+        };
+    }
+
+    @Test
+    @DisplayName("STUDIO-012 — nível: a opção CONFIGURADA vai para a conferência; existe e está selecionada → proposto, com a explicação")
+    void opcaoConferida() {
+        studio();
+        selectCase("Auditoria Carefy");
+        optionReply("RESOLVED", "{\"matches\":1,\"selected\":true}");
+        begin();
+        Map<String, Object> sent = browser.payloads.get(browser.commands.lastIndexOf("studio.debug.inspect"));
+        assertEquals("Auditoria Carefy", sent.get("expectedOption"), "o rótulo vem da etapa, não da página");
+        assertEquals(GuidedDebugPanel.Badge.PROPOSED, card().badge());
+        assertTrue(card().message().contains("«Auditoria Carefy»: existe na lista e está selecionada agora"), card().message());
+    }
+
+    @Test
+    @DisplayName("STUDIO-012 — nível: opção que não existe na lista mantém a etapa em revisão")
+    void opcaoInexistente() {
+        studio();
+        selectCase("Auditoria Carefy");
+        optionReply("RESOLVED", "{\"matches\":0,\"selected\":false}");
+        begin();
+        assertEquals(GuidedDebugPanel.Badge.REVIEW, card().badge());
+        assertTrue(card().message().contains("não existe nesta lista"), card().message());
+    }
+
+    @Test
+    @DisplayName("STUDIO-012 — nível: opção não configurada (a gravação a retém por privacidade) mantém a etapa em revisão e nada é enviado")
+    void opcaoNaoConfigurada() {
+        studio();
+        selectCase(null);
+        optionReply("RESOLVED", null);
+        begin();
+        assertEquals(GuidedDebugPanel.Badge.REVIEW, card().badge());
+        assertTrue(card().message().contains("Opção não configurada"), card().message());
+        assertFalse(browser.payloads.get(browser.commands.lastIndexOf("studio.debug.inspect")).containsKey("expectedOption"));
+    }
+
+    @Test
+    @DisplayName("STUDIO-012 — nível: lista sem identidade comprovada (sósias) não tem a opção conferida")
+    void opcaoSemIdentidade() {
+        studio();
+        selectCase("Auditoria Carefy");
+        optionReply("AMBIGUOUS", null);
+        begin();
+        assertTrue(card().message().contains("não conferida: a lista não foi comprovada"), card().message());
+        assertFalse(card().canContinue());
+    }
+
     @Test
     @DisplayName("ambíguo: requer revisão, Continuar desabilitado; Corrigir → rejeição → selecionar → comparar → aplicar troca só o alvo")
     void corrigir() {

@@ -61,7 +61,7 @@ public final class CapturedDataPolicy {
         require(e.tag().isEmpty() || "unknown".equals(e.tag()) || e.tag().equals(CapturePrivacy.tagName(e.tag())), w + ".tag");
         require(e.semanticKind().matches("[A-Z_]{1,40}"), w + ".semanticKind");
         for (String id : new String[] {e.htmlId().orElse(null), e.htmlName().orElse(null)}) {
-            require(id == null || (!e.sensitive() && id.equals(CapturePrivacy.identifier(id))), w + ".htmlId/htmlName");
+            require(id == null || (!e.sensitive() && id.equals(CapturePrivacy.developerIdentifier(id))), w + ".htmlId/htmlName"); // STUDIO-012
         }
         require(e.privacyPolicy().map(DisplaySafety.KNOWN_PRODUCER_POLICY::equals).orElse(true), w + ".privacyPolicy");
         for (int i = 0; i < e.locators().size(); i++) {

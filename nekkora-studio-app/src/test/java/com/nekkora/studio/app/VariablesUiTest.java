@@ -115,7 +115,7 @@ class VariablesUiTest {
         assertFalse(fx.prompts.results.get(fx.prompts.results.size() - 1));
         assertTrue(Edt.call(() -> seen[0].constantWarning().isVisible()));
         assertTrue(Edt.call(() -> seen[0].visibleErrors()).contains("não podem ter valor fixo"), Edt.call(() -> seen[0].visibleErrors()));
-        assertEquals(1, Edt.call(() -> seen[0].tabs().getSelectedIndex()), "a aba com o campo do problema fica em primeiro plano");
+        assertEquals(0, Edt.call(() -> seen[0].tabs().getSelectedIndex()), "a aba com o campo do problema (Nome e valor) fica em primeiro plano");
 
         fx.prompts.then(variable("portal.endereco", VariableType.STRING, SemanticType.UNSPECIFIED, false, Sensitivity.PUBLIC, VariableOrigin.Kind.CONSTANT,
                 "https://lab.exemplo.test"));
@@ -167,6 +167,79 @@ class VariablesUiTest {
         assertTrue(Edt.call(() -> panel().usageLine().getText()).contains("Sessão 1 · Etapa 01 — Preencher usuário"));
         Edt.run(() -> panel().goToButton().doClick());
         assertEquals(usuario.id(), ((com.nekkora.studio.app.workspace.Selection.OfStep) fx.studio.state().selection()).step());
+    }
+
+    @Test
+    @DisplayName("STUDIO-012 — Finalidade é descrição: palavra com cara de valor (senha, usuário de segredo) é recusada no campo; nada é declarado")
+    void finalidadeNaoEValor() {
+        fx.missionExample();
+        VariableForm[] seen = new VariableForm[1];
+        for (String[] c : new String[][] {{"portal.usuario", "SECRET", "operador01"}, {"portal.senha", "SECRET", "Abc!2026xyz"}, {"lab.codigo", "PUBLIC", "Teste#2026"}}) {
+            fx.prompts.then(f -> {
+                seen[0] = (VariableForm) f;
+                variable(c[0], VariableType.STRING, SemanticType.UNSPECIFIED, false, Sensitivity.valueOf(c[1]), VariableOrigin.Kind.INPUT, null).accept(f);
+                seen[0].purposeInput().setText(c[2]);
+            });
+            Edt.run(() -> fx.studio.controller().newVariable());
+            assertTrue(fx.active().variables().isEmpty(), "nada é declarado: " + c[0]);
+            assertTrue(Edt.call(() -> seen[0].visibleErrors()).contains("finalidade parece conter um dado sensível"), Edt.call(() -> seen[0].visibleErrors()));
+            assertEquals(1, Edt.call(() -> seen[0].tabs().getSelectedIndex()), "a aba com a Finalidade fica em primeiro plano");
+        }
+        // descrição de verdade passa, inclusive para um segredo
+        fx.prompts.then(f -> {
+            variable("portal.senha", VariableType.STRING, SemanticType.UNSPECIFIED, false, Sensitivity.SECRET, VariableOrigin.Kind.INPUT, null).accept(f);
+            ((VariableForm) f).purposeInput().setText("Senha de acesso ao portal de auditoria");
+        });
+        Edt.run(() -> fx.studio.controller().newVariable());
+        assertEquals("Senha de acesso ao portal de auditoria", fx.active().variableNamed("portal.senha").orElseThrow().purpose());
+    }
+
+    @Test
+    @DisplayName("STUDIO-012 — origem do valor explícita: segredo sem campo de valor (fonte de segredo na execução); constante pública editável, Desfazer/Refazer")
+    void origemDoValorExplicita() {
+        Automation a = fx.missionExample();
+        VariableForm[] seen = new VariableForm[1];
+        fx.prompts.then(f -> {
+            seen[0] = (VariableForm) f;
+            variable("portal.senha", VariableType.STRING, SemanticType.UNSPECIFIED, false, Sensitivity.SECRET, VariableOrigin.Kind.INPUT, null).accept(f);
+            assertTrue(javax.swing.SwingUtilities.isDescendingFrom(seen[0].originInput(), seen[0].tabs().getComponentAt(0)), "a origem do valor fica na primeira aba");
+            assertTrue(javax.swing.SwingUtilities.isDescendingFrom(seen[0].purposeInput(), seen[0].tabs().getComponentAt(1)), "a finalidade fica com a descrição");
+            assertTrue(seen[0].originHelp().getText().contains("NK_SECRET_"), seen[0].originHelp().getText());
+            assertTrue(seen[0].originHelp().getText().contains("Não fica gravado no projeto"), seen[0].originHelp().getText());
+            seen[0].originInput().setSelectedItem(VariableOrigin.Kind.CONSTANT);
+            assertFalse(seen[0].constantInput().isEnabled(), "segredo: nenhum valor digitável no projeto");
+            assertTrue(seen[0].originHelp().getText().contains("não podem ter valor constante"), seen[0].originHelp().getText());
+            seen[0].originInput().setSelectedItem(VariableOrigin.Kind.INPUT);
+            assertTrue(seen[0].usage().getText().contains("não a vincula"), seen[0].usage().getText());
+        });
+        Edt.run(() -> fx.studio.controller().newVariable());
+        assertEquals(VariableOrigin.Kind.INPUT, fx.active().variableNamed("portal.senha").orElseThrow().origin().kind());
+        assertEquals("Entrada na execução — fornecido ao rodar", VariableForm.originLabel(VariableOrigin.Kind.INPUT));
+
+        // constante pública: valor gravado, editável, desfazível; o vínculo com a etapa é explícito
+        fx.prompts.then(variable("auditoria.nivel", VariableType.STRING, SemanticType.UNSPECIFIED, false, Sensitivity.PUBLIC, VariableOrigin.Kind.CONSTANT,
+                "Nível A"));
+        Edt.run(() -> fx.studio.controller().newVariable());
+        VariableDefinition nivel = fx.active().variableNamed("auditoria.nivel").orElseThrow();
+        assertEquals("Nível A", nivel.origin().constant());
+        fx.prompts.then(f -> {
+            VariableForm v = (VariableForm) f;
+            assertEquals("Nível A", v.constantInput().getText(), "reabrir mostra o valor constante para editar");
+            assertTrue(v.constantInput().isEnabled());
+            assertTrue(v.usage().getText().startsWith("Ainda não usada"), v.usage().getText());
+            v.constantInput().setText("Nível B");
+        });
+        Edt.run(() -> fx.studio.controller().editVariable(nivel.id()));
+        assertEquals("Nível B", fx.active().variable(nivel.id()).orElseThrow().origin().constant());
+        Edt.run(() -> fx.studio.controller().undo());
+        assertEquals("Nível A", fx.active().variable(nivel.id()).orElseThrow().origin().constant());
+        Edt.run(() -> fx.studio.controller().redo());
+        assertEquals("Nível B", fx.active().variable(nivel.id()).orElseThrow().origin().constant());
+        AutomationStep usuario = a.sessions().get(0).steps().get(0);
+        Edt.run(() -> fx.studio.service().setStepParameters(a.id(), usuario.id(),
+                com.nekkora.studio.domain.action.ActionParameters.withValue(new ValueSource.VariableReference("auditoria.nivel"))));
+        assertTrue(VariableForm.usageText(fx.active(), fx.active().variable(nivel.id()).orElseThrow()).startsWith("Usada em 1 etapa: Sessão 1 · Etapa 01"),
+                VariableForm.usageText(fx.active(), fx.active().variable(nivel.id()).orElseThrow()));
     }
 
     private static List<String> items(StepDetailsForm d) {

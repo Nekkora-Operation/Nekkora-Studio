@@ -117,7 +117,7 @@ public record RecordedStep(String recordingId, String eventId, long sequence, St
         boolean sensitive = Boolean.TRUE.equals(e.get("sensitive"));
         for (String k : new String[]{"htmlId", "htmlName"}) {
             Object v = e.get(k);
-            e.put(k, sensitive || !(v instanceof String s) ? null : CapturePrivacy.identifier(s));
+            e.put(k, sensitive || !(v instanceof String s) ? null : CapturePrivacy.developerIdentifier(s)); // STUDIO-012: lista técnica
         }
         if (e.get("locators") instanceof List<?> ls) {
             List<Object> kept = new ArrayList<>();

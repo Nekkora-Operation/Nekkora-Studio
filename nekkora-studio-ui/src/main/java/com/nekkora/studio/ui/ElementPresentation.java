@@ -59,7 +59,9 @@ public final class ElementPresentation {
         e.displayableHtmlName().ifPresent(v -> rows.add(new Row("name HTML", v)));
         if (e.sensitive()) rows.add(new Row("Privacidade", "Elemento sensível — nenhum valor digitado é guardado"));
         rows.add(new Row("Localizador", e.preferredLocator().map(ElementPresentation::locator)
-                .orElse(e.locators().isEmpty() ? "Nenhum candidato" : e.locators().size() + " candidato(s), nenhum validado")));
+                .orElse(e.locators().isEmpty() ? "Nenhum candidato" : e.locators().size() + " candidato(s), nenhum validado — requer revisão")));
+        e.preferredLocator().ifPresent(c -> rows.add(new Row("Por que este", why(c))));
+        if (!e.accessPath().isEmpty()) rows.add(new Row("Escopo", scope(e.accessPath())));
         if (!e.accessPath().isEmpty()) rows.add(new Row("Trajetória", path(e.accessPath())));
         if (!e.context().isEmpty()) rows.add(new Row("Contexto", context(e.context())));
         if (!e.stabilityNotes().isEmpty()) rows.add(new Row("Estabilidade", safeJoin(e.stabilityNotes(), "; ")));
@@ -70,7 +72,31 @@ public final class ElementPresentation {
     }
 
     private static String locator(LocatorCandidate c) {
-        return StudioText.technical(c.description()) + " · " + c.stability().label();
+        return STRATEGY_LABELS.getOrDefault(c.strategy().name(), c.strategy().name()) + ": " + StudioText.technical(c.description()) + " · "
+                + c.stability().label();
+    }
+
+    /**
+     * STUDIO-012: justificativa curta da estratégia preferida. Identificador do desenvolvedor ou nome de interface únicos
+     * identificam; caminho estrutural/posicional só localiza nesta página — fica em revisão.
+     */
+    public static String why(LocatorCandidate c) {
+        String unique = c.validated() ? "único e validado na captura" : "não validado na captura";
+        return switch (c.strategy()) {
+            case ID, NAME, TEST_ATTRIBUTE -> "identificador do desenvolvedor aceito pela política, " + unique;
+            case LABEL, ROLE_NAME, TEXT -> "nome de interface do vocabulário, " + unique;
+            case ROW_CONTEXT, CONTEXTUAL, ATTRIBUTE -> "contexto e atributos estruturais, " + unique + "; confira antes de executar";
+            case XPATH_RELATIVE, POSITIONAL -> "caminho estrutural/posicional (sem id, name ou rótulo utilizáveis), " + unique
+                    + " — requer revisão: muda se a página mudar";
+        };
+    }
+
+    /** STUDIO-012: documento em que o elemento está ("Documento principal" / "Dentro de iframe (2 níveis)"). */
+    public static String scope(List<AccessStep> steps) {
+        long frames = steps.stream().filter(s -> s.type() == AccessStep.Type.IFRAME).count();
+        boolean shadow = steps.stream().anyMatch(s -> s.type() == AccessStep.Type.SHADOW_ROOT);
+        String base = frames == 0 ? "Documento principal" : frames == 1 ? "Dentro de iframe" : "Dentro de iframe (" + frames + " níveis)";
+        return shadow ? base + ", em Shadow DOM" : base;
     }
 
     private static final Map<String, String> STRATEGY_LABELS = Map.ofEntries(
