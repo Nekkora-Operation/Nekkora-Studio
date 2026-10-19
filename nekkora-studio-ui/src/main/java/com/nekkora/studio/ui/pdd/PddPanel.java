@@ -86,14 +86,14 @@ public class PddPanel extends JPanel {
         default void revokeSite(String origin) {}
 
         /**
-         * Revisão da usuária (19/10/2026): autoriza já escolhendo a imagem do site — {@code full} = print integral (os dados
-         * da tela vão para o PDD; só senhas cobertas), que pede confirmação explícita antes de valer.
+         * Revisão da usuária (19/10/2026): autoriza já escolhendo a imagem do site — {@code full} = print integral (o padrão:
+         * os dados da tela vão para o PDD; só senhas cobertas) ou o print mascarado.
          */
         default void authorizeSite(String tabRef, String origin, boolean remember, boolean full) {
             if (!full) authorizeSite(tabRef, origin, remember);
         }
 
-        /** Troca a imagem de um site já autorizado: print integral ({@code full}, com confirmação) ou de volta ao mascarado. */
+        /** Troca a imagem de um site já autorizado: print integral ({@code full}) ou mascarado. */
         default void setSiteLevel(String tabRef, String origin, boolean full) {}
 
         /** Captura; {@code masked} = mascarar esta captura mesmo num site com print integral. */
@@ -166,8 +166,8 @@ public class PddPanel extends JPanel {
     }
 
     /** Escolha da imagem do PDD ao autorizar um site (revisão da usuária). */
-    static final String LEVEL_MASKED = "Print mascarado (recomendado)";
-    static final String LEVEL_FULL = "Print integral: os dados da tela vão para o PDD";
+    static final String LEVEL_FULL = "Print integral (padrão): a tela como está, só senhas cobertas";
+    static final String LEVEL_MASKED = "Print mascarado: dados cobertos por faixas";
     /** Selo da imagem em print integral. */
     public static final String FULL_BADGE = "Print integral: dados reais da tela";
 
@@ -324,8 +324,8 @@ public class PddPanel extends JPanel {
         blockTools.add(captureHint);
         consentText.getAccessibleContext().setAccessibleName("Autorização da captura do PDD neste site");
         consentBox.add(consentText);
+        level.addItem(LEVEL_FULL); // pedido da usuária: o print original é a opção primária
         level.addItem(LEVEL_MASKED);
-        level.addItem(LEVEL_FULL);
         level.setLabelProvider(x -> x == null ? "" : x);
         level.getAccessibleContext().setAccessibleName("Imagem do PDD neste site");
         consentBox.add(level);
@@ -593,8 +593,8 @@ public class PddPanel extends JPanel {
         String origin = t == null || t.origin() == null ? "" : t.origin();
         String text = switch (state) {
             case "CONSENT_REQUIRED" -> "Esta página permite gravação, mas a captura de PDD ainda não está autorizada. Site: " + origin + ". A autorização vale só"
-                    + " para esta origem exata. No print mascarado, campos, textos de dados, tabelas e frames saem cobertos por faixas; no print integral,"
-                    + " a tela sai como está, com os dados, e só os campos de senha saem cobertos.";
+                    + " para esta origem exata. Por padrão a imagem é o print integral: a tela como está, com os dados (só os campos de senha saem"
+                    + " cobertos), e ela vai assim para o PDF. No print mascarado, campos, textos de dados, tabelas e frames saem cobertos por faixas.";
             case "CHROME_ACCESS_REQUIRED" -> "Sem acesso do Chrome a este site: conceda pelo ícone da Nekkora Extension (Acesso ao site → Neste site). Depois, autorize"
                     + " a captura do PDD.";
             case "RECORDING" -> "Esta aba está sendo gravada: finalize a gravação para capturar.";

@@ -145,6 +145,7 @@ class PddSitesUiTest {
     /** Resposta da pessoa às confirmações do print integral (liberar no site, exportar). */
     private volatile boolean confirms = true;
     private final List<String> asked = new CopyOnWriteArrayList<>();
+    private volatile int shows;
 
     @AfterEach
     void tearDown() {
@@ -156,7 +157,9 @@ class PddSitesUiTest {
         studio = Edt.call(() -> Studio.create(StudioFixture.CLOCK, new ScriptedPrompts(), () -> { }, browser, RecorderPrompts.none(),
                 p -> RecorderWindowHost.headless()));
         studio.useVisualPddHosts(p -> new PddPresenter.Host() {
-            public void show() {}
+            public void show() {
+                shows++;
+            }
 
             public void hide() {}
 
@@ -293,16 +296,16 @@ class PddSitesUiTest {
         Edt.run(() -> pdd().panel().authorizeButton().doClick());
         Edt.flush();
         Edt.flush();
-        assertEquals(Map.of("tabRef", "t-SiteTab00002", "origin", SITE, "scope", "SESSION", "actor", "DEVELOPER", "level", "MASKED"), browser.lastGrant,
-                "sem escolha: print mascarado");
-        assertTrue(asked.isEmpty(), "o print mascarado não pede confirmação");
+        assertEquals(Map.of("tabRef", "t-SiteTab00002", "origin", SITE, "scope", "SESSION", "actor", "DEVELOPER", "level", "FULL"), browser.lastGrant,
+                "pedido da usuária: sem escolha, o print integral (o padrão)");
+        assertTrue(asked.isEmpty(), "autorizar não pede confirmação (o texto da autorização avisa)");
         assertEquals("Captura PDD autorizada", model().bannerTitle(), model().banner());
         assertEquals("READY", model().tabs().stream().filter(t -> t.tabRef().equals("t-SiteTab00002")).findFirst().orElseThrow().state());
         assertEquals(1, model().sites().size());
         selectTab("t-SiteTab00002");
         assertTrue(Edt.call(() -> pdd().panel().captureButton().isEnabled()));
         shoot(login, "t-SiteTab00002", capturedV3(a, "Entrar"));
-        assertEquals("nekkora-visual/4", browser.lastArm.get("policy"), "extensão 0.6.0: o Studio pede o print mascarado (v4); a descrição v3 continua aceita");
+        assertEquals("nekkora-visual/5", browser.lastArm.get("policy"), "site no print integral (o padrão): o Studio pede a v5; a descrição v3 continua aceita");
         assertEquals(SITE, browser.lastArm.get("origin"), "a origem mostrada vai junto (aba em outra origem = nada é armado)");
         assertTrue(model().hasImage(), model().banner());
         assertEquals("Imagem associada · rascunho 1.2.0", model().bannerTitle(), model().banner());
@@ -402,32 +405,24 @@ class PddSitesUiTest {
     }
 
     @Test
-    @DisplayName("v5 liberar o print integral: pede confirmação (recusada = nada concedido; aceita = nível FULL); site integral arma a v5; \"Mascarar esta captura\" arma a v4")
-    void liberarPrintIntegral() {
+    @DisplayName("v5 é o padrão: autorizar já no print integral, sem segundo clique; \"Print mascarado\" escolhido arma a v4; \"Mascarar esta captura\"; trocar o nível sem confirmação")
+    void printIntegralPadrao() {
         studio();
         site();
         String login = openLogin();
         selectTab("t-SiteTab00002");
         assertTrue(Edt.call(() -> pdd().panel().levelCombo().isVisible()), "a escolha da imagem aparece ao autorizar");
-        confirms = false;
-        Edt.run(() -> {
-            pdd().panel().levelCombo().setSelectedIndex(1);
-            pdd().panel().authorizeButton().doClick();
-        });
-        Edt.flush();
-        Edt.flush();
-        assertEquals(1, asked.size(), "confirmação explícita antes do print integral");
-        assertNull(browser.lastGrant, "recusada: nada é concedido");
-        assertEquals("Print integral não liberado", model().bannerTitle());
-        confirms = true;
+        assertTrue(Edt.call(() -> pdd().panel().levelCombo().getSelectedValue()).startsWith("Print integral (padrão)"));
+        assertTrue(Edt.call(() -> pdd().panel().consentText().getText()).contains("Por padrão a imagem é o print integral"), "o aviso de uma linha");
+        confirms = false; // nenhuma confirmação deve ser pedida ao autorizar
         Edt.run(() -> pdd().panel().authorizeButton().doClick());
         Edt.flush();
         Edt.flush();
+        assertTrue(asked.isEmpty(), "sem segundo clique");
         assertEquals("FULL", browser.lastGrant.get("level"));
         assertTrue(siteTab().full(), "a aba sabe que o site está no print integral");
         assertTrue(model().sites().get(0).label().contains("print integral"), model().sites().get(0).label());
         selectTab("t-SiteTab00002");
-        assertTrue(Edt.call(() -> pdd().panel().consentText().getText()).contains("print integral"));
         assertTrue(Edt.call(() -> pdd().panel().maskThisBox().isVisible()), "cada captura pode sair mascarada");
         Edt.run(() -> pdd().panel().captureButton().doClick());
         Edt.flush();
@@ -440,17 +435,82 @@ class PddSitesUiTest {
         Edt.flush();
         assertEquals("nekkora-visual/4", browser.lastArm.get("policy"), "esta captura sai mascarada");
         Edt.run(() -> pdd().cancelCapture());
-        // voltar ao mascarado não pede confirmação
-        int before = asked.size();
-        Edt.run(() -> pdd().panel().siteLevelButton().doClick());
+        Edt.run(() -> pdd().panel().siteLevelButton().doClick()); // "Voltar ao print mascarado neste site"
         Edt.flush();
         Edt.flush();
         assertEquals("MASKED", browser.lastGrant.get("level"));
-        assertEquals(before, asked.size());
         assertFalse(siteTab().full());
         Edt.run(() -> pdd().capture(login, "t-SiteTab00002"));
         Edt.flush();
         assertEquals("nekkora-visual/4", browser.lastArm.get("policy"), "site mascarado nunca arma a v5");
+        Edt.run(() -> pdd().cancelCapture());
+        selectTab("t-SiteTab00002"); // a lista de abas foi relida: a escolha volta para a primeira
+        Edt.run(() -> pdd().panel().siteLevelButton().doClick()); // "Liberar print integral neste site", sem confirmação
+        Edt.flush();
+        Edt.flush();
+        assertEquals("FULL", browser.lastGrant.get("level"));
+        assertTrue(asked.isEmpty(), "trocar o nível não pede confirmação");
+        // autorizar sem escolher o nível (chamada de quem não passa a escolha): print integral, o padrão
+        Edt.run(() -> pdd().revokeSite(SITE));
+        Edt.flush();
+        Edt.flush();
+        Edt.run(() -> pdd().authorizeSite("t-SiteTab00002", SITE, false));
+        Edt.flush();
+        Edt.flush();
+        assertEquals("FULL", browser.lastGrant.get("level"), "sem escolha: integral");
+        // autorizar escolhendo o mascarado
+        Edt.run(() -> pdd().revokeSite(SITE));
+        Edt.flush();
+        Edt.flush();
+        selectTab("t-SiteTab00002");
+        Edt.run(() -> {
+            pdd().panel().levelCombo().setSelectedIndex(1);
+            pdd().panel().authorizeButton().doClick();
+        });
+        Edt.flush();
+        Edt.flush();
+        assertEquals("MASKED", browser.lastGrant.get("level"));
+    }
+
+    @Test
+    @DisplayName("Recorder: \"Capturar tela\" depois de finalizar arma a captura para o bloco da última etapa da gravação; a imagem é associada; site sem autorização abre o PDD")
+    void capturarPeloRecorder() throws Exception {
+        studio();
+        Automation a = site();
+        var session = a.sessions().get(0);
+        var rec = new com.nekkora.studio.recorder.RecorderController.LastRecording("rec-13", a.id(), session.id(), "t-SiteTab00002");
+        List<String> status = new CopyOnWriteArrayList<>();
+        // site ainda sem autorização do PDD: a janela do PDD abre no bloco certo
+        Edt.run(() -> pdd().captureAfterRecording(rec, (t, busy) -> status.add(t)));
+        Edt.flush();
+        Edt.flush();
+        assertTrue(status.get(status.size() - 1).startsWith("Autorize a captura do PDD neste site"), status.toString());
+        assertTrue(shows > 0, "a janela do PDD abriu para autorizar");
+        assertNull(browser.lastArm, "nada foi armado sem autorização");
+        // autorizado (print integral): arma e associa a imagem ao bloco da etapa "Entrar" (a última desta gravação)
+        browser.consent = "SESSION";
+        browser.level = "FULL";
+        status.clear();
+        Edt.run(() -> pdd().captureAfterRecording(rec, (t, busy) -> status.add(t)));
+        Edt.flush();
+        Edt.flush();
+        assertEquals("nekkora-visual/5", browser.lastArm.get("policy"), status.toString());
+        assertEquals(SITE, browser.lastArm.get("origin"));
+        assertTrue(status.stream().anyMatch(x -> x.startsWith("Captura armada")), status.toString());
+        browser.emit(capturedV5(a, false).replace("CID", (String) browser.lastArm.get("captureId")));
+        Edt.flush();
+        Edt.flush();
+        assertTrue(status.get(status.size() - 1).startsWith("Imagem associada"), status.toString());
+        DocumentDraft d = Edt.call(() -> pdd().draft().orElseThrow());
+        var entrar = a.sessions().get(0).steps().get(2).id();
+        DocumentDraft.Block b = d.blocks().stream().filter(x -> x.stepIds().contains(entrar)).findFirst().orElseThrow();
+        assertFalse(b.captureSha().isEmpty(), "a imagem foi para o bloco da última etapa da gravação");
+        assertEquals("nekkora-visual/5", d.captures().get(b.captureSha()).policy());
+        // gravação sem etapas registradas no Studio: nada a capturar
+        status.clear();
+        Edt.run(() -> pdd().captureAfterRecording(new com.nekkora.studio.recorder.RecorderController.LastRecording("rec-outra", a.id(), session.id(),
+                "t-SiteTab00002"), (t, busy) -> status.add(t)));
+        assertTrue(status.get(0).startsWith("Nenhuma etapa desta gravação"), status.toString());
     }
 
     @Test

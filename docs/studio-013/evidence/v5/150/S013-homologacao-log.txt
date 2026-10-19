@@ -5,13 +5,11 @@ Chrome for Testing: 155.0.8059.39
 OK    Conexão autenticada Studio ⇄ host ⇄ extensão
 OK    B0: extensão 0.6.0 conectada (print mascarado e print integral)
 OK    B1: gravação no site = preencher, preencher, clicar; nenhum valor digitado no modelo
-OK    B2: ao autorizar, a escolha da imagem do site aparece com o print mascarado como padrão
+OK    B2: ao autorizar, a escolha da imagem do site aparece com o PRINT INTEGRAL como padrão
+OK    B2: o texto da autorização avisa que, por padrão, os dados vão para o PDF
 OK    B2: escolha, "Autorizar" e "Lembrar" inteiros dentro da janela
-OK    B2: "Print integral" escolhido pelo teclado na lista
-captura S013-B2-escolha-print-integral.png (1254x666)
-OK    B2: a confirmação diz o site e explica que os dados vão para o PDF e que só senhas saem cobertas
-captura S013-B2-confirmacao-print-integral.png (420x220)
-OK    B2: Cancelar na confirmação: nada é autorizado
+captura S013-B2-autorizar-print-integral-padrao.png (1254x666)
+OK    B2: nenhuma confirmação pedida ao autorizar (sem segundo clique)
   http://site-a.nekkora.test:18765 — até fechar o navegador. Print integral: as imagens mostram os dados da tela; só senhas cobertas. Cada captura pode sair mascarada. Revogue quando quiser em "Sites autorizados para o PDD". · sites: [http://site-a.nekkora.test:18765 · até fechar o navegador · print integral · agente de teste]
 OK    B2: site no print integral, só nesta sessão, registrado como agente de teste
 OK    B2: a aba diz "print integral" e oferece "Mascarar esta captura"
@@ -22,4 +20,4 @@ captura S013-B2-site-print-integral.png (1254x666)
 OK    E2: captura v5 em 150%
 OK    E2: selo "Print integral" visível em 150%
 captura S013-E2-150-print-integral.png (1254x666)
-RESULTADO: 13 verificações, 0 falha(s)
+RESULTADO: 12 verificações, 0 falha(s)

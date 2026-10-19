@@ -6,7 +6,7 @@ Execuções de 19/10/2026, com dados 100% sintéticos. Nenhum ambiente ou dado d
 
 | Suíte | Resultado |
 |---|---|
-| Windows (`./mvnw test`, MS OpenJDK 21.0.12) | **649/649**. Base `main`: 624. Novos: `PddVisualV3Test` 7, `PddSitesUiTest` 9 (1 com evento v4 real; 2 do print integral: confirmações, nível, "Mascarar esta captura", selo, exportar), `PddSitesClientTest` 4 (1 do nível), `PddVisualV4Test` 2, `PddVisualV5Test` 2, `BridgeServerTest` +1 (quadro grande só para o print v4/v5) |
+| Windows (`./mvnw test`, MS OpenJDK 21.0.12) | **655/655**. Base `main`: 624. Novos: `PddVisualV3Test` 7, `PddSitesUiTest` 10 (1 com evento v4 real; print integral como padrão, "Mascarar esta captura", selo, exportar; "Capturar tela" pelo Recorder), `PddSitesClientTest` 4 (1 do nível), `PddVisualV4Test` 2, `PddVisualV5Test` 2, `BridgeServerTest` +1 (quadro grande só para o print v4/v5), `MarkerLayoutTest` 4 e `PddImageEditorMarkersTest` 1 (números dos marcadores); `RecorderStepsStudioTest` passou a conferir o botão "Capturar tela" |
 | Linux (`tools/golden-linux.sh verify`, Temurin fixado por digest) | **648/648 + 1 ignorado** (649 no total; o ignorado é o mesmo das missões anteriores, só para Windows), Temurin 21.0.12.1 linux/amd64, sobre o commit 36156ac do Studio e o 8c1ba4b da extensão |
 | Contrato do Bridge | Schema e fixtures `s013-*` idênticos aos da extensão (20 válidas, 23 inválidas) |
 
@@ -19,9 +19,15 @@ dado (nomes, CPFs, tabela, mensagens, campos) está na cor-sentinela #E6007E, e 
 dessa cor** no print que chega ao Studio, no rascunho e no PDF. Operador: Claude como
 agente de teste (TEST_AGENT).
 
-**Resultado: 81/81 verificações; em 150%, 5/5.** Log completo: `evidence/S013-homologacao-log.txt`. (Na revisão do
-print integral a página ganhou três sentinelas de senha; as 6 verificações a mais conferem que nenhuma delas chega ao
-rascunho nem ao PDF.)
+**Resultado: 83/83 verificações; em 150%, 5/5.** Log completo: `evidence/S013-homologacao-log.txt`.
+- **Sentinelas de senha:** na revisão do print integral, a página ganhou três sentinelas de senha; 6 verificações
+  conferem que nenhuma chega ao rascunho nem ao PDF.
+- **Integral como padrão:** com o integral virando padrão (D-S013-10), este roteiro escolhe "Print mascarado" pelo
+  teclado antes de autorizar (A3), e no laboratório usa "Mascarar esta captura" (A11).
+- **Higiene (A12):** uma evidência só conta como suja a partir de 5 px da cor-sentinela. Dado vazado é texto, com dezenas
+  ou centenas de px. As capturas da janela mostraram 1 px isolado, no mesmo ponto em todas: ampliado, é a borda
+  antisserrilhada do número rosa do marcador (#C2466D) na prévia do PDF, que agora pode ficar acima do campo, sobre o
+  rótulo "Senha".
 
 | Etapa | O que foi provado |
 |---|---|
@@ -55,22 +61,31 @@ Mesma infraestrutura, com o "sistema real" sintético: todo dado na cor-sentinel
 (senha, "mostrar senha" com `type=text` e senha dentro da shadow root fechada). Operador: Claude como agente de teste;
 as duas confirmações foram respondidas por clique real do mouse do sistema.
 
-**Resultado: 55/55 verificações; em 150%, 13/13.** Log: `evidence/v5/S013-homologacao-log.txt`.
+**Resultado: 58/58 verificações; em 150%, 12/12** (rodada depois de D-S013-10: integral como padrão, "Capturar tela"
+pelo Recorder e números dos marcadores). Log: `evidence/v5/S013-homologacao-log.txt`.
 
 | Etapa | O que foi provado |
 |---|---|
 | B1 | Gravação no site (preencher, preencher, clicar) sem valor digitado no modelo |
-| B2 | A escolha da imagem aparece ao autorizar, com o print mascarado como padrão; "Print integral" escolhido pelo teclado; confirmação real com o site e o aviso (dados no PDF, só senhas cobertas); **Cancelar não autoriza nada**; "Liberar print integral" autoriza (sessão, agente de teste); "Mascarar esta captura" e "Voltar ao print mascarado" inteiros dentro da janela |
-| B3 | Captura v5 com o gesto real: só máscaras FIELD (3) e BLOCK; **5.495 px de dados** (cor-sentinela) no print e **nenhum** px de senha; selo "Print integral"; metadados do rascunho sem nenhuma das 23 sentinelas |
+| B1b | **Recorder:** o resumo da gravação concluída oferece "Capturar tela"; com o site ainda sem autorização do PDD, o Recorder avisa e a janela do PDD abre no bloco das etapas desta gravação |
+| B2 | A escolha da imagem aparece ao autorizar com o **print integral como padrão** e o aviso de uma linha; **autorizar não pede segundo clique** (nenhuma janela de confirmação); site no integral (sessão, agente de teste); "Mascarar esta captura" e "Voltar ao print mascarado" inteiros dentro da janela |
+| B3 | **"Capturar tela" pelo Recorder** com o gesto real: o Recorder mostra "Captura armada" e depois "Imagem associada"; a imagem vai para o bloco das etapas desta gravação. Captura v5: só máscaras FIELD (3) e BLOCK; **5.495 px de dados** (cor-sentinela) no print e **nenhum** px de senha; selo "Print integral"; metadados do rascunho sem nenhuma das 23 sentinelas |
+| B3b | **Recorte justo** nos campos de login (Usuário, Senha, Entrar) pelo mouse: os números dos marcadores ficam separados no editor (defeito relatado pela usuária) |
 | B4 | "Mascarar esta captura": candidata v4 sem cor-sentinela e sem o selo; Cancelar mantém a imagem integral |
 | B5 | Exportar pede confirmação; **Cancelar = nenhum PDF**; "Exportar mesmo assim" gera o PDF com a procedência do print integral e a nota no bloco; texto do PDF sem valores digitados; as páginas renderizadas trazem os dados e nenhuma senha |
 | B6 | "Voltar ao print mascarado neste site" sem confirmação; a próxima captura no site é v4 sem cor-sentinela |
 | B7 | Rascunho, logs do host e observações do log sem valores digitados nem dados do sistema; print salvo e páginas do PDF sem a sentinela de senha; `.nekkora` nunca mudou |
-| E2 (150%) | Escolha, confirmação e autorização; "Capturar", "Mascarar esta captura" e "Voltar ao print mascarado" inteiros na janela; captura v5 e selo visíveis |
+| E2 (150%) | Escolha (integral como padrão) e autorização; "Capturar", "Mascarar esta captura" e "Voltar ao print mascarado" inteiros na janela; captura v5 e selo visíveis |
 
 Evidências em `evidence/v5/`: escolha e confirmação do print integral, janela com o selo, o print integral salvo
 (página **sintética**, com dados fictícios à mostra e senhas cobertas), a confirmação da exportação, o PDF e o texto
 extraído.
+
+**Defeitos relatados pela usuária no teste e corrigidos (D-S013-10):** os números dos marcadores ficavam um em cima do
+outro depois de recortar, no editor e no PDF. Agora há uma regra única de posição (`MarkerLayout`).
+
+**Observação de uso.** O Recorder fica acima das outras janelas. Quando ele abre a janela do PDD para autorizar o site,
+pode cobrir os controles dela. No roteiro, o Recorder é arrastado para o canto, como a pessoa faria.
 
 **Defeitos achados nesta homologação e corrigidos:**
 - "Lembrar este site" ficava cortado ao lado de "Autorizar" (235 de 396 px visíveis): agora fica em linha própria.
@@ -100,11 +115,18 @@ extraído.
 | S15 | v5 aceita máscara de texto | morta |
 | S16 | Site no print mascarado arma a v5 | morta |
 | S17 | "Mascarar esta captura" ignorado | morta |
-| S18 | Liberar o print integral sem confirmação | morta |
 | S19 | Exportar print integral sem confirmação | morta |
 | S20 | Nível desconhecido vindo da extensão vale como FULL | morta |
+| S21 | Números dos marcadores sem desvio (sempre na posição preferida) | morta |
+| S22 | O editor volta à regra antiga (número sempre à esquerda) | morta |
+| S23 | Autorizar sem escolha volta ao mascarado | morta (SOBREVIVEU na 1ª rodada: a janela sempre passa a escolha; o teste passou a chamar a autorização sem nível) |
+| S24 | Recorder: etapas de qualquer gravação contam como desta | morta |
+| S25 | Recorder: arma a captura em site sem autorização do PDD | morta |
+| S26 | Recorder: "Capturar tela" também depois de cancelar | morta |
+| S27 | A lista da janela volta a abrir no mascarado | morta |
 
-**20/20 mortas.** A S11 também foi repetida com a âncora nova (o `grant` passou a conferir o nível).
+**26/26 mortas.** A S18 (liberar o integral sem confirmação) saiu: a confirmação ao liberar foi retirada por decisão da
+usuária (D-S013-10). As S11, S14, S16 e S17 foram repetidas com as âncoras novas.
 
 ## Defeito achado na homologação
 

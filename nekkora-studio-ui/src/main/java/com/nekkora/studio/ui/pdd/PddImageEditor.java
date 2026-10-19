@@ -1,5 +1,6 @@
 package com.nekkora.studio.ui.pdd;
 
+import com.nekkora.studio.domain.layout.MarkerLayout;
 import com.nekkora.tokens.ColorToken;
 import com.nekkora.tokens.FontWeight;
 import com.nekkora.tokens.TypeStyle;
@@ -256,15 +257,18 @@ public final class PddImageEditor extends JComponent {
         }
         g2.setFont(NekkoraFonts.font(TypeStyle.CAPTION, FontWeight.SEMIBOLD));
         Color accent = ThemeManager.current().color(ColorToken.ACCENT_SOLID); // o marcador do PDF é o rosa oficial; no editor, o acento do tema
-        for (Mark m : marks) {
+        // números: mesma regra do PDF (MarkerLayout) — nunca um em cima do outro, dentro do recorte quando há
+        int r = 8;
+        List<MarkerLayout.Point> centers = badgeCenters(s, w, h, r);
+        for (int k = 0; k < marks.size(); k++) {
+            Mark m = marks.get(k);
             Rectangle v = view(m.box(), s);
             g2.setColor(accent);
             g2.setStroke(m.manual() ? new BasicStroke(1.6f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 10f, new float[] {4f, 3f}, 0f)
                     : new BasicStroke(1.6f));
             g2.drawRect(v.x - 2, v.y - 2, v.width + 3, v.height + 3);
-            int r = 8;
-            int cx = Math.max(r + 1, v.x - r - 4);
-            int cy = v.y + v.height / 2;
+            int cx = (int) Math.round(centers.get(k).x());
+            int cy = (int) Math.round(centers.get(k).y());
             g2.fillOval(cx - r, cy - r, 2 * r, 2 * r);
             g2.setColor(ThemeManager.current().color(ColorToken.ACTION_PRIMARY_TEXT));
             String n = String.valueOf(m.ordinal());
@@ -282,6 +286,24 @@ public final class PddImageEditor extends JComponent {
             g2.drawRect(0, 0, w + 1, h + 1);
         }
         g2.dispose();
+    }
+
+    /** Centros dos números (coordenadas da tela do editor). */
+    List<MarkerLayout.Point> badgeCenters(double s, int w, int h, int r) {
+        Rectangle area = crop != null ? view(crop, s) : new Rectangle(1, 1, w, h);
+        List<MarkerLayout.Box> boxes = new java.util.ArrayList<>();
+        for (Mark m : marks) {
+            Rectangle v = view(m.box(), s);
+            boxes.add(new MarkerLayout.Box(v.x - 2, v.y - 2, v.width + 3, v.height + 3));
+        }
+        return MarkerLayout.place(boxes, new MarkerLayout.Box(area.x, area.y, area.width, area.height), r, 4, List.of());
+    }
+
+    /** Centros dos números como estão na tela agora (testes de interface). */
+    public List<MarkerLayout.Point> badgeCenters() {
+        if (image == null) return List.of();
+        double s = scale();
+        return badgeCenters(s, (int) Math.round(image.getWidth() * s), (int) Math.round(image.getHeight() * s), 8);
     }
 
     private static Rectangle view(Rectangle r, double s) {

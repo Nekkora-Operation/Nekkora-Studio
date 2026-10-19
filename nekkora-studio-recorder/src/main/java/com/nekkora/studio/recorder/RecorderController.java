@@ -6,6 +6,7 @@ import com.nekkora.studio.bridge.BridgeEvent;
 import com.nekkora.studio.bridge.BrowserLink;
 import com.nekkora.studio.bridge.LinkStatus;
 import com.nekkora.studio.bridge.json.Json;
+import com.nekkora.studio.domain.AutomationId;
 import com.nekkora.studio.domain.SessionId;
 import com.nekkora.studio.domain.privacy.DisplaySafety;
 import java.time.Clock;
@@ -93,6 +94,11 @@ public final class RecorderController implements AutoCloseable {
     private String pendingOp;
     private ScheduledFuture<?> renewTask;
     private volatile RecorderSnapshot snapshot;
+    /** Última gravação iniciada (mantida depois de concluída): o PDD captura a tela para as etapas dela. */
+    private volatile LastRecording lastRecording;
+
+    /** Gravação mais recente: id (as etapas levam {@code RECORDING_ID}), automação, sessão e a aba (referência opaca). */
+    public record LastRecording(String recordingId, AutomationId automation, SessionId session, String tabRef) {}
 
     // ---- etapas gravadas (STUDIO-003; somente na thread do Recorder)
     private boolean stepsEnabled;
@@ -187,6 +193,11 @@ public final class RecorderController implements AutoCloseable {
     }
 
     /** Última fotografia publicada. */
+    /** A gravação mais recente (ainda que concluída), se houver. */
+    public java.util.Optional<LastRecording> lastRecording() {
+        return java.util.Optional.ofNullable(lastRecording);
+    }
+
     public RecorderSnapshot snapshot() {
         return snapshot;
     }
@@ -362,6 +373,7 @@ public final class RecorderController implements AutoCloseable {
             return;
         }
         recording = new TechnicalRecording("rec-" + UUID.randomUUID(), target.automation(), target.session(), clock.instant());
+        lastRecording = new LastRecording(recording.recordingId(), target.automation(), target.session(), tab.tabRef());
         pendingMode = requested;
         tabTitle = tab.label();
         tabHost = tab.host();

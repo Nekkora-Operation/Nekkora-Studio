@@ -243,15 +243,40 @@ public final class Studio013V5Homologation {
         clickInPage("document.getElementById('entrar')");
         waitFor("3 etapas na Autenticação", 30, () -> edt(auth::stepCount) >= 3);
         sleep(1500);
-        finishRecording();
+        if (scale) {
+            finishRecording();
+        } else {
+            restoreStudio(floating());
+            clickButtonWithText(floating(), "Finalizar");
+            waitFor("gravação finalizada", 30, () -> !edt(() -> window.studio().recorder().snapshot().state().active()));
+            sleep(800);
+        }
         check("B1: gravação no site = preencher, preencher, clicar; nenhum valor digitado no modelo", edt(() -> kinds(auth).equals(List.of("FILL", "FILL", "CLICK")))
                 && !edt(() -> domainText(a)).contains(USER) && !edt(() -> domainText(a)).contains(PASS));
         long revisionBefore = edt(a::revision);
         String nekkoraBefore = edt(() -> domainText(a));
-
-        // ================================================================ B2 — autorizar escolhendo "Print integral": confirmação real
-        menuPath("Automação", "Gerar documentação", "PDD visual…");
-        JDialog dlg = pddDialog();
+        com.nekkora.studio.ui.recorder.FloatingRecorderPanel rp = edt(() -> window.studio().recorderPresenter().panel());
+        JDialog dlg;
+        if (!scale) {
+            // ============================================================ B1b — "Capturar tela" no resumo do Recorder (pedido da usuária)
+            check("B1b: o resumo da gravação concluída oferece \"Capturar tela\"", edt(() -> rp.capturePddButton().isShowing()));
+            save(robot.createScreenCapture(edt(() -> floating().getBounds())), "B1b-recorder-capturar-tela");
+            click(edt(rp::capturePddButton));
+            waitFor("aviso no Recorder", 15, () -> edt(() -> rp.pddStatusText().getText()).startsWith("Autorize a captura do PDD"));
+            log("  Recorder: " + edt(() -> rp.pddStatusText().getText()));
+            dlg = pddDialog();
+            check("B1b: site sem autorização do PDD: o Recorder avisa e a janela do PDD abre", dlg.isShowing());
+            // o Recorder fica acima das outras janelas e cobria "Autorizar" no PDD: a pessoa o arrasta para o canto (sobre a prévia)
+            edt(() -> {
+                java.awt.Rectangle sb = GraphicsEnvironment.getLocalGraphicsEnvironment().getMaximumWindowBounds();
+                floating().setLocation(sb.x + sb.width - floating().getWidth() - 8, sb.y + sb.height - floating().getHeight() - 8);
+                return null;
+            });
+            sleep(400);
+        } else {
+            menuPath("Automação", "Gerar documentação", "PDD visual…");
+            dlg = pddDialog();
+        }
         PddPresenter pdd = edt(() -> window.studio().visualPdd());
         PddPanel panel = edt(pdd::panel);
         if (scale) {
@@ -269,31 +294,16 @@ public final class Studio013V5Homologation {
         String loginKey = model(panel).items().get(1).key();
         selectItem(panel, loginKey);
         selectTab(panel, "site-a");
-        check("B2: ao autorizar, a escolha da imagem do site aparece com o print mascarado como padrão", edt(() -> panel.levelCombo().isShowing()
-                && "Print mascarado (recomendado)".equals(panel.levelCombo().getSelectedValue())));
+        check("B2: ao autorizar, a escolha da imagem do site aparece com o PRINT INTEGRAL como padrão", edt(() -> panel.levelCombo().isShowing()
+                && String.valueOf(panel.levelCombo().getSelectedValue()).startsWith("Print integral (padrão)")));
+        check("B2: o texto da autorização avisa que, por padrão, os dados vão para o PDF", edt(() -> panel.consentText().getText())
+                .contains("Por padrão a imagem é o print integral"));
         check("B2: escolha, \"Autorizar\" e \"Lembrar\" inteiros dentro da janela", reachable(dlg, panel.levelCombo(), panel.authorizeButton(), panel.rememberBox()));
-        click(edt(panel::levelCombo));
-        sleep(400);
-        press(KeyEvent.VK_DOWN);
-        press(KeyEvent.VK_ENTER);
-        sleep(300);
-        check("B2: \"Print integral\" escolhido pelo teclado na lista", edt(() -> String.valueOf(panel.levelCombo().getSelectedValue())).startsWith("Print integral"));
-        shot(dlg, panel, "B2-escolha-print-integral");
+        shot(dlg, panel, "B2-autorizar-print-integral-padrao");
         click(edt(panel::authorizeButton));
-        NekkoraDialog cd = waitDialog("Liberar o print integral neste site?");
-        String msg = edt(() -> text(cd));
-        check("B2: a confirmação diz o site e explica que os dados vão para o PDF e que só senhas saem cobertas", msg.contains(SITE_ORIGIN) && msg.contains("entram no PDD e no PDF")
-                && msg.contains("Só os campos de senha saem cobertos"));
-        save(robot.createScreenCapture(edt(cd::getBounds)), "B2-confirmacao-print-integral");
-        clickButtonWithText(cd, "Cancelar");
-        waitClosed(cd);
-        waitFor("recusa registrada", 10, () -> "Print integral não liberado".equals(model(panel).bannerTitle()));
-        check("B2: Cancelar na confirmação: nada é autorizado", model(panel).sites().isEmpty() && !edt(() -> panel.captureButton().isEnabled()));
-        click(edt(panel::authorizeButton));
-        NekkoraDialog cd2 = waitDialog("Liberar o print integral neste site?");
-        clickButtonWithText(cd2, "Liberar print integral");
-        waitClosed(cd2);
         waitFor("autorização no print integral", 15, () -> "Captura PDD autorizada".equals(model(panel).bannerTitle()));
+        check("B2: nenhuma confirmação pedida ao autorizar (sem segundo clique)", edt(() -> java.util.Arrays.stream(Window.getWindows())
+                .noneMatch(w -> w instanceof NekkoraDialog open && open.isShowing())));
         waitFor("lista de sites", 10, () -> !model(panel).sites().isEmpty() && model(panel).sites().get(0).full());
         log("  " + model(panel).banner() + " · sites: " + model(panel).sites().stream().map(PddPanel.Site::label).toList());
         check("B2: site no print integral, só nesta sessão, registrado como agente de teste", model(panel).sites().get(0).label().contains("print integral")
@@ -313,8 +323,29 @@ public final class Studio013V5Homologation {
             return;
         }
 
-        // ================================================================ B3 — captura v5 com o gesto real: os dados aparecem, a senha não
-        boolean c1 = captureBlock(panel, loginKey, SITE_PAGE, null, "site-a");
+        // ================================================================ B3 — "Capturar tela" pelo Recorder: v5 com o gesto real
+        cdp.activate(labTarget);
+        navigate(SITE_PAGE);
+        sleep(800);
+        restoreStudio(floating());
+        click(edt(rp::capturePddButton));
+        waitFor("captura armada pelo Recorder", 20, () -> edt(() -> rp.pddStatusText().getText()).startsWith("Captura armada"));
+        log("  Recorder: " + edt(() -> rp.pddStatusText().getText()));
+        focusChrome();
+        guardForeground("atalho de captura (Recorder)");
+        press(KeyEvent.VK_ALT, KeyEvent.VK_SHIFT, KeyEvent.VK_K);
+        waitFor("captura concluída (Recorder)", 30, () -> !edt(() -> rp.pddStatusText().getText()).startsWith("Captura armada"));
+        String recStatus = edt(() -> rp.pddStatusText().getText());
+        log("  Recorder: " + recStatus);
+        save(robot.createScreenCapture(edt(() -> floating().getBounds())), "B3-recorder-imagem-associada");
+        boolean c1 = recStatus.startsWith("Imagem associada") && edt(() -> {
+            DocumentDraft d = pdd.draft().orElseThrow();
+            return !d.block(loginKey).orElseThrow().captureSha().isEmpty();
+        });
+        check("B3: pelo Recorder, a imagem vai para o bloco das etapas desta gravação", c1);
+        clickButtonWithText(floating(), "Voltar ao Studio");
+        sleep(800);
+        selectItem(panel, loginKey);
         DocumentDraft d1 = edt(() -> pdd.draft().orElseThrow());
         DocumentDraft.SafeCapture lc = d1.captures().get(d1.block(loginKey).orElseThrow().captureSha());
         java.util.Map<String, Long> kinds = lc.regions().stream().collect(java.util.stream.Collectors.groupingBy(DocumentDraft.Region::kind,
@@ -333,6 +364,27 @@ public final class Studio013V5Homologation {
         String draftJson = Files.readString(edt(() -> pdd.store().folder(a.id())).resolve("rascunho.json"));
         for (String s : SENTINELS) check("B3: metadados do rascunho sem \"" + s + "\"", !draftJson.contains(s));
         shot(dlg, panel, "B3-captura-v5");
+
+        // ================================================================ B3b — recorte justo nos campos: números separados (defeito relatado)
+        @SuppressWarnings("unchecked")
+        List<Object> fg = (List<Object>) page.eval("(() => { const a = document.getElementById('usuario').getBoundingClientRect();"
+                + " const b = document.getElementById('entrar').getBoundingClientRect(); return [a.left, a.top, Math.max(a.right, b.right), b.bottom]; })()");
+        double dpr = lc.devicePixelRatio();
+        Rectangle tight = new Rectangle((int) Math.max(0, (((Number) fg.get(0)).doubleValue() - 4) * dpr), (int) Math.max(0, (((Number) fg.get(1)).doubleValue() - 4) * dpr),
+                (int) ((((Number) fg.get(2)).doubleValue() - ((Number) fg.get(0)).doubleValue() + 8) * dpr),
+                (int) ((((Number) fg.get(3)).doubleValue() - ((Number) fg.get(1)).doubleValue() + 8) * dpr));
+        dragOnEditor(panel, panel.selectAreaButton(), tight);
+        log("  recorte pedido " + tight + " · obtido " + model(panel).image().crop());
+        List<com.nekkora.studio.domain.layout.MarkerLayout.Point> badges = edt(() -> panel.imageEditor().badgeCenters());
+        boolean apart = true;
+        for (int i = 0; i < badges.size(); i++) {
+            for (int j = i + 1; j < badges.size(); j++) {
+                if (Math.hypot(badges.get(i).x() - badges.get(j).x(), badges.get(i).y() - badges.get(j).y()) < 16) apart = false;
+            }
+        }
+        log("  números no editor: " + badges);
+        check("B3b: depois do recorte justo, os números dos marcadores não ficam um em cima do outro (editor)", badges.size() >= 2 && apart);
+        shot(dlg, panel, "B3b-recorte-justo-numeros");
 
         // ================================================================ B4 — "Mascarar esta captura": a nova sai mascarada
         click(edt(panel::maskThisBox));

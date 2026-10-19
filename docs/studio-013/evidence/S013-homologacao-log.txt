@@ -8,13 +8,14 @@ OK    A0: extensão 0.6.0 conectada (consentimento PDD por origem; print mascara
 OK    A1: gravação no site autorizado pelo Chrome = preencher, preencher, clicar
 OK    A1: nenhum valor digitado no modelo
   abas: [site-a.nekkora.test · captura PDD não autorizada [CONSENT_REQUIRED]]
-  Esta página permite gravação, mas a captura de PDD ainda não está autorizada. Site: http://site-a.nekkora.test:18765. A autorização vale só para esta origem exata. No print mascarado, campos, textos de dados, tabelas e frames saem cobertos por faixas; no print integral, a tela sai como está, com os dados, e só os campos de senha saem cobertos.
+  Esta página permite gravação, mas a captura de PDD ainda não está autorizada. Site: http://site-a.nekkora.test:18765. A autorização vale só para esta origem exata. Por padrão a imagem é o print integral: a tela como está, com os dados (só os campos de senha saem cobertos), e ela vai assim para o PDF. No print mascarado, campos, textos de dados, tabelas e frames saem cobertos por faixas.
 OK    A2: "Esta página permite gravação, mas a captura de PDD ainda não está autorizada"
 OK    A2: a origem aparece exata e sem caminho
 OK    A2: sem autorização, "Capturar tela…" fica indisponível e "Autorizar" aparece
 captura S013-A2-site-sem-autorizacao-pdd.png (1244x811)
+OK    A3: "Print mascarado" escolhido na lista (o integral é o padrão)
   http://site-a.nekkora.test:18765 — até fechar o navegador. Print mascarado: campos, textos de dados, tabelas e frames saem cobertos. Revogue quando quiser em "Sites autorizados para o PDD". · sites: [http://site-a.nekkora.test:18765 · até fechar o navegador · print mascarado · agente de teste]
-OK    A3: site autorizado só nesta sessão, registrado como agente de teste
+OK    A3: site autorizado no print mascarado, só nesta sessão, registrado como agente de teste
 OK    A3: a aba passa a poder capturar
 OK    A3: "Capturar", "Revogar captura PDD" e a lista de sites inteiros dentro da janela (nada empurrado para fora)
 captura S013-A3-site-autorizado.png (1244x811)
@@ -96,8 +97,9 @@ Acesso ao site http://site-a.nekkora.test/* → revogado pelo controle do Chrome
 OK    A10: sem acesso do Chrome, a autorização PDD do site some da lista
 Acesso ao site http://site-a.nekkora.test/* → concedido pelo controle do Chrome
 OK    A10: devolver o acesso do Chrome não devolve a autorização PDD
+OK    A11: no laboratório, "Mascarar esta captura" aparece (o padrão é o print integral)
   Nova captura pronta para revisão: Print mascarado (dados cobertos por faixas). A prévia já mostra a nova imagem; use "Selecionar área" se quiser recortar e então "Aplicar". "Cancelar" mantém a imagem anterior.
-OK    A11: laboratório captura sem pedir autorização (candidata v4, sem cor-sentinela)
+OK    A11: laboratório captura sem pedir autorização (candidata v4 mascarada, sem cor-sentinela)
 captura S013-A12-tema-sakura-dark.png (1244x811)
 captura S013-A12-tema-midnight-dark.png (1244x811)
 captura S013-A12-tema-porcelain-light.png (1244x811)
@@ -105,6 +107,11 @@ captura S013-A12-tema-sage-light.png (1244x811)
 OK    A12 rascunho e capturas: sem valores digitados e sem dados do sistema sintético
 OK    A12 logs do host: sem valores digitados e sem dados do sistema sintético
 OK    A12 log da homologação (observações): sem valores digitados e sem dados do sistema sintético
-OK    A12: nenhuma evidência PNG desta rodada com a cor-sentinela
+  cor-sentinela em S013-A12-tema-midnight-dark.png: 1 px
+  cor-sentinela em S013-A12-tema-porcelain-light.png: 1 px
+  cor-sentinela em S013-A12-tema-sage-light.png: 1 px
+  cor-sentinela em S013-A12-tema-sakura-dark.png: 1 px
+  cor-sentinela em S013-A6-recorte-e-marcador.png: 1 px
+OK    A12: nenhuma evidência PNG desta rodada com a cor-sentinela (texto: 5 px ou mais)
 OK    A12: a automação (.nekkora) nunca mudou pelo PDD nem pelas autorizações
-RESULTADO: 81 verificações, 0 falha(s)
+RESULTADO: 83 verificações, 0 falha(s)

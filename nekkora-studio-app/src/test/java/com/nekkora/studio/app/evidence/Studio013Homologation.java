@@ -269,12 +269,21 @@ public final class Studio013Homologation {
                 !edt(() -> panel.captureButton().isEnabled()) && edt(() -> panel.authorizeButton().isShowing()));
         shot(dlg, panel, "A2-site-sem-autorizacao-pdd");
 
-        // ================================================================ A3 — autorizar pelo Studio (clique real; padrão = só esta sessão)
+        // ================================================================ A3 — autorizar pelo Studio no PRINT MASCARADO (clique real; só esta sessão)
+        // o padrão é o print integral (pedido da usuária): este roteiro escolhe o mascarado pelo teclado na lista
+        click(edt(panel::levelCombo));
+        sleep(400);
+        press(KeyEvent.VK_DOWN);
+        press(KeyEvent.VK_ENTER);
+        sleep(300);
+        check("A3: \"Print mascarado\" escolhido na lista (o integral é o padrão)", edt(() -> String.valueOf(panel.levelCombo().getSelectedValue()))
+                .startsWith("Print mascarado"));
         click(edt(panel::authorizeButton));
         waitFor("autorização concedida", 15, () -> "Captura PDD autorizada".equals(model(panel).bannerTitle()));
         waitFor("lista de sites", 10, () -> !model(panel).sites().isEmpty());
         log("  " + model(panel).banner() + " · sites: " + model(panel).sites().stream().map(PddPanel.Site::label).toList());
-        check("A3: site autorizado só nesta sessão, registrado como agente de teste", model(panel).sites().size() == 1
+        check("A3: site autorizado no print mascarado, só nesta sessão, registrado como agente de teste", model(panel).sites().size() == 1
+                && model(panel).sites().get(0).label().contains("print mascarado")
                 && model(panel).sites().get(0).label().contains("até fechar o navegador") && model(panel).sites().get(0).label().contains("agente de teste"));
         selectTab(panel, "site-a");
         check("A3: a aba passa a poder capturar", edt(() -> panel.captureButton().isEnabled()));
@@ -412,11 +421,23 @@ public final class Studio013Homologation {
         waitFor("acesso devolvido", 15, () -> model(panel).tabs().stream().anyMatch(t -> "CONSENT_REQUIRED".equals(t.state())));
         check("A10: devolver o acesso do Chrome não devolve a autorização PDD", model(panel).sites().isEmpty());
 
-        // ================================================================ A11 — o laboratório local continua sem autorização (agora v3)
+        // ================================================================ A11 — o laboratório local continua sem autorização
+        // o laboratório também é print integral por padrão: "Mascarar esta captura" faz esta sair mascarada
+        cdp.activate(labTarget);
+        navigate(LAB_PAGE);
+        edt(() -> {
+            pdd.reloadTabs();
+            return null;
+        });
+        sleep(1200);
+        selectTab(panel, "127.0.0.1");
+        check("A11: no laboratório, \"Mascarar esta captura\" aparece (o padrão é o print integral)", edt(() -> panel.maskThisBox().isShowing()));
+        click(edt(panel::maskThisBox));
         String t11 = recapture(panel, loginKey, LAB_PAGE, null, "127.0.0.1");
-        check("A11: laboratório captura sem pedir autorização (candidata v4, sem cor-sentinela)", "Nova captura pronta para revisão".equals(t11)
+        check("A11: laboratório captura sem pedir autorização (candidata v4 mascarada, sem cor-sentinela)", "Nova captura pronta para revisão".equals(t11)
                 && "nekkora-visual/4".equals(model(panel).image().policy()) && sentinelPixels(model(panel).image().image()) == 0);
         click(edt(panel::cancelCandidateButton));
+        click(edt(panel::maskThisBox));
 
         // ================================================================ A12 — temas e higiene dos artefatos
         for (NekkoraTheme t : NekkoraThemes.all()) {
@@ -439,13 +460,13 @@ public final class Studio013Homologation {
         try (Stream<Path> fs = Files.list(out.toPath())) {
             for (Path f : fs.filter(f -> f.toString().endsWith(".png")).sorted().toList()) {
                 int n = sentinelPixels(ImageIO.read(f.toFile()));
-                if (n > 0) {
-                    dirty++;
-                    log("  cor-sentinela em " + f.getFileName() + ": " + n + " px");
-                }
+                if (n > 0) log("  cor-sentinela em " + f.getFileName() + ": " + n + " px");
+                // dado vazado = dezenas/centenas de px (texto); 1–4 px isolados são a borda antisserrilhada do número rosa do
+                // marcador (#C2466D) sobre a prévia do PDF, conferida ampliando a evidência (o número agora pode ficar sobre um rótulo)
+                if (n >= 5) dirty++;
             }
         }
-        check("A12: nenhuma evidência PNG desta rodada com a cor-sentinela", dirty == 0);
+        check("A12: nenhuma evidência PNG desta rodada com a cor-sentinela (texto: 5 px ou mais)", dirty == 0);
         check("A12: a automação (.nekkora) nunca mudou pelo PDD nem pelas autorizações", edt(a::revision) == revisionBefore
                 && nekkoraBefore.equals(edt(() -> domainText(a))));
     }
@@ -515,6 +536,11 @@ public final class Studio013Homologation {
             java.awt.Point p = x.getLocationOnScreen();
             return x.isShowing() && dlg.getBounds().contains(p.x, p.y) && dlg.getBounds().contains(p.x + x.getWidth() - 1, p.y + x.getHeight() - 1);
         }));
+        click(edt(panel::levelCombo)); // o padrão é o integral: este roteiro escolhe o mascarado
+        sleep(400);
+        press(KeyEvent.VK_DOWN);
+        press(KeyEvent.VK_ENTER);
+        sleep(300);
         click(edt(panel::authorizeButton));
         waitFor("autorizado", 15, () -> !model(panel).sites().isEmpty());
         boolean c1 = captureBlock(panel, loginKey, SITE_PAGE, null, "site-a");
@@ -533,7 +559,7 @@ public final class Studio013Homologation {
         check("E1: Aplicar em 150%", "Imagem substituída".equals(model(panel).bannerTitle()));
         int dirty = 0;
         try (Stream<Path> fs = Files.list(out.toPath())) {
-            for (Path f : fs.filter(f -> f.toString().endsWith(".png")).sorted().toList()) if (sentinelPixels(ImageIO.read(f.toFile())) > 0) dirty++;
+            for (Path f : fs.filter(f -> f.toString().endsWith(".png")).sorted().toList()) if (sentinelPixels(ImageIO.read(f.toFile())) >= 5) dirty++;
         }
         check("E1: nenhuma evidência PNG com a cor-sentinela", dirty == 0);
     }

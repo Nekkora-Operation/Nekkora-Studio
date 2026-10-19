@@ -297,6 +297,7 @@ class RecorderStepsStudioTest {
         assertEquals(List.of("Abrir o sistema"), names(login), "manual preservada; nenhuma exclusão parcial");
         String panel = StudioFixture.texts(studio.recorderPresenter().panel());
         assertTrue(panel.contains("as etapas desta gravação foram descartadas"), panel);
+        assertFalse(Edt.call(() -> studio.recorderPresenter().panel().capturePddButton().isVisible()), "gravação cancelada: nada a capturar");
     }
 
     @Test
@@ -327,6 +328,13 @@ class RecorderStepsStudioTest {
         String summary = StudioFixture.texts(studio.recorderPresenter().panel());
         assertTrue(summary.contains("Gravação concluída") && summary.contains("Etapas registradas: 2"), summary);
         assertTrue(summary.contains("O PageMap não foi exportado"), summary);
+        // pedido da usuária: "Capturar tela" para o PDD logo depois de finalizar, para o bloco das etapas desta gravação
+        assertTrue(Edt.call(() -> studio.recorderPresenter().panel().capturePddButton().isVisible()), "Capturar tela depois de concluir");
+        assertEquals(rid, studio.recorder().lastRecording().orElseThrow().recordingId(), "a gravação concluída fica conhecida");
+        Edt.run(() -> studio.recorderPresenter().panel().capturePddButton().doClick());
+        Edt.flush();
+        Edt.flush();
+        assertFalse(Edt.call(() -> studio.recorderPresenter().panel().pddStatusText().getText()).isEmpty(), "o Recorder diz o que aconteceu com a captura");
     }
 
     // ------------------------------------------------------------- STUDIO-006: projeto × gravação

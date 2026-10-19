@@ -5,20 +5,24 @@ Chrome for Testing: 155.0.8059.39
 OK    Conexão autenticada Studio ⇄ host ⇄ extensão
 OK    B0: extensão 0.6.0 conectada (print mascarado e print integral)
 OK    B1: gravação no site = preencher, preencher, clicar; nenhum valor digitado no modelo
-OK    B2: ao autorizar, a escolha da imagem do site aparece com o print mascarado como padrão
+OK    B1b: o resumo da gravação concluída oferece "Capturar tela"
+captura S013-B1b-recorder-capturar-tela.png (400x551)
+  Recorder: Autorize a captura do PDD neste site na janela do PDD, que foi aberta no bloco das etapas desta gravação.
+OK    B1b: site sem autorização do PDD: o Recorder avisa e a janela do PDD abre
+OK    B2: ao autorizar, a escolha da imagem do site aparece com o PRINT INTEGRAL como padrão
+OK    B2: o texto da autorização avisa que, por padrão, os dados vão para o PDF
 OK    B2: escolha, "Autorizar" e "Lembrar" inteiros dentro da janela
-OK    B2: "Print integral" escolhido pelo teclado na lista
-captura S013-B2-escolha-print-integral.png (1244x811)
-OK    B2: a confirmação diz o site e explica que os dados vão para o PDF e que só senhas saem cobertas
-captura S013-B2-confirmacao-print-integral.png (420x220)
-OK    B2: Cancelar na confirmação: nada é autorizado
+captura S013-B2-autorizar-print-integral-padrao.png (1244x811)
+OK    B2: nenhuma confirmação pedida ao autorizar (sem segundo clique)
   http://site-a.nekkora.test:18765 — até fechar o navegador. Print integral: as imagens mostram os dados da tela; só senhas cobertas. Cada captura pode sair mascarada. Revogue quando quiser em "Sites autorizados para o PDD". · sites: [http://site-a.nekkora.test:18765 · até fechar o navegador · print integral · agente de teste]
 OK    B2: site no print integral, só nesta sessão, registrado como agente de teste
 OK    B2: a aba diz "print integral" e oferece "Mascarar esta captura"
 OK    B2: "Capturar", "Mascarar esta captura" e "Voltar ao print mascarado" inteiros dentro da janela
 captura S013-B2-site-print-integral.png (1244x811)
-  No Chrome, deixe a aba escolhida no estado desta etapa e pressione Alt+Shift+K. Nada é clicado ou enviado; print integral: a imagem mostra os dados da tela; só senhas cobertas.
-  Imagem associada · rascunho 1.2.0: O rascunho do documento passou a usar o formato 1.2.0 (print integral: a imagem mostra os dados da tela; só senhas cobertas). A automação não muda.
+  Recorder: Captura armada: No Chrome, deixe a aba escolhida no estado desta etapa e pressione Alt+Shift+K. Nada é clicado ou enviado; print integral: a imagem mostra os dados da tela; só senhas cobertas.
+  Recorder: Imagem associada · rascunho 1.2.0: O rascunho do documento passou a usar o formato 1.2.0 (print integral: a imagem mostra os dados da tela; só senhas cobertas). A automação não muda.
+captura S013-B3-recorder-imagem-associada.png (400x551)
+OK    B3: pelo Recorder, a imagem vai para o bloco das etapas desta gravação
   1024×849 · máscaras {BLOCK=1, FIELD=3} · limitações [FRAMES_HIDDEN]
 OK    B3: captura v5 (print integral) associada ao bloco
 OK    B3: só máscaras de senha (FIELD) e de frame (BLOCK) — nenhuma de texto
@@ -51,6 +55,10 @@ OK    B3: metadados do rascunho sem "S3nh@Visivel"
 OK    B3: metadados do rascunho sem "F3chad@"
 OK    B3: metadados do rascunho sem "Quadr0@"
 captura S013-B3-captura-v5.png (1244x811)
+  recorte pedido java.awt.Rectangle[x=25,y=114,width=185,height=345] · obtido java.awt.Rectangle[x=24,y=114,width=186,height=346]
+  números no editor: [Point[x=21.0, y=59.0], Point[x=79.0, y=81.0], Point[x=48.0, y=170.0]]
+OK    B3b: depois do recorte justo, os números dos marcadores não ficam um em cima do outro (editor)
+captura S013-B3b-recorte-justo-numeros.png (1244x811)
   Nova captura pronta para revisão: Print mascarado (dados cobertos por faixas). A prévia já mostra a nova imagem; use "Selecionar área" se quiser recortar e então "Aplicar". "Cancelar" mantém a imagem anterior.
 OK    B4: com "Mascarar esta captura", a candidata sai no print mascarado (v4, sem cor-sentinela)
 OK    B4: a candidata mascarada não tem o selo do print integral
@@ -71,4 +79,4 @@ OK    B7 logs do host: sem valores digitados e sem dados do sistema sintético
 OK    B7 log da homologação (observações): sem valores digitados e sem dados do sistema sintético
 OK    B7: o print salvo e as páginas do PDF sem a sentinela de senha
 OK    B7: a automação (.nekkora) nunca mudou pelo PDD, pelas autorizações nem pelas confirmações
-RESULTADO: 55 verificações, 0 falha(s)
+RESULTADO: 58 verificações, 0 falha(s)
