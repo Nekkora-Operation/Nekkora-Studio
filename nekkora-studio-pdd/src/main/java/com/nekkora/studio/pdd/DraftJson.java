@@ -22,6 +22,12 @@ import java.util.UUID;
  * JSON canônico do rascunho ({@code nekkora-studio/pdd-visual/1.0.0}): mesma forma → mesmos bytes. Leitura ESTRITA:
  * esquema/versão exatos, campos desconhecidos recusados, textos revalidados pela política (um rascunho adulterado com um
  * valor num texto "revisado" não volta como exportável).
+ *
+ * <p>STUDIO-012 PDD-01 — versão {@code 1.1.0}: cada captura com a sua referência ({@code ref}) e o recorte
+ * ({@code crop}, ou {@code null}); marcadores com procedência ({@code provenance}, {@code reviewer}); regiões da
+ * {@code nekkora-visual/2} com {@code tone}. É escrita SÓ quando o rascunho usa uma dessas novidades
+ * ({@link DocumentDraft#needsV11()}); sem elas, o rascunho continua 1.0.0, byte a byte igual ao da STUDIO-010. As duas
+ * versões são lidas; um 1.0.0 com algo do 1.1.0 é recusado.
  */
 public final class DraftJson {
     private DraftJson() {}
@@ -30,8 +36,9 @@ public final class DraftJson {
 
     public static String write(DocumentDraft d) {
         Map<String, Object> root = new LinkedHashMap<>();
+        boolean v11 = d.needsV11();
         root.put("schema", DocumentDraft.SCHEMA);
-        root.put("version", DocumentDraft.VERSION);
+        root.put("version", v11 ? DocumentDraft.VERSION_V11 : DocumentDraft.VERSION);
         root.put("automationId", d.automationId().value().toString());
         root.put("processRevision", d.processRevision());
         List<Object> sections = new ArrayList<>();
@@ -67,6 +74,7 @@ public final class DraftJson {
         List<Object> captures = new ArrayList<>();
         for (SafeCapture c : d.captures().values()) {
             Map<String, Object> m = new LinkedHashMap<>();
+            if (v11) m.put("ref", c.ref());
             m.put("sha256", c.sha256());
             m.put("width", c.width());
             m.put("height", c.height());
@@ -86,6 +94,10 @@ public final class DraftJson {
                 am.put("width", num(a.width()));
                 am.put("height", num(a.height()));
                 am.put("reason", a.reason());
+                if (v11) {
+                    am.put("provenance", a.provenance().name());
+                    am.put("reviewer", a.reviewer());
+                }
                 anns.add(am);
             }
             m.put("annotations", anns);
@@ -98,9 +110,23 @@ public final class DraftJson {
                 rm.put("y", r.y());
                 rm.put("width", r.width());
                 rm.put("height", r.height());
+                if (r.tone() != null) rm.put("tone", r.tone());
                 regs.add(rm);
             }
             m.put("regions", regs);
+            if (v11) {
+                if (c.crop() == null) {
+                    m.put("crop", null);
+                } else {
+                    Map<String, Object> cm = new LinkedHashMap<>();
+                    cm.put("x", c.crop().x());
+                    cm.put("y", c.crop().y());
+                    cm.put("width", c.crop().width());
+                    cm.put("height", c.crop().height());
+                    cm.put("reviewer", c.crop().reviewer());
+                    m.put("crop", cm);
+                }
+            }
             captures.add(m);
         }
         root.put("captures", captures);
@@ -132,7 +158,9 @@ public final class DraftJson {
     public static DocumentDraft read(String json) {
         Map<String, Object> root = Json.parseObject(json);
         only(root, Set.of("schema", "version", "automationId", "processRevision", "sections", "captures"));
-        if (!DocumentDraft.SCHEMA.equals(Json.string(root, "schema")) || !DocumentDraft.VERSION.equals(Json.string(root, "version"))) {
+        String version = Json.string(root, "version");
+        boolean v11 = DocumentDraft.VERSION_V11.equals(version);
+        if (!DocumentDraft.SCHEMA.equals(Json.string(root, "schema")) || !(v11 || DocumentDraft.VERSION.equals(version))) {
             throw new IllegalArgumentException("rascunho de outro esquema ou versão");
         }
         String rev = req(root, "processRevision");
@@ -163,30 +191,48 @@ public final class DraftJson {
         Map<String, SafeCapture> captures = new LinkedHashMap<>();
         for (Object o : Json.array(root, "captures")) {
             Map<String, Object> c = obj(o);
-            only(c, Set.of("sha256", "width", "height", "devicePixelRatio", "observedAt", "pageEpoch", "policy", "screenKey", "forSteps", "annotations",
-                    "limitations", "regions"));
+            Set<String> captureFields = new java.util.HashSet<>(Set.of("sha256", "width", "height", "devicePixelRatio", "observedAt", "pageEpoch", "policy",
+                    "screenKey", "forSteps", "annotations", "limitations", "regions"));
+            if (v11) captureFields.addAll(Set.of("ref", "crop"));
+            only(c, captureFields);
             List<Annotation> anns = new ArrayList<>();
             for (Object ao : Json.array(c, "annotations")) {
                 Map<String, Object> a = obj(ao);
-                only(a, Set.of("stepId", "status", "x", "y", "width", "height", "reason"));
+                Set<String> annFields = new java.util.HashSet<>(Set.of("stepId", "status", "x", "y", "width", "height", "reason"));
+                if (v11) annFields.addAll(Set.of("provenance", "reviewer"));
+                only(a, annFields);
+                Annotation.Provenance prov = v11 ? Annotation.Provenance.valueOf(req(a, "provenance")) : Annotation.Provenance.AUTOMATIC;
                 anns.add(new Annotation(new StepId(UUID.fromString(req(a, "stepId"))), Annotation.Status.valueOf(req(a, "status")), dbl(a, "x"), dbl(a, "y"),
-                        dbl(a, "width"), dbl(a, "height"), code(Json.string(a, "reason"))));
+                        dbl(a, "width"), dbl(a, "height"), code(Json.string(a, "reason")), prov, v11 ? Json.string(a, "reviewer") : ""));
             }
             List<String> limits = new ArrayList<>();
             for (Object l : Json.array(c, "limitations")) limits.add(code(String.valueOf(l)));
             List<DocumentDraft.Region> regs = new ArrayList<>();
             for (Object ro : Json.array(c, "regions")) {
                 Map<String, Object> r = obj(ro);
-                only(r, Set.of("kind", "x", "y", "width", "height"));
+                only(r, v11 ? Set.of("kind", "x", "y", "width", "height", "tone") : Set.of("kind", "x", "y", "width", "height"));
                 regs.add(new DocumentDraft.Region(req(r, "kind"), (int) Json.number(r, "x", -1), (int) Json.number(r, "y", -1), (int) Json.number(r, "width", 0),
-                        (int) Json.number(r, "height", 0)));
+                        (int) Json.number(r, "height", 0), Json.string(r, "tone")));
             }
-            SafeCapture sc = new SafeCapture(req(c, "sha256"), (int) Json.number(c, "width", 0), (int) Json.number(c, "height", 0),
-                    dbl(c, "devicePixelRatio"), Instant.parse(req(c, "observedAt")), (int) Json.number(c, "pageEpoch", 0), req(c, "policy"),
-                    Json.string(c, "screenKey"), stepIds(Json.array(c, "forSteps")), anns, limits, regs);
-            captures.put(sc.sha256(), sc);
+            DocumentDraft.Crop crop = null;
+            if (v11) {
+                if (!c.containsKey("ref") || !c.containsKey("crop")) throw new IllegalArgumentException("campo obrigatório: ref/crop");
+                Object co = c.get("crop");
+                if (co != null && co != Json.NULL) {
+                    Map<String, Object> cm = obj(co);
+                    only(cm, Set.of("x", "y", "width", "height", "reviewer"));
+                    crop = new DocumentDraft.Crop((int) Json.number(cm, "x", -1), (int) Json.number(cm, "y", -1), (int) Json.number(cm, "width", 0),
+                            (int) Json.number(cm, "height", 0), req(cm, "reviewer"));
+                }
+            }
+            SafeCapture sc = new SafeCapture(v11 ? req(c, "ref") : req(c, "sha256"), req(c, "sha256"), (int) Json.number(c, "width", 0),
+                    (int) Json.number(c, "height", 0), dbl(c, "devicePixelRatio"), Instant.parse(req(c, "observedAt")), (int) Json.number(c, "pageEpoch", 0),
+                    req(c, "policy"), Json.string(c, "screenKey"), stepIds(Json.array(c, "forSteps")), anns, limits, regs, crop);
+            if (captures.put(sc.ref(), sc) != null) throw new IllegalArgumentException("captura repetida");
         }
-        return new DocumentDraft(new AutomationId(UUID.fromString(req(root, "automationId"))), rev, sections, captures);
+        DocumentDraft d = new DocumentDraft(new AutomationId(UUID.fromString(req(root, "automationId"))), rev, sections, captures);
+        if (!v11 && d.needsV11()) throw new IllegalArgumentException("rascunho 1.0.0 com conteúdo do 1.1.0");
+        return d;
     }
 
     private static DocText text(Map<String, Object> t) {

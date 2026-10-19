@@ -40,10 +40,11 @@
       <artifactId>nekkora-studio-validation</artifactId>
     </dependency>
     <dependency>
-      <!-- STUDIO-008: contrato semântico — só nos testes (desempenho e homologação); o Studio não o persiste nem o envia -->
+      <!-- STUDIO-008: contrato semântico — o Studio não o persiste nem o envia. Escopo de COMPILAÇÃO (STUDIO-012 PDD-01, achado
+           A3): o debug guiado (nekkora-studio-guided) o usa em tempo de execução; com escopo "test" aqui, esta declaração
+           vencia a dependência transitiva e o jar empacotado saía sem ele (NoClassDefFoundError: SemanticContract). -->
       <groupId>com.nekkora</groupId>
       <artifactId>nekkora-studio-semantics</artifactId>
-      <scope>test</scope>
     </dependency>
     <dependency>
       <!-- STUDIO-009: plano do debug guiado e regra de reuso -->

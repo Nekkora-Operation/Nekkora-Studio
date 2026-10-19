@@ -45,6 +45,8 @@ public final class PddExporter {
     public static final String BASE = "pdd-visual";
     public static final String MANIFEST_SCHEMA = "nekkora-studio/pdd-visual-manifest";
     public static final String MANIFEST_VERSION = "1.0.0";
+    /** STUDIO-012 PDD-01: manifesto de um rascunho 1.1.0 (políticas usadas, imagens por sha-256, marcadores manuais). */
+    public static final String MANIFEST_VERSION_V11 = "1.1.0";
     private static final Pattern NAME = Pattern.compile(BASE + "-v(\\d{3})\\.pdf");
 
     private PddExporter() {}
@@ -81,7 +83,7 @@ public final class PddExporter {
             SafeCapture c = d.captures().get(b.captureSha());
             byte[] png = store.capture(d.automationId(), c.sha256()).orElseThrow(() -> new ExportException("CAPTURE_FILE_MISSING"));
             try {
-                images.put(c.sha256(), VisualVerifier.verify(png, c.sha256(), c.width(), c.height(), c.devicePixelRatio(), c.regions()));
+                images.put(c.sha256(), VisualVerifier.verify(png, c.sha256(), c.width(), c.height(), c.devicePixelRatio(), c.regions(), c.policy()));
             } catch (VisualVerifier.VisualPolicyException e) {
                 throw new ExportException("CAPTURE_REJECTED_" + e.code());
             }
@@ -146,9 +148,10 @@ public final class PddExporter {
     }
 
     static String manifest(DocumentDraft d, int version, int pages, String documentRevision, Clock clock) {
+        boolean v11 = d.needsV11();
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("schema", MANIFEST_SCHEMA);
-        m.put("version", MANIFEST_VERSION);
+        m.put("version", v11 ? MANIFEST_VERSION_V11 : MANIFEST_VERSION);
         m.put("documentVersion", version);
         m.put("exportedAt", clock.instant().toString());
         m.put("status", "EXPORTED");
@@ -158,15 +161,27 @@ public final class PddExporter {
         m.put("sections", d.sections().size());
         m.put("blocks", d.blocks().size());
         List<Object> caps = new ArrayList<>();
-        d.blocks().forEach(b -> b.capture().ifPresent(caps::add));
+        if (v11) caps.addAll(d.referencedImages()); // 1.1.0: o conteúdo (sha-256 do PNG), não a referência interna
+        else d.blocks().forEach(b -> b.capture().ifPresent(caps::add));
         m.put("captures", caps);
         long missing = d.pending(null).stream().filter(p -> p.code().equals("CAPTURE_MISSING")).count();
         long markers = d.pending(null).stream().filter(p -> p.code().equals("MARKER_UNAVAILABLE")).count();
         Map<String, Object> limits = new LinkedHashMap<>();
         limits.put("blocksWithoutImage", missing);
         limits.put("markersUnavailable", markers);
+        if (v11) {
+            long manual = d.blocks().stream().map(b -> b.capture().map(d.captures()::get).orElse(null)).filter(java.util.Objects::nonNull)
+                    .flatMap(c -> c.annotations().stream()).filter(DocumentDraft.Annotation::manual).count();
+            limits.put("markersManual", manual);
+            limits.put("markersOutsideCrop", d.pending(null).stream().filter(p -> p.code().equals("MARKER_OUTSIDE_CROP")).count());
+        }
         m.put("limitations", limits);
-        m.put("visualPolicy", VisualVerifier.POLICY);
+        if (v11) {
+            m.put("visualPolicies", new ArrayList<Object>(d.blocks().stream().map(b -> b.capture().map(d.captures()::get).orElse(null))
+                    .filter(java.util.Objects::nonNull).map(DocumentDraft.SafeCapture::policy).distinct().sorted().toList()));
+        } else {
+            m.put("visualPolicy", VisualVerifier.POLICY);
+        }
         m.put("exclusions", List.of("VALUES", "VARIABLE_NAMES", "CREDENTIALS", "SELECTORS", "TECHNICAL_IDS", "PAGE_TEXT", "BUSINESS_OUTCOME"));
         StringBuilder b = new StringBuilder();
         DraftJson.Pretty.value(b, m, 0);

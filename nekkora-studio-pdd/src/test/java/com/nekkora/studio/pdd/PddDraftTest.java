@@ -277,7 +277,9 @@ class PddDraftTest {
         ProcessProjection p = ProcessProjection.of(PddLab.consulta());
         String json = DraftJson.write(DraftEdits.reviseSectionTitle(DraftBuilder.build(p), 1, "Autenticação", "TEST_AGENT"));
         assertThrows(IllegalArgumentException.class, () -> DraftJson.read(json.replace("\"schema\"", "\"extra\": 1,\n  \"schema\"")));
-        assertThrows(IllegalArgumentException.class, () -> DraftJson.read(json.replace("\"1.0.0\"", "\"1.1.0\"")));
+        // STUDIO-012 PDD-01: 1.1.0 passou a existir (lido com regras próprias); versões desconhecidas continuam recusadas
+        assertThrows(IllegalArgumentException.class, () -> DraftJson.read(json.replace("\"1.0.0\"", "\"1.2.0\"")));
+        assertThrows(IllegalArgumentException.class, () -> DraftJson.read(json.replace("\"1.0.0\"", "\"2.0.0\"")));
         DocumentDraft tampered = DraftJson.read(json.replace("\"value\": \"Autenticação\"", "\"value\": \"CPF 123.456.789-09\""));
         assertTrue(tampered.pending(p).stream().anyMatch(x -> x.code().equals("TEXT_POLICY") && x.blocking()));
     }

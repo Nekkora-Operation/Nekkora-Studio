@@ -34,6 +34,11 @@ import javax.swing.JPanel;
  * STUDIO-010 G6 — preparação do PDD visual: lista de seções e blocos à esquerda, edição do item selecionado ao centro e
  * PRÉVIA do PDF à direita (o próprio PDF rasterizado — o que se vê é o que se exporta). Nada aqui altera a automação: as
  * ações vão ao apresentador, que só mexe no RASCUNHO do documento (com desfazer/refazer próprio).
+ *
+ * <p>STUDIO-012 PDD-01: "Imagem do bloco" — a imagem sanitizada com recorte e marcadores ({@link PddImageEditor});
+ * "Capturar novamente" traz uma captura CANDIDATA que só substitui a anterior em "Aplicar" ("Cancelar" a descarta);
+ * "Selecionar área" ajusta o recorte; "Posicionar marcador" cria um marcador MANUAL para instrução sem marcador
+ * automático.
  */
 public class PddPanel extends JPanel {
 
@@ -66,7 +71,34 @@ public class PddPanel extends JPanel {
         void cancelCapture();
 
         void removeCapture(String blockId);
+
+        /** Aplica a captura candidata ao bloco (substitui a anterior). */
+        void applyCandidate();
+
+        /** Descarta a captura candidata (a anterior continua). */
+        void cancelCandidate();
+
+        /** Recorte em px da imagem (candidata, se houver; senão a aplicada). */
+        void setCrop(String blockId, int x, int y, int width, int height);
+
+        /** Volta ao recorte automático. */
+        void autoCrop(String blockId);
+
+        /** Marcador manual da instrução {@code ordinal}: retângulo normalizado sobre a imagem inteira. */
+        void placeMarker(String blockId, int ordinal, double x, double y, double width, double height);
+
+        void removeMarker(String blockId, int ordinal);
     }
+
+    /** Imagem do bloco no editor: a aplicada ou a candidata, recorte ({@code null} = automático), marcadores e a política. */
+    public record ImageView(BufferedImage image, java.awt.Rectangle crop, List<PddImageEditor.Mark> marks, boolean candidate, String policy) {
+        public ImageView {
+            marks = List.copyOf(marks);
+        }
+    }
+
+    /** Instrução do bloco quanto ao marcador: automático, manual ou indisponível ({@code markable} = aceita marcador manual). */
+    public record MarkerSlot(int ordinal, String state, boolean markable, boolean manual) {}
 
     /** Item da lista: seção ({@code secao-<n>}) ou bloco ({@code blk-…}). */
     public record Item(String key, String label, String secondary, boolean section) {}
@@ -81,13 +113,28 @@ public class PddPanel extends JPanel {
     public record Model(List<Item> items, String selected, String title, String titleState, boolean titleNeedsAttention, boolean block,
                         List<InstructionRow> instructions, List<String> pending, boolean hasImage, boolean canJoinNext, List<Tab> tabs,
                         boolean capturing, String bannerTitle, String banner, Severity bannerSeverity, String status, Status statusKind,
-                        List<BufferedImage> preview, boolean canUndo, boolean canRedo, boolean canExport) {
+                        List<BufferedImage> preview, boolean canUndo, boolean canRedo, boolean canExport, ImageView image, List<MarkerSlot> markers) {
         public Model {
             items = List.copyOf(items);
             instructions = List.copyOf(instructions);
             pending = List.copyOf(pending);
             tabs = List.copyOf(tabs);
             preview = List.copyOf(preview);
+            markers = markers == null ? List.of() : List.copyOf(markers);
+        }
+
+        /** A forma da STUDIO-010 (sem imagem no editor). */
+        public Model(List<Item> items, String selected, String title, String titleState, boolean titleNeedsAttention, boolean block,
+                List<InstructionRow> instructions, List<String> pending, boolean hasImage, boolean canJoinNext, List<Tab> tabs, boolean capturing,
+                String bannerTitle, String banner, Severity bannerSeverity, String status, Status statusKind, List<BufferedImage> preview, boolean canUndo,
+                boolean canRedo, boolean canExport) {
+            this(items, selected, title, titleState, titleNeedsAttention, block, instructions, pending, hasImage, canJoinNext, tabs, capturing, bannerTitle,
+                    banner, bannerSeverity, status, statusKind, preview, canUndo, canRedo, canExport, null, List.of());
+        }
+
+        /** Há uma captura candidata do bloco selecionado aguardando Aplicar/Cancelar. */
+        public boolean reviewing() {
+            return image != null && image.candidate();
         }
     }
 
@@ -114,6 +161,18 @@ public class PddPanel extends JPanel {
     private final NekkoraButton cancelCapture = NekkoraButton.ghost("Cancelar captura").withSize(ControlSize.SMALL);
     private final NekkoraButton removeCapture = NekkoraButton.ghost("Remover imagem").withSize(ControlSize.SMALL);
     private final NekkoraStack blockTools = NekkoraStack.vertical(Spacing.SPACE_2);
+    private final NekkoraStack imageBox = NekkoraStack.vertical(Spacing.SPACE_2);
+    private final NekkoraText imageHeading = new NekkoraText("", TextTone.SECONDARY);
+    private final NekkoraText imageNote = new NekkoraText("", TextTone.MUTED);
+    private final PddImageEditor editor = new PddImageEditor();
+    private final NekkoraButton selectArea = NekkoraButton.secondary("Selecionar área").withSize(ControlSize.SMALL);
+    private final NekkoraButton autoCrop = NekkoraButton.ghost("Recorte automático").withSize(ControlSize.SMALL);
+    private final NekkoraComboBox<MarkerSlot> markerSlot = new NekkoraComboBox<>();
+    private final NekkoraButton placeMarker = NekkoraButton.secondary("Posicionar marcador").withSize(ControlSize.SMALL);
+    private final NekkoraButton removeMarker = NekkoraButton.ghost("Remover marcador manual").withSize(ControlSize.SMALL);
+    private final NekkoraButton apply = NekkoraButton.primary("Aplicar").withSize(ControlSize.SMALL);
+    private final NekkoraButton cancelCandidate = NekkoraButton.ghost("Cancelar").withSize(ControlSize.SMALL);
+    private final NekkoraStack reviewRow = NekkoraStack.horizontal(Spacing.SPACE_2);
     private final Preview preview = new Preview();
     private final List<NekkoraTextField> instructionFields = new ArrayList<>();
     private Model model;
@@ -167,12 +226,35 @@ public class PddPanel extends JPanel {
         captureRow.add(cancelCapture);
         captureRow.add(removeCapture);
         blockTools.add(captureRow);
+        // STUDIO-012 PDD-01: imagem do bloco (recorte, marcadores, revisão da candidata)
+        imageBox.add(imageHeading);
+        imageBox.add(imageNote);
+        imageBox.add(this.editor);
+        NekkoraStack cropRow = NekkoraStack.horizontal(Spacing.SPACE_2);
+        cropRow.add(selectArea);
+        cropRow.add(autoCrop);
+        imageBox.add(cropRow);
+        NekkoraStack markerRow = NekkoraStack.horizontal(Spacing.SPACE_2);
+        markerSlot.setLabelProvider(m -> m == null ? "" : "Instrução " + m.ordinal() + " · " + m.state());
+        markerSlot.getAccessibleContext().setAccessibleName("Instrução do marcador");
+        markerRow.add(markerSlot);
+        markerRow.add(placeMarker);
+        markerRow.add(removeMarker);
+        imageBox.add(markerRow);
+        reviewRow.add(apply);
+        reviewRow.add(cancelCandidate);
+        imageBox.add(reviewRow);
+        blockTools.add(imageBox);
         editor.add(blockTools);
         editor.add(new NekkoraText("Pendências", TextTone.SECONDARY));
         editor.add(pendingBox);
         NekkoraScrollPane editorScroll = NekkoraScrollPane.verticalOnly(editor);
+        // barra vertical fixa: a altura da prévia (e do texto quebrado) depende da largura; com a barra aparecendo e sumindo
+        // conforme a largura, o layout entrava em laço (STUDIO-012 PDD-01, homologação na janela real)
+        editorScroll.setVerticalScrollBarPolicy(javax.swing.ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
 
         NekkoraScrollPane previewScroll = NekkoraScrollPane.verticalOnly(preview);
+        previewScroll.setVerticalScrollBarPolicy(javax.swing.ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
         previewScroll.getAccessibleContext().setAccessibleName("Prévia do PDF");
         NekkoraSplitPane right = NekkoraSplitPane.horizontal(editorScroll, previewScroll).withProportion(0.48);
         NekkoraSplitPane main = NekkoraSplitPane.horizontal(NekkoraScrollPane.verticalOnly(list), right).withProportion(0.24);
@@ -195,6 +277,38 @@ public class PddPanel extends JPanel {
         });
         cancelCapture.addActionListener(e -> actions.cancelCapture());
         removeCapture.addActionListener(e -> actions.removeCapture(model.selected()));
+        markerSlot.addActionListener(e -> {
+            MarkerSlot m = markerSlot.getSelectedValue();
+            boolean editable = model != null && model.image() != null && !model.image().candidate();
+            placeMarker.setEnabled(editable && m != null && m.markable());
+            removeMarker.setEnabled(editable && m != null && m.manual());
+        });
+        apply.addActionListener(e -> actions.applyCandidate());
+        cancelCandidate.addActionListener(e -> actions.cancelCandidate());
+        autoCrop.addActionListener(e -> actions.autoCrop(model.selected()));
+        removeMarker.addActionListener(e -> {
+            MarkerSlot m = markerSlot.getSelectedValue();
+            if (m != null) actions.removeMarker(model.selected(), m.ordinal());
+        });
+        selectArea.addActionListener(e -> {
+            String blk = model.selected();
+            this.editor.setMode(PddImageEditor.Mode.CROP, r -> actions.setCrop(blk, r.x, r.y, r.width, r.height), () -> { });
+            this.editor.requestFocusInWindow();
+        });
+        placeMarker.addActionListener(e -> {
+            MarkerSlot m = markerSlot.getSelectedValue();
+            ImageView v = model.image();
+            if (m == null || v == null) return;
+            String blk = model.selected();
+            double w = v.image().getWidth();
+            double h = v.image().getHeight();
+            this.editor.setMode(PddImageEditor.Mode.MARKER, r -> actions.placeMarker(blk, m.ordinal(), r.x / w, r.y / h, r.width / w, r.height / h), () -> { });
+            this.editor.requestFocusInWindow();
+        });
+        selectArea.getAccessibleContext().setAccessibleDescription("Arraste sobre a imagem (ou use as setas e Enter) para escolher a área que vai ao PDF.");
+        placeMarker.getAccessibleContext().setAccessibleDescription("Marca a área da instrução escolhida; o marcador fica como manual e não comprova o elemento.");
+        apply.getAccessibleContext().setAccessibleDescription("Substitui a imagem do bloco pela nova captura revisada.");
+        cancelCandidate.getAccessibleContext().setAccessibleDescription("Descarta a nova captura; a imagem anterior continua.");
         export.getAccessibleContext().setAccessibleDescription("Gera um PDF local com versão nova; nunca substitui um PDF anterior.");
         capture.getAccessibleContext().setAccessibleDescription("Arma a captura sanitizada do laboratório; a imagem é tirada ao pressionar o atalho no Chrome.");
     }
@@ -255,9 +369,35 @@ public class PddPanel extends JPanel {
             tabs.removeAllItems();
             m.tabs().forEach(tabs::addItem);
         }
-        capture.setEnabled(m.block() && !m.tabs().isEmpty() && !m.capturing());
+        capture.setText(m.hasImage() ? "Capturar novamente…" : "Capturar tela…");
+        capture.setEnabled(m.block() && !m.tabs().isEmpty() && !m.capturing() && !m.reviewing());
         cancelCapture.setVisible(m.capturing());
-        removeCapture.setEnabled(m.block() && m.hasImage() && !m.capturing());
+        removeCapture.setEnabled(m.block() && m.hasImage() && !m.capturing() && !m.reviewing());
+        ImageView iv = m.block() ? m.image() : null;
+        imageBox.setVisible(iv != null);
+        if (iv != null) {
+            imageHeading.setText(iv.candidate() ? "Nova captura — revise e aplique" : "Imagem do bloco");
+            imageNote.setText(("nekkora-visual/2".equals(iv.policy()) ? "Representação documental: estrutura redesenhada, só rótulos de interface reais."
+                    : "Captura da política anterior: fundo oculto em cinza.") + (iv.crop() == null ? " Recorte automático." : " Recorte escolhido."));
+            if (editor.mode() != PddImageEditor.Mode.VIEW) editor.setMode(PddImageEditor.Mode.VIEW, null, null);
+            editor.setContent(iv.image(), iv.crop(), iv.marks());
+            List<MarkerSlot> slots = new ArrayList<>();
+            for (int i = 0; i < markerSlot.getItemCount(); i++) slots.add(markerSlot.getItemAt(i));
+            if (!slots.equals(m.markers())) {
+                MarkerSlot before = markerSlot.getSelectedValue();
+                markerSlot.removeAllItems();
+                m.markers().forEach(markerSlot::addItem);
+                if (before != null) {
+                    for (int i = 0; i < markerSlot.getItemCount(); i++) if (markerSlot.getItemAt(i).ordinal() == before.ordinal()) markerSlot.setSelectedIndex(i);
+                }
+            }
+            MarkerSlot sel = markerSlot.getSelectedValue();
+            placeMarker.setEnabled(!iv.candidate() && sel != null && sel.markable());
+            removeMarker.setEnabled(!iv.candidate() && sel != null && sel.manual());
+            reviewRow.setVisible(iv.candidate());
+        } else {
+            editor.setContent(null, null, List.of());
+        }
         pendingBox.removeAll();
         if (m.pending().isEmpty()) pendingBox.add(new NekkoraText("Nenhuma pendência neste item.", TextTone.MUTED));
         for (String p : m.pending()) pendingBox.add(new NekkoraParagraph("• " + p));
@@ -321,6 +461,38 @@ public class PddPanel extends JPanel {
 
     public NekkoraComboBox<Integer> splitInput() {
         return splitAt;
+    }
+
+    public PddImageEditor imageEditor() {
+        return editor;
+    }
+
+    public NekkoraButton selectAreaButton() {
+        return selectArea;
+    }
+
+    public NekkoraButton autoCropButton() {
+        return autoCrop;
+    }
+
+    public NekkoraButton placeMarkerButton() {
+        return placeMarker;
+    }
+
+    public NekkoraButton removeMarkerButton() {
+        return removeMarker;
+    }
+
+    public NekkoraButton applyButton() {
+        return apply;
+    }
+
+    public NekkoraButton cancelCandidateButton() {
+        return cancelCandidate;
+    }
+
+    public NekkoraComboBox<MarkerSlot> markerInput() {
+        return markerSlot;
     }
 
     public List<NekkoraTextField> instructionFields() {

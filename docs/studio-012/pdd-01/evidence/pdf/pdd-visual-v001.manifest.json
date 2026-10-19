@@ -1,0 +1,19 @@
+{
+  "schema": "nekkora-studio/pdd-visual-manifest",
+  "version": "1.0.0",
+  "documentVersion": 1,
+  "exportedAt": "2026-10-18T23:28:38.294076800Z",
+  "status": "EXPORTED",
+  "processRevision": "sha256:d03590a517d490b33d2a2ba305d4cc21f86f0ed78575857abc88819da8355f21",
+  "documentRevision": "sha256:2cdb5ebd0b5957e95ac7aa85cdf03f0bb99c56f9af11f6a7ed87f579be8de51f",
+  "pages": 1,
+  "sections": 2,
+  "blocks": 2,
+  "captures": ["sha256:d8a2ea8e3e890d741415001f7d6ec40ae1010d81a1ec26e8151fa1c2da15720c"],
+  "limitations": {
+    "blocksWithoutImage": 1,
+    "markersUnavailable": 0
+  },
+  "visualPolicy": "nekkora-visual/1",
+  "exclusions": ["VALUES", "VARIABLE_NAMES", "CREDENTIALS", "SELECTORS", "TECHNICAL_IDS", "PAGE_TEXT", "BUSINESS_OUTCOME"]
+}

@@ -2,8 +2,9 @@ package com.nekkora.studio.app.pdd;
 
 import com.nekkora.studio.ui.pdd.PddPanel;
 import com.nekkora.tokens.Spacing;
-import com.nekkora.ui.container.NekkoraStack;
+import com.nekkora.ui.container.NekkoraPanel;
 import com.nekkora.ui.file.NekkoraFileDialogs;
+import java.awt.BorderLayout;
 import java.awt.Dialog;
 import java.awt.GraphicsEnvironment;
 import java.awt.Rectangle;
@@ -30,9 +31,11 @@ public final class SwingPddHost implements PddPresenter.Host {
         if (dialog == null) {
             dialog = new JDialog(owner.get(), "PDD visual — preparar documentação", Dialog.ModalityType.MODELESS);
             dialog.setDefaultCloseOperation(WindowConstants.HIDE_ON_CLOSE);
-            NekkoraStack root = NekkoraStack.vertical(Spacing.SPACE_2);
+            // o painel ocupa exatamente a área da janela (uma pilha daria a ele a altura PREFERIDA: com a imagem do bloco ele
+            // transbordava a janela e as colunas nunca rolavam — STUDIO-012 PDD-01)
+            NekkoraPanel root = new NekkoraPanel(new BorderLayout());
             root.setPadding(Spacing.SPACE_4);
-            root.add(panel);
+            root.add(panel, BorderLayout.CENTER);
             dialog.setContentPane(root);
             Rectangle usable = GraphicsEnvironment.getLocalGraphicsEnvironment().getMaximumWindowBounds();
             dialog.setSize(Math.min(1260, usable.width - 40), Math.min(820, usable.height - 40));

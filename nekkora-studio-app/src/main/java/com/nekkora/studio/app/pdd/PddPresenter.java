@@ -29,6 +29,7 @@ import com.nekkora.studio.pdd.VisualVerifier;
 import com.nekkora.studio.recorder.BrowserTab;
 import com.nekkora.studio.recorder.PddCaptureClient;
 import com.nekkora.studio.recorder.RecorderController;
+import com.nekkora.studio.ui.pdd.PddImageEditor;
 import com.nekkora.studio.ui.pdd.PddPanel;
 import com.nekkora.studio.ui.pdd.PddPanel.InstructionRow;
 import com.nekkora.studio.ui.pdd.PddPanel.Item;
@@ -58,6 +59,11 @@ import org.apache.pdfbox.rendering.PDFRenderer;
  * STUDIO-010 — "Automação → Gerar documentação → PDD visual": rascunho do documento (nunca a automação), com
  * desfazer/refazer próprio, captura sanitizada do laboratório (gesto no Chrome + 4ª barreira), prévia que É o PDF e
  * exportação local versionada. Todo método público é chamado na EDT.
+ *
+ * <p>STUDIO-012 PDD-01: pede {@code nekkora-visual/2} (representação documental) a uma extensão que a declare;
+ * "Capturar novamente" num bloco COM imagem traz uma CANDIDATA (só em memória, já verificada) que só substitui a anterior
+ * em "Aplicar" — cancelar, falhar, trocar de aba ou mudar o processo nunca troca a imagem do bloco; recorte e marcadores
+ * manuais são edições do rascunho (com desfazer/refazer); a retenção de imagens respeita o histórico da sessão.
  */
 public final class PddPresenter implements PddPanel.Actions {
 
@@ -106,6 +112,33 @@ public final class PddPresenter implements PddPanel.Actions {
     private Severity bannerSeverity = Severity.INFO;
     private Path lastExport;
     private List<BufferedImage> preview = List.of();
+    private Candidate candidate; // nova captura do bloco aguardando Aplicar/Cancelar (pixels só em memória)
+    private final Map<String, BufferedImage> verified = new LinkedHashMap<>(); // sha-256 → imagem já verificada (prévia e editor)
+
+    /**
+     * Captura candidata: já passou pela 4ª barreira, NÃO está no armazenamento nem no rascunho. {@code processRevision}: a
+     * revisão do processo quando a captura foi armada — se mudar, a candidata não pode ser aplicada.
+     */
+    private static final class Candidate {
+        final String blockId;
+        final SafeCapture capture;
+        final byte[] png;
+        final BufferedImage image;
+        final String processRevision;
+        DocumentDraft.Crop crop;
+
+        Candidate(String blockId, SafeCapture capture, byte[] png, BufferedImage image, String processRevision) {
+            this.blockId = blockId;
+            this.capture = capture;
+            this.png = png;
+            this.image = image;
+            this.processRevision = processRevision;
+        }
+
+        void wipe() {
+            java.util.Arrays.fill(png, (byte) 0);
+        }
+    }
 
     public PddPresenter(WorkspaceService service, BrowserLink link, RecorderController recorder, DecisionActor actor, Clock clock, Path dataDir,
             java.util.function.Function<PddPanel, Host> hosts) {
@@ -155,10 +188,13 @@ public final class PddPresenter implements PddPanel.Actions {
         }
         if (host == null) host = hosts.apply(panel);
         if (!a.id().equals(automationId)) {
+            endHistory(); // o desfazer da automação anterior acaba aqui: as imagens que só ele alcançava saem do disco
             automationId = a.id();
             undo.clear();
             redo.clear();
             lastExport = null;
+            discardCandidate();
+            verified.clear();
             ProcessProjection now = ProcessProjection.of(a);
             DocumentDraft saved = null;
             try {
@@ -169,6 +205,7 @@ public final class PddPresenter implements PddPanel.Actions {
             draft = saved != null ? saved : DraftBuilder.build(now);
             projection = saved != null && saved.processRevision().equals(now.revision()) ? now : saved == null ? now : null;
             selected = draft.sections().isEmpty() ? "" : "secao-1";
+            if (saved != null) retain(); // histórico novo: sobras de uma sessão anterior saem; rascunho ilegível = nada é apagado
         }
         listTabs();
         render();
@@ -243,6 +280,10 @@ public final class PddPresenter implements PddPanel.Actions {
         projection = now;
         retain();
         if (draft.block(selected).isEmpty() && !selected.startsWith("secao-")) selected = "secao-1";
+        if (candidate != null && draft.block(candidate.blockId).map(b -> !b.stepIds().equals(candidate.capture.forSteps())).orElse(true)) {
+            discardCandidate();
+            say(Severity.WARNING, "Nova captura descartada", "O bloco mudou com a automação; a imagem anterior (se havia) continua.");
+        }
         render();
     }
 
@@ -277,6 +318,7 @@ public final class PddPresenter implements PddPanel.Actions {
     public void split(String blockId, int at) {
         ProcessProjection p = currentProjection();
         apply(d -> DraftEdits.split(d, p, blockId, at - 1));
+        if (candidate != null && candidate.blockId.equals(blockId) && draft.block(blockId).isEmpty()) discardCandidate();
         retain();
     }
 
@@ -290,11 +332,13 @@ public final class PddPresenter implements PddPanel.Actions {
         if (i + 1 >= s.blocks().size()) return;
         String next = s.blocks().get(i + 1).blockId();
         apply(d -> DraftEdits.join(d, p, blockId, next));
+        if (candidate != null && draft.block(candidate.blockId).isEmpty()) discardCandidate();
         retain();
     }
 
     @Override
     public void removeCapture(String blockId) {
+        if (candidate != null && candidate.blockId.equals(blockId)) discardCandidate();
         apply(d -> DraftEdits.dropUnreferencedCaptures(DraftEdits.detachCapture(d, blockId)));
         retain();
     }
@@ -314,17 +358,26 @@ public final class PddPresenter implements PddPanel.Actions {
             render();
             return;
         }
+        if (candidate != null) {
+            say(Severity.WARNING, "Revise a nova captura antes", "Aplique ou cancele a nova captura pendente antes de capturar de novo.");
+            render();
+            return;
+        }
         Automation a = automation();
         List<PddCaptureClient.StepTarget> targets = new ArrayList<>();
         for (StepId id : b.stepIds()) {
             AutomationStep st = a.step(id).orElse(null);
             if (st != null) targets.add(new PddCaptureClient.StepTarget(id, st.actionType(), st.element().orElse(null)));
         }
+        boolean replace = b.capture().isPresent(); // bloco COM imagem: a nova vira candidata (revisar → Aplicar/Cancelar)
+        String armedRevision = draft.processRevision();
+        LinkStatus.ExtensionInfo ext = link.status().extension();
+        String policy = ext != null && PddCaptureClient.supportsV2(ext.version()) ? PddCaptureClient.POLICY_V2 : null;
         PddCaptureClient c = new PddCaptureClient(link, Duration.ofSeconds(20));
         capturing = c;
         say(Severity.INFO, "Preparando a captura…", "");
         render();
-        c.arm(tabRef, targets, Duration.ofSeconds(60)).whenComplete((armed, err) -> edt(() -> {
+        c.arm(tabRef, targets, Duration.ofSeconds(60), policy).whenComplete((armed, err) -> edt(() -> {
             if (capturing != c) return;
             if (err != null) {
                 finishCapture(c);
@@ -347,7 +400,7 @@ public final class PddPresenter implements PddPanel.Actions {
             } else if (!r.captured()) {
                 say(Severity.WARNING, "Imagem indisponível", captureFailure(r.failureCode()));
             } else {
-                accept(blockId, r);
+                accept(blockId, r, replace, armedRevision);
             }
             render();
         }));
@@ -368,18 +421,38 @@ public final class PddPresenter implements PddPanel.Actions {
         c.close();
     }
 
-    private void accept(String blockId, PddCaptureClient.Result r) {
+    private void accept(String blockId, PddCaptureClient.Result r, boolean replace, String armedRevision) {
         Block b = draft.block(blockId).orElse(null);
         if (b == null) {
             say(Severity.WARNING, "Imagem descartada", "O bloco mudou durante a captura.");
             return;
         }
+        String policy = r.policy() == null ? VisualVerifier.POLICY : r.policy();
         List<Region> regions = new ArrayList<>();
-        for (PddCaptureClient.Region x : r.regions()) regions.add(new Region(x.kind(), x.x(), x.y(), x.width(), x.height()));
+        BufferedImage image;
         try {
-            VisualVerifier.verify(r.png(), r.sha256(), r.width(), r.height(), r.devicePixelRatio(), regions); // 4ª barreira
+            for (PddCaptureClient.Region x : r.regions()) regions.add(new Region(x.kind(), x.x(), x.y(), x.width(), x.height(), x.tone()));
+            image = VisualVerifier.verify(r.png(), r.sha256(), r.width(), r.height(), r.devicePixelRatio(), regions, policy); // 4ª barreira
         } catch (VisualVerifier.VisualPolicyException e) {
-            say(Severity.WARNING, "Imagem recusada pelo Studio", "A imagem não passou na verificação da política visual (" + e.code() + "). Nada foi guardado.");
+            say(Severity.WARNING, "Imagem recusada pelo Studio", "A imagem não passou na verificação da política visual (" + e.code() + "). Nada foi guardado."
+                    + (replace ? " A imagem anterior continua." : ""));
+            return;
+        } catch (IllegalArgumentException e) {
+            say(Severity.WARNING, "Imagem recusada pelo Studio", "As regiões da imagem não seguem a política visual. Nada foi guardado.");
+            return;
+        }
+        if (replace) {
+            if (!armedRevision.equals(draft.processRevision()) || !b.stepIds().equals(draft.block(blockId).orElseThrow().stepIds())) {
+                say(Severity.WARNING, "Nova captura descartada", "O processo mudou durante a captura; a imagem anterior continua.");
+                return;
+            }
+            SafeCapture c = safeCapture(b, r, policy, regions, r.sha256());
+            discardCandidate();
+            candidate = new Candidate(blockId, c, r.png(), image, armedRevision);
+            selected = blockId;
+            long labels = regions.stream().filter(x -> "CARRIER".equals(x.kind())).count();
+            say(Severity.INFO, "Nova captura pronta para revisão", labels + " rótulo(s) de interface visíveis. A prévia já mostra a nova imagem; use \"Selecionar área\" "
+                    + "se quiser recortar e então \"Aplicar\". \"Cancelar\" mantém a imagem anterior.");
             return;
         }
         String sha;
@@ -399,14 +472,142 @@ public final class PddPresenter implements PddPanel.Actions {
             if (ok) placed++;
         }
         List<String> limits = r.limitations().stream().filter(l -> l.matches("[A-Z][A-Z0-9_]{0,59}")).toList();
-        SafeCapture c = new SafeCapture(sha, r.width(), r.height(), r.devicePixelRatio(), r.observedAt(), 0, VisualVerifier.POLICY, b.screenKey(),
-                b.stepIds(), anns, limits, regions);
+        SafeCapture c = new SafeCapture(sha, r.width(), r.height(), r.devicePixelRatio(), r.observedAt(), 0, policy, b.screenKey(), b.stepIds(), anns,
+                limits, VisualVerifier.POLICY.equals(policy) ? regions : List.of());
+        if (!VisualVerifier.POLICY.equals(policy)) c = safeCapture(b, r, policy, regions, sha); // v2: referência própria (rascunho 1.1.0)
+        SafeCapture attached = c;
         int finalPlaced = placed;
-        apply(d -> DraftEdits.dropUnreferencedCaptures(DraftEdits.attachCapture(d, blockId, c)));
+        boolean upgrade = !draft.needsV11();
+        apply(d -> DraftEdits.dropUnreferencedCaptures(DraftEdits.attachCapture(d, blockId, attached)));
         retain();
+        if (upgrade && draft.needsV11()) {
+            say(Severity.SUCCESS, "Imagem associada · rascunho 1.1.0", "O rascunho do documento passou a usar o formato 1.1.0 (representação documental). "
+                    + "A automação não muda.");
+            return;
+        }
         long labels = regions.stream().filter(x -> "CARRIER".equals(x.kind())).count();
         say(Severity.SUCCESS, "Imagem sanitizada associada", labels + " rótulo(s) de interface visíveis; " + finalPlaced + " de " + b.stepIds().size()
                 + " marcador(es) posicionados. Campos e o restante da tela ficam ocultos.");
+    }
+
+    /** Metadados da captura: marcadores só das etapas do bloco; v2 com referência própria. */
+    private SafeCapture safeCapture(Block b, PddCaptureClient.Result r, String policy, List<Region> regions, String sha) {
+        List<Annotation> anns = new ArrayList<>();
+        for (PddCaptureClient.Marker m : r.markers()) {
+            if (!b.stepIds().contains(m.step())) continue;
+            boolean ok = "PLACED".equals(m.status()) && m.width() > 0 && m.height() > 0;
+            anns.add(ok ? new Annotation(m.step(), Annotation.Status.PLACED, m.x(), m.y(), m.width(), m.height(), "")
+                    : new Annotation(m.step(), Annotation.Status.OMITTED, 0, 0, 0, 0, code(m.reason())));
+        }
+        List<String> limits = r.limitations().stream().filter(l -> l.matches("[A-Z][A-Z0-9_]{0,59}")).toList();
+        SafeCapture c = new SafeCapture(null, sha, r.width(), r.height(), r.devicePixelRatio(), r.observedAt(), 0, policy, b.screenKey(), b.stepIds(), anns,
+                limits, regions, null);
+        return VisualVerifier.POLICY.equals(policy) ? c : withRef(c, DraftEdits.freshRef(c, b.blockId()));
+    }
+
+    private static SafeCapture withRef(SafeCapture c, String ref) {
+        return new SafeCapture(ref, c.sha256(), c.width(), c.height(), c.devicePixelRatio(), c.observedAt(), c.pageEpoch(), c.policy(), c.screenKey(),
+                c.forSteps(), c.annotations(), c.limitations(), c.regions(), c.crop());
+    }
+
+    // ------------------------------------------------------------------------------------------- candidata, recorte, marcadores
+
+    @Override
+    public void applyCandidate() {
+        Candidate k = candidate;
+        if (k == null) return;
+        Block b = draft.block(k.blockId).orElse(null);
+        if (b == null || !b.stepIds().equals(k.capture.forSteps()) || !k.processRevision.equals(currentProjection().revision())
+                || !k.processRevision.equals(draft.processRevision())) {
+            discardCandidate();
+            say(Severity.WARNING, "Nova captura descartada", "O processo ou o bloco mudou desde a captura; a imagem anterior continua.");
+            render();
+            return;
+        }
+        try {
+            String sha = store.putCapture(draft.automationId(), k.png);
+            if (!sha.equals(k.capture.sha256())) throw new IOException("conteúdo");
+        } catch (IOException e) {
+            say(Severity.WARNING, "Imagem não guardada", "Não foi possível gravar a imagem sanitizada; a imagem anterior continua.");
+            render();
+            return;
+        }
+        SafeCapture c = k.capture.withCrop(k.crop);
+        boolean upgrade = !draft.needsV11();
+        apply(d -> DraftEdits.dropUnreferencedCaptures(DraftEdits.attachCapture(d, k.blockId, c)));
+        verified.put(c.sha256(), k.image);
+        discardCandidate();
+        retain();
+        say(Severity.SUCCESS, "Imagem substituída", "A nova captura passou a ilustrar este bloco. Desfazer volta à anterior."
+                + (upgrade && draft.needsV11() ? " O rascunho do documento passou ao formato 1.1.0; a automação não muda." : ""));
+        render();
+    }
+
+    @Override
+    public void cancelCandidate() {
+        if (candidate == null) return;
+        discardCandidate();
+        say(Severity.INFO, "Nova captura descartada", "Nada mudou: a imagem anterior continua no bloco.");
+        render();
+    }
+
+    private void discardCandidate() {
+        if (candidate != null) candidate.wipe();
+        candidate = null;
+    }
+
+    @Override
+    public void setCrop(String blockId, int x, int y, int width, int height) {
+        DocumentDraft.Crop crop;
+        try {
+            crop = new DocumentDraft.Crop(x, y, width, height, actor.name());
+        } catch (IllegalArgumentException e) {
+            say(Severity.WARNING, "Recorte recusado", "A área precisa ter pelo menos " + DocumentDraft.Crop.MIN_WIDTH + "×" + DocumentDraft.Crop.MIN_HEIGHT
+                    + " px da imagem.");
+            render();
+            return;
+        }
+        if (candidate != null && candidate.blockId.equals(blockId)) {
+            SafeCapture c = candidate.capture;
+            if (x + width > c.width() || y + height > c.height()) {
+                say(Severity.WARNING, "Recorte recusado", message("CROP_OUT_OF_IMAGE"));
+            } else {
+                candidate.crop = crop;
+                say(Severity.INFO, "Recorte da nova captura ajustado", "Revise a prévia e use \"Aplicar\".");
+            }
+            render();
+            return;
+        }
+        apply(d -> DraftEdits.setCrop(d, blockId, crop));
+    }
+
+    @Override
+    public void autoCrop(String blockId) {
+        if (candidate != null && candidate.blockId.equals(blockId)) {
+            candidate.crop = null;
+            render();
+            return;
+        }
+        apply(d -> DraftEdits.setCrop(d, blockId, null));
+    }
+
+    @Override
+    public void placeMarker(String blockId, int ordinal, double x, double y, double width, double height) {
+        StepId step = stepOf(blockId, ordinal);
+        if (step == null) return;
+        apply(d -> DraftEdits.placeManualMarker(d, blockId, step, x, y, width, height, actor.name()));
+    }
+
+    @Override
+    public void removeMarker(String blockId, int ordinal) {
+        StepId step = stepOf(blockId, ordinal);
+        if (step == null) return;
+        apply(d -> DraftEdits.removeManualMarker(d, blockId, step));
+    }
+
+    private StepId stepOf(String blockId, int ordinal) {
+        return draft.block(blockId).flatMap(b -> b.instructions().stream().filter(i -> i.ordinal() == ordinal).findFirst()).map(Instruction::stepId)
+                .orElse(null);
     }
 
     // ------------------------------------------------------------------------------------------- exportar
@@ -483,7 +684,8 @@ public final class PddPresenter implements PddPanel.Actions {
         String bTitle = bannerTitle;
         String bText = banner;
         Severity bSev = bannerSeverity;
-        boolean transientMessage = bText.isEmpty() && bTitle.isEmpty() || bSev == Severity.INFO || bSev == Severity.SUCCESS;
+        // com uma captura armada, a instrução do gesto (Alt+Shift+K) não pode ser coberta por um aviso de estado
+        boolean transientMessage = capturing == null && (bText.isEmpty() && bTitle.isEmpty() || bSev == Severity.INFO || bSev == Severity.SUCCESS);
         if (transientMessage) { // avisos de ESTADO (automação mudou, PDF desatualizado) têm prioridade sobre mensagens passageiras
             if (!draft.processRevision().equals(now.revision())) {
                 bTitle = "A automação mudou";
@@ -503,28 +705,69 @@ public final class PddPresenter implements PddPanel.Actions {
             }
         }
         preview = renderPreview();
+        PddPanel.ImageView image = null;
+        List<PddPanel.MarkerSlot> slots = new ArrayList<>();
+        Block sel = draft.block(selected).orElse(null);
+        if (sel != null) {
+            boolean cand = candidate != null && candidate.blockId.equals(sel.blockId());
+            SafeCapture c = cand ? candidate.capture.withCrop(candidate.crop) : sel.capture().map(draft.captures()::get).orElse(null);
+            BufferedImage img = cand ? candidate.image : c == null ? null : verified.get(c.sha256());
+            if (c != null && img != null) {
+                List<PddImageEditor.Mark> marks = new ArrayList<>();
+                for (Instruction i : sel.instructions()) {
+                    Annotation a = c.annotations().stream().filter(z -> z.stepId().equals(i.stepId()) && z.status() == Annotation.Status.PLACED && !z.manual())
+                            .findFirst().orElse(c.annotations().stream().filter(z -> z.stepId().equals(i.stepId()) && z.manual()).findFirst().orElse(null));
+                    if (a != null) {
+                        marks.add(new PddImageEditor.Mark(i.ordinal(), new java.awt.Rectangle((int) Math.round(a.x() * c.width()), (int) Math.round(a.y() * c.height()),
+                                (int) Math.round(a.width() * c.width()), (int) Math.round(a.height() * c.height())), a.manual()));
+                    }
+                    boolean auto = a != null && !a.manual();
+                    slots.add(new PddPanel.MarkerSlot(i.ordinal(), auto ? "automático" : a != null ? "manual" : "sem marcador", !auto, a != null && a.manual()));
+                }
+                java.awt.Rectangle crop = c.crop() == null ? null : new java.awt.Rectangle(c.crop().x(), c.crop().y(), c.crop().width(), c.crop().height());
+                image = new PddPanel.ImageView(img, crop, marks, cand, c.policy());
+            }
+        }
         long nBlocking = pending.stream().filter(Pending::blocking).count();
+        // com uma nova captura em revisão a exportação fica bloqueada: o selo diz isso (antes dizia "Pronto para exportar")
+        String status = blocking ? nBlocking + " pendência(s) para revisar" : candidate != null ? "Nova captura em revisão" : "Pronto para exportar";
         panel.show(new PddPanel.Model(items, selected, title, titleState, attention, block, rows, itemPending, hasImage, canJoin, tabs, capturing != null,
-                bTitle, bText, bSev, blocking ? nBlocking + " pendência(s) para revisar" : "Pronto para exportar", blocking ? Status.WARNING : Status.SUCCESS,
-                preview, !undo.isEmpty(), !redo.isEmpty(), !blocking && capturing == null));
+                bTitle, bText, bSev, status, blocking || candidate != null ? Status.WARNING : Status.SUCCESS,
+                preview, !undo.isEmpty(), !redo.isEmpty(), !blocking && capturing == null && candidate == null, image, slots));
     }
 
-    /** Prévia: o próprio PDF (modo prévia) rasterizado. */
+    /** Prévia: o próprio PDF (modo prévia) rasterizado — com a candidata no lugar da imagem do bloco, se houver. */
     private List<BufferedImage> renderPreview() {
         try {
             Map<String, BufferedImage> images = new LinkedHashMap<>();
             for (Block b : draft.blocks()) {
                 if (b.capture().isEmpty()) continue;
                 SafeCapture c = draft.captures().get(b.captureSha());
+                if (c == null) continue;
                 byte[] png = store.capture(draft.automationId(), c.sha256()).orElse(null);
-                if (png == null) continue;
+                if (png == null) {
+                    verified.remove(c.sha256());
+                    continue;
+                }
                 try {
-                    images.put(c.sha256(), VisualVerifier.verify(png, c.sha256(), c.width(), c.height(), c.devicePixelRatio(), c.regions()));
+                    // sempre REVERIFICADA a partir do disco (o arquivo pode ter sido trocado); o editor usa a mesma imagem
+                    BufferedImage img = VisualVerifier.verify(png, c.sha256(), c.width(), c.height(), c.devicePixelRatio(), c.regions(), c.policy());
+                    images.put(c.sha256(), img);
+                    verified.put(c.sha256(), img);
                 } catch (VisualVerifier.VisualPolicyException e) {
-                    // imagem recusada: a prévia mostra "Imagem indisponível"
+                    verified.remove(c.sha256()); // imagem recusada: a prévia mostra "Imagem indisponível"
                 }
             }
-            byte[] pdf = PdfRenderer.render(draft, images, fonts, new PdfRenderer.Options("prévia", LocalDate.now(clock.withZone(ZoneOffset.UTC)), true));
+            DocumentDraft shown = draft;
+            if (candidate != null && draft.block(candidate.blockId).isPresent()) {
+                try {
+                    shown = DraftEdits.attachCapture(draft, candidate.blockId, candidate.capture.withCrop(candidate.crop));
+                    images.put(candidate.capture.sha256(), candidate.image);
+                } catch (DraftException e) {
+                    shown = draft;
+                }
+            }
+            byte[] pdf = PdfRenderer.render(shown, images, fonts, new PdfRenderer.Options("prévia", LocalDate.now(clock.withZone(ZoneOffset.UTC)), true));
             List<BufferedImage> pages = new ArrayList<>();
             try (PDDocument doc = Loader.loadPDF(pdf)) {
                 PDFRenderer r = new PDFRenderer(doc);
@@ -544,12 +787,23 @@ public final class PddPresenter implements PddPanel.Actions {
         }
     }
 
+    /** Retenção: só sai do disco a imagem que nem o rascunho nem o desfazer/refazer desta sessão alcançam (achado A1). */
     private void retain() {
         try {
-            store.retain(draft);
+            java.util.Set<String> history = new java.util.HashSet<>();
+            undo.forEach(d -> history.addAll(d.referencedImages()));
+            redo.forEach(d -> history.addAll(d.referencedImages()));
+            store.retain(draft, history);
         } catch (IOException e) {
             // retenção é melhor esforço
         }
+    }
+
+    /** Fim do desfazer/refazer desta sessão do PDD: só ficam no disco as imagens que o rascunho referencia. */
+    private void endHistory() {
+        undo.clear();
+        redo.clear();
+        if (draft != null) retain();
     }
 
     private void say(Severity s, String title, String text) {
@@ -594,7 +848,8 @@ public final class PddPresenter implements PddPanel.Actions {
                     + p.instruction() : "") + ".";
             case "CAPTURE_MISMATCH" -> "A imagem não corresponde a este bloco: capture de novo.";
             case "CAPTURE_MISSING" -> "Sem imagem: o PDF dirá \"Imagem indisponível\".";
-            case "MARKER_UNAVAILABLE" -> "Instrução " + p.instruction() + " sem marcador na imagem (alvo não comprovado).";
+            case "MARKER_UNAVAILABLE" -> "Instrução " + p.instruction() + " sem marcador na imagem (alvo não comprovado). Você pode posicionar um marcador manual.";
+            case "MARKER_OUTSIDE_CROP" -> "Instrução " + p.instruction() + ": o marcador fica fora do recorte escolhido.";
             default -> p.code();
         };
     }
@@ -607,6 +862,12 @@ public final class PddPresenter implements PddPanel.Actions {
             case "BLOCKS_NOT_ADJACENT" -> "Só blocos vizinhos da mesma seção podem ser juntados.";
             case "SPLIT_POSITION_INVALID" -> "Escolha uma instrução depois da primeira.";
             case "CAPTURE_DOES_NOT_MATCH_BLOCK" -> "A imagem não corresponde a este bloco.";
+            case "CROP_OUT_OF_IMAGE" -> "O recorte precisa ficar dentro da imagem.";
+            case "MARKER_ALREADY_PLACED" -> "Esta instrução já tem marcador automático (comprovado na captura); ele não é substituído.";
+            case "MARKER_OUTSIDE_CROP" -> "O marcador precisa ficar dentro do recorte escolhido.";
+            case "MARKER_INVALID" -> "O marcador precisa ficar dentro da imagem.";
+            case "MARKER_NOT_FOUND" -> "Esta instrução não tem marcador manual.";
+            case "CAPTURE_MISSING" -> "Este bloco ainda não tem imagem.";
             case "DRAFT_HAS_BLOCKING_PENDING" -> "Há pendências que impedem a exportação.";
             case "CAPTURE_FILE_MISSING" -> "Uma imagem do rascunho não está mais no diretório de dados: capture de novo.";
             case "PDF_TEXT_POLICY", "PDF_METADATA_POLICY" -> "A verificação final do PDF falhou: nada foi salvo.";
@@ -617,7 +878,8 @@ public final class PddPresenter implements PddPanel.Actions {
 
     static String captureFailure(String code) {
         return switch (code == null ? "" : code) {
-            case "VISUAL_CAPTURE_NOT_ALLOWED" -> "A captura de tela só existe no laboratório local.";
+            case "VISUAL_CAPTURE_NOT_ALLOWED" -> "Esta origem não está autorizada para a captura do PDD (só o laboratório local ou uma origem autorizada).";
+            case "CARRIER_OVERLAPS_CONTENT" -> "Um rótulo encosta em imagem ou quadro incorporado: a captura foi recusada por segurança.";
             case "PAGE_CHANGED_DURING_CAPTURE" -> "A página mudou durante a captura: deixe-a parada e tente de novo.";
             case "PAGE_CHANGED", "TAB_CLOSED" -> "A aba navegou ou foi fechada antes do atalho.";
             case "ARM_EXPIRED" -> "O atalho não foi pressionado a tempo.";
@@ -648,6 +910,7 @@ public final class PddPresenter implements PddPanel.Actions {
 
     public void dispose() {
         if (capturing != null) capturing.close();
+        endHistory();
         if (host != null) host.hide();
     }
 

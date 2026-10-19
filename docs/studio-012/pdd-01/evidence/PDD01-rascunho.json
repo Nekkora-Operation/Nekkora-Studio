@@ -1,0 +1,253 @@
+{
+  "schema": "nekkora-studio/pdd-visual",
+  "version": "1.1.0",
+  "automationId": "af2986d2-1a5f-45ad-b8fd-cf9731b69535",
+  "processRevision": "sha256:efe3d568abd9de624ba9559d6e5ef4e2d4fad7c0c338b9043e6392473bbee19b",
+  "sections": [
+    {
+      "sessionId": "fefa5192-199d-45e1-bb97-caf58f9c828d",
+      "number": 1,
+      "title": {
+        "value": "Autenticação",
+        "state": "REVIEWED",
+        "reviewer": "TEST_AGENT"
+      },
+      "blocks": [
+        {
+          "blockId": "blk-3c83a8b65a79ed42",
+          "stepIds": ["dd4f6792-e286-48f5-b4bd-96968931b528", "33a87530-bc8a-48ae-8bf6-09a5b96a650c", "3dbd4ed4-6827-46a9-a577-f177e93ac7d3"],
+          "title": {
+            "value": "Preencher os campos e selecionar “Entrar”",
+            "state": "DERIVED",
+            "reviewer": ""
+          },
+          "instructions": [
+            {
+              "stepId": "dd4f6792-e286-48f5-b4bd-96968931b528",
+              "ordinal": 1,
+              "kind": "OBSERVED",
+              "text": {
+                "value": "Informar o campo “Usuário:”",
+                "state": "DERIVED",
+                "reviewer": ""
+              }
+            },
+            {
+              "stepId": "33a87530-bc8a-48ae-8bf6-09a5b96a650c",
+              "ordinal": 2,
+              "kind": "OBSERVED",
+              "text": {
+                "value": "Informar a senha",
+                "state": "DERIVED",
+                "reviewer": ""
+              }
+            },
+            {
+              "stepId": "3dbd4ed4-6827-46a9-a577-f177e93ac7d3",
+              "ordinal": 3,
+              "kind": "OBSERVED",
+              "text": {
+                "value": "Selecionar “Entrar”",
+                "state": "DERIVED",
+                "reviewer": ""
+              }
+            }
+          ],
+          "screenKey": "tela-949aded09c5f9af0",
+          "capture": "cap-255fbc65252d321bd9b959d218418432"
+        }
+      ]
+    },
+    {
+      "sessionId": "3a3e4301-15b3-4290-ac85-aabba73bca87",
+      "number": 2,
+      "title": {
+        "value": "Consulta",
+        "state": "DERIVED",
+        "reviewer": ""
+      },
+      "blocks": [
+        {
+          "blockId": "blk-2b62df4b200b326f",
+          "stepIds": ["24973b32-1b2c-4eb3-8744-b5019e6663a4", "9ee2e5e5-0a07-4dbd-ad53-04b671b4af9d"],
+          "title": {
+            "value": "Etapas 1 a 2",
+            "state": "NEEDS_REVIEW",
+            "reviewer": ""
+          },
+          "instructions": [
+            {
+              "stepId": "24973b32-1b2c-4eb3-8744-b5019e6663a4",
+              "ordinal": 1,
+              "kind": "OBSERVED",
+              "text": {
+                "value": "Selecionar “Consultar”",
+                "state": "DERIVED",
+                "reviewer": ""
+              }
+            },
+            {
+              "stepId": "9ee2e5e5-0a07-4dbd-ad53-04b671b4af9d",
+              "ordinal": 2,
+              "kind": "DECLARED",
+              "text": {
+                "value": "Selecionar o elemento indicado",
+                "state": "NEEDS_REVIEW",
+                "reviewer": ""
+              }
+            }
+          ],
+          "screenKey": "tela-b22e00c6192576a0",
+          "capture": ""
+        }
+      ]
+    }
+  ],
+  "captures": [
+    {
+      "ref": "cap-255fbc65252d321bd9b959d218418432",
+      "sha256": "sha256:c71b3411c0acba13c65e1e0b0a1ee70525de3059a30343ba3d88a5c7ec671af8",
+      "width": 1024,
+      "height": 849,
+      "devicePixelRatio": 1,
+      "observedAt": "2026-10-18T23:29:03.196Z",
+      "pageEpoch": 0,
+      "policy": "nekkora-visual/2",
+      "screenKey": "tela-949aded09c5f9af0",
+      "forSteps": ["dd4f6792-e286-48f5-b4bd-96968931b528", "33a87530-bc8a-48ae-8bf6-09a5b96a650c", "3dbd4ed4-6827-46a9-a577-f177e93ac7d3"],
+      "annotations": [
+        {
+          "stepId": "dd4f6792-e286-48f5-b4bd-96968931b528",
+          "status": "PLACED",
+          "x": 0.34375,
+          "y": 0.284066,
+          "width": 0.298828,
+          "height": 0.030624,
+          "reason": "",
+          "provenance": "AUTOMATIC",
+          "reviewer": ""
+        },
+        {
+          "stepId": "33a87530-bc8a-48ae-8bf6-09a5b96a650c",
+          "status": "PLACED",
+          "x": 0.34375,
+          "y": 0.347891,
+          "width": 0.298828,
+          "height": 0.030624,
+          "reason": "",
+          "provenance": "AUTOMATIC",
+          "reviewer": ""
+        },
+        {
+          "stepId": "3dbd4ed4-6827-46a9-a577-f177e93ac7d3",
+          "status": "PLACED",
+          "x": 0.554398,
+          "y": 0.404428,
+          "width": 0.088181,
+          "height": 0.029446,
+          "reason": "",
+          "provenance": "AUTOMATIC",
+          "reviewer": ""
+        }
+      ],
+      "limitations": ["SOME_LABELS_HIDDEN"],
+      "regions": [
+        {
+          "kind": "SURFACE",
+          "x": 0,
+          "y": 0,
+          "width": 1024,
+          "height": 300,
+          "tone": "DARK"
+        },
+        {
+          "kind": "SURFACE",
+          "x": 232,
+          "y": 40,
+          "width": 204,
+          "height": 68,
+          "tone": "LIGHT"
+        },
+        {
+          "kind": "SURFACE",
+          "x": 232,
+          "y": 158,
+          "width": 560,
+          "height": 371,
+          "tone": "LIGHT"
+        },
+        {
+          "kind": "SURFACE",
+          "x": 0,
+          "y": 528,
+          "width": 1024,
+          "height": 221,
+          "tone": "DARK"
+        },
+        {
+          "kind": "MEDIA",
+          "x": 259,
+          "y": 56,
+          "width": 150,
+          "height": 36
+        },
+        {
+          "kind": "MEDIA",
+          "x": 744,
+          "y": 552,
+          "width": 19,
+          "height": 19
+        },
+        {
+          "kind": "MEDIA",
+          "x": 774,
+          "y": 552,
+          "width": 18,
+          "height": 19
+        },
+        {
+          "kind": "FIELD",
+          "x": 352,
+          "y": 241,
+          "width": 306,
+          "height": 27
+        },
+        {
+          "kind": "FIELD",
+          "x": 352,
+          "y": 295,
+          "width": 306,
+          "height": 27
+        },
+        {
+          "kind": "CARRIER",
+          "x": 352,
+          "y": 223,
+          "width": 320,
+          "height": 18
+        },
+        {
+          "kind": "CARRIER",
+          "x": 352,
+          "y": 278,
+          "width": 320,
+          "height": 17
+        },
+        {
+          "kind": "CARRIER",
+          "x": 568,
+          "y": 344,
+          "width": 90,
+          "height": 24
+        }
+      ],
+      "crop": {
+        "x": 217,
+        "y": 143,
+        "width": 590,
+        "height": 244,
+        "reviewer": "TEST_AGENT"
+      }
+    }
+  ]
+}
