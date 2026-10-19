@@ -106,7 +106,7 @@ public final class Studio013Homologation {
     /** Tudo o que NUNCA pode chegar ao documento: valores, dados do sistema sintético, caminhos e identificadores técnicos. */
     private static final List<String> SENTINELS = List.of(USER, PASS, "SENTINELA", "Sentinela", "Ana Souza", "Bruno Lima", "Carla Dias", "Zeta",
             "123.456.789-09", "987.654.321-00", "S3nh@Lab", "ana.souza", "autofill", "sombra.aberta", "Internado", "Observação", "Exame",
-            "sistema.html", "studio013", "tgt-");
+            "sistema.html", "studio013", "tgt-", "S3nh@Visivel", "F3chad@", "Quadr0@");
     /** Rótulos que a página pode mostrar (todos do vocabulário). */
     private static final java.util.Set<String> ROTULOS = java.util.Set.of("Início", "Menu", "Usuário", "Senha", "Entrar", "Pesquisar", "Salvar", "Ver detalhes",
             "Confirmar", "Cancelar", "Sair");
@@ -218,7 +218,7 @@ public final class Studio013Homologation {
         }
         launchChrome(SITE_PAGE);
         connect();
-        check("A0: extensão 0.6.0 conectada (consentimento PDD por origem e nekkora-visual/3)", statusText().contains("Extension 0.6.0"));
+        check("A0: extensão 0.6.0 conectada (consentimento PDD por origem; print mascarado nekkora-visual/4)", statusText().contains("Extension 0.6.0"));
 
         // ================================================================ A1 — mapeamento real num SITE autorizado pelo Chrome
         focusStudio();

@@ -71,6 +71,7 @@ class PddSitesUiTest {
         volatile Map<String, Object> lastGrant;
         volatile String lastRevoke;
         volatile String consent = "NONE";
+        volatile String level = "MASKED";
         volatile String version = "0.6.0";
         volatile String armReason;
 
@@ -104,12 +105,13 @@ class PddSitesUiTest {
                         + "{\"tabRef\":\"t-Intern00004\",\"title\":null,\"host\":null,\"access\":\"BROWSER_INTERNAL\",\"visualCapture\":null,"
                         + "\"origin\":null,\"pddConsent\":\"NONE\",\"active\":false,\"recording\":false}],\"truncated\":false}";
                 case "studio.pdd.consent.list" -> granted ? "{\"consents\":[{\"origin\":\"" + SITE + "\",\"consent\":\"" + consent + "\",\"actor\":\"DEVELOPER\","
-                        + "\"via\":\"STUDIO\",\"grantedAt\":\"2026-10-19T12:00:00Z\",\"chromeAccess\":true}]}" : "{\"consents\":[]}";
+                        + "\"via\":\"STUDIO\",\"grantedAt\":\"2026-10-19T12:00:00Z\",\"chromeAccess\":true,\"level\":\"" + level + "\"}]}" : "{\"consents\":[]}";
                 case "studio.pdd.consent.grant" -> {
                     lastGrant = payload;
                     consent = (String) payload.get("scope");
-                    yield "{\"origin\":\"" + payload.get("origin") + "\",\"consent\":\"" + consent + "\",\"actor\":\"" + payload.get("actor")
-                            + "\",\"via\":\"STUDIO\",\"grantedAt\":\"2026-10-19T12:00:00Z\"}";
+                    level = payload.get("level") == null ? "MASKED" : (String) payload.get("level");
+                    yield "{\"origin\":\"" + payload.get("origin") + "\",\"consent\":\"" + consent + "\",\"level\":\"" + level + "\",\"actor\":\""
+                            + payload.get("actor") + "\",\"via\":\"STUDIO\",\"grantedAt\":\"2026-10-19T12:00:00Z\"}";
                 }
                 case "studio.pdd.consent.revoke" -> {
                     lastRevoke = (String) payload.get("origin");
@@ -140,6 +142,9 @@ class PddSitesUiTest {
 
     private final FakeBrowser browser = new FakeBrowser();
     private Studio studio;
+    /** Resposta da pessoa às confirmações do print integral (liberar no site, exportar). */
+    private volatile boolean confirms = true;
+    private final List<String> asked = new CopyOnWriteArrayList<>();
 
     @AfterEach
     void tearDown() {
@@ -150,7 +155,20 @@ class PddSitesUiTest {
         Edt.theme(NekkoraThemes.SAKURA_DARK);
         studio = Edt.call(() -> Studio.create(StudioFixture.CLOCK, new ScriptedPrompts(), () -> { }, browser, RecorderPrompts.none(),
                 p -> RecorderWindowHost.headless()));
-        studio.useVisualPddHosts(p -> PddPresenter.Host.headless(out));
+        studio.useVisualPddHosts(p -> new PddPresenter.Host() {
+            public void show() {}
+
+            public void hide() {}
+
+            public java.util.Optional<Path> chooseFolder() {
+                return java.util.Optional.of(out);
+            }
+
+            public boolean confirm(String title, String message, String action) {
+                asked.add(title);
+                return confirms;
+            }
+        });
     }
 
     private static ElementReference el(String targetId, String kind, String tag, String name, String css, boolean sensitive) {
@@ -275,7 +293,9 @@ class PddSitesUiTest {
         Edt.run(() -> pdd().panel().authorizeButton().doClick());
         Edt.flush();
         Edt.flush();
-        assertEquals(Map.of("tabRef", "t-SiteTab00002", "origin", SITE, "scope", "SESSION", "actor", "DEVELOPER"), browser.lastGrant);
+        assertEquals(Map.of("tabRef", "t-SiteTab00002", "origin", SITE, "scope", "SESSION", "actor", "DEVELOPER", "level", "MASKED"), browser.lastGrant,
+                "sem escolha: print mascarado");
+        assertTrue(asked.isEmpty(), "o print mascarado não pede confirmação");
         assertEquals("Captura PDD autorizada", model().bannerTitle(), model().banner());
         assertEquals("READY", model().tabs().stream().filter(t -> t.tabRef().equals("t-SiteTab00002")).findFirst().orElseThrow().state());
         assertEquals(1, model().sites().size());
@@ -355,6 +375,120 @@ class PddSitesUiTest {
             String text = new PDFTextStripper().getText(doc).replaceAll("\\s+", " ");
             assertTrue(text.contains("capturas reais da tela"), text);
         }
+    }
+
+    /** Print v5 sintético 400×200: a "tela" toda na cor-sentinela (os dados ficam) e só a senha coberta; {@code leak} = senha à mostra. */
+    static String capturedV5(Automation a, boolean leak) throws Exception {
+        int w = 400, h = 200;
+        java.awt.image.BufferedImage img = new java.awt.image.BufferedImage(w, h, java.awt.image.BufferedImage.TYPE_INT_RGB);
+        for (int y = 0; y < h; y++) for (int x = 0; x < w; x++) img.setRGB(x, y, 0xE6007E);
+        int[] fb = com.nekkora.studio.pdd.VisualVerifier.v4Paint("FIELD", null);
+        for (int y = 110; y < 134 && !leak; y++) {
+            for (int x = 40; x < 240; x++) img.setRGB(x, y, y == 110 || y == 133 || x == 40 || x == 239 ? fb[1] : fb[0]);
+        }
+        java.io.ByteArrayOutputStream o = new java.io.ByteArrayOutputStream();
+        javax.imageio.ImageIO.write(img, "png", o);
+        byte[] png = o.toByteArray();
+        String sha = "sha256:" + java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(png));
+        String u = a.sessions().get(0).steps().get(0).id().value().toString();
+        return "{\"captureId\":\"CID\",\"status\":\"CAPTURED\",\"policy\":\"nekkora-visual/5\",\"observedAt\":\"2026-10-19T12:00:00Z\","
+                + "\"width\":400,\"height\":200,\"devicePixelRatio\":1,\"png\":\"" + java.util.Base64.getEncoder().encodeToString(png) + "\",\"sha256\":\"" + sha
+                + "\",\"regions\":[{\"kind\":\"FIELD\",\"x\":40,\"y\":110,\"width\":200,\"height\":24}],\"annotations\":[{\"stepRef\":\"" + u
+                + "\",\"status\":\"PLACED\",\"x\":0.1,\"y\":0.3,\"width\":0.5,\"height\":0.12,\"reason\":\"\"}],\"limitations\":[]}";
+    }
+
+    private PddPanel.Tab siteTab() {
+        return model().tabs().stream().filter(t -> t.tabRef().equals("t-SiteTab00002")).findFirst().orElseThrow();
+    }
+
+    @Test
+    @DisplayName("v5 liberar o print integral: pede confirmação (recusada = nada concedido; aceita = nível FULL); site integral arma a v5; \"Mascarar esta captura\" arma a v4")
+    void liberarPrintIntegral() {
+        studio();
+        site();
+        String login = openLogin();
+        selectTab("t-SiteTab00002");
+        assertTrue(Edt.call(() -> pdd().panel().levelCombo().isVisible()), "a escolha da imagem aparece ao autorizar");
+        confirms = false;
+        Edt.run(() -> {
+            pdd().panel().levelCombo().setSelectedIndex(1);
+            pdd().panel().authorizeButton().doClick();
+        });
+        Edt.flush();
+        Edt.flush();
+        assertEquals(1, asked.size(), "confirmação explícita antes do print integral");
+        assertNull(browser.lastGrant, "recusada: nada é concedido");
+        assertEquals("Print integral não liberado", model().bannerTitle());
+        confirms = true;
+        Edt.run(() -> pdd().panel().authorizeButton().doClick());
+        Edt.flush();
+        Edt.flush();
+        assertEquals("FULL", browser.lastGrant.get("level"));
+        assertTrue(siteTab().full(), "a aba sabe que o site está no print integral");
+        assertTrue(model().sites().get(0).label().contains("print integral"), model().sites().get(0).label());
+        selectTab("t-SiteTab00002");
+        assertTrue(Edt.call(() -> pdd().panel().consentText().getText()).contains("print integral"));
+        assertTrue(Edt.call(() -> pdd().panel().maskThisBox().isVisible()), "cada captura pode sair mascarada");
+        Edt.run(() -> pdd().panel().captureButton().doClick());
+        Edt.flush();
+        assertEquals("nekkora-visual/5", browser.lastArm.get("policy"));
+        Edt.run(() -> pdd().cancelCapture());
+        Edt.run(() -> {
+            pdd().panel().maskThisBox().setSelected(true);
+            pdd().panel().captureButton().doClick();
+        });
+        Edt.flush();
+        assertEquals("nekkora-visual/4", browser.lastArm.get("policy"), "esta captura sai mascarada");
+        Edt.run(() -> pdd().cancelCapture());
+        // voltar ao mascarado não pede confirmação
+        int before = asked.size();
+        Edt.run(() -> pdd().panel().siteLevelButton().doClick());
+        Edt.flush();
+        Edt.flush();
+        assertEquals("MASKED", browser.lastGrant.get("level"));
+        assertEquals(before, asked.size());
+        assertFalse(siteTab().full());
+        Edt.run(() -> pdd().capture(login, "t-SiteTab00002"));
+        Edt.flush();
+        assertEquals("nekkora-visual/4", browser.lastArm.get("policy"), "site mascarado nunca arma a v5");
+    }
+
+    @Test
+    @DisplayName("v5 aceito: selo \"Print integral\" na imagem; senha à mostra é recusada; exportar pede confirmação (recusada = nenhum PDF; aceita = PDF com a procedência do integral)")
+    void printIntegralEExportar() throws Exception {
+        studio();
+        Automation a = site();
+        long before = revision();
+        String login = openLogin();
+        browser.consent = "SESSION";
+        browser.level = "FULL";
+        Edt.run(() -> pdd().reloadTabs());
+        Edt.flush();
+        Edt.flush();
+        shoot(login, "t-SiteTab00002", capturedV5(a, true));
+        assertEquals("nekkora-visual/5", browser.lastArm.get("policy"));
+        assertFalse(model().hasImage());
+        assertEquals("Imagem recusada pelo Studio", model().bannerTitle(), model().banner());
+        shoot(login, "t-SiteTab00002", capturedV5(a, false));
+        assertTrue(model().hasImage(), model().banner());
+        assertEquals("nekkora-visual/5", model().image().policy());
+        assertTrue(Edt.call(() -> pdd().panel().fullBadge().isVisible()), "selo do print integral");
+        confirms = false;
+        asked.clear();
+        Edt.run(() -> pdd().export());
+        assertEquals(List.of("Exportar com print integral?"), asked);
+        assertFalse(Files.exists(out.resolve("pdd-visual-v001.pdf")), "recusada: nenhum PDF");
+        assertEquals("Exportação cancelada", model().bannerTitle());
+        confirms = true;
+        Edt.run(() -> pdd().export());
+        Path pdf = out.resolve("pdd-visual-v001.pdf");
+        assertTrue(Files.exists(pdf), model().banner());
+        try (PDDocument doc = Loader.loadPDF(pdf.toFile())) {
+            String text = new PDFTextStripper().getText(doc).replaceAll("\\s+", " ");
+            assertTrue(text.contains("Este documento contém imagens em print integral"), text);
+            assertTrue(text.contains("Print integral: a imagem mostra os dados da tela"), text);
+        }
+        assertEquals(before, revision(), "o print integral não muda a automação (.nekkora)");
     }
 
     @Test

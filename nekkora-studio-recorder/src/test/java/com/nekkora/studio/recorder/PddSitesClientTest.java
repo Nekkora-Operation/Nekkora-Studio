@@ -68,6 +68,27 @@ class PddSitesClientTest {
     }
 
     @Test
+    @DisplayName("revisão da usuária: nível do consentimento — FULL só pedido; nível desconhecido ou ausente vale MASKED (o lado seguro)")
+    void nivel() throws Exception {
+        Link link = new Link();
+        PddConsentClient c = new PddConsentClient(link, Duration.ofSeconds(1));
+        link.reply = "{\"origin\":\"https://app.exemplo.test:8443\",\"consent\":\"SESSION\",\"level\":\"FULL\",\"actor\":\"DEVELOPER\",\"via\":\"STUDIO\",\"grantedAt\":\"x\"}";
+        PddConsentClient.Consent g = c.grant("t-SiteTab00002", "https://app.exemplo.test:8443", "SESSION", "DEVELOPER", "FULL").get();
+        assertEquals("FULL", link.last.get("level"));
+        assertTrue(g.full());
+        assertThrows(IllegalArgumentException.class, () -> c.grant("t-SiteTab00002", "https://app.exemplo.test", "SESSION", "DEVELOPER", "TOTAL"));
+        link.reply = "{\"consents\":[{\"origin\":\"https://a.exemplo.test\",\"consent\":\"SESSION\",\"level\":\"FULL\",\"actor\":\"DEVELOPER\",\"via\":\"STUDIO\","
+                + "\"grantedAt\":\"x\",\"chromeAccess\":true},{\"origin\":\"https://b.exemplo.test\",\"consent\":\"SESSION\",\"actor\":\"DEVELOPER\","
+                + "\"via\":\"STUDIO\",\"grantedAt\":\"x\",\"chromeAccess\":true},{\"origin\":\"https://c.exemplo.test\",\"consent\":\"SESSION\",\"level\":\"TUDO\","
+                + "\"actor\":\"DEVELOPER\",\"via\":\"STUDIO\",\"grantedAt\":\"x\",\"chromeAccess\":true}]}";
+        List<PddConsentClient.Consent> list = c.list().get();
+        assertEquals(List.of("FULL", "MASKED", "MASKED"), list.stream().map(PddConsentClient.Consent::level).toList(), "extensão anterior ou nível estranho: mascarado");
+        link.reply = "{\"tabRef\":\"t-SiteTab00002\",\"origin\":\"https://app.exemplo.test:8443\",\"access\":\"AUTHORIZED\",\"consent\":\"SESSION\","
+                + "\"level\":\"FULL\",\"visualCapture\":\"AUTHORIZED_SITE\",\"reason\":null}";
+        assertTrue(c.status("t-SiteTab00002").get().full());
+    }
+
+    @Test
     @DisplayName("consentimento: só origem esquema://host[:porta], escopo e ator fechados; lista descarta origem com caminho")
     void consentimento() throws Exception {
         Link link = new Link();
@@ -75,7 +96,8 @@ class PddSitesClientTest {
         link.reply = "{\"origin\":\"https://app.exemplo.test:8443\",\"consent\":\"SESSION\",\"actor\":\"DEVELOPER\",\"via\":\"STUDIO\",\"grantedAt\":\"x\"}";
         PddConsentClient.Consent g = c.grant("t-SiteTab00002", "https://app.exemplo.test:8443", "SESSION", "DEVELOPER").get();
         assertEquals("studio.pdd.consent.grant", link.lastType);
-        assertEquals(Map.of("tabRef", "t-SiteTab00002", "origin", "https://app.exemplo.test:8443", "scope", "SESSION", "actor", "DEVELOPER"), link.last);
+        assertEquals(Map.of("tabRef", "t-SiteTab00002", "origin", "https://app.exemplo.test:8443", "scope", "SESSION", "actor", "DEVELOPER", "level", "MASKED"),
+                link.last, "sem nível escolhido: print mascarado");
         assertEquals("SESSION", g.scope());
         for (String bad : new String[] {"https://app.exemplo.test/pacientes", "https://app.exemplo.test?x=1", "https://u:s@app.exemplo.test", "https://*/*", "ftp://x"}) {
             assertThrows(IllegalArgumentException.class, () -> c.grant("t-SiteTab00002", bad, "SESSION", "DEVELOPER"), bad);

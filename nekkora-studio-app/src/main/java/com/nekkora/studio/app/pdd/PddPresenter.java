@@ -49,6 +49,7 @@ import java.time.ZoneOffset;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -67,6 +68,10 @@ import org.apache.pdfbox.rendering.PDFRenderer;
  * "Capturar novamente" num bloco COM imagem traz uma CANDIDATA (só em memória, já verificada) que só substitui a anterior
  * em "Aplicar" — cancelar, falhar, trocar de aba ou mudar o processo nunca troca a imagem do bloco; recorte e marcadores
  * manuais são edições do rascunho (com desfazer/refazer); a retenção de imagens respeita o histórico da sessão.
+ *
+ * <p>Revisão da usuária (19/10/2026) — duas opções por site: print mascarado (nekkora-visual/4, padrão) e print integral
+ * (nekkora-visual/5: os dados da tela vão para o PDD; só senhas cobertas). Liberar o integral num site e exportar um PDF
+ * com alguma imagem integral pedem confirmação explícita; cada captura num site integral pode sair mascarada.
  */
 public final class PddPresenter implements PddPanel.Actions {
 
@@ -79,7 +84,17 @@ public final class PddPresenter implements PddPanel.Actions {
         /** Pasta escolhida para exportar (vazia = cancelado). */
         Optional<Path> chooseFolder();
 
+        /** Confirmação explícita da pessoa (print integral). Sem janela que pergunte, nada é confirmado. */
+        default boolean confirm(String title, String message, String action) {
+            return false;
+        }
+
         static Host headless(Path folder) {
+            return headless(folder, true);
+        }
+
+        /** Janela sem tela para os testes; {@code confirms} = o que a pessoa responderia às confirmações. */
+        static Host headless(Path folder, boolean confirms) {
             return new Host() {
                 public void show() {}
 
@@ -87,6 +102,10 @@ public final class PddPresenter implements PddPanel.Actions {
 
                 public Optional<Path> chooseFolder() {
                     return Optional.ofNullable(folder);
+                }
+
+                public boolean confirm(String title, String message, String action) {
+                    return confirms;
                 }
             };
         }
@@ -112,6 +131,8 @@ public final class PddPresenter implements PddPanel.Actions {
     /** STUDIO-013: por que nenhuma aba captura (só contagens, nunca endereço ou título) e os sites autorizados para o PDD. */
     private String tabsHint = "";
     private List<PddPanel.Site> sites = List.of();
+    /** Consentimento por origem (nível e escopo), da última leitura da lista de sites. */
+    private Map<String, PddConsentClient.Consent> consents = Map.of();
     private PddCaptureClient capturing;
     private String bannerTitle = "";
     private String banner = "";
@@ -258,13 +279,17 @@ public final class PddPresenter implements PddPanel.Actions {
         if (consentAware) {
             new PddConsentClient(link, Duration.ofSeconds(10)).list().whenComplete((list, err) -> edt(() -> {
                 List<PddPanel.Site> out = new ArrayList<>();
+                Map<String, PddConsentClient.Consent> by = new HashMap<>();
                 if (list != null) {
                     for (PddConsentClient.Consent c : list) {
+                        by.put(c.origin(), c);
                         out.add(new PddPanel.Site(c.origin(), c.origin() + " · " + ("REMEMBERED".equals(c.scope()) ? "lembrado" : "até fechar o navegador")
-                                + " · " + ("TEST_AGENT".equals(c.actor()) ? "agente de teste" : "desenvolvedor") + (c.chromeAccess() ? "" : " · sem acesso do Chrome")));
+                                + " · " + (c.full() ? "print integral" : "print mascarado") + " · " + ("TEST_AGENT".equals(c.actor()) ? "agente de teste" : "desenvolvedor")
+                                + (c.chromeAccess() ? "" : " · sem acesso do Chrome"), c.full()));
                     }
                 }
                 sites = out;
+                consents = by;
                 render();
             }));
         } else {
@@ -324,18 +349,57 @@ public final class PddPresenter implements PddPanel.Actions {
     /** STUDIO-013: autoriza a captura do PDD na origem mostrada (registro com quem decidiu: desenvolvedor ou agente de teste). */
     @Override
     public void authorizeSite(String tabRef, String origin, boolean remember) {
+        authorizeSite(tabRef, origin, remember, false);
+    }
+
+    /** Título da confirmação do print integral (a origem vai no texto: no título ela era cortada). */
+    public static final String CONFIRM_FULL_TITLE = "Liberar o print integral neste site?";
+    /** Texto da confirmação do print integral (liberar no site). */
+    public static final String CONFIRM_FULL = "No print integral, as imagens deste site mostram a tela como está: nomes, números, mensagens e tabelas "
+            + "entram no PDD e no PDF. Só os campos de senha saem cobertos. Revise o PDF antes de compartilhar.";
+
+    @Override
+    public void authorizeSite(String tabRef, String origin, boolean remember, boolean full) {
         if (!consentAware() || !PddConsentClient.validOrigin(origin)) return;
-        String scope = remember ? "REMEMBERED" : "SESSION";
-        new PddConsentClient(link, Duration.ofSeconds(10)).grant(tabRef, origin, scope, actor.name()).whenComplete((c, err) -> edt(() -> {
+        if (full && !host().confirm(CONFIRM_FULL_TITLE, "Site: " + origin + ". " + CONFIRM_FULL, "Liberar print integral")) {
+            say(Severity.INFO, "Print integral não liberado", "Nada foi autorizado. Escolha \"Print mascarado\" para autorizar com os dados cobertos.");
+            render();
+            return;
+        }
+        grantLevel(tabRef, origin, remember ? "REMEMBERED" : "SESSION", full, "Captura PDD autorizada");
+    }
+
+    /** Revisão da usuária: troca a imagem de um site já autorizado (integral pede confirmação; voltar ao mascarado, não). */
+    @Override
+    public void setSiteLevel(String tabRef, String origin, boolean full) {
+        if (!consentAware() || !PddConsentClient.validOrigin(origin)) return;
+        PddConsentClient.Consent c = consents.get(origin);
+        if (full && !host().confirm(CONFIRM_FULL_TITLE, "Site: " + origin + ". " + CONFIRM_FULL, "Liberar print integral")) {
+            say(Severity.INFO, "Print integral não liberado", "O site continua no print mascarado.");
+            render();
+            return;
+        }
+        grantLevel(tabRef, origin, c != null && "REMEMBERED".equals(c.scope()) ? "REMEMBERED" : "SESSION", full,
+                full ? "Print integral liberado" : "Print mascarado neste site");
+    }
+
+    private void grantLevel(String tabRef, String origin, String scope, boolean full, String title) {
+        new PddConsentClient(link, Duration.ofSeconds(10)).grant(tabRef, origin, scope, actor.name(), full ? "FULL" : "MASKED").whenComplete((c, err) -> edt(() -> {
             if (err != null) {
                 say(Severity.WARNING, "Autorização não concedida", failure(err));
             } else {
-                say(Severity.SUCCESS, "Captura PDD autorizada", c.origin() + (remember ? " — site lembrado." : " — até fechar o navegador.")
-                        + " A imagem do PDD é sintética: nenhum pixel da página é copiado. Revogue quando quiser em \"Sites autorizados para o PDD\".");
+                say(Severity.SUCCESS, title, c.origin() + ("REMEMBERED".equals(c.scope()) ? " — site lembrado." : " — até fechar o navegador.")
+                        + (c.full() ? " Print integral: as imagens mostram os dados da tela; só senhas cobertas. Cada captura pode sair mascarada."
+                                : " Print mascarado: campos, textos de dados, tabelas e frames saem cobertos.")
+                        + " Revogue quando quiser em \"Sites autorizados para o PDD\".");
             }
             listTabs();
             render();
         }));
+    }
+
+    private Host host() {
+        return host != null ? host : Host.headless(null, false);
     }
 
     @Override
@@ -468,6 +532,11 @@ public final class PddPresenter implements PddPanel.Actions {
      */
     @Override
     public void capture(String blockId, String tabRef) {
+        capture(blockId, tabRef, false);
+    }
+
+    @Override
+    public void capture(String blockId, String tabRef, boolean masked) {
         Block b = draft.block(blockId).orElse(null);
         if (b == null || capturing != null) return;
         if (!draft.processRevision().equals(currentProjection().revision())) {
@@ -492,8 +561,11 @@ public final class PddPresenter implements PddPanel.Actions {
         // STUDIO-013: extensão 0.6.0+ → sempre a v3 (sintética) e a origem mostrada; 0.5.x → v2 (só laboratório); antes → v1
         boolean v3 = ext != null && PddCaptureClient.supportsV3(ext.version());
         // revisão da usuária: o Studio pede o print real com o texto de dados mascarado (v4); a v3 sintética segue no contrato
-        String policy = v3 ? PddCaptureClient.POLICY_V4 : ext != null && PddCaptureClient.supportsV2(ext.version()) ? PddCaptureClient.POLICY_V2 : null;
         String origin = v3 ? tabs.stream().filter(t -> t.tabRef().equals(tabRef)).map(PddPanel.Tab::origin).findFirst().orElse(null) : null;
+        // revisão da usuária: site com print integral → v5, salvo se esta captura foi marcada para sair mascarada
+        boolean full = v3 && !masked && origin != null && consents.containsKey(origin) && consents.get(origin).full();
+        String policy = full ? PddCaptureClient.POLICY_V5 : v3 ? PddCaptureClient.POLICY_V4
+                : ext != null && PddCaptureClient.supportsV2(ext.version()) ? PddCaptureClient.POLICY_V2 : null;
         PddCaptureClient c = new PddCaptureClient(link, Duration.ofSeconds(20));
         capturing = c;
         say(Severity.INFO, "Preparando a captura…", "");
@@ -510,7 +582,8 @@ public final class PddPresenter implements PddPanel.Actions {
             say(Severity.INFO, "Captura armada", sc.isEmpty()
                     ? "Defina um atalho para \"Capturar a tela para o PDD\" em chrome://extensions/shortcuts e pressione-o no Chrome, na aba escolhida."
                     : "No Chrome, deixe a aba escolhida no estado desta etapa e pressione " + sc + ". Nada é clicado ou enviado; "
-                            + (PddCaptureClient.POLICY_V4.equals(armed.policy()) ? "a imagem é a tela real com os dados cobertos por faixas."
+                            + (PddCaptureClient.POLICY_V5.equals(armed.policy()) ? "print integral: a imagem mostra os dados da tela; só senhas cobertas."
+                                    : PddCaptureClient.POLICY_V4.equals(armed.policy()) ? "a imagem é a tela real com os dados cobertos por faixas."
                                     : PddCaptureClient.POLICY_V3.equals(armed.policy()) ? "a imagem é desenhada pelo Studio, sem nenhum pixel da página."
                                     : "só rótulos de interface aparecem na imagem."));
             render();
@@ -563,7 +636,7 @@ public final class PddPresenter implements PddPanel.Actions {
                 SyntheticRenderer.Rendered drawn = SyntheticRenderer.render(new SyntheticRenderer.Description(r.width(), r.height(), r.devicePixelRatio(), css));
                 r = scaledResult(r, drawn);
                 regions.addAll(drawn.regions());
-            } else if (VisualVerifier.POLICY_V4.equals(policy)) {
+            } else if (VisualVerifier.POLICY_V4.equals(policy) || VisualVerifier.POLICY_V5.equals(policy)) {
                 for (PddCaptureClient.Region x : r.regions()) regions.add(new Region(x.kind(), x.x(), x.y(), x.width(), x.height(), null, null, 0, null, x.ink(), null));
             } else {
                 for (PddCaptureClient.Region x : r.regions()) regions.add(new Region(x.kind(), x.x(), x.y(), x.width(), x.height(), x.tone()));
@@ -587,7 +660,9 @@ public final class PddPresenter implements PddPanel.Actions {
             candidate = new Candidate(blockId, c, r.png(), image, armedRevision);
             selected = blockId;
             long labels = regions.stream().filter(x -> "CARRIER".equals(x.kind()) || "LABEL".equals(x.kind())).count();
-            say(Severity.INFO, "Nova captura pronta para revisão", labels + " rótulo(s) de interface visíveis. A prévia já mostra a nova imagem; use \"Selecionar área\" "
+            String kind = VisualVerifier.POLICY_V5.equals(policy) ? "Print integral (dados da tela; só senhas cobertas). "
+                    : VisualVerifier.POLICY_V4.equals(policy) ? "Print mascarado (dados cobertos por faixas). " : labels + " rótulo(s) de interface visíveis. ";
+            say(Severity.INFO, "Nova captura pronta para revisão", kind + "A prévia já mostra a nova imagem; use \"Selecionar área\" "
                     + "se quiser recortar e então \"Aplicar\". \"Cancelar\" mantém a imagem anterior.");
             return;
         }
@@ -618,8 +693,10 @@ public final class PddPresenter implements PddPanel.Actions {
         apply(d -> DraftEdits.dropUnreferencedCaptures(DraftEdits.attachCapture(d, blockId, attached)));
         retain();
         if (upgrade12 && draft.needsV12()) {
-            say(Severity.SUCCESS, "Imagem associada · rascunho 1.2.0", "O rascunho do documento passou a usar o formato 1.2.0 (representação sintética). "
-                    + "A automação não muda.");
+            say(Severity.SUCCESS, "Imagem associada · rascunho 1.2.0", "O rascunho do documento passou a usar o formato 1.2.0 ("
+                    + (VisualVerifier.POLICY_V5.equals(policy) ? "print integral: a imagem mostra os dados da tela; só senhas cobertas"
+                            : VisualVerifier.POLICY_V4.equals(policy) ? "print mascarado: dados cobertos por faixas" : "representação sintética")
+                    + "). A automação não muda.");
             return;
         }
         if (upgrade && draft.needsV11()) {
@@ -629,7 +706,9 @@ public final class PddPresenter implements PddPanel.Actions {
         }
         long labels = regions.stream().filter(x -> "CARRIER".equals(x.kind()) || "LABEL".equals(x.kind())).count();
         say(Severity.SUCCESS, "Imagem sanitizada associada", labels + " rótulo(s) de interface visíveis; " + finalPlaced + " de " + b.stepIds().size()
-                + " marcador(es) posicionados. " + (VisualVerifier.POLICY_V4.equals(policy)
+                + " marcador(es) posicionados. " + (VisualVerifier.POLICY_V5.equals(policy)
+                        ? "Print integral: a imagem mostra os dados da tela; só os campos de senha estão cobertos. Revise antes de compartilhar."
+                        : VisualVerifier.POLICY_V4.equals(policy)
                         ? "Print real da tela: campos, textos de dados, tabelas e frames cobertos por faixas; revise antes de compartilhar."
                         : VisualVerifier.POLICY_V3.equals(policy)
                         ? "Representação sintética: textos que não são rótulos de interface viraram barras e os campos ficam vazios."
@@ -772,6 +851,14 @@ public final class PddPresenter implements PddPanel.Actions {
             render();
             return;
         }
+        long full = draft.blocks().stream().map(b -> b.capture().map(draft.captures()::get).orElse(null))
+                .filter(c -> c != null && c.fullPrint()).count();
+        if (full > 0 && !host().confirm("Exportar com print integral?", full + " imagem(ns) deste documento são print integral: mostram os dados da tela "
+                + "(só senhas cobertas) e vão assim para o PDF. Revise o PDF antes de compartilhar.", "Exportar mesmo assim")) {
+            say(Severity.INFO, "Exportação cancelada", "Nenhum PDF foi gerado. Recapture em print mascarado as imagens que não devem levar dados.");
+            render();
+            return;
+        }
         Path dir = host.chooseFolder().orElse(null);
         if (dir == null) return;
         try {
@@ -883,7 +970,8 @@ public final class PddPresenter implements PddPanel.Actions {
         long nBlocking = pending.stream().filter(Pending::blocking).count();
         // com uma nova captura em revisão a exportação fica bloqueada: o selo diz isso (antes dizia "Pronto para exportar")
         String status = blocking ? nBlocking + " pendência(s) para revisar" : candidate != null ? "Nova captura em revisão" : "Pronto para exportar";
-        panel.show(new PddPanel.Model(items, selected, title, titleState, attention, block, rows, itemPending, hasImage, canJoin, tabs, capturing != null,
+        List<PddPanel.Tab> shown = tabs.stream().map(t -> t.withFull(t.origin() != null && consents.containsKey(t.origin()) && consents.get(t.origin()).full())).toList();
+        panel.show(new PddPanel.Model(items, selected, title, titleState, attention, block, rows, itemPending, hasImage, canJoin, shown, capturing != null,
                 bTitle, bText, bSev, status, blocking || candidate != null ? Status.WARNING : Status.SUCCESS,
                 preview, !undo.isEmpty(), !redo.isEmpty(), !blocking && capturing == null && candidate == null, image, slots, tabsHint, sites));
     }

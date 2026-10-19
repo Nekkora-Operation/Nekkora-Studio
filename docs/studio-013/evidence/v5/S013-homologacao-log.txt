@@ -1,0 +1,74 @@
+Tela: java.awt.Rectangle[x=0,y=0,width=1920,height=1032] · java 21.0.12
+Operador: Claude como AGENTE DE TESTE (autorizações e confirmações do print integral como TEST_AGENT, por clique real) · ator do Studio: TEST_AGENT
+Native Host instalado pelo script oficial (install-host.ps1)
+Chrome for Testing: 155.0.8059.39
+OK    Conexão autenticada Studio ⇄ host ⇄ extensão
+OK    B0: extensão 0.6.0 conectada (print mascarado e print integral)
+OK    B1: gravação no site = preencher, preencher, clicar; nenhum valor digitado no modelo
+OK    B2: ao autorizar, a escolha da imagem do site aparece com o print mascarado como padrão
+OK    B2: escolha, "Autorizar" e "Lembrar" inteiros dentro da janela
+OK    B2: "Print integral" escolhido pelo teclado na lista
+captura S013-B2-escolha-print-integral.png (1244x811)
+OK    B2: a confirmação diz o site e explica que os dados vão para o PDF e que só senhas saem cobertas
+captura S013-B2-confirmacao-print-integral.png (420x220)
+OK    B2: Cancelar na confirmação: nada é autorizado
+  http://site-a.nekkora.test:18765 — até fechar o navegador. Print integral: as imagens mostram os dados da tela; só senhas cobertas. Cada captura pode sair mascarada. Revogue quando quiser em "Sites autorizados para o PDD". · sites: [http://site-a.nekkora.test:18765 · até fechar o navegador · print integral · agente de teste]
+OK    B2: site no print integral, só nesta sessão, registrado como agente de teste
+OK    B2: a aba diz "print integral" e oferece "Mascarar esta captura"
+OK    B2: "Capturar", "Mascarar esta captura" e "Voltar ao print mascarado" inteiros dentro da janela
+captura S013-B2-site-print-integral.png (1244x811)
+  No Chrome, deixe a aba escolhida no estado desta etapa e pressione Alt+Shift+K. Nada é clicado ou enviado; print integral: a imagem mostra os dados da tela; só senhas cobertas.
+  Imagem associada · rascunho 1.2.0: O rascunho do documento passou a usar o formato 1.2.0 (print integral: a imagem mostra os dados da tela; só senhas cobertas). A automação não muda.
+  1024×849 · máscaras {BLOCK=1, FIELD=3} · limitações [FRAMES_HIDDEN]
+OK    B3: captura v5 (print integral) associada ao bloco
+OK    B3: só máscaras de senha (FIELD) e de frame (BLOCK) — nenhuma de texto
+captura S013-B3-print-integral-site.png (1024x849)
+  pixels da cor-sentinela (dados) no print integral: 5495 · da sentinela de senha: 0
+OK    B3: os DADOS da tela aparecem no print integral (cor-sentinela presente)
+OK    B3: NENHUM pixel da sentinela de senha (senha, "mostrar senha" e a da shadow fechada)
+OK    B3: selo "Print integral" na imagem do bloco
+OK    B3: metadados do rascunho sem "anasouza"
+OK    B3: metadados do rascunho sem "Lab42senha"
+OK    B3: metadados do rascunho sem "SENTINELA"
+OK    B3: metadados do rascunho sem "Sentinela"
+OK    B3: metadados do rascunho sem "Ana Souza"
+OK    B3: metadados do rascunho sem "Bruno Lima"
+OK    B3: metadados do rascunho sem "Carla Dias"
+OK    B3: metadados do rascunho sem "Zeta"
+OK    B3: metadados do rascunho sem "123.456.789-09"
+OK    B3: metadados do rascunho sem "987.654.321-00"
+OK    B3: metadados do rascunho sem "S3nh@Lab"
+OK    B3: metadados do rascunho sem "ana.souza"
+OK    B3: metadados do rascunho sem "autofill"
+OK    B3: metadados do rascunho sem "sombra.aberta"
+OK    B3: metadados do rascunho sem "Internado"
+OK    B3: metadados do rascunho sem "Observação"
+OK    B3: metadados do rascunho sem "Exame"
+OK    B3: metadados do rascunho sem "sistema.html"
+OK    B3: metadados do rascunho sem "studio013"
+OK    B3: metadados do rascunho sem "tgt-"
+OK    B3: metadados do rascunho sem "S3nh@Visivel"
+OK    B3: metadados do rascunho sem "F3chad@"
+OK    B3: metadados do rascunho sem "Quadr0@"
+captura S013-B3-captura-v5.png (1244x811)
+  Nova captura pronta para revisão: Print mascarado (dados cobertos por faixas). A prévia já mostra a nova imagem; use "Selecionar área" se quiser recortar e então "Aplicar". "Cancelar" mantém a imagem anterior.
+OK    B4: com "Mascarar esta captura", a candidata sai no print mascarado (v4, sem cor-sentinela)
+OK    B4: a candidata mascarada não tem o selo do print integral
+OK    B4: a imagem do bloco continua a do print integral
+captura S013-B5-confirmacao-exportar.png (420x186)
+OK    B5: Cancelar na confirmação: nenhum PDF
+OK    B5: PDF exportado depois da confirmação
+captura S013-B5-pdf-pagina-1.png (793x1122)
+OK    B5: o PDF declara o print integral e que só senhas foram cobertas
+OK    B5: nota "Print integral" no bloco
+OK    B5: texto do PDF sem os valores digitados
+OK    B5: as páginas renderizadas trazem os dados da tela e nenhuma senha
+OK    B6: o site volta ao print mascarado sem confirmação; "Mascarar esta captura" some
+  Nova captura pronta para revisão: Print mascarado (dados cobertos por faixas). A prévia já mostra a nova imagem; use "Selecionar área" se quiser recortar e então "Aplicar". "Cancelar" mantém a imagem anterior.
+OK    B6: a próxima captura no site é mascarada (v4, sem cor-sentinela)
+OK    B7 rascunho: sem valores digitados e sem dados do sistema sintético
+OK    B7 logs do host: sem valores digitados e sem dados do sistema sintético
+OK    B7 log da homologação (observações): sem valores digitados e sem dados do sistema sintético
+OK    B7: o print salvo e as páginas do PDF sem a sentinela de senha
+OK    B7: a automação (.nekkora) nunca mudou pelo PDD, pelas autorizações nem pelas confirmações
+RESULTADO: 55 verificações, 0 falha(s)

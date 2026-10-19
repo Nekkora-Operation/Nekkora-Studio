@@ -75,7 +75,8 @@ public record DocumentDraft(AutomationId automationId, String processRevision, L
     }
 
     /** Políticas visuais aceitas (a v1 continua válida para rascunhos e PDFs anteriores). */
-    public static final List<String> VISUAL_POLICIES = List.of("nekkora-visual/1", "nekkora-visual/2", "nekkora-visual/3", "nekkora-visual/4");
+    public static final List<String> VISUAL_POLICIES = List.of("nekkora-visual/1", "nekkora-visual/2", "nekkora-visual/3", "nekkora-visual/4",
+            "nekkora-visual/5");
 
     /**
      * Imagem JÁ sanitizada ({@code nekkora-visual/1} ou {@code /2}): só a referência e os metadados — os pixels ficam no
@@ -106,8 +107,11 @@ public record DocumentDraft(AutomationId automationId, String processRevision, L
             if ("nekkora-visual/1".equals(policy) && regions.stream().anyMatch(r -> !r.legacy())) throw new IllegalArgumentException("região fora da v1");
             boolean v3 = "nekkora-visual/3".equals(policy);
             boolean v4 = "nekkora-visual/4".equals(policy);
-            // a v3 nunca tem portador de pixels; v1/v2 nunca têm TEXT/LABEL; a v4 só tem máscaras (BLOCK, FIELD, TEXT)
-            if (regions.stream().anyMatch(r -> v4 ? !Region.V4_KINDS.contains(r.kind()) : v3 ? "CARRIER".equals(r.kind()) || "BLOCK".equals(r.kind())
+            boolean v5 = "nekkora-visual/5".equals(policy);
+            // a v3 nunca tem portador de pixels; v1/v2 nunca têm TEXT/LABEL; a v4 só tem máscaras (BLOCK, FIELD, TEXT); a v5
+            // (print integral) só as de senha e de frame (FIELD, BLOCK)
+            if (regions.stream().anyMatch(r -> v5 ? !"BLOCK".equals(r.kind()) && !"FIELD".equals(r.kind())
+                    : v4 ? !Region.V4_KINDS.contains(r.kind()) : v3 ? "CARRIER".equals(r.kind()) || "BLOCK".equals(r.kind())
                     : r.v3Only() || "BLOCK".equals(r.kind()))) {
                 throw new IllegalArgumentException("região fora da política");
             }
@@ -130,9 +134,14 @@ public record DocumentDraft(AutomationId automationId, String processRevision, L
                     crop);
         }
 
-        /** Usa a política inteiramente sintética da STUDIO-013 (rascunho 1.2.0)? */
+        /** Usa uma política da STUDIO-013 (rascunho 1.2.0): a sintética, o print mascarado ou o print integral? */
         boolean needsV12() {
-            return "nekkora-visual/3".equals(policy) || "nekkora-visual/4".equals(policy);
+            return "nekkora-visual/3".equals(policy) || "nekkora-visual/4".equals(policy) || "nekkora-visual/5".equals(policy);
+        }
+
+        /** Print integral (revisão da usuária): a imagem traz os dados da tela; só senhas cobertas. */
+        public boolean fullPrint() {
+            return "nekkora-visual/5".equals(policy);
         }
 
         /** Usa algo que só existe no rascunho 1.1.0 (política v2, região nova, recorte, marcador manual, referência própria)? */

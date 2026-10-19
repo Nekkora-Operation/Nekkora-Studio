@@ -68,6 +68,7 @@ public final class VisualVerifier {
     /** Verifica pela política da captura ({@code nekkora-visual/1} ou {@code /2}) e devolve a imagem decodificada. */
     public static BufferedImage verify(byte[] png, String declaredSha, int width, int height, double dpr, List<Region> regions, String policy)
             throws VisualPolicyException {
+        if (POLICY_V5.equals(policy)) return verifyV5(png, declaredSha, width, height, dpr, regions);
         if (POLICY_V4.equals(policy)) return verifyV4(png, declaredSha, width, height, dpr, regions);
         if (POLICY_V3.equals(policy)) return verifyV3(png, declaredSha, width, height, dpr, regions);
         if (POLICY_V2.equals(policy)) return verifyV2(png, declaredSha, width, height, dpr, regions);
@@ -399,6 +400,22 @@ public final class VisualVerifier {
         }
         if (violationsV4(img, regions) != 0) throw new VisualPolicyException("SANITIZATION_CHECK_FAILED");
         return img;
+    }
+
+    // ------------------------------------------------------------------------------------------- nekkora-visual/5
+
+    /**
+     * Revisão da usuária (19/10/2026) — {@code nekkora-visual/5}: PRINT INTEGRAL. A tela como está, dados inclusive; só
+     * as máscaras de senha (FIELD) e, quando não se confirmou que nenhum frame mostra senha, de frame (BLOCK). Mesmas
+     * conferências da v4; TEXT não existe nesta política.
+     */
+    public static final String POLICY_V5 = "nekkora-visual/5";
+
+    static BufferedImage verifyV5(byte[] png, String declaredSha, int width, int height, double dpr, List<Region> regions) throws VisualPolicyException {
+        for (Region r : regions) {
+            if (!"BLOCK".equals(r.kind()) && !"FIELD".equals(r.kind())) throw new VisualPolicyException("REGION_KIND_UNKNOWN");
+        }
+        return verifyV4(png, declaredSha, width, height, dpr, regions);
     }
 
     /** {preenchimento, borda} de uma máscara da v4. */

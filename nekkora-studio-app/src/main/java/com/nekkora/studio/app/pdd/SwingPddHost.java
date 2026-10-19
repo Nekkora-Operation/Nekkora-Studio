@@ -56,6 +56,12 @@ public final class SwingPddHost implements PddPresenter.Host {
         return NekkoraFileDialogs.selectFolder(dialog, "Pasta para o PDF (versões anteriores nunca são substituídas)");
     }
 
+    /** Revisão da usuária: confirmação do print integral (liberar no site, exportar), sobre a janela do PDD. */
+    @Override
+    public boolean confirm(String title, String message, String action) {
+        return com.nekkora.ui.dialog.NekkoraConfirmationDialog.confirmDanger(dialog, title, message, action);
+    }
+
     public JDialog dialog() {
         return dialog;
     }

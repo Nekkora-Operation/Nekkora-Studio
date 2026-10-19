@@ -68,6 +68,8 @@ public final class PddCaptureClient implements BrowserLink.Listener, AutoCloseab
     public static final String POLICY_V3 = "nekkora-visual/3";
     /** STUDIO-013 (revisão da usuária): print real com o texto de dados mascarado — o que o Studio pede à extensão 0.6.0. */
     public static final String POLICY_V4 = "nekkora-visual/4";
+    /** Revisão da usuária: print integral (dados da tela; só senhas cobertas) — só em site com o nível FULL. */
+    public static final String POLICY_V5 = "nekkora-visual/5";
 
     /** A extensão conectada entende a v3 e o consentimento PDD por origem? (0.6.0 em diante; versão desconhecida = não). */
     public static boolean supportsV3(String extensionVersion) {

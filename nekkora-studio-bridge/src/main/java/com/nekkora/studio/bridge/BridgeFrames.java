@@ -61,9 +61,9 @@ public final class BridgeFrames {
         out.flush();
     }
 
-    /** Mensagem que pode passar do teto de controle: só o evento da captura nekkora-visual/4. */
+    /** Mensagem que pode passar do teto de controle: só o evento da captura nekkora-visual/4 ou /5 (print integral). */
     public static boolean largeAllowed(String kind, String type, String policy) {
-        return "event".equals(kind) && "studio.pdd.captured".equals(type) && "nekkora-visual/4".equals(policy);
+        return "event".equals(kind) && "studio.pdd.captured".equals(type) && ("nekkora-visual/4".equals(policy) || "nekkora-visual/5".equals(policy));
     }
 
     /** O quadro passou do teto de controle? (bytes UTF-8; só calcula quando pode ter passado) */

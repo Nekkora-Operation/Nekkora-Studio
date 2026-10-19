@@ -93,6 +93,14 @@ public final class PdfRenderer {
             + "tela com os campos, os textos de dados, as tabelas, os frames e as imagens de conteúdo cobertos por faixas lisas; só a aparência "
             + "da tela e os rótulos de interface do vocabulário controlado aparecem como na página. Revise as imagens antes de compartilhar. "
             + "Este documento descreve o processo mapeado e não comprova resultado de negócio.";
+    /** Revisão da usuária: documento com alguma imagem nekkora-visual/5 (print integral, com os dados da tela). */
+    public static final String PROVENANCE_V5 = "Gerado pelo Nekkora Studio a partir das sessões e etapas mapeadas. Este documento contém imagens em "
+            + "print integral: elas mostram a tela como estava, com os dados exibidos nela; só os campos de senha foram cobertos. Revise o "
+            + "documento antes de compartilhar. Este documento descreve o processo mapeado e não comprova resultado de negócio.";
+    /** Acrescentado quando o documento mistura print integral com imagens mascaradas ou sintéticas. */
+    public static final String PROVENANCE_V5_MIXED = "As demais imagens trazem os dados cobertos ou são representações sintéticas.";
+    /** Nota de cada bloco cuja imagem é print integral. */
+    public static final String FULL_PRINT_NOTE = "Print integral: a imagem mostra os dados da tela; só senhas cobertas.";
     /** Documento que mistura imagens v3 com imagens anteriores (v2) do laboratório. */
     public static final String PROVENANCE_V2_MIXED = "Imagens anteriores do laboratório (representação documental) trazem os rótulos como na página.";
     /** NEKKORA-STUDIO-013: documento com alguma imagem nekkora-visual/3 (representação inteiramente sintética). */
@@ -159,7 +167,9 @@ public final class PdfRenderer {
                 .anyMatch(Annotation::manual));
         boolean v4 = d.blocks().stream().map(b -> b.capture().map(d.captures()::get).orElse(null)).anyMatch(c -> c != null
                 && VisualVerifier.POLICY_V4.equals(c.policy()));
-        String provenance = v4 ? PROVENANCE_V4 : v3 && !v2 ? PROVENANCE_V3 : v3 ? PROVENANCE_V3 + " " + PROVENANCE_V2_MIXED : v2 ? PROVENANCE_V2 : PROVENANCE;
+        boolean v5 = d.blocks().stream().map(b -> b.capture().map(d.captures()::get).orElse(null)).anyMatch(c -> c != null && c.fullPrint());
+        boolean masked = d.blocks().stream().map(b -> b.capture().map(d.captures()::get).orElse(null)).anyMatch(c -> c != null && !c.fullPrint());
+        String provenance = v5 ? (masked ? PROVENANCE_V5 + " " + PROVENANCE_V5_MIXED : PROVENANCE_V5) : v4 ? PROVENANCE_V4 : v3 && !v2 ? PROVENANCE_V3 : v3 ? PROVENANCE_V3 + " " + PROVENANCE_V2_MIXED : v2 ? PROVENANCE_V2 : PROVENANCE;
         for (String line : wrap(regular, 9, provenance + (manual ? " " + MANUAL_NOTE : ""), W - 2 * M)) {
             text(regular, 9, MUTED, M, y - 9, line);
             y -= 12.5f;
@@ -187,6 +197,9 @@ public final class PdfRenderer {
         boolean recorded = b.instructions().stream().allMatch(i -> i.kind() == Instruction.Kind.OBSERVED);
         boolean declared = b.instructions().stream().allMatch(i -> i.kind() == Instruction.Kind.DECLARED);
         lines.add(new String[] {recorded ? "Ações observadas na gravação" : declared ? "Etapas declaradas no Studio" : "Ações gravadas e etapas declaradas", "nota"});
+        if (cap != null && cap.fullPrint()) {
+            for (String w : wrap(regular, 8.5f, FULL_PRINT_NOTE, LEFT_W)) lines.add(new String[] {w, "nota"});
+        }
         for (Instruction i : b.instructions()) {
             List<String> w = wrap(regular, 10, i.ordinal() + ". " + exportable(i.text(), preview), LEFT_W);
             for (int k = 0; k < w.size(); k++) lines.add(new String[] {(k == 0 ? "" : "     ") + w.get(k), "texto"});
