@@ -22,6 +22,8 @@ public record DocumentDraft(AutomationId automationId, String processRevision, L
     public static final String SCHEMA = "nekkora-studio/pdd-visual";
     public static final String VERSION = "1.0.0";
     public static final String VERSION_V11 = "1.1.0";
+    /** NEKKORA-STUDIO-013: só quando alguma captura usa a política {@code nekkora-visual/3} (regiões TEXT/LABEL). */
+    public static final String VERSION_V12 = "1.2.0";
 
     /** Seção = sessão lógica, na ordem da automação. */
     public record Section(SessionId sessionId, int number, DocText title, List<Block> blocks) {
@@ -73,7 +75,7 @@ public record DocumentDraft(AutomationId automationId, String processRevision, L
     }
 
     /** Políticas visuais aceitas (a v1 continua válida para rascunhos e PDFs anteriores). */
-    public static final List<String> VISUAL_POLICIES = List.of("nekkora-visual/1", "nekkora-visual/2");
+    public static final List<String> VISUAL_POLICIES = List.of("nekkora-visual/1", "nekkora-visual/2", "nekkora-visual/3");
 
     /**
      * Imagem JÁ sanitizada ({@code nekkora-visual/1} ou {@code /2}): só a referência e os metadados — os pixels ficam no
@@ -102,6 +104,9 @@ public record DocumentDraft(AutomationId automationId, String processRevision, L
             limitations = List.copyOf(limitations);
             regions = regions == null ? List.of() : List.copyOf(regions);
             if ("nekkora-visual/1".equals(policy) && regions.stream().anyMatch(r -> !r.legacy())) throw new IllegalArgumentException("região fora da v1");
+            boolean v3 = "nekkora-visual/3".equals(policy);
+            // a v3 nunca tem portador de pixels; v1/v2 nunca têm TEXT/LABEL
+            if (regions.stream().anyMatch(r -> v3 ? "CARRIER".equals(r.kind()) : r.v3Only())) throw new IllegalArgumentException("região fora da política");
             if (crop != null && (crop.x() + crop.width() > width || crop.y() + crop.height() > height)) throw new IllegalArgumentException("recorte fora da imagem");
         }
 
@@ -119,6 +124,11 @@ public record DocumentDraft(AutomationId automationId, String processRevision, L
         public SafeCapture withAnnotations(List<Annotation> list) {
             return new SafeCapture(ref, sha256, width, height, devicePixelRatio, observedAt, pageEpoch, policy, screenKey, forSteps, list, limitations, regions,
                     crop);
+        }
+
+        /** Usa a política inteiramente sintética da STUDIO-013 (rascunho 1.2.0)? */
+        boolean needsV12() {
+            return "nekkora-visual/3".equals(policy);
         }
 
         /** Usa algo que só existe no rascunho 1.1.0 (política v2, região nova, recorte, marcador manual, referência própria)? */
@@ -146,19 +156,50 @@ public record DocumentDraft(AutomationId automationId, String processRevision, L
      * Região da imagem sanitizada (px do dispositivo): {@code CARRIER} (pixels reais de um rótulo de interface) ou
      * {@code FIELD} (moldura sintética); na v2 também {@code SURFACE} (com o {@code tone}: LIGHT/MID/DARK), {@code MEDIA},
      * {@code FRAME} e {@code CONTROL}, todas sintéticas. Guardada para REVERIFICAR os pixels antes de cada exportação.
+     *
+     * <p>NEKKORA-STUDIO-013 ({@code nekkora-visual/3}, sem portador de pixels): {@code TEXT} = barra neutra no lugar de texto
+     * que não é rótulo ({@code ink}: classe do fundo); {@code LABEL} = texto de interface aprovado pelo vocabulário controlado,
+     * desenhado pelo Studio ({@code text}, {@code size} em px CSS, {@code weight}, {@code ink}, {@code align}).
      */
-    public record Region(String kind, int x, int y, int width, int height, String tone) {
+    public record Region(String kind, int x, int y, int width, int height, String tone, String text, int size, String weight, String ink, String align) {
         public static final List<String> KINDS = List.of("SURFACE", "MEDIA", "FRAME", "CONTROL", "FIELD", "CARRIER");
+        public static final List<String> V3_KINDS = List.of("SURFACE", "MEDIA", "FRAME", "CONTROL", "FIELD", "TEXT", "LABEL");
         public static final List<String> TONES = List.of("LIGHT", "MID", "DARK");
+        public static final List<String> INKS = List.of("DARK", "LIGHT");
 
         public Region {
-            if (!KINDS.contains(kind)) throw new IllegalArgumentException("tipo de região");
+            if (!KINDS.contains(kind) && !V3_KINDS.contains(kind)) throw new IllegalArgumentException("tipo de região");
             if (x < 0 || y < 0 || width <= 0 || height <= 0) throw new IllegalArgumentException("região inválida");
             if ("SURFACE".equals(kind) != (tone != null) || (tone != null && !TONES.contains(tone))) throw new IllegalArgumentException("tom de região");
+            boolean label = "LABEL".equals(kind);
+            if (label != (text != null) || label != (weight != null) || label != (align != null) || label != (size > 0)) {
+                throw new IllegalArgumentException("rótulo de região");
+            }
+            if (("TEXT".equals(kind) || label) != (ink != null) || (ink != null && !INKS.contains(ink))) throw new IllegalArgumentException("tinta de região");
+            if (label && (text.isEmpty() || text.length() > 80 || !List.of("NORMAL", "BOLD").contains(weight) || !List.of("START", "CENTER").contains(align))) {
+                throw new IllegalArgumentException("rótulo de região");
+            }
+        }
+
+        public Region(String kind, int x, int y, int width, int height, String tone) {
+            this(kind, x, y, width, height, tone, null, 0, null, null, null);
         }
 
         public Region(String kind, int x, int y, int width, int height) {
             this(kind, x, y, width, height, null);
+        }
+
+        public static Region text(int x, int y, int width, int height, String ink) {
+            return new Region("TEXT", x, y, width, height, null, null, 0, null, ink, null);
+        }
+
+        public static Region label(int x, int y, int width, int height, String text, int size, String weight, String ink, String align) {
+            return new Region("LABEL", x, y, width, height, null, text, size, weight, ink, align);
+        }
+
+        /** Tipo que só existe na v3. */
+        boolean v3Only() {
+            return "TEXT".equals(kind) || "LABEL".equals(kind);
         }
 
         /** Tipo que já existia na v1. */
@@ -250,6 +291,11 @@ public record DocumentDraft(AutomationId automationId, String processRevision, L
     /** O rascunho usa algo do 1.1.0? Sem novidade, ele continua sendo gravado byte a byte como 1.0.0. */
     public boolean needsV11() {
         return captures.values().stream().anyMatch(SafeCapture::needsV11);
+    }
+
+    /** STUDIO-013: alguma captura v3 → formato 1.2.0 (Studios anteriores recusam o rascunho em vez de ler errado). */
+    public boolean needsV12() {
+        return captures.values().stream().anyMatch(SafeCapture::needsV12);
     }
 
     /** Sha-256 dos PNGs referenciados pelos blocos (o que o armazenamento precisa manter). */

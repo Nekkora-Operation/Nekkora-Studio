@@ -88,6 +88,13 @@ public final class PdfRenderer {
     public static final String PROVENANCE_V2 = "Gerado pelo Nekkora Studio a partir das sessões e etapas mapeadas. As imagens são representações "
             + "sanitizadas da tela: a estrutura (blocos, campos e botões) é redesenhada sem conteúdo e só rótulos de interface aparecem como na "
             + "página. Este documento descreve o processo mapeado e não comprova resultado de negócio.";
+    /** Documento que mistura imagens v3 com imagens anteriores (v2) do laboratório. */
+    public static final String PROVENANCE_V2_MIXED = "Imagens anteriores do laboratório (representação documental) trazem os rótulos como na página.";
+    /** NEKKORA-STUDIO-013: documento com alguma imagem nekkora-visual/3 (representação inteiramente sintética). */
+    public static final String PROVENANCE_V3 = "Gerado pelo Nekkora Studio a partir das sessões e etapas mapeadas. As imagens são representações "
+            + "sintéticas da tela desenhadas pelo Studio: nenhum pixel da página foi copiado; só rótulos de interface do vocabulário controlado "
+            + "aparecem como texto, os demais textos viram barras neutras e os campos ficam vazios. Não é uma captura de tela real. Este "
+            + "documento descreve o processo mapeado e não comprova resultado de negócio.";
     /** Acrescentado quando o documento tem algum marcador manual. */
     public static final String MANUAL_NOTE = "Marcadores tracejados foram posicionados manualmente na revisão e não comprovam o elemento.";
 
@@ -140,10 +147,13 @@ public final class PdfRenderer {
                 + " · Nekkora Studio");
         y -= 22;
         boolean v2 = d.blocks().stream().map(b -> b.capture().map(d.captures()::get).orElse(null)).anyMatch(c -> c != null
-                && !VisualVerifier.POLICY.equals(c.policy()));
+                && VisualVerifier.POLICY_V2.equals(c.policy()));
+        boolean v3 = d.blocks().stream().map(b -> b.capture().map(d.captures()::get).orElse(null)).anyMatch(c -> c != null
+                && VisualVerifier.POLICY_V3.equals(c.policy()));
         boolean manual = d.blocks().stream().map(b -> b.capture().map(d.captures()::get).orElse(null)).anyMatch(c -> c != null && c.annotations().stream()
                 .anyMatch(Annotation::manual));
-        for (String line : wrap(regular, 9, (v2 ? PROVENANCE_V2 : PROVENANCE) + (manual ? " " + MANUAL_NOTE : ""), W - 2 * M)) {
+        String provenance = v3 && !v2 ? PROVENANCE_V3 : v3 ? PROVENANCE_V3 + " " + PROVENANCE_V2_MIXED : v2 ? PROVENANCE_V2 : PROVENANCE;
+        for (String line : wrap(regular, 9, provenance + (manual ? " " + MANUAL_NOTE : ""), W - 2 * M)) {
             text(regular, 9, MUTED, M, y - 9, line);
             y -= 12.5f;
         }
@@ -294,7 +304,7 @@ public final class PdfRenderer {
     /** Recorte da imagem: união das regiões e dos marcadores, com margem; nunca maior que a imagem. */
     record Crop(BufferedImage image, int x, int y, int w, int h, java.awt.Dimension full) {
         /** Regiões que definem o recorte automático: o que a pessoa usa (na v2, a estrutura em volta é contexto). */
-        static final List<String> INTERACTIVE = List.of("CARRIER", "FIELD", "CONTROL");
+        static final List<String> INTERACTIVE = List.of("CARRIER", "FIELD", "CONTROL", "LABEL"); // LABEL: rótulo desenhado da v3
 
         static Crop of(BufferedImage img, SafeCapture c) {
             if (c.crop() != null) { // recorte escolhido no Studio: exatamente o que foi revisado

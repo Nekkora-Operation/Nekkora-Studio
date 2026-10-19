@@ -21,7 +21,9 @@ public final class BridgeProtocol {
             "studio.debug.start", "studio.debug.inspect", "studio.debug.highlight", "studio.debug.pick", "studio.debug.finish",
             "studio.debug.status", "studio.debug.renew", "studio.debug.probe",
             // STUDIO-010 (pdd-capture/1): armar/cancelar UMA captura visual sanitizada (o gesto no Chrome dispara)
-            "studio.pdd.capture.arm", "studio.pdd.capture.cancel");
+            "studio.pdd.capture.arm", "studio.pdd.capture.cancel",
+            // STUDIO-013 (nekkora-pdd-consent/1): consentimento de captura do PDD por origem exata
+            "studio.pdd.consent.status", "studio.pdd.consent.grant", "studio.pdd.consent.revoke", "studio.pdd.consent.list");
 
     public static final List<String> EVENTS = List.of("bridge.connected", "bridge.disconnected",
             "studio.recording.started", "studio.recording.paused", "studio.recording.resumed", "studio.recording.modeChanged",
@@ -33,7 +35,7 @@ public final class BridgeProtocol {
             "studio.recording.evidence",
             // STUDIO-009: elemento escolhido no navegador e mudança de estado da sessão de debug
             "studio.debug.picked", "studio.debug.changed",
-            // STUDIO-010: imagem JÁ sanitizada (política nekkora-visual/1) ou só o código da falha
+            // STUDIO-010: imagem JÁ sanitizada (política nekkora-visual/1) ou só o código da falha; STUDIO-013: descrição sintética (v3)
             "studio.pdd.captured");
 
     /** Capacidades negociadas no início da gravação (acréscimos compatíveis do nekkora-bridge/1). */

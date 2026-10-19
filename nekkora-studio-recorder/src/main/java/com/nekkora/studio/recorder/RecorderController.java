@@ -202,7 +202,8 @@ public final class RecorderController implements AutoCloseable {
                     TabAccess access = TabAccess.of(Json.string(t, "access"));
                     String visual = t.containsKey("visualCapture") ? Json.string(t, "visualCapture") : (access == TabAccess.LAB ? "LAB" : null);
                     out.add(new BrowserTab(Json.string(t, "tabRef"), tabTitle(Json.string(t, "title")), safe(Json.string(t, "host")),
-                            access, Json.bool(t, "active", false), Json.bool(t, "recording", false), visual));
+                            access, Json.bool(t, "active", false), Json.bool(t, "recording", false), visual, Json.string(t, "origin"),
+                            Json.string(t, "pddConsent")));
                 }
             }
             return out;

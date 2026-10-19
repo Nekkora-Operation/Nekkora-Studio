@@ -38,7 +38,7 @@ public final class DraftJson {
         Map<String, Object> root = new LinkedHashMap<>();
         boolean v11 = d.needsV11();
         root.put("schema", DocumentDraft.SCHEMA);
-        root.put("version", v11 ? DocumentDraft.VERSION_V11 : DocumentDraft.VERSION);
+        root.put("version", d.needsV12() ? DocumentDraft.VERSION_V12 : v11 ? DocumentDraft.VERSION_V11 : DocumentDraft.VERSION);
         root.put("automationId", d.automationId().value().toString());
         root.put("processRevision", d.processRevision());
         List<Object> sections = new ArrayList<>();
@@ -111,6 +111,13 @@ public final class DraftJson {
                 rm.put("width", r.width());
                 rm.put("height", r.height());
                 if (r.tone() != null) rm.put("tone", r.tone());
+                if (r.text() != null) {
+                    rm.put("text", r.text());
+                    rm.put("size", r.size());
+                    rm.put("weight", r.weight());
+                }
+                if (r.ink() != null) rm.put("ink", r.ink());
+                if (r.align() != null) rm.put("align", r.align());
                 regs.add(rm);
             }
             m.put("regions", regs);
@@ -159,7 +166,8 @@ public final class DraftJson {
         Map<String, Object> root = Json.parseObject(json);
         only(root, Set.of("schema", "version", "automationId", "processRevision", "sections", "captures"));
         String version = Json.string(root, "version");
-        boolean v11 = DocumentDraft.VERSION_V11.equals(version);
+        boolean v12 = DocumentDraft.VERSION_V12.equals(version);
+        boolean v11 = v12 || DocumentDraft.VERSION_V11.equals(version); // o 1.2.0 contém tudo do 1.1.0
         if (!DocumentDraft.SCHEMA.equals(Json.string(root, "schema")) || !(v11 || DocumentDraft.VERSION.equals(version))) {
             throw new IllegalArgumentException("rascunho de outro esquema ou versão");
         }
@@ -210,9 +218,11 @@ public final class DraftJson {
             List<DocumentDraft.Region> regs = new ArrayList<>();
             for (Object ro : Json.array(c, "regions")) {
                 Map<String, Object> r = obj(ro);
-                only(r, v11 ? Set.of("kind", "x", "y", "width", "height", "tone") : Set.of("kind", "x", "y", "width", "height"));
+                only(r, v12 ? Set.of("kind", "x", "y", "width", "height", "tone", "text", "size", "weight", "ink", "align")
+                        : v11 ? Set.of("kind", "x", "y", "width", "height", "tone") : Set.of("kind", "x", "y", "width", "height"));
                 regs.add(new DocumentDraft.Region(req(r, "kind"), (int) Json.number(r, "x", -1), (int) Json.number(r, "y", -1), (int) Json.number(r, "width", 0),
-                        (int) Json.number(r, "height", 0), Json.string(r, "tone")));
+                        (int) Json.number(r, "height", 0), Json.string(r, "tone"), Json.string(r, "text"), (int) Json.number(r, "size", 0), Json.string(r, "weight"),
+                        Json.string(r, "ink"), Json.string(r, "align")));
             }
             DocumentDraft.Crop crop = null;
             if (v11) {
@@ -232,6 +242,7 @@ public final class DraftJson {
         }
         DocumentDraft d = new DocumentDraft(new AutomationId(UUID.fromString(req(root, "automationId"))), rev, sections, captures);
         if (!v11 && d.needsV11()) throw new IllegalArgumentException("rascunho 1.0.0 com conteúdo do 1.1.0");
+        if (v12 != d.needsV12()) throw new IllegalArgumentException("versão do rascunho incoerente com a política visual"); // 1.1.0 nunca tem v3
         return d;
     }
 
