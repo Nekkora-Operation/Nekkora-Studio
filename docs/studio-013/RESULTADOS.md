@@ -7,7 +7,7 @@ Execuções de 19/10/2026, com dados 100% sintéticos. Nenhum ambiente ou dado d
 | Suíte | Resultado |
 |---|---|
 | Windows (`./mvnw test`, MS OpenJDK 21.0.12) | **655/655**. Base `main`: 624. Novos: `PddVisualV3Test` 7, `PddSitesUiTest` 10 (1 com evento v4 real; print integral como padrão, "Mascarar esta captura", selo, exportar; "Capturar tela" pelo Recorder), `PddSitesClientTest` 4 (1 do nível), `PddVisualV4Test` 2, `PddVisualV5Test` 2, `BridgeServerTest` +1 (quadro grande só para o print v4/v5), `MarkerLayoutTest` 4 e `PddImageEditorMarkersTest` 1 (números dos marcadores); `RecorderStepsStudioTest` passou a conferir o botão "Capturar tela" |
-| Linux (`tools/golden-linux.sh verify`, Temurin fixado por digest) | **648/648 + 1 ignorado** (649 no total; o ignorado é o mesmo das missões anteriores, só para Windows), Temurin 21.0.12.1 linux/amd64, sobre o commit 36156ac do Studio e o 8c1ba4b da extensão |
+| Linux (`tools/golden-linux.sh verify`, Temurin fixado por digest) | **654/654 + 1 ignorado** (655 no total; o ignorado é o mesmo das missões anteriores, só para Windows), Temurin 21.0.12.1 linux/amd64, sobre o commit 2b7d985 do Studio e o f82d58f da extensão |
 | Contrato do Bridge | Schema e fixtures `s013-*` idênticos aos da extensão (20 válidas, 23 inválidas) |
 
 ## Homologação na janela real (`Studio013Homologation`)
