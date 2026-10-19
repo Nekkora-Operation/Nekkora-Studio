@@ -6,15 +6,17 @@ Execuções de 19/10/2026, com dados 100% sintéticos. Nenhum ambiente ou dado d
 
 | Suíte | Resultado |
 |---|---|
-| Windows (`./mvnw test`, MS OpenJDK 21.0.12) | **640/640**. Base `main`: 624. Novos: `PddVisualV3Test` 7, `PddSitesUiTest` 6, `PddSitesClientTest` 3 |
-| Linux (`tools/golden-linux.sh verify`, Temurin fixado por digest) | **639/639 + 1 ignorado** (640 no total; o ignorado é o mesmo das missões anteriores, só para Windows), Temurin 21.0.12.1 linux/amd64 |
-| Contrato do Bridge | Schema e fixtures `s013-*` idênticos aos da extensão (13 válidas, 15 inválidas) |
+| Windows (`./mvnw test`, MS OpenJDK 21.0.12) | **644/644**. Base `main`: 624. Novos: `PddVisualV3Test` 7, `PddSitesUiTest` 7 (1 com evento v4 real: PNG + máscaras), `PddSitesClientTest` 3, `PddVisualV4Test` 2, `BridgeServerTest` +1 (quadro grande só para o print v4) |
+| Linux (`tools/golden-linux.sh verify`, Temurin fixado por digest) | **643/643 + 1 ignorado** (644 no total; o ignorado é o mesmo das missões anteriores, só para Windows), Temurin 21.0.12.1 linux/amd64, sobre o commit 440d6b7 do Studio e o 54434fa da extensão |
+| Contrato do Bridge | Schema e fixtures `s013-*` idênticos aos da extensão (14 válidas, 19 inválidas) |
 
 ## Homologação na janela real (`Studio013Homologation`)
 
 A homologação usou o Studio de verdade com dados, Bridge e Studio isolados, o Chrome for Testing 155 com a extensão 0.6.0
 desta branch, o Native Host do script oficial, o mouse e o teclado do sistema (Robot) e o gesto Alt+Shift+K real. A
-página foi o "sistema real" sintético `studio013/sistema.html`, servido como `site-a.nekkora.test`. Operador: Claude como
+página foi o "sistema real" sintético `studio013/sistema.html`, servido como `site-a.nekkora.test`. Nessa página, todo
+dado (nomes, CPFs, tabela, mensagens, campos) está na cor-sentinela #E6007E, e a prova principal da v4 é **nenhum pixel
+dessa cor** no print que chega ao Studio, no rascunho e no PDF. Operador: Claude como
 agente de teste (TEST_AGENT).
 
 **Resultado: 75/75 verificações; em 150%, 5/5.** Log completo: `evidence/S013-homologacao-log.txt`.
@@ -24,25 +26,26 @@ agente de teste (TEST_AGENT).
 | A1 | Gravação no site autorizado pelo Chrome (preencher, preencher, clicar), sem valor digitado no modelo |
 | A2 | "Esta página permite gravação, mas a captura de PDD ainda não está autorizada", com a origem exata e sem caminho. "Capturar" fica indisponível |
 | A3 | "Autorizar captura PDD neste site" com clique real: só nesta sessão, registrado como agente de teste. Botões e lista inteiros dentro da janela |
-| A4 | Captura v3 com gesto real. Rascunho 1.2.0. Escala 2. Só rótulos do vocabulário, inclusive de shadow roots aberta e fechada. Tabela e frame só como lugar. **Nenhum pixel da cor-sentinela**. Rascunho sem nenhuma das 20 sentinelas |
+| A4 | Captura **v4** (print real) com gesto real. Rascunho 1.2.0. Só máscaras BLOCK/FIELD/TEXT. Campos (inclusive de shadow roots aberta e fechada), tabela, frame, canvas, vídeo, fundo, pseudo-elemento e linhas de texto de dados cobertos. **Nenhum pixel da cor-sentinela**. Rascunho sem nenhuma das 20 sentinelas |
 | A5 | Recaptura vira candidata; recorte pelo mouse; Aplicar |
 | A6 | Marcadores automáticos 1/2/3 comprovados (o manual foi dispensado) e a automação intocada |
-| A7 | O PDF declara "nenhum pixel da página foi copiado" e "Não é uma captura de tela real". Nenhuma sentinela no texto nem nas páginas renderizadas |
+| A7 | O PDF declara o print real com os dados cobertos e pede revisão antes de compartilhar. Nenhuma sentinela no texto nem cor-sentinela nas páginas renderizadas |
 | A8 | Revogar pela lista deixa a captura indisponível. "Lembrar este site" registra o site como lembrado |
 | A9 | Revogar com a captura armada cancela a captura |
 | A10 | Acesso do Chrome revogado: a autorização PDD some. Devolver o acesso não a devolve |
-| A11 | Laboratório local captura sem autorização (v3) |
+| A11 | Laboratório local captura sem autorização (candidata v4, sem cor-sentinela) |
 | A12 | 4 temas. Rascunho, logs do host e observações do log sem sentinelas. Nenhuma evidência PNG com a cor-sentinela. `.nekkora` nunca mudou |
 
 Evidências em `evidence/`:
 
 - **Janela do PDD:** A2, A3, A4, A6 e temas.
-- **Imagem sintética desenhada:** `S013-A4-imagem-sintetica-site.png`.
+- **Print v4 mascarado (página sintética):** `S013-A4-print-mascarado-site.png` e a janela `S013-A4-captura-v4.png`.
 - **PDF:** `S013-pdd-visual-v001.pdf` e a página renderizada.
 - **Texto extraído do PDF.**
 - **150%:** em `evidence/150/`.
 
-Todas as imagens são da janela do Studio ou desenhadas pelo Studio: nenhuma traz pixels da página.
+As imagens são da janela do Studio ou o print v4 da página SINTÉTICA, com os dados cobertos. O rótulo do passo A0 no log
+ainda diz "nekkora-visual/3" (texto fixo do roteiro, anterior à v4); a política verificada no A4 é a v4.
 
 ## Teste de mutação
 
@@ -60,8 +63,10 @@ Todas as imagens são da janela do Studio ou desenhadas pelo Studio: nenhuma tra
 | S10 | O Studio aceita v3 com imagem | morta |
 | S11 | O Studio manda origem com caminho no consentimento | morta |
 | S12 | v3 não reverificada antes de exportar | morta |
+| S13 | O Studio deixa de conferir as máscaras da v4 | morta |
+| S14 | O Studio aceita quadro grande de qualquer política | morta |
 
-**12/12 mortas.**
+**14/14 mortas.**
 
 ## Defeito achado na homologação
 
