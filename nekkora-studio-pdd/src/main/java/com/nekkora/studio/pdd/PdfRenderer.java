@@ -325,7 +325,7 @@ public final class PdfRenderer {
 
     // ------------------------------------------------------------------------------------------- recorte
 
-    /** Recorte da imagem: união das regiões e dos marcadores, com margem; nunca maior que a imagem. */
+    /** Recorte da imagem: o escolhido no Studio; no print real, a tela inteira; nas demais, união das regiões e dos marcadores, com margem. */
     record Crop(BufferedImage image, int x, int y, int w, int h, java.awt.Dimension full) {
         /** Regiões que definem o recorte automático: o que a pessoa usa (na v2, a estrutura em volta é contexto). */
         static final List<String> INTERACTIVE = List.of("CARRIER", "FIELD", "CONTROL", "LABEL"); // LABEL: rótulo desenhado da v3
@@ -335,6 +335,11 @@ public final class PdfRenderer {
                 DocumentDraft.Crop k = c.crop();
                 return new Crop(img.getSubimage(k.x(), k.y(), k.width(), k.height()), k.x(), k.y(), k.width(), k.height(),
                         new java.awt.Dimension(img.getWidth(), img.getHeight()));
+            }
+            // print real (v4/v5): sem recorte escolhido, vai a tela inteira, como o editor mostra (revisão da usuária: o recorte
+            // automático deixava só o miolo em volta dos campos, parecido com a imagem sintética)
+            if (VisualVerifier.POLICY_V4.equals(c.policy()) || VisualVerifier.POLICY_V5.equals(c.policy())) {
+                return new Crop(img, 0, 0, img.getWidth(), img.getHeight(), new java.awt.Dimension(img.getWidth(), img.getHeight()));
             }
             int x0 = Integer.MAX_VALUE, y0 = Integer.MAX_VALUE, x1 = 0, y1 = 0;
             for (Region r : c.regions()) {

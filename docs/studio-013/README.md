@@ -42,6 +42,8 @@ Contrato, decisões D-S013-01..10 e políticas `nekkora-visual/3`, `/4` e `/5`: 
    - **Janela do PDD encoberta:** o Recorder fica acima das outras janelas e pode cobrir a do PDD; arraste-o.
 4. Revise como antes: candidata, Aplicar/Cancelar, **Selecionar área** e **Posicionar marcador**. Os números dos
    marcadores nunca ficam um em cima do outro, nem num recorte justo (`MarkerLayout`, a mesma regra no editor e no PDF).
+   **Sem recorte escolhido**, o print real (integral ou mascarado) vai ao PDF com a tela inteira, como o editor mostra.
+   O recorte automático em volta dos campos ficou só para as imagens sintéticas e as anteriores.
 5. Exporte o PDF. Na v4, o texto de procedência declara que as imagens são capturas reais com os dados cobertos e pede
    revisão antes de compartilhar. Com alguma imagem em print integral, o Studio pede confirmação antes (*"Exportar com
    print integral?"*; Cancelar não gera PDF). O PDF declara o print integral na procedência e numa nota em cada bloco.

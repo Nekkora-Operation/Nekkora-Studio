@@ -60,6 +60,26 @@ class PddVisualV5Test {
     }
 
     @Test
+    @DisplayName("print real (v4/v5) sem recorte escolhido: o PDF leva a tela inteira; recorte escolhido vale; v2 segue com o recorte automático")
+    void telaInteiraSemRecorte() throws Exception {
+        BufferedImage img = PddVisualV4Test.paint(MASKS);
+        List<Annotation> anns = List.of(new Annotation(new com.nekkora.studio.domain.StepId(java.util.UUID.randomUUID()), Annotation.Status.PLACED, 40 / 640.0, 200 / 360.0,
+                280 / 640.0, 30 / 360.0, ""));
+        for (String policy : List.of(VisualVerifier.POLICY_V5, VisualVerifier.POLICY_V4)) {
+            List<Region> regions = VisualVerifier.POLICY_V5.equals(policy) ? MASKS : PddVisualV4Test.MASKS;
+            SafeCapture c = new SafeCapture("cap-" + "7".repeat(32), "sha256:" + "a".repeat(64), W, H, 1.5, PddVisualV4Test.CLOCK.instant(), 0, policy, "",
+                    List.of(), anns, List.of(), regions, null);
+            PdfRenderer.Crop k = PdfRenderer.Crop.of(img, c);
+            assertEquals(List.of(0, 0, W, H), List.of(k.x(), k.y(), k.w(), k.h()), policy + ": a tela inteira, como no editor");
+            PdfRenderer.Crop chosen = PdfRenderer.Crop.of(img, c.withCrop(new DocumentDraft.Crop(20, 180, 320, 80, "DEVELOPER")));
+            assertEquals(List.of(20, 180, 320, 80), List.of(chosen.x(), chosen.y(), chosen.w(), chosen.h()), policy + ": o recorte escolhido");
+        }
+        SafeCapture v2 = new SafeCapture("cap-" + "8".repeat(32), "sha256:" + "a".repeat(64), W, H, 1.0, PddVisualV4Test.CLOCK.instant(), 0,
+                VisualVerifier.POLICY_V2, "", List.of(), anns, List.of(), List.of(new Region("FIELD", 40, 200, 280, 30)), null);
+        assertTrue(PdfRenderer.Crop.of(img, v2).w() < W, "v2: recorte automático em volta dos campos");
+    }
+
+    @Test
     @DisplayName("v5: rascunho 1.2.0 relido igual; PDF declara o print integral, com nota no bloco e a mistura com imagens mascaradas")
     void rascunhoEPdf() throws Exception {
         Automation a = PddLab.consulta();
