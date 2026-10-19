@@ -130,6 +130,12 @@ final class TestHostClient implements AutoCloseable {
         BridgeFrames.write(out, Json.write(msg));
     }
 
+    /** Quadro acima do teto de controle (o Studio só aceita o do print nekkora-visual/4). */
+    synchronized void sendLarge(Map<String, Object> msg) throws IOException {
+        msg.put("seq", seq.incrementAndGet());
+        BridgeFrames.write(out, Json.write(msg), BridgeFrames.MAX_CAPTURE_FRAME_BYTES);
+    }
+
     void event(String type, Map<String, Object> payload) throws IOException {
         send(Json.obj().put("protocol", "nekkora-bridge/1").put("kind", "event").put("type", type).put("payload", payload).build());
     }

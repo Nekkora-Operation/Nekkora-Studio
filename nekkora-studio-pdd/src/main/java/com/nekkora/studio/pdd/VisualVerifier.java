@@ -68,6 +68,7 @@ public final class VisualVerifier {
     /** Verifica pela política da captura ({@code nekkora-visual/1} ou {@code /2}) e devolve a imagem decodificada. */
     public static BufferedImage verify(byte[] png, String declaredSha, int width, int height, double dpr, List<Region> regions, String policy)
             throws VisualPolicyException {
+        if (POLICY_V4.equals(policy)) return verifyV4(png, declaredSha, width, height, dpr, regions);
         if (POLICY_V3.equals(policy)) return verifyV3(png, declaredSha, width, height, dpr, regions);
         if (POLICY_V2.equals(policy)) return verifyV2(png, declaredSha, width, height, dpr, regions);
         if (!POLICY.equals(policy)) throw new VisualPolicyException("POLICY_UNKNOWN");
@@ -358,6 +359,85 @@ public final class VisualVerifier {
             if (Math.abs(bc[c] + a * (ic[c] - bc[c]) - vc[c]) > V3_BLEND_TOLERANCE) return false;
         }
         return true;
+    }
+
+    // ------------------------------------------------------------------------------------------- nekkora-visual/4
+
+    /**
+     * STUDIO-013 (revisão da usuária) — {@code nekkora-visual/4}: print real com o texto de dados mascarado. Mesma regra do
+     * service worker e do Native Host: máscaras BLOCK/FIELD/TEXT na ordem, nos tetos e dentro da imagem, e cada pixel
+     * DENTRO delas exatamente a cor repintada. Fora das máscaras os pixels são da tela (limite declarado da política).
+     */
+    public static final String POLICY_V4 = "nekkora-visual/4";
+    public static final int V4_BLOCK_FILL = 0xEDF0F3;
+    public static final int V4_BLOCK_BORDER = 0xC9D1D9;
+    static final Map<String, Integer> V4_BARS = Map.of("DARK", 0xC8CFD8, "LIGHT", 0x8792A2);
+    static final Map<String, Integer> V4_MAX = Map.of("BLOCK", 96, "FIELD", 128, "TEXT", 600);
+    public static final int V4_MAX_PNG_BYTES = 8_000_000;
+
+    static BufferedImage verifyV4(byte[] png, String declaredSha, int width, int height, double dpr, List<Region> regions) throws VisualPolicyException {
+        if (png == null || png.length == 0 || png.length > V4_MAX_PNG_BYTES) throw new VisualPolicyException("SANITIZED_IMAGE_TOO_LARGE");
+        if (declaredSha != null && !declaredSha.equals(Canonical.sha256(png))) throw new VisualPolicyException("CHECKSUM_MISMATCH");
+        BufferedImage img;
+        try {
+            img = ImageIO.read(new ByteArrayInputStream(png));
+        } catch (IOException e) {
+            throw new VisualPolicyException("IMAGE_UNREADABLE");
+        }
+        if (img == null) throw new VisualPolicyException("IMAGE_UNREADABLE");
+        if (img.getWidth() != width || img.getHeight() != height || !(dpr > 0 && dpr <= 4)) throw new VisualPolicyException("GEOMETRY_MISMATCH");
+        Map<String, Integer> count = new HashMap<>();
+        int rank = 0;
+        for (Region r : regions) {
+            int k = Region.V4_KINDS.indexOf(r.kind());
+            if (k < 0) throw new VisualPolicyException("REGION_KIND_UNKNOWN");
+            if (k < rank) throw new VisualPolicyException("REGION_ORDER");
+            rank = k;
+            if (count.merge(r.kind(), 1, Integer::sum) > V4_MAX.get(r.kind())) throw new VisualPolicyException("TOO_MANY_REGIONS");
+            if ((long) r.x() + r.width() > width || (long) r.y() + r.height() > height) throw new VisualPolicyException("REGION_OUT_OF_IMAGE");
+            if ("TEXT".equals(r.kind()) != (r.ink() != null)) throw new VisualPolicyException("REGION_KIND_UNKNOWN");
+        }
+        if (violationsV4(img, regions) != 0) throw new VisualPolicyException("SANITIZATION_CHECK_FAILED");
+        return img;
+    }
+
+    /** {preenchimento, borda} de uma máscara da v4. */
+    public static int[] v4Paint(String kind, String ink) {
+        return switch (kind) {
+            case "BLOCK" -> new int[] {V4_BLOCK_FILL, V4_BLOCK_BORDER};
+            case "FIELD" -> new int[] {FIELD_FILL, FIELD_BORDER};
+            case "TEXT" -> new int[] {V4_BARS.get(ink), V4_BARS.get(ink)};
+            default -> throw new IllegalArgumentException("tipo");
+        };
+    }
+
+    /** Pixels DENTRO das máscaras diferentes da cor repintada (na ordem declarada). */
+    public static long violationsV4(BufferedImage img, List<Region> regions) {
+        int w = img.getWidth();
+        int h = img.getHeight();
+        int[] expected = new int[w * h];
+        Arrays.fill(expected, -1);
+        for (Region r : regions) {
+            int[] fb = v4Paint(r.kind(), r.ink());
+            int x2 = r.x() + r.width();
+            int y2 = r.y() + r.height();
+            for (int y = r.y(); y < y2; y++) {
+                for (int x = r.x(); x < x2; x++) expected[y * w + x] = y == r.y() || y == y2 - 1 || x == r.x() || x == x2 - 1 ? fb[1] : fb[0];
+            }
+        }
+        boolean alpha = img.getColorModel().hasAlpha();
+        long bad = 0;
+        int[] row = new int[w];
+        for (int y = 0; y < h; y++) {
+            img.getRGB(0, y, w, 1, row, 0, w);
+            for (int x = 0; x < w; x++) {
+                int e = expected[y * w + x];
+                if (e < 0) continue;
+                int argb = row[x];
+                if ((alpha && (argb >>> 24) != 0xFF) || (argb & 0xFFFFFF) != e) bad++;
+            }
+        }
+        return bad;
     }
 
     /** Pixels fora dos portadores que não são uma das três cores sintéticas opacas. */

@@ -8,7 +8,7 @@ OK    A0: extensão 0.6.0 conectada (consentimento PDD por origem e nekkora-visu
 OK    A1: gravação no site autorizado pelo Chrome = preencher, preencher, clicar
 OK    A1: nenhum valor digitado no modelo
   abas: [site-a.nekkora.test · captura PDD não autorizada [CONSENT_REQUIRED]]
-  Esta página permite gravação, mas a captura de PDD ainda não está autorizada. Site: http://site-a.nekkora.test:18765. A autorização vale só para esta origem exata; a imagem do PDD é sintética (nenhum pixel da página é copiado).
+  Esta página permite gravação, mas a captura de PDD ainda não está autorizada. Site: http://site-a.nekkora.test:18765. A autorização vale só para esta origem exata; no PDD, campos, textos de dados, tabelas e frames saem cobertos por faixas.
 OK    A2: "Esta página permite gravação, mas a captura de PDD ainda não está autorizada"
 OK    A2: a origem aparece exata e sem caminho
 OK    A2: sem autorização, "Capturar tela…" fica indisponível e "Autorizar" aparece
@@ -18,17 +18,16 @@ OK    A3: site autorizado só nesta sessão, registrado como agente de teste
 OK    A3: a aba passa a poder capturar
 OK    A3: "Capturar", "Revogar captura PDD" e a lista de sites inteiros dentro da janela (nada empurrado para fora)
 captura S013-A3-site-autorizado.png (1244x811)
-  No Chrome, deixe a aba escolhida no estado desta etapa e pressione Alt+Shift+K. Nada é clicado ou enviado; a imagem é desenhada pelo Studio, sem nenhum pixel da página.
+  No Chrome, deixe a aba escolhida no estado desta etapa e pressione Alt+Shift+K. Nada é clicado ou enviado; a imagem é a tela real com os dados cobertos por faixas.
   Imagem associada · rascunho 1.2.0: O rascunho do documento passou a usar o formato 1.2.0 (representação sintética). A automação não muda.
 OK    A4: captura no site associada e rascunho 1.2.0
-  2048×1698 escala 2.0 · regiões {CONTROL=7, FIELD=8, FRAME=1, LABEL=10, MEDIA=4, SURFACE=4, TEXT=7} · limitações [TABLE_CONTENT_HIDDEN, SOME_LABELS_HIDDEN, FRAMES_HIDDEN]
-  rótulos: [Senha, Salvar, Ver detalhes, Confirmar, Pesquisar, Usuário, Cancelar, Entrar, Menu, Início]
-OK    A4: política nekkora-visual/3, desenhada em escala 2 do viewport
-OK    A4: só rótulos de interface do vocabulário viram texto
-OK    A4: shadow roots aberta e fechada percorridas (Confirmar, Cancelar)
-OK    A4: tabela e frame de outra origem só como lugar
-captura S013-A4-imagem-sintetica-site.png (2048x1698)
-OK    A4: nenhum pixel da cor-sentinela na imagem (nada da página foi copiado)
+  1024×849 escala 1.0 · regiões {BLOCK=7, FIELD=8, TEXT=7} · limitações [FRAMES_HIDDEN, TABLE_CONTENT_HIDDEN]
+OK    A4: política nekkora-visual/4 (print real) só com máscaras BLOCK/FIELD/TEXT
+OK    A4: campos (inclusive de shadow roots aberta e fechada) cobertos
+OK    A4: tabela, frame, canvas, vídeo, fundo e pseudo-elemento cobertos
+OK    A4: linhas de texto de dados cobertas
+captura S013-A4-print-mascarado-site.png (1024x849)
+OK    A4: NENHUM pixel da cor-sentinela no print real (todo dado da página está na cor-sentinela)
 OK    A4: rascunho sem "anasouza"
 OK    A4: rascunho sem "Lab42senha"
 OK    A4: rascunho sem "SENTINELA"
@@ -49,10 +48,10 @@ OK    A4: rascunho sem "Exame"
 OK    A4: rascunho sem "sistema.html"
 OK    A4: rascunho sem "studio013"
 OK    A4: rascunho sem "tgt-"
-captura S013-A4-captura-v3.png (1244x811)
-  Nova captura pronta para revisão: 10 rótulo(s) de interface visíveis. A prévia já mostra a nova imagem; use "Selecionar área" se quiser recortar e então "Aplicar". "Cancelar" mantém a imagem anterior.
+captura S013-A4-captura-v4.png (1244x811)
+  Nova captura pronta para revisão: 0 rótulo(s) de interface visíveis. A prévia já mostra a nova imagem; use "Selecionar área" se quiser recortar e então "Aplicar". "Cancelar" mantém a imagem anterior.
 OK    A5: nova captura vira candidata
-  recorte pedido java.awt.Rectangle[x=42,y=182,width=900,height=746] · obtido java.awt.Rectangle[x=42,y=180,width=899,height=747]
+  recorte pedido java.awt.Rectangle[x=21,y=91,width=450,height=373] · obtido java.awt.Rectangle[x=21,y=90,width=449,height=374]
 OK    A5: recorte pelo mouse sobre a candidata
 OK    A5: Aplicar substitui a imagem do bloco
   marcadores: [PLACED/, PLACED/, PLACED/]
@@ -61,7 +60,7 @@ OK    A6: a automação não mudou
 captura S013-A6-recorte-e-marcador.png (1244x811)
 OK    A7: PDF exportado
 captura S013-A7-pdf-pagina-1.png (793x1122)
-OK    A7: o PDF declara a imagem sintética (nenhum pixel copiado; não é captura real)
+OK    A7: o PDF declara o print real com os dados cobertos e pede revisão antes de compartilhar
 OK    A7: PDF sem "anasouza"
 OK    A7: PDF sem "Lab42senha"
 OK    A7: PDF sem "SENTINELA"
@@ -91,8 +90,8 @@ Acesso ao site http://site-a.nekkora.test/* → revogado pelo controle do Chrome
 OK    A10: sem acesso do Chrome, a autorização PDD do site some da lista
 Acesso ao site http://site-a.nekkora.test/* → concedido pelo controle do Chrome
 OK    A10: devolver o acesso do Chrome não devolve a autorização PDD
-  Nova captura pronta para revisão: 10 rótulo(s) de interface visíveis. A prévia já mostra a nova imagem; use "Selecionar área" se quiser recortar e então "Aplicar". "Cancelar" mantém a imagem anterior.
-OK    A11: laboratório captura sem pedir autorização (candidata v3)
+  Nova captura pronta para revisão: 0 rótulo(s) de interface visíveis. A prévia já mostra a nova imagem; use "Selecionar área" se quiser recortar e então "Aplicar". "Cancelar" mantém a imagem anterior.
+OK    A11: laboratório captura sem pedir autorização (candidata v4, sem cor-sentinela)
 captura S013-A12-tema-sakura-dark.png (1244x811)
 captura S013-A12-tema-midnight-dark.png (1244x811)
 captura S013-A12-tema-porcelain-light.png (1244x811)

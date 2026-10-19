@@ -75,7 +75,7 @@ public record DocumentDraft(AutomationId automationId, String processRevision, L
     }
 
     /** Políticas visuais aceitas (a v1 continua válida para rascunhos e PDFs anteriores). */
-    public static final List<String> VISUAL_POLICIES = List.of("nekkora-visual/1", "nekkora-visual/2", "nekkora-visual/3");
+    public static final List<String> VISUAL_POLICIES = List.of("nekkora-visual/1", "nekkora-visual/2", "nekkora-visual/3", "nekkora-visual/4");
 
     /**
      * Imagem JÁ sanitizada ({@code nekkora-visual/1} ou {@code /2}): só a referência e os metadados — os pixels ficam no
@@ -105,8 +105,12 @@ public record DocumentDraft(AutomationId automationId, String processRevision, L
             regions = regions == null ? List.of() : List.copyOf(regions);
             if ("nekkora-visual/1".equals(policy) && regions.stream().anyMatch(r -> !r.legacy())) throw new IllegalArgumentException("região fora da v1");
             boolean v3 = "nekkora-visual/3".equals(policy);
-            // a v3 nunca tem portador de pixels; v1/v2 nunca têm TEXT/LABEL
-            if (regions.stream().anyMatch(r -> v3 ? "CARRIER".equals(r.kind()) : r.v3Only())) throw new IllegalArgumentException("região fora da política");
+            boolean v4 = "nekkora-visual/4".equals(policy);
+            // a v3 nunca tem portador de pixels; v1/v2 nunca têm TEXT/LABEL; a v4 só tem máscaras (BLOCK, FIELD, TEXT)
+            if (regions.stream().anyMatch(r -> v4 ? !Region.V4_KINDS.contains(r.kind()) : v3 ? "CARRIER".equals(r.kind()) || "BLOCK".equals(r.kind())
+                    : r.v3Only() || "BLOCK".equals(r.kind()))) {
+                throw new IllegalArgumentException("região fora da política");
+            }
             if (crop != null && (crop.x() + crop.width() > width || crop.y() + crop.height() > height)) throw new IllegalArgumentException("recorte fora da imagem");
         }
 
@@ -128,7 +132,7 @@ public record DocumentDraft(AutomationId automationId, String processRevision, L
 
         /** Usa a política inteiramente sintética da STUDIO-013 (rascunho 1.2.0)? */
         boolean needsV12() {
-            return "nekkora-visual/3".equals(policy);
+            return "nekkora-visual/3".equals(policy) || "nekkora-visual/4".equals(policy);
         }
 
         /** Usa algo que só existe no rascunho 1.1.0 (política v2, região nova, recorte, marcador manual, referência própria)? */
@@ -164,11 +168,13 @@ public record DocumentDraft(AutomationId automationId, String processRevision, L
     public record Region(String kind, int x, int y, int width, int height, String tone, String text, int size, String weight, String ink, String align) {
         public static final List<String> KINDS = List.of("SURFACE", "MEDIA", "FRAME", "CONTROL", "FIELD", "CARRIER");
         public static final List<String> V3_KINDS = List.of("SURFACE", "MEDIA", "FRAME", "CONTROL", "FIELD", "TEXT", "LABEL");
+        /** Máscaras da nekkora-visual/4 (print real), na ordem de pintura. */
+        public static final List<String> V4_KINDS = List.of("BLOCK", "FIELD", "TEXT");
         public static final List<String> TONES = List.of("LIGHT", "MID", "DARK");
         public static final List<String> INKS = List.of("DARK", "LIGHT");
 
         public Region {
-            if (!KINDS.contains(kind) && !V3_KINDS.contains(kind)) throw new IllegalArgumentException("tipo de região");
+            if (!KINDS.contains(kind) && !V3_KINDS.contains(kind) && !V4_KINDS.contains(kind)) throw new IllegalArgumentException("tipo de região");
             if (x < 0 || y < 0 || width <= 0 || height <= 0) throw new IllegalArgumentException("região inválida");
             if ("SURFACE".equals(kind) != (tone != null) || (tone != null && !TONES.contains(tone))) throw new IllegalArgumentException("tom de região");
             boolean label = "LABEL".equals(kind);

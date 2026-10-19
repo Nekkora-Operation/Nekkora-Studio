@@ -88,6 +88,11 @@ public final class PdfRenderer {
     public static final String PROVENANCE_V2 = "Gerado pelo Nekkora Studio a partir das sessões e etapas mapeadas. As imagens são representações "
             + "sanitizadas da tela: a estrutura (blocos, campos e botões) é redesenhada sem conteúdo e só rótulos de interface aparecem como na "
             + "página. Este documento descreve o processo mapeado e não comprova resultado de negócio.";
+    /** STUDIO-013 (revisão): documento com alguma imagem nekkora-visual/4 (print real com o texto de dados mascarado). */
+    public static final String PROVENANCE_V4 = "Gerado pelo Nekkora Studio a partir das sessões e etapas mapeadas. As imagens são capturas reais da "
+            + "tela com os campos, os textos de dados, as tabelas, os frames e as imagens de conteúdo cobertos por faixas lisas; só a aparência "
+            + "da tela e os rótulos de interface do vocabulário controlado aparecem como na página. Revise as imagens antes de compartilhar. "
+            + "Este documento descreve o processo mapeado e não comprova resultado de negócio.";
     /** Documento que mistura imagens v3 com imagens anteriores (v2) do laboratório. */
     public static final String PROVENANCE_V2_MIXED = "Imagens anteriores do laboratório (representação documental) trazem os rótulos como na página.";
     /** NEKKORA-STUDIO-013: documento com alguma imagem nekkora-visual/3 (representação inteiramente sintética). */
@@ -152,7 +157,9 @@ public final class PdfRenderer {
                 && VisualVerifier.POLICY_V3.equals(c.policy()));
         boolean manual = d.blocks().stream().map(b -> b.capture().map(d.captures()::get).orElse(null)).anyMatch(c -> c != null && c.annotations().stream()
                 .anyMatch(Annotation::manual));
-        String provenance = v3 && !v2 ? PROVENANCE_V3 : v3 ? PROVENANCE_V3 + " " + PROVENANCE_V2_MIXED : v2 ? PROVENANCE_V2 : PROVENANCE;
+        boolean v4 = d.blocks().stream().map(b -> b.capture().map(d.captures()::get).orElse(null)).anyMatch(c -> c != null
+                && VisualVerifier.POLICY_V4.equals(c.policy()));
+        String provenance = v4 ? PROVENANCE_V4 : v3 && !v2 ? PROVENANCE_V3 : v3 ? PROVENANCE_V3 + " " + PROVENANCE_V2_MIXED : v2 ? PROVENANCE_V2 : PROVENANCE;
         for (String line : wrap(regular, 9, provenance + (manual ? " " + MANUAL_NOTE : ""), W - 2 * M)) {
             text(regular, 9, MUTED, M, y - 9, line);
             y -= 12.5f;

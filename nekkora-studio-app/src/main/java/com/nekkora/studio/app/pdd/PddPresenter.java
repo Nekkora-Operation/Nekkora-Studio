@@ -491,7 +491,8 @@ public final class PddPresenter implements PddPanel.Actions {
         LinkStatus.ExtensionInfo ext = link.status().extension();
         // STUDIO-013: extensão 0.6.0+ → sempre a v3 (sintética) e a origem mostrada; 0.5.x → v2 (só laboratório); antes → v1
         boolean v3 = ext != null && PddCaptureClient.supportsV3(ext.version());
-        String policy = v3 ? PddCaptureClient.POLICY_V3 : ext != null && PddCaptureClient.supportsV2(ext.version()) ? PddCaptureClient.POLICY_V2 : null;
+        // revisão da usuária: o Studio pede o print real com o texto de dados mascarado (v4); a v3 sintética segue no contrato
+        String policy = v3 ? PddCaptureClient.POLICY_V4 : ext != null && PddCaptureClient.supportsV2(ext.version()) ? PddCaptureClient.POLICY_V2 : null;
         String origin = v3 ? tabs.stream().filter(t -> t.tabRef().equals(tabRef)).map(PddPanel.Tab::origin).findFirst().orElse(null) : null;
         PddCaptureClient c = new PddCaptureClient(link, Duration.ofSeconds(20));
         capturing = c;
@@ -509,7 +510,8 @@ public final class PddPresenter implements PddPanel.Actions {
             say(Severity.INFO, "Captura armada", sc.isEmpty()
                     ? "Defina um atalho para \"Capturar a tela para o PDD\" em chrome://extensions/shortcuts e pressione-o no Chrome, na aba escolhida."
                     : "No Chrome, deixe a aba escolhida no estado desta etapa e pressione " + sc + ". Nada é clicado ou enviado; "
-                            + (PddCaptureClient.POLICY_V3.equals(armed.policy()) ? "a imagem é desenhada pelo Studio, sem nenhum pixel da página."
+                            + (PddCaptureClient.POLICY_V4.equals(armed.policy()) ? "a imagem é a tela real com os dados cobertos por faixas."
+                                    : PddCaptureClient.POLICY_V3.equals(armed.policy()) ? "a imagem é desenhada pelo Studio, sem nenhum pixel da página."
                                     : "só rótulos de interface aparecem na imagem."));
             render();
         }));
@@ -561,6 +563,8 @@ public final class PddPresenter implements PddPanel.Actions {
                 SyntheticRenderer.Rendered drawn = SyntheticRenderer.render(new SyntheticRenderer.Description(r.width(), r.height(), r.devicePixelRatio(), css));
                 r = scaledResult(r, drawn);
                 regions.addAll(drawn.regions());
+            } else if (VisualVerifier.POLICY_V4.equals(policy)) {
+                for (PddCaptureClient.Region x : r.regions()) regions.add(new Region(x.kind(), x.x(), x.y(), x.width(), x.height(), null, null, 0, null, x.ink(), null));
             } else {
                 for (PddCaptureClient.Region x : r.regions()) regions.add(new Region(x.kind(), x.x(), x.y(), x.width(), x.height(), x.tone()));
             }
@@ -625,7 +629,9 @@ public final class PddPresenter implements PddPanel.Actions {
         }
         long labels = regions.stream().filter(x -> "CARRIER".equals(x.kind()) || "LABEL".equals(x.kind())).count();
         say(Severity.SUCCESS, "Imagem sanitizada associada", labels + " rótulo(s) de interface visíveis; " + finalPlaced + " de " + b.stepIds().size()
-                + " marcador(es) posicionados. " + (VisualVerifier.POLICY_V3.equals(policy)
+                + " marcador(es) posicionados. " + (VisualVerifier.POLICY_V4.equals(policy)
+                        ? "Print real da tela: campos, textos de dados, tabelas e frames cobertos por faixas; revise antes de compartilhar."
+                        : VisualVerifier.POLICY_V3.equals(policy)
                         ? "Representação sintética: textos que não são rótulos de interface viraram barras e os campos ficam vazios."
                         : "Campos e o restante da tela ficam ocultos."));
     }

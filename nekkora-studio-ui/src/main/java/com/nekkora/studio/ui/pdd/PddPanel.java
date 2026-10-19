@@ -480,7 +480,8 @@ public class PddPanel extends JPanel {
         imageBox.setVisible(iv != null);
         if (iv != null) {
             imageHeading.setText(iv.candidate() ? "Nova captura — revise e aplique" : "Imagem do bloco");
-            imageNote.setText(("nekkora-visual/3".equals(iv.policy())
+            imageNote.setText(("nekkora-visual/4".equals(iv.policy()) ? "Print real da tela: campos, textos de dados, tabelas e frames cobertos por faixas."
+                    : "nekkora-visual/3".equals(iv.policy())
                     ? "Representação sintética desenhada pelo Studio: nenhum pixel da página; só rótulos de interface como texto, o resto em barras."
                     : "nekkora-visual/2".equals(iv.policy()) ? "Representação documental: estrutura redesenhada, só rótulos de interface reais."
                     : "Captura da política anterior: fundo oculto em cinza.") + (iv.crop() == null ? " Recorte automático." : " Recorte escolhido."));
@@ -536,7 +537,7 @@ public class PddPanel extends JPanel {
         String origin = t == null || t.origin() == null ? "" : t.origin();
         String text = switch (state) {
             case "CONSENT_REQUIRED" -> "Esta página permite gravação, mas a captura de PDD ainda não está autorizada. Site: " + origin + ". A autorização vale só"
-                    + " para esta origem exata; a imagem do PDD é sintética (nenhum pixel da página é copiado).";
+                    + " para esta origem exata; no PDD, campos, textos de dados, tabelas e frames saem cobertos por faixas.";
             case "CHROME_ACCESS_REQUIRED" -> "Sem acesso do Chrome a este site: conceda pelo ícone da Nekkora Extension (Acesso ao site → Neste site). Depois, autorize"
                     + " a captura do PDD.";
             case "RECORDING" -> "Esta aba está sendo gravada: finalize a gravação para capturar.";

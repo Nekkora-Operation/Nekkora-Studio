@@ -290,18 +290,20 @@ public final class Studio013Homologation {
         log("  " + lc.width() + "×" + lc.height() + " escala " + lc.devicePixelRatio() + " · regiões " + lc.regions().stream()
                 .collect(java.util.stream.Collectors.groupingBy(DocumentDraft.Region::kind, java.util.TreeMap::new, java.util.stream.Collectors.counting()))
                 + " · limitações " + lc.limitations());
-        Set<String> labels = lc.regions().stream().filter(r -> "LABEL".equals(r.kind())).map(DocumentDraft.Region::text).collect(java.util.stream.Collectors.toSet());
-        log("  rótulos: " + labels);
-        check("A4: política nekkora-visual/3, desenhada em escala 2 do viewport", "nekkora-visual/3".equals(lc.policy()) && lc.devicePixelRatio() == 2.0);
-        check("A4: só rótulos de interface do vocabulário viram texto", ROTULOS.containsAll(labels) && labels.containsAll(Set.of("Usuário", "Senha", "Entrar")));
-        check("A4: shadow roots aberta e fechada percorridas (Confirmar, Cancelar)", labels.contains("Confirmar") && labels.contains("Cancelar"));
-        check("A4: tabela e frame de outra origem só como lugar", lc.limitations().containsAll(List.of("TABLE_CONTENT_HIDDEN", "FRAMES_HIDDEN")));
+        java.util.Map<String, Long> kinds = lc.regions().stream().collect(java.util.stream.Collectors.groupingBy(DocumentDraft.Region::kind,
+                java.util.stream.Collectors.counting()));
+        check("A4: política nekkora-visual/4 (print real) só com máscaras BLOCK/FIELD/TEXT", "nekkora-visual/4".equals(lc.policy())
+                && List.of("BLOCK", "FIELD", "TEXT").containsAll(kinds.keySet()));
+        check("A4: campos (inclusive de shadow roots aberta e fechada) cobertos", kinds.getOrDefault("FIELD", 0L) >= 8);
+        check("A4: tabela, frame, canvas, vídeo, fundo e pseudo-elemento cobertos", kinds.getOrDefault("BLOCK", 0L) >= 6
+                && lc.limitations().containsAll(List.of("TABLE_CONTENT_HIDDEN", "FRAMES_HIDDEN")));
+        check("A4: linhas de texto de dados cobertas", kinds.getOrDefault("TEXT", 0L) >= 5);
         BufferedImage img = storedImage(pdd, loginKey);
-        save(img, "A4-imagem-sintetica-site");
-        check("A4: nenhum pixel da cor-sentinela na imagem (nada da página foi copiado)", sentinelPixels(img) == 0);
+        save(img, "A4-print-mascarado-site");
+        check("A4: NENHUM pixel da cor-sentinela no print real (todo dado da página está na cor-sentinela)", sentinelPixels(img) == 0);
         String draftJson = Files.readString(edt(() -> pdd.store().folder(a.id())).resolve("rascunho.json"));
         for (String s : SENTINELS) check("A4: rascunho sem \"" + s + "\"", !draftJson.contains(s));
-        shot(dlg, panel, "A4-captura-v3");
+        shot(dlg, panel, "A4-captura-v4");
 
         // ================================================================ A5 — recaptura → candidata → recorte (mouse) → Aplicar
         String t5 = recapture(panel, loginKey, SITE_PAGE, null, "site-a");
@@ -309,7 +311,7 @@ public final class Studio013Homologation {
         int imgW = model(panel).image().image().getWidth();
         @SuppressWarnings("unchecked")
         List<Object> g = (List<Object>) page.eval("(() => { const c = document.getElementById('ficha').getBoundingClientRect(); return [c.left, c.top, c.width, c.height]; })()");
-        int s2 = 2; // escala do desenho v3
+        int s2 = (int) Math.round(lc.devicePixelRatio()); // px do dispositivo por px CSS (print real)
         Rectangle wanted = new Rectangle((int) Math.max(0, (((Number) g.get(0)).doubleValue() - 8) * s2), (int) Math.max(0, (((Number) g.get(1)).doubleValue() - 8) * s2),
                 (int) Math.min(imgW, (((Number) g.get(2)).doubleValue() + 16) * s2), (int) ((((Number) g.get(3)).doubleValue() + 16) * s2));
         dragOnEditor(panel, panel.selectAreaButton(), wanted);
@@ -360,8 +362,8 @@ public final class Studio013Homologation {
         }
         Files.writeString(out.toPath().resolve("S013-pdf-texto-extraido.txt"), text, StandardCharsets.UTF_8);
         String flat = text.replaceAll("\\s+", " ");
-        check("A7: o PDF declara a imagem sintética (nenhum pixel copiado; não é captura real)", flat.contains("nenhum pixel da página foi copiado")
-                && flat.contains("Não é uma captura de tela real"));
+        check("A7: o PDF declara o print real com os dados cobertos e pede revisão antes de compartilhar", flat.contains("capturas reais da tela")
+                && flat.contains("Revise as imagens antes de compartilhar"));
         for (String s : SENTINELS) check("A7: PDF sem \"" + s + "\"", !text.contains(s));
         int pageSentinels = 0;
         for (BufferedImage p : pages) pageSentinels += sentinelPixels(p);
@@ -412,8 +414,8 @@ public final class Studio013Homologation {
 
         // ================================================================ A11 — o laboratório local continua sem autorização (agora v3)
         String t11 = recapture(panel, loginKey, LAB_PAGE, null, "127.0.0.1");
-        check("A11: laboratório captura sem pedir autorização (candidata v3)", "Nova captura pronta para revisão".equals(t11)
-                && "nekkora-visual/3".equals(model(panel).image().policy()));
+        check("A11: laboratório captura sem pedir autorização (candidata v4, sem cor-sentinela)", "Nova captura pronta para revisão".equals(t11)
+                && "nekkora-visual/4".equals(model(panel).image().policy()) && sentinelPixels(model(panel).image().image()) == 0);
         click(edt(panel::cancelCandidateButton));
 
         // ================================================================ A12 — temas e higiene dos artefatos
@@ -517,7 +519,7 @@ public final class Studio013Homologation {
         waitFor("autorizado", 15, () -> !model(panel).sites().isEmpty());
         boolean c1 = captureBlock(panel, loginKey, SITE_PAGE, null, "site-a");
         DocumentDraft d = edt(() -> pdd.draft().orElseThrow());
-        check("E1: captura v3 em 150%", c1 && "nekkora-visual/3".equals(d.captures().get(d.block(loginKey).orElseThrow().captureSha()).policy()));
+        check("E1: captura v4 em 150%", c1 && "nekkora-visual/4".equals(d.captures().get(d.block(loginKey).orElseThrow().captureSha()).policy()));
         recapture(panel, loginKey, SITE_PAGE, null, "site-a");
         for (NekkoraTheme t : NekkoraThemes.all()) {
             edt(() -> {

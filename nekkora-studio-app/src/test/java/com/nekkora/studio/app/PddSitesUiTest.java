@@ -282,7 +282,7 @@ class PddSitesUiTest {
         selectTab("t-SiteTab00002");
         assertTrue(Edt.call(() -> pdd().panel().captureButton().isEnabled()));
         shoot(login, "t-SiteTab00002", capturedV3(a, "Entrar"));
-        assertEquals("nekkora-visual/3", browser.lastArm.get("policy"), "extensão 0.6.0: o Studio pede a v3");
+        assertEquals("nekkora-visual/4", browser.lastArm.get("policy"), "extensão 0.6.0: o Studio pede o print mascarado (v4); a descrição v3 continua aceita");
         assertEquals(SITE, browser.lastArm.get("origin"), "a origem mostrada vai junto (aba em outra origem = nada é armado)");
         assertTrue(model().hasImage(), model().banner());
         assertEquals("Imagem associada · rascunho 1.2.0", model().bannerTitle(), model().banner());
@@ -301,6 +301,60 @@ class PddSitesUiTest {
             for (String s : List.of("ana.souza", "cofre.senha-lab", "/entrar", "app.exemplo.test")) assertFalse(text.contains(s), "no PDF: " + s);
         }
         assertEquals(before, revision(), "consentimento, captura e PDF não mudam a automação (.nekkora)");
+    }
+
+    /** Print v4 sintético 400×200 "da tela" (cor-sentinela) com as máscaras pintadas; {@code leak} = pixel da página dentro de uma máscara. */
+    static String capturedV4(Automation a, boolean leak) throws Exception {
+        int w = 400, h = 200;
+        java.awt.image.BufferedImage img = new java.awt.image.BufferedImage(w, h, java.awt.image.BufferedImage.TYPE_INT_RGB);
+        for (int y = 0; y < h; y++) for (int x = 0; x < w; x++) img.setRGB(x, y, 0xE6007E);
+        int[][] m = {{0, 250, 20, 130, 90}, {1, 40, 60, 200, 24}, {1, 40, 110, 200, 24}, {2, 40, 20, 150, 16}};
+        String[] kinds = {"BLOCK", "FIELD", "TEXT"};
+        StringBuilder rj = new StringBuilder();
+        for (int[] r : m) {
+            int[] fb = com.nekkora.studio.pdd.VisualVerifier.v4Paint(kinds[r[0]], r[0] == 2 ? "DARK" : null);
+            for (int y = r[2]; y < r[2] + r[4]; y++) {
+                for (int x = r[1]; x < r[1] + r[3]; x++) {
+                    img.setRGB(x, y, y == r[2] || y == r[2] + r[4] - 1 || x == r[1] || x == r[1] + r[3] - 1 ? fb[1] : fb[0]);
+                }
+            }
+            if (rj.length() > 0) rj.append(',');
+            rj.append("{\"kind\":\"").append(kinds[r[0]]).append("\",\"x\":").append(r[1]).append(",\"y\":").append(r[2]).append(",\"width\":")
+                    .append(r[3]).append(",\"height\":").append(r[4]).append(r[0] == 2 ? ",\"ink\":\"DARK\"" : "").append('}');
+        }
+        if (leak) img.setRGB(300, 60, 0xE6007E - 1);
+        java.io.ByteArrayOutputStream o = new java.io.ByteArrayOutputStream();
+        javax.imageio.ImageIO.write(img, "png", o);
+        byte[] png = o.toByteArray();
+        String sha = "sha256:" + java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(png));
+        String u = a.sessions().get(0).steps().get(0).id().value().toString();
+        return "{\"captureId\":\"CID\",\"status\":\"CAPTURED\",\"policy\":\"nekkora-visual/4\",\"observedAt\":\"2026-10-19T12:00:00Z\","
+                + "\"width\":400,\"height\":200,\"devicePixelRatio\":1,\"png\":\"" + java.util.Base64.getEncoder().encodeToString(png) + "\",\"sha256\":\"" + sha
+                + "\",\"regions\":[" + rj + "],\"annotations\":[{\"stepRef\":\"" + u + "\",\"status\":\"PLACED\",\"x\":0.1,\"y\":0.3,\"width\":0.5,"
+                + "\"height\":0.12,\"reason\":\"\"}],\"limitations\":[\"TABLE_CONTENT_HIDDEN\"]}";
+    }
+
+    @Test
+    @DisplayName("S013 v4: print real mascarado aceito (rascunho 1.2.0, PDF com a procedência da v4); pixel da página dentro de máscara recusado")
+    void printRealMascarado() throws Exception {
+        studio();
+        Automation a = site();
+        String login = openLogin();
+        browser.consent = "SESSION";
+        Edt.run(() -> pdd().reloadTabs());
+        Edt.flush();
+        shoot(login, "t-SiteTab00002", capturedV4(a, true));
+        assertFalse(model().hasImage());
+        assertEquals("Imagem recusada pelo Studio", model().bannerTitle(), model().banner());
+        shoot(login, "t-SiteTab00002", capturedV4(a, false));
+        assertTrue(model().hasImage(), model().banner());
+        assertEquals("Imagem associada · rascunho 1.2.0", model().bannerTitle());
+        assertEquals("nekkora-visual/4", model().image().policy());
+        Edt.run(() -> pdd().export());
+        try (PDDocument doc = Loader.loadPDF(out.resolve("pdd-visual-v001.pdf").toFile())) {
+            String text = new PDFTextStripper().getText(doc).replaceAll("\\s+", " ");
+            assertTrue(text.contains("capturas reais da tela"), text);
+        }
     }
 
     @Test

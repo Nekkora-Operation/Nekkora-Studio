@@ -403,12 +403,19 @@ public final class BridgeServer implements BrowserLink, AutoCloseable {
     private void readLoop(Connection c) {
         try {
             while (c.open.get()) {
-                String raw = BridgeFrames.read(c.in);
+                // conexão já autenticada: só o print da nekkora-visual/4 pode passar do teto de controle (STUDIO-013)
+                String raw = BridgeFrames.read(c.in, BridgeFrames.MAX_CAPTURE_FRAME_BYTES);
                 if (raw == null) {
                     break;
                 }
                 c.lastInbound = System.currentTimeMillis();
                 Map<String, Object> msg = Json.parseObject(raw);
+                if (BridgeFrames.overControl(raw)) {
+                    Map<String, Object> payload = Json.object(msg, "payload");
+                    if (!BridgeFrames.largeAllowed(Json.string(msg, "kind"), Json.string(msg, "type"), payload == null ? null : Json.string(payload, "policy"))) {
+                        throw new BridgeException(BridgeError.FRAME_TOO_LARGE, "quadro grande fora da captura nekkora-visual/4");
+                    }
+                }
                 java.util.function.BiConsumer<Map<String, Object>, Runnable> gate = dispatchGate;
                 if (gate != null) {
                     gate.accept(msg, c::close);

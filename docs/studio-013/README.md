@@ -22,10 +22,13 @@ Contrato, decisões D-S013-01..07 e política `nekkora-visual/3`: `Nekkora-Exten
 
    Quando nenhuma aba pode capturar, uma dica explica por quê, só com contagens: sem autorização PDD, sem acesso do
    Chrome, em gravação, bloqueadas pelo navegador. Nunca mostra endereço ou título.
-3. Use **Capturar tela…** e depois o atalho **Alt+Shift+K** no Chrome. A imagem é **desenhada pelo Studio** a partir da
-   descrição sintética. Nenhum pixel da página é copiado.
+3. Use **Capturar tela…** e depois o atalho **Alt+Shift+K** no Chrome. A imagem é o **print real da tela**
+   (`nekkora-visual/4`, decisão D-S013-08). Os campos, os textos de dados, as tabelas, os frames, o canvas, o vídeo e as
+   imagens de conteúdo saem cobertos por faixas lisas. Ficam como na página: a aparência, o logotipo, os ícones e os
+   rótulos de interface do vocabulário. A v3 inteiramente sintética continua no contrato.
 4. Revise como antes: candidata, Aplicar/Cancelar, **Selecionar área** e **Posicionar marcador**.
-5. Exporte o PDF. O texto de procedência declara que a imagem é sintética e que não é uma captura de tela real.
+5. Exporte o PDF. Na v4, o texto de procedência declara que as imagens são capturas reais com os dados cobertos e pede
+   revisão antes de compartilhar.
 6. Para revogar, use **Sites autorizados para o PDD** → **Revogar captura PDD**. Uma captura armada ou em curso nesse site é
    cancelada pela extensão.
 
@@ -39,7 +42,9 @@ Contrato, decisões D-S013-01..07 e política `nekkora-visual/3`: `Nekkora-Exten
 | `SyntheticRenderer` (pdd) | Valida a descrição (mesma regra do host, com `CapturePrivacy.interfaceText`) e desenha em escala 2 (1 acima de 2048 px CSS), com Inter e paleta fechada; texto em tons de cinza |
 | `VisualVerifier.verifyV3` | 4ª barreira, na recepção e antes de cada exportação: tipos, ordem, tetos, geometria em múltiplos da escala, barras quantizadas, rótulos do vocabulário e disjuntos, repintura exata fora dos rótulos, mistura fundo↔tinta dentro deles, sha-256 |
 | `DocumentDraft`/`DraftJson` | Política `nekkora-visual/3`, regiões `TEXT`/`LABEL` e rascunho **1.2.0** só quando há v3. Versão e política precisam ser coerentes |
-| `PdfRenderer` | Texto de procedência `PROVENANCE_V3`; recorte automático considera `LABEL` |
+| `VisualVerifier.verifyV4` | 4ª barreira da v4: máscaras BLOCK/FIELD/TEXT na ordem, nos tetos e dentro da imagem, e cada pixel DENTRO delas exato. Fora delas os pixels são da tela (limite declarado) |
+| `BridgeFrames`/`BridgeServer` | Exceção única ao teto de 256 KiB: só o evento do print v4, até 12 MiB, depois do handshake autenticado. Qualquer outro quadro grande derruba a conexão |
+| `PdfRenderer` | Textos de procedência `PROVENANCE_V3` e `PROVENANCE_V4`; recorte automático considera `LABEL` |
 | `PddPresenter`/`PddPanel` | Estados das abas, autorização, revogação, lista de sites, dica de indisponibilidade, mensagens por motivo |
 
 O ator do registro vem de `StudioEnvironment.decisionActor()`: `TEST_AGENT` só em modo de laboratório explícito. A lista
@@ -48,7 +53,8 @@ a automação.
 
 ## Compatibilidade
 
-- **Extensão 0.6.0:** o Studio pede a v3, inclusive no laboratório.
+- **Extensão 0.6.0:** o Studio pede a v4 (print mascarado), inclusive no laboratório. Uma descrição v3 que chegue continua
+  aceita.
 - **Extensão 0.5.x:** o Studio pede a v2, só no laboratório. Sites aparecem como indisponíveis e nenhum comando novo é
   enviado.
 - **Extensões anteriores:** v1.
