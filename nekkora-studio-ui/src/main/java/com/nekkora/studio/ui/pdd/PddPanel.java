@@ -195,7 +195,9 @@ public class PddPanel extends JPanel {
     private final NekkoraComboBox<Integer> splitAt = new NekkoraComboBox<>();
     private final NekkoraButton split = NekkoraButton.ghost("Dividir antes da instrução").withSize(ControlSize.SMALL);
     private final NekkoraButton joinNext = NekkoraButton.ghost("Juntar com o próximo bloco").withSize(ControlSize.SMALL);
-    private final NekkoraComboBox<Tab> tabs = new NekkoraComboBox<>();
+    /** Largura máxima das escolhas (aba, site): rótulos longos não empurram os botões para fora da coluna (homologação STUDIO-013). */
+    static final int CHOICE_MAX_WIDTH = 340;
+    private final NekkoraComboBox<Tab> tabs = capped();
     private final NekkoraButton capture = NekkoraButton.secondary("Capturar tela…").withIcon(IconName.PLAY).withSize(ControlSize.SMALL);
     private final NekkoraButton cancelCapture = NekkoraButton.ghost("Cancelar captura").withSize(ControlSize.SMALL);
     private final NekkoraButton removeCapture = NekkoraButton.ghost("Remover imagem").withSize(ControlSize.SMALL);
@@ -206,9 +208,9 @@ public class PddPanel extends JPanel {
     private final NekkoraParagraph consentText = new NekkoraParagraph("");
     private final NekkoraCheckBox remember = new NekkoraCheckBox("Lembrar este site (sem marcar: só até fechar o navegador)");
     private final NekkoraButton authorize = NekkoraButton.secondary("Autorizar captura PDD neste site").withSize(ControlSize.SMALL);
-    private final NekkoraComboBox<Site> sites = new NekkoraComboBox<>();
+    private final NekkoraComboBox<Site> sites = capped();
     private final NekkoraButton revokeSite = NekkoraButton.ghost("Revogar captura PDD").withSize(ControlSize.SMALL);
-    private final NekkoraStack sitesRow = NekkoraStack.horizontal(Spacing.SPACE_2);
+    private final NekkoraStack sitesRow = NekkoraStack.vertical(Spacing.SPACE_1);
     private final NekkoraStack blockTools = NekkoraStack.vertical(Spacing.SPACE_2);
     private final NekkoraStack imageBox = NekkoraStack.vertical(Spacing.SPACE_2);
     private final NekkoraText imageHeading = new NekkoraText("", TextTone.SECONDARY);
@@ -267,13 +269,15 @@ public class PddPanel extends JPanel {
         splitRow.add(splitAt);
         splitRow.add(joinNext);
         blockTools.add(splitRow);
-        NekkoraStack captureRow = NekkoraStack.horizontal(Spacing.SPACE_2);
+        NekkoraStack captureRow = NekkoraStack.vertical(Spacing.SPACE_1);
+        NekkoraStack captureButtons = NekkoraStack.horizontal(Spacing.SPACE_2);
         tabs.setLabelProvider(t -> t == null ? "" : t.label());
         tabs.getAccessibleContext().setAccessibleName("Aba do Chrome (laboratório) para a captura");
         captureRow.add(tabs);
-        captureRow.add(capture);
-        captureRow.add(cancelCapture);
-        captureRow.add(removeCapture);
+        captureButtons.add(capture);
+        captureButtons.add(cancelCapture);
+        captureButtons.add(removeCapture);
+        captureRow.add(captureButtons);
         blockTools.add(captureRow);
         captureHint.getAccessibleContext().setAccessibleName("Por que a captura está indisponível");
         blockTools.add(captureHint);
@@ -290,6 +294,8 @@ public class PddPanel extends JPanel {
         sitesRow.add(sites);
         sitesRow.add(revokeSite);
         blockTools.add(sitesRow);
+        tabs.addActionListener(e -> tabs.setToolTipText(tabs.getSelectedValue() == null ? null : tabs.getSelectedValue().label()));
+        sites.addActionListener(e -> sites.setToolTipText(sites.getSelectedValue() == null ? null : sites.getSelectedValue().label()));
         // STUDIO-012 PDD-01: imagem do bloco (recorte, marcadores, revisão da candidata)
         imageBox.add(imageHeading);
         imageBox.add(imageNote);
@@ -503,6 +509,22 @@ public class PddPanel extends JPanel {
         preview.setPages(m.preview());
         revalidate();
         repaint();
+    }
+
+    /** Escolha com largura máxima (o rótulo inteiro fica na dica). */
+    private static <T> NekkoraComboBox<T> capped() {
+        return new NekkoraComboBox<T>() {
+            @Override
+            public Dimension getPreferredSize() {
+                Dimension d = super.getPreferredSize();
+                return new Dimension(Math.min(d.width, CHOICE_MAX_WIDTH), d.height);
+            }
+
+            @Override
+            public Dimension getMaximumSize() {
+                return getPreferredSize();
+            }
+        };
     }
 
     /** STUDIO-013: o que a aba escolhida permite — capturar, autorizar o PDD neste site ou o motivo do bloqueio. */

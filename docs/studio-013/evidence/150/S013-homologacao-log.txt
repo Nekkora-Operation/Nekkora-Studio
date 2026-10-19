@@ -1,0 +1,17 @@
+Tela: java.awt.Rectangle[x=0,y=0,width=1280,height=688] · java 21.0.12 · interface em 150%
+Operador: Claude como AGENTE DE TESTE (autorizações, recortes e marcadores manuais TEST_AGENT; nenhuma confirmação humana) · ator do Studio: TEST_AGENT
+Native Host instalado pelo script oficial (install-host.ps1)
+Chrome for Testing: 155.0.8059.39
+OK    Conexão autenticada Studio ⇄ host ⇄ extensão
+OK    E1: em 150%, "Autorizar captura PDD neste site" visível dentro da janela
+  No Chrome, deixe a aba escolhida no estado desta etapa e pressione Alt+Shift+K. Nada é clicado ou enviado; a imagem é desenhada pelo Studio, sem nenhum pixel da página.
+  Imagem associada · rascunho 1.2.0: O rascunho do documento passou a usar o formato 1.2.0 (representação sintética). A automação não muda.
+OK    E1: captura v3 em 150%
+  Nova captura pronta para revisão: 10 rótulo(s) de interface visíveis. A prévia já mostra a nova imagem; use "Selecionar área" se quiser recortar e então "Aplicar". "Cancelar" mantém a imagem anterior.
+captura S013-E1-150-tema-sakura-dark.png (1254x666)
+captura S013-E1-150-tema-midnight-dark.png (1254x666)
+captura S013-E1-150-tema-porcelain-light.png (1254x666)
+captura S013-E1-150-tema-sage-light.png (1254x666)
+OK    E1: Aplicar em 150%
+OK    E1: nenhuma evidência PNG com a cor-sentinela
+RESULTADO: 5 verificações, 0 falha(s)

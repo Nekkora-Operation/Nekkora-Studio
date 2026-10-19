@@ -1,0 +1,105 @@
+Tela: java.awt.Rectangle[x=0,y=0,width=1920,height=1032] · java 21.0.12
+Operador: Claude como AGENTE DE TESTE (autorizações, recortes e marcadores manuais TEST_AGENT; nenhuma confirmação humana) · ator do Studio: TEST_AGENT
+Native Host instalado pelo script oficial (install-host.ps1)
+Chrome for Testing: 155.0.8059.39
+OK    Conexão autenticada Studio ⇄ host ⇄ extensão
+OK    A0: extensão 0.6.0 conectada (consentimento PDD por origem e nekkora-visual/3)
+  etapas: [Preencher campo Usuário, Preencher campo Senha, Clicar no botão Entrar]
+OK    A1: gravação no site autorizado pelo Chrome = preencher, preencher, clicar
+OK    A1: nenhum valor digitado no modelo
+  abas: [site-a.nekkora.test · captura PDD não autorizada [CONSENT_REQUIRED]]
+  Esta página permite gravação, mas a captura de PDD ainda não está autorizada. Site: http://site-a.nekkora.test:18765. A autorização vale só para esta origem exata; a imagem do PDD é sintética (nenhum pixel da página é copiado).
+OK    A2: "Esta página permite gravação, mas a captura de PDD ainda não está autorizada"
+OK    A2: a origem aparece exata e sem caminho
+OK    A2: sem autorização, "Capturar tela…" fica indisponível e "Autorizar" aparece
+captura S013-A2-site-sem-autorizacao-pdd.png (1244x811)
+  http://site-a.nekkora.test:18765 — até fechar o navegador. A imagem do PDD é sintética: nenhum pixel da página é copiado. Revogue quando quiser em "Sites autorizados para o PDD". · sites: [http://site-a.nekkora.test:18765 · até fechar o navegador · agente de teste]
+OK    A3: site autorizado só nesta sessão, registrado como agente de teste
+OK    A3: a aba passa a poder capturar
+OK    A3: "Capturar", "Revogar captura PDD" e a lista de sites inteiros dentro da janela (nada empurrado para fora)
+captura S013-A3-site-autorizado.png (1244x811)
+  No Chrome, deixe a aba escolhida no estado desta etapa e pressione Alt+Shift+K. Nada é clicado ou enviado; a imagem é desenhada pelo Studio, sem nenhum pixel da página.
+  Imagem associada · rascunho 1.2.0: O rascunho do documento passou a usar o formato 1.2.0 (representação sintética). A automação não muda.
+OK    A4: captura no site associada e rascunho 1.2.0
+  2048×1698 escala 2.0 · regiões {CONTROL=7, FIELD=8, FRAME=1, LABEL=10, MEDIA=4, SURFACE=4, TEXT=7} · limitações [TABLE_CONTENT_HIDDEN, SOME_LABELS_HIDDEN, FRAMES_HIDDEN]
+  rótulos: [Senha, Salvar, Ver detalhes, Confirmar, Pesquisar, Usuário, Cancelar, Entrar, Menu, Início]
+OK    A4: política nekkora-visual/3, desenhada em escala 2 do viewport
+OK    A4: só rótulos de interface do vocabulário viram texto
+OK    A4: shadow roots aberta e fechada percorridas (Confirmar, Cancelar)
+OK    A4: tabela e frame de outra origem só como lugar
+captura S013-A4-imagem-sintetica-site.png (2048x1698)
+OK    A4: nenhum pixel da cor-sentinela na imagem (nada da página foi copiado)
+OK    A4: rascunho sem "anasouza"
+OK    A4: rascunho sem "Lab42senha"
+OK    A4: rascunho sem "SENTINELA"
+OK    A4: rascunho sem "Sentinela"
+OK    A4: rascunho sem "Ana Souza"
+OK    A4: rascunho sem "Bruno Lima"
+OK    A4: rascunho sem "Carla Dias"
+OK    A4: rascunho sem "Zeta"
+OK    A4: rascunho sem "123.456.789-09"
+OK    A4: rascunho sem "987.654.321-00"
+OK    A4: rascunho sem "S3nh@Lab"
+OK    A4: rascunho sem "ana.souza"
+OK    A4: rascunho sem "autofill"
+OK    A4: rascunho sem "sombra.aberta"
+OK    A4: rascunho sem "Internado"
+OK    A4: rascunho sem "Observação"
+OK    A4: rascunho sem "Exame"
+OK    A4: rascunho sem "sistema.html"
+OK    A4: rascunho sem "studio013"
+OK    A4: rascunho sem "tgt-"
+captura S013-A4-captura-v3.png (1244x811)
+  Nova captura pronta para revisão: 10 rótulo(s) de interface visíveis. A prévia já mostra a nova imagem; use "Selecionar área" se quiser recortar e então "Aplicar". "Cancelar" mantém a imagem anterior.
+OK    A5: nova captura vira candidata
+  recorte pedido java.awt.Rectangle[x=42,y=182,width=900,height=746] · obtido java.awt.Rectangle[x=42,y=180,width=899,height=747]
+OK    A5: recorte pelo mouse sobre a candidata
+OK    A5: Aplicar substitui a imagem do bloco
+  marcadores: [PLACED/, PLACED/, PLACED/]
+OK    A6: Entrar já tem marcador automático (manual dispensado)
+OK    A6: a automação não mudou
+captura S013-A6-recorte-e-marcador.png (1244x811)
+OK    A7: PDF exportado
+captura S013-A7-pdf-pagina-1.png (793x1122)
+OK    A7: o PDF declara a imagem sintética (nenhum pixel copiado; não é captura real)
+OK    A7: PDF sem "anasouza"
+OK    A7: PDF sem "Lab42senha"
+OK    A7: PDF sem "SENTINELA"
+OK    A7: PDF sem "Sentinela"
+OK    A7: PDF sem "Ana Souza"
+OK    A7: PDF sem "Bruno Lima"
+OK    A7: PDF sem "Carla Dias"
+OK    A7: PDF sem "Zeta"
+OK    A7: PDF sem "123.456.789-09"
+OK    A7: PDF sem "987.654.321-00"
+OK    A7: PDF sem "S3nh@Lab"
+OK    A7: PDF sem "ana.souza"
+OK    A7: PDF sem "autofill"
+OK    A7: PDF sem "sombra.aberta"
+OK    A7: PDF sem "Internado"
+OK    A7: PDF sem "Observação"
+OK    A7: PDF sem "Exame"
+OK    A7: PDF sem "sistema.html"
+OK    A7: PDF sem "studio013"
+OK    A7: PDF sem "tgt-"
+OK    A7: nenhuma cor-sentinela nas páginas renderizadas
+OK    A8: revogado pelo Studio → captura indisponível de novo
+OK    A8: "Lembrar este site" registra o site como lembrado
+  Imagem indisponível: A autorização de captura do PDD neste site foi revogada: nada foi capturado.
+OK    A9: revogar com a captura armada cancela a captura (nenhuma imagem nova)
+Acesso ao site http://site-a.nekkora.test/* → revogado pelo controle do Chrome
+OK    A10: sem acesso do Chrome, a autorização PDD do site some da lista
+Acesso ao site http://site-a.nekkora.test/* → concedido pelo controle do Chrome
+OK    A10: devolver o acesso do Chrome não devolve a autorização PDD
+  Nova captura pronta para revisão: 10 rótulo(s) de interface visíveis. A prévia já mostra a nova imagem; use "Selecionar área" se quiser recortar e então "Aplicar". "Cancelar" mantém a imagem anterior.
+OK    A11: laboratório captura sem pedir autorização (candidata v3)
+captura S013-A12-tema-sakura-dark.png (1244x811)
+captura S013-A12-tema-midnight-dark.png (1244x811)
+captura S013-A12-tema-porcelain-light.png (1244x811)
+captura S013-A12-tema-sage-light.png (1244x811)
+OK    A12 rascunho e capturas: sem valores digitados e sem dados do sistema sintético
+OK    A12 logs do host: sem valores digitados e sem dados do sistema sintético
+OK    A12 log da homologação (observações): sem valores digitados e sem dados do sistema sintético
+OK    A12: nenhuma evidência PNG desta rodada com a cor-sentinela
+OK    A12: a automação (.nekkora) nunca mudou pelo PDD nem pelas autorizações
+RESULTADO: 75 verificações, 0 falha(s)
