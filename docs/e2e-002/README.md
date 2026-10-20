@@ -36,6 +36,6 @@ texto e de listas, tecla, endereço da página) e o Studio/extensão, a leitura 
 
 ## Rodada final
 
-Commits da homologação: `Nekkora-RPA-Framework` 2f36a0a · `Nekkora-Extension-Chrome` 9e4687e · `Nekkora-Studio` 0293b50 (depois: só documentação e, na extensão, a correção de tempo do `Studio013SitesIT`, `d10abcf`).
+Commits da homologação: `Nekkora-RPA-Framework` 2f36a0a · `Nekkora-Extension-Chrome` 9e4687e · `Nekkora-Studio` 0293b50 (depois: só documentação e, na extensão, a correção de tempo do `Studio013SitesIT` — commit `7beeb25`, branch `test/e2e-002-c12-regressao`).
 Três rodadas reais completas com 100% (r10, r13, r14). A planilha gerada fica só na estação de homologação
 (`Documentos/teste-rpa/wikipedia-biografias/biografias.xlsx`); não é commitada.

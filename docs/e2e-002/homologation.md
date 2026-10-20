@@ -48,6 +48,19 @@ com os dados lidos pelo CDP no Chrome visível também deu 24/24.
 **Repetibilidade**: três rodadas reais completas com 100% (r10 63/63, r13 69/69, r14 69/69), cada uma com o conferidor
 independente 24/24.
 
+## 2b. Regressão (C12)
+
+Suítes automatizadas sem falhas: Studio 765 testes (Windows) e 703 + 9 pulados (Linux, contêiner com JDK fixado);
+framework 354 (Windows) e 353 + 1 pulado (Linux), controle negativo 30/30; extensão: núcleo 223, Native Host 98,
+Node 221 e **ITs da suíte padrão: 40/40 classes, 305 testes aprovados, 0 falhas**. Os ITs foram concluídos em grupos
+sequenciais de até 3 classes, com memória amostrada (a rodada completa anterior foi interrompida pelo sistema por memória
+baixa depois de 16 classes / 129 testes, todos aprovados). Matriz classe a classe:
+`Nekkora-Extension-Chrome/docs/e2e-002/c12-matriz.md`.
+
+Defeito pré-existente encontrado (falhava também na base `main` `fd10e26`): `Studio013SitesIT` S013-06/S013-09
+dependiam de a captura levar mais de 1,2 s; o teste passou a ocupar a página ANTES do gesto (extensão `7beeb25`),
+19/19 sozinho e 35/35 com o grupo de permissões.
+
 ## 3. Rodadas anteriores — defeitos REAIS encontrados e corrigidos
 
 | Rodada | Falha | Causa | Correção |
