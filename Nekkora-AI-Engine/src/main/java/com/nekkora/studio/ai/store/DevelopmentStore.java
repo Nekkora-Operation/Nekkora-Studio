@@ -121,23 +121,23 @@ public final class DevelopmentStore {
     }
 
     /** NEKKORA-E2E-002: último teste autorizado ({@code teste-autorizado.json}). */
-    public void saveTrial(AutomationId id, String json) throws IOException {
+    public void saveSupervisedRun(AutomationId id, String json) throws IOException {
         write(id.value(), "teste-autorizado.json", json);
     }
 
-    public Optional<String> trial(AutomationId id) {
+    public Optional<String> supervisedRun(AutomationId id) {
         return read(id.value(), "teste-autorizado.json");
     }
 
     /** NEKKORA-E2E-002: entrada e destino escolhidos para o teste autorizado (caminhos locais da pessoa). */
-    public void saveTrialPaths(AutomationId id, Path input, Path spreadsheet) throws IOException {
+    public void saveRunPaths(AutomationId id, Path input, Path spreadsheet) throws IOException {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("input", input.toString());
         m.put("spreadsheet", spreadsheet.toString());
         write(id.value(), "teste-autorizado-caminhos.json", Json.write(m));
     }
 
-    public Optional<Path[]> trialPaths(AutomationId id) {
+    public Optional<Path[]> runPaths(AutomationId id) {
         return read(id.value(), "teste-autorizado-caminhos.json").flatMap(t -> {
             try {
                 Map<String, Object> m = Json.parseObject(t);

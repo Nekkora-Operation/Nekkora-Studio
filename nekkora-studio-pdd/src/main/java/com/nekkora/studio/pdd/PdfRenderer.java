@@ -62,11 +62,22 @@ public final class PdfRenderer {
      * "[Revisar] …" e texto fora da política como "[Texto recusado pela política]" (nunca o texto); o arquivo exportado
      * nunca usa a prévia.
      */
-    public record Options(String versionLabel, LocalDate date, boolean preview) {
+    /** {@code appendix}: NEKKORA-E2E-002 — linhas do apêndice "Dados do processo" (vazio = sem apêndice). */
+    public record Options(String versionLabel, LocalDate date, boolean preview, List<String> appendix) {
+        public Options {
+            appendix = appendix == null ? List.of() : List.copyOf(appendix);
+        }
+
+        public Options(String versionLabel, LocalDate date, boolean preview) {
+            this(versionLabel, date, preview, List.of());
+        }
+
         public Options(String versionLabel, LocalDate date) {
             this(versionLabel, date, false);
         }
     }
+
+    public static final String APPENDIX_TITLE = "Dados do processo";
 
     static final float W = PDRectangle.A4.getWidth();
     static final float H = PDRectangle.A4.getHeight();
@@ -185,6 +196,20 @@ public final class PdfRenderer {
                 y -= 20;
             }
             for (Block b : s.blocks()) block(d, b, images);
+        }
+        if (!o.appendix().isEmpty()) {
+            // NEKKORA-E2E-002: como os itens entram e os dados lidos saem (colunas, fontes, regras) — da especificação funcional
+            ensure(80);
+            text(bold, 14, INK, M, y - 14, APPENDIX_TITLE);
+            y -= 26;
+            for (String l : o.appendix()) {
+                for (String w : wrap(regular, 10, l, W - 2 * M)) {
+                    ensure(16);
+                    text(regular, 10, INK, M, y - 10, w);
+                    y -= 14.5f;
+                }
+                y -= 3;
+            }
         }
     }
 

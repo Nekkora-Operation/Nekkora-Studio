@@ -21,8 +21,8 @@ import java.util.Set;
  * valores), o registro de alvos do código gerado e o estado da planilha (a linha preparada de cada transação). Nenhum
  * valor além da chave da linha.
  */
-public final class TrialProvenance {
-    private TrialProvenance() {}
+public final class RunProvenance {
+    private RunProvenance() {}
 
     public static final String SCHEMA = "nekkora-studio/trial-provenance";
 

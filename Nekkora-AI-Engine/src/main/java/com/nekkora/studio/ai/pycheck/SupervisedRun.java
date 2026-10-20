@@ -36,8 +36,8 @@ import java.util.function.Consumer;
  *       ({@code conferir_planilha.py}), que devolve só cabeçalhos, quantidade de linhas e o hash — nunca células.</li>
  * </ul>
  */
-public final class AuthorizedTrial {
-    private AuthorizedTrial() {}
+public final class SupervisedRun {
+    private SupervisedRun() {}
 
     static final String VERIFY_RESOURCE = "/nekkora/ai/python/conferir_planilha.py";
     /** Variáveis de ambiente que o subprocesso herda (o resto — inclusive chaves de API — fica de fora). */
@@ -125,7 +125,7 @@ public final class AuthorizedTrial {
         long t0 = System.nanoTime();
         Process p = pb.start();
         StringBuilder stdout = new StringBuilder();
-        Thread drain = new Thread(() -> drain(p.getInputStream(), stdout), "nekkora-trial-saida");
+        Thread drain = new Thread(() -> drain(p.getInputStream(), stdout), "nekkora-run-saida");
         drain.setDaemon(true);
         drain.start();
         Path events = r.runDir().resolve("execucao").resolve("events.jsonl");
@@ -187,7 +187,7 @@ public final class AuthorizedTrial {
     static Verification verify(PythonChecks.Environment env, Request r) {
         try {
             Path script = Files.createTempFile("nekkora-conferir-", ".py");
-            try (InputStream in = AuthorizedTrial.class.getResourceAsStream(VERIFY_RESOURCE)) {
+            try (InputStream in = SupervisedRun.class.getResourceAsStream(VERIFY_RESOURCE)) {
                 if (in == null) return new Verification(false, "VERIFY_SCRIPT_MISSING", 0, List.of(), "");
                 Files.write(script, in.readAllBytes());
             }

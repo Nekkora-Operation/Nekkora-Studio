@@ -257,7 +257,7 @@ class DevelopmentStudioTest {
         assertTrue(layers.contains("V1 ×"), layers);
         assertTrue(layers.contains("V4 —") && layers.contains("V6 —"), layers);
         String full = Edt.call(() -> studio.view().validationPanel().layersText().getAccessibleContext().getAccessibleDescription());
-        assertTrue(full.contains("V6 Execução real: não executada pelo Studio"), full);
+        assertTrue(full.contains("V6 Execução real: nenhum teste autorizado desta automação"), full); // E2E-002: só o teste autorizado da revisão conta
         assertFalse(full.toLowerCase().contains("aprovad") || full.toLowerCase().contains("garantid") || full.toLowerCase().contains("produção"), full);
         List<String> items = Edt.call(() -> {
             List<String> out = new ArrayList<>();
@@ -274,7 +274,7 @@ class DevelopmentStudioTest {
         idle();
         String after = Edt.call(() -> studio.view().validationPanel().layersText().getAccessibleContext().getAccessibleDescription());
         assertTrue(after.contains("V1 PDD: PDD_READY"), after);
-        assertTrue(after.contains("V6 Execução real: não executada"), after);
+        assertTrue(after.contains("V6 Execução real: nenhum teste autorizado"), after);
         assertFalse(after.contains("V4 Código Python: código ainda não gerado"), after);
         // o modelo mudou depois da geração → código desatualizado com a correção segura "gerar de novo"
         Edt.run(() -> studio.service().renameSession(c.a().id(), c.a().sessions().get(1).id(), "Consulta de registros"));

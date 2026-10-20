@@ -48,7 +48,7 @@ public final class AutomationQualityGate {
     /** Entradas da avaliação (tudo do estado atual; {@code checks} vazio = V4/V5 não rodaram nesta avaliação). */
     public record Inputs(Automation automation, ValidationReport staticReport, Optional<DocumentDraft> draft, FunctionalSpec spec, FrameworkCapabilityCatalog catalog,
                          Path outputDir, Optional<CodegenConfig> declaredTabular, Optional<PythonChecks.Environment> python, boolean pythonPending,
-                         List<PythonChecks.Check> checks, String prompt, Instant now, List<String> publicOrigins, Optional<TrialRecord> trial) {
+                         List<PythonChecks.Check> checks, String prompt, Instant now, List<String> publicOrigins, Optional<SupervisedRunRecord> supervisedRun) {
         public Inputs(Automation automation, ValidationReport staticReport, Optional<DocumentDraft> draft, FunctionalSpec spec, FrameworkCapabilityCatalog catalog,
                       Path outputDir, Optional<CodegenConfig> declaredTabular, Optional<PythonChecks.Environment> python, boolean pythonPending,
                       List<PythonChecks.Check> checks, String prompt, Instant now, List<String> publicOrigins) {
@@ -137,18 +137,18 @@ public final class AutomationQualityGate {
             layers.put(Layer.V5_TESTS, checksLayer(Layer.V5_TESTS, in.checks(), in.python().get(), issues));
         }
         // V6 — só o teste autorizado da REVISÃO ATUAL do código comprova a execução
-        layers.put(Layer.V6_EXECUTION, execution(in.trial(), code, a));
+        layers.put(Layer.V6_EXECUTION, execution(in.supervisedRun(), code, a));
         QualityReport r = new QualityReport(a.id().value().toString(), a.revision(), projection.revision(), gate.record().documentRevision(),
                 gate.record().specRevision(), code.manifestHash(), in.now(), layers, issues, code.current() ? in.checks() : List.of(), in.prompt(),
                 "nekkora-rpa " + in.catalog().version() + " " + in.catalog().fingerprint());
         return new Assessment(r, gate, plan, code);
     }
 
-    static QualityReport.LayerResult execution(Optional<TrialRecord> trial, CodeState code, Automation a) {
-        if (trial.isEmpty()) {
+    static QualityReport.LayerResult execution(Optional<SupervisedRunRecord> run, CodeState code, Automation a) {
+        if (run.isEmpty()) {
             return new QualityReport.LayerResult(Layer.V6_EXECUTION, QualityReport.State.NOT_CHECKED, "nenhum teste autorizado desta automação");
         }
-        TrialRecord t = trial.get();
+        SupervisedRunRecord t = run.get();
         if (!code.current() || !t.codeRevision().equals(code.manifestHash()) || t.automationRevision() != a.revision()) {
             return new QualityReport.LayerResult(Layer.V6_EXECUTION, QualityReport.State.NOT_CHECKED,
                     "o último teste autorizado é de outra revisão do código — execute de novo");

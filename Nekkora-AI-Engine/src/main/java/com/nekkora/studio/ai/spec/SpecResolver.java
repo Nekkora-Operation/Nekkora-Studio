@@ -138,6 +138,21 @@ public final class SpecResolver {
                         columnQuestion(ctx, st, out), null, null));
             }
         }
+        // coluna DERIVADA do rótulo da linha: revisão NÃO bloqueante (manter, usar como alternativa de outra coluna, ou fora)
+        for (Map.Entry<StepId, Resolved<String>> e : out.entrySet()) {
+            if (e.getValue().provenance() != Provenance.DERIVED_LABEL) continue;
+            ProjectContext.Step st = ctx.step(e.getKey()).orElseThrow();
+            AssistanceRequest base = columnQuestion(ctx, st, out);
+            List<AssistanceRequest.Option> opts = new ArrayList<>();
+            opts.add(AssistanceRequest.Option.answer(e.getValue().value(), "Manter a coluna “" + e.getValue().value().substring(FunctionalSpec.COLUMN.length()) + "”",
+                    "o rótulo da linha nomeia a coluna"));
+            opts.addAll(base.options());
+            issues.add(new QualityIssue("SPEC_OUTPUT_COLUMN_REVIEW", Layer.V1_PDD, QualityIssue.Kind.WARNING, st.stepId(), st.blockId(), place(st),
+                    "Coluna derivada do rótulo da linha: “" + e.getValue().value().substring(FunctionalSpec.COLUMN.length()) + "”.",
+                    "Confirme a coluna, ou declare esta leitura como fonte alternativa de outra coluna (dado ausente na página).",
+                    new AssistanceRequest(base.question(), "Colunas derivadas valem até você decidir; a decisão fica na especificação funcional e no PDD.", opts,
+                            FunctionalSpec.Field.OUTPUT_COLUMN, base.destinationLabel()), null, null));
+        }
         for (ProjectContext.Step s : missing) issues.add(new QualityIssue("SPEC_OUTPUT_COLUMN_UNKNOWN", Layer.V1_PDD, QualityIssue.Kind.HELP_REQUIRED, s.stepId(),
                 s.blockId(), place(s), "A leitura não tem rótulo de linha que nomeie a coluna da planilha.",
                 "Informe o cabeçalho, use-a como fonte alternativa de outra coluna ou deixe-a fora da planilha.", columnQuestion(ctx, s, out), null, null));

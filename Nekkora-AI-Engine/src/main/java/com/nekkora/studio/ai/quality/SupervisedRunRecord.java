@@ -13,14 +13,14 @@ import java.util.Objects;
  * fonte de V6 = executado: o teste precisa ser da revisão atual, ter terminado {@code COMPLETED} com a saída
  * {@code COMMITTED} e a conferência ok.
  */
-public record TrialRecord(String automationId, long automationRevision, String codeRevision, String at, String actor, String status, int exitCode,
+public record SupervisedRunRecord(String automationId, long automationRevision, String codeRevision, String at, String actor, String status, int exitCode,
                           Map<String, Integer> counts, String outputStatus, int outputRows, String outputDetail, boolean verified, String verifyCode,
                           int verifiedRows, List<String> headers, String spreadsheetSha256, long millis, String visibility) {
 
     public static final String SCHEMA = "nekkora-studio/authorized-trial";
     public static final String VERSION = "1.0.0";
 
-    public TrialRecord {
+    public SupervisedRunRecord {
         Objects.requireNonNull(automationId);
         counts = Map.copyOf(counts);
         headers = List.copyOf(headers);
@@ -64,7 +64,7 @@ public record TrialRecord(String automationId, long automationRevision, String c
     }
 
     @SuppressWarnings("unchecked")
-    public static TrialRecord parse(String json) {
+    public static SupervisedRunRecord parse(String json) {
         Map<String, Object> m = Json.parseObject(json);
         if (!SCHEMA.equals(m.get("schema")) || !VERSION.equals(m.get("version"))) throw new IllegalArgumentException("TRIAL_VERSION");
         Map<String, Integer> counts = new LinkedHashMap<>();
@@ -73,7 +73,7 @@ public record TrialRecord(String automationId, long automationRevision, String c
         Map<String, Object> v = (Map<String, Object>) m.get("verification");
         List<String> headers = new java.util.ArrayList<>();
         if (v.get("headers") instanceof List<?> h) h.forEach(x -> headers.add(String.valueOf(x)));
-        return new TrialRecord(String.valueOf(m.get("automationId")), ((Number) m.get("automationRevision")).longValue(), String.valueOf(m.get("codeRevision")),
+        return new SupervisedRunRecord(String.valueOf(m.get("automationId")), ((Number) m.get("automationRevision")).longValue(), String.valueOf(m.get("codeRevision")),
                 String.valueOf(m.get("at")), String.valueOf(m.get("actor")), String.valueOf(m.get("status")), ((Number) m.get("exitCode")).intValue(), counts,
                 String.valueOf(o.get("status")), ((Number) o.get("rows")).intValue(), String.valueOf(o.get("detail")), Boolean.TRUE.equals(v.get("ok")),
                 String.valueOf(v.get("code")), ((Number) v.get("rows")).intValue(), headers, String.valueOf(v.get("sha256")), ((Number) m.get("millis")).longValue(),

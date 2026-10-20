@@ -30,7 +30,7 @@ import org.junit.jupiter.api.io.TempDir;
  * subprocesso isolado, acompanhado pelos eventos, e a planilha é conferida REABRINDO o arquivo; a proveniência sai
  * separada; código adulterado não roda; cancelar encerra a árvore e nada é gravado.
  */
-class AuthorizedTrialTest {
+class SupervisedRunTest {
     @TempDir
     Path tmp;
 
@@ -68,19 +68,19 @@ class AuthorizedTrialTest {
         Path sheet = tmp.resolve("saida").resolve("fichas.xlsx");
         Files.createDirectories(sheet.getParent());
         Process lab = lab();
-        List<AuthorizedTrial.Progress> seen = new ArrayList<>();
+        List<SupervisedRun.Progress> seen = new ArrayList<>();
         try {
-            AuthorizedTrial.Outcome r = AuthorizedTrial.run(s.env(), new AuthorizedTrial.Request(s.project(), in, sheet, tmp.resolve("exec"), false,
+            SupervisedRun.Outcome r = SupervisedRun.run(s.env(), new SupervisedRun.Request(s.project(), in, sheet, tmp.resolve("exec"), false,
                     Duration.ofMinutes(5)), seen::add, () -> false);
-            assertEquals(AuthorizedTrial.Status.COMPLETED, r.status(), r.toString());
+            assertEquals(SupervisedRun.Status.COMPLETED, r.status(), r.toString());
             assertTrue(r.proven(), r.toString());
             assertEquals("COMMITTED", r.outputStatus());
             assertEquals(3, r.verification().rows());
             assertEquals(List.of("URL", "Nome completo", "Nascimento", "Morte", "Nacionalidade", "Ocupação"), r.verification().headers());
             assertEquals(Map.of("SUCCEEDED", 3), r.counts());
             assertTrue(seen.stream().anyMatch(p -> p.succeeded() == 3), seen.toString());
-            assertEquals(AuthorizedTrial.verifyGenerated(s.project()), r.codeRevision());
-            String prov = TrialProvenance.build(s.project(), tmp.resolve("exec"), sheet, s.cfg());
+            assertEquals(SupervisedRun.verifyGenerated(s.project()), r.codeRevision());
+            String prov = RunProvenance.build(s.project(), tmp.resolve("exec"), sheet, s.cfg());
             Map<String, Object> doc = Json.parseObject(prov);
             List<Object> txs = (List<Object>) doc.get("transactions");
             assertEquals(3, txs.size());
@@ -118,9 +118,9 @@ class AuthorizedTrialTest {
         Setup s = setup();
         Path pages = s.project().resolve("paginas.py");
         Files.writeString(pages, Files.readString(pages) + "\n# editado à mão\n");
-        AuthorizedTrial.Refused e = assertThrows(AuthorizedTrial.Refused.class, () -> AuthorizedTrial.verifyGenerated(s.project()));
+        SupervisedRun.Refused e = assertThrows(SupervisedRun.Refused.class, () -> SupervisedRun.verifyGenerated(s.project()));
         assertEquals("CODE_CHANGED_SINCE_GENERATION", e.code());
-        assertThrows(AuthorizedTrial.Refused.class, () -> AuthorizedTrial.run(s.env(), new AuthorizedTrial.Request(s.project(), pages, tmp.resolve("x.xlsx"),
+        assertThrows(SupervisedRun.Refused.class, () -> SupervisedRun.run(s.env(), new SupervisedRun.Request(s.project(), pages, tmp.resolve("x.xlsx"),
                 tmp.resolve("exec"), false, Duration.ofMinutes(1)), p -> { }, () -> false));
     }
 
@@ -134,11 +134,11 @@ class AuthorizedTrialTest {
         Process lab = lab();
         AtomicBoolean cancel = new AtomicBoolean();
         try {
-            AuthorizedTrial.Outcome r = AuthorizedTrial.run(s.env(), new AuthorizedTrial.Request(s.project(), in, sheet, tmp.resolve("exec-c"), false,
+            SupervisedRun.Outcome r = SupervisedRun.run(s.env(), new SupervisedRun.Request(s.project(), in, sheet, tmp.resolve("exec-c"), false,
                     Duration.ofMinutes(5)), p -> {
                         if (p.started() >= 1) cancel.set(true);
                     }, cancel::get);
-            assertEquals(AuthorizedTrial.Status.CANCELLED, r.status(), r.toString());
+            assertEquals(SupervisedRun.Status.CANCELLED, r.status(), r.toString());
             assertFalse(r.proven());
             assertFalse(Files.exists(sheet), "nada parcial");
         } finally {
@@ -150,6 +150,6 @@ class AuthorizedTrialTest {
     @Test
     @DisplayName("o subprocesso não herda chaves de API nem variáveis de segredo")
     void ambienteMinimo() {
-        assertFalse(AuthorizedTrial.ENV_KEEP.stream().anyMatch(k -> k.contains("KEY") || k.contains("SECRET") || k.contains("TOKEN") || k.contains("ANTHROPIC")));
+        assertFalse(SupervisedRun.ENV_KEEP.stream().anyMatch(k -> k.contains("KEY") || k.contains("SECRET") || k.contains("TOKEN") || k.contains("ANTHROPIC")));
     }
 }

@@ -121,6 +121,8 @@ public final class PddPresenter implements PddPanel.Actions {
     private final DecisionActor actor;
     private final Clock clock;
     private final PddStore store;
+    /** Diretório de dados do Studio (a especificação funcional fica em {@code desenvolvimento/}); null nos testes em memória. */
+    private final Path dataDir;
     private final PdfRenderer.Fonts fonts;
     private final PddPanel panel = new PddPanel(this);
     private final java.util.function.Function<PddPanel, Host> hosts;
@@ -179,6 +181,7 @@ public final class PddPresenter implements PddPanel.Actions {
         this.actor = actor;
         this.clock = clock;
         this.hosts = hosts;
+        this.dataDir = dataDir;
         Path dir = dataDir;
         if (dir == null) {
             try {
@@ -951,7 +954,7 @@ public final class PddPresenter implements PddPanel.Actions {
         Path dir = host.chooseFolder().orElse(null);
         if (dir == null) return;
         try {
-            PddExporter.Exported e = PddExporter.export(draft, now, store, dir, fonts, clock, null);
+            PddExporter.Exported e = PddExporter.export(draft, now, store, dir, fonts, clock, null, appendix());
             lastExport = dir;
             say(Severity.SUCCESS, "PDF exportado", e.pdf().getFileName() + " · " + e.pages() + " página(s). Versões anteriores ficam como estão.");
         } catch (PddExporter.ExportException e) {
@@ -1096,7 +1099,8 @@ public final class PddPresenter implements PddPanel.Actions {
                     shown = draft;
                 }
             }
-            byte[] pdf = PdfRenderer.render(shown, images, fonts, new PdfRenderer.Options("prévia", LocalDate.now(clock.withZone(ZoneOffset.UTC)), true));
+            byte[] pdf = PdfRenderer.render(shown, images, fonts, new PdfRenderer.Options("prévia", LocalDate.now(clock.withZone(ZoneOffset.UTC)), true,
+                    appendix()));
             List<BufferedImage> pages = new ArrayList<>();
             try (PDDocument doc = Loader.loadPDF(pdf)) {
                 PDFRenderer r = new PDFRenderer(doc);
@@ -1140,6 +1144,21 @@ public final class PddPresenter implements PddPanel.Actions {
         bannerTitle = title;
         banner = text;
         if (recorderStatus != null) recorderStatus.accept(title + (text == null || text.isEmpty() ? "" : ": " + text), capturing != null);
+    }
+
+    /**
+     * NEKKORA-E2E-002: apêndice "Dados do processo" da especificação funcional desta automação (lista → planilha: colunas,
+     * fontes, regras). Sem especificação de lista, nenhum apêndice.
+     */
+    private List<String> appendix() {
+        if (dataDir == null) return List.of();
+        try {
+            Automation a = automation();
+            com.nekkora.studio.ai.spec.FunctionalSpec spec = new com.nekkora.studio.ai.store.DevelopmentStore(dataDir).spec(a.id());
+            return com.nekkora.studio.ai.spec.DataFlowDocument.lines(a, Optional.ofNullable(draft), spec);
+        } catch (IOException | RuntimeException e) {
+            return List.of();
+        }
     }
 
     private Automation automation() {
