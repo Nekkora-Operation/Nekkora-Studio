@@ -64,25 +64,37 @@ public final class GenerationOrchestrator {
         void phase(Phase p);
     }
 
+    /**
+     * Resultado. {@code files} = projeto gerado (ainda não gravado: {@link #write} grava, fora da thread de interface);
+     * {@code written} = o que a gravação fez.
+     */
     public record Run(Stage reached, Phase stoppedAt, PddGate.Result gate, DevelopmentPlan plan, List<PythonGenerator.Blocker> blockers,
-                      OutputWriter.Report written, Path outputDir, String configJson, List<QualityIssue> issues) {
+                      Map<String, String> files, OutputWriter.Report written, Path outputDir, String configJson, List<QualityIssue> issues) {
         public boolean generated() {
             return written != null;
         }
+
+        public boolean readyToWrite() {
+            return files != null && !files.isEmpty() && written == null;
+        }
+
+        Run withWritten(OutputWriter.Report r) {
+            return new Run(Stage.CODE_GENERATED, null, gate, plan, blockers, files, r, outputDir, configJson, issues);
+        }
     }
 
-    public static Run develop(Automation a, Optional<DocumentDraft> draft, FunctionalSpec spec, FrameworkCapabilityCatalog cat, Optional<CodegenConfig> declaredTabular,
-                              Path outputDir, DevelopmentStore store, Instant now, Progress progress, BooleanSupplier cancelled) throws IOException {
+    /** Fases puras (sem disco): gate, plano, validação e geração. Chamar na thread dona do modelo. */
+    public static Run prepare(Automation a, Optional<DocumentDraft> draft, FunctionalSpec spec, FrameworkCapabilityCatalog cat,
+                              Optional<CodegenConfig> declaredTabular, Path outputDir, Instant now, Progress progress, BooleanSupplier cancelled) {
         progress.phase(Phase.ANALYZING);
         ProjectContext ctx = ProjectContext.of(a, draft);
         progress.phase(Phase.PDD);
         PddGate.Result gate = PddGate.evaluate(ctx, draft, spec, ProcessProjection.of(a), now);
-        store.saveGate(gate.record());
-        if (!gate.ready()) return new Run(Stage.PROJECT_ANALYZED, Phase.PDD, gate, null, List.of(), null, outputDir, null, gate.issues());
+        if (!gate.ready()) return new Run(Stage.PROJECT_ANALYZED, Phase.PDD, gate, null, List.of(), null, null, outputDir, null, gate.issues());
         if (cancelled.getAsBoolean()) return cancelledRun(Stage.PDD_READY, Phase.PDD, gate, null, outputDir);
         progress.phase(Phase.PLAN);
         DevelopmentPlan plan = DevelopmentPlanner.plan(a, ctx, gate, cat, declaredTabular);
-        if (!plan.ready()) return new Run(Stage.PDD_READY, Phase.PLAN, gate, plan, List.of(), null, outputDir, null, plan.issues());
+        if (!plan.ready()) return new Run(Stage.PDD_READY, Phase.PLAN, gate, plan, List.of(), null, null, outputDir, null, plan.issues());
         if (cancelled.getAsBoolean()) return cancelledRun(Stage.PLAN_VALIDATED, Phase.PLAN, gate, plan, outputDir);
         progress.phase(Phase.VALIDATING);
         var report = new AutomationValidator(RuleSet.V1_1).validate(a);
@@ -102,16 +114,30 @@ public final class GenerationOrchestrator {
                 issues.add(QualityIssue.of("GEN_" + b.code(), Layer.V3_PLAN, QualityIssue.Kind.BLOCKER, b.step(), "Gerador oficial",
                         "O pré-voo do gerador recusou (" + b.code() + "). Nenhum arquivo foi gravado.", "Veja a etapa e valide a automação."));
             }
-            return new Run(Stage.PLAN_VALIDATED, Phase.GENERATING, gate, plan, result.blockers(), null, outputDir, configJson, issues);
+            return new Run(Stage.PLAN_VALIDATED, Phase.GENERATING, gate, plan, result.blockers(), null, null, outputDir, configJson, issues);
         }
         if (cancelled.getAsBoolean()) return cancelledRun(Stage.PLAN_VALIDATED, Phase.GENERATING, gate, plan, outputDir);
-        if (configJson != null) store.saveConfig(a.id(), configJson);
-        OutputWriter.Report written = OutputWriter.write(outputDir, result.files());
-        return new Run(Stage.CODE_GENERATED, null, gate, plan, List.of(), written, outputDir, configJson, plan.issues());
+        return new Run(Stage.PLAN_VALIDATED, null, gate, plan, List.of(), result.files(), null, outputDir, configJson, plan.issues());
+    }
+
+    /** Grava o projeto preparado (proteção de edição manual) e os registros de auditoria. Fora da thread de interface. */
+    public static Run write(Run r, DevelopmentStore store) throws IOException {
+        if (!r.readyToWrite()) return r;
+        store.saveGate(r.gate().record());
+        if (r.configJson() != null) store.saveConfig(java.util.UUID.fromString(r.gate().record().automationId()), r.configJson());
+        return r.withWritten(OutputWriter.write(r.outputDir(), r.files()));
+    }
+
+    /** As duas partes em sequência (testes e uso sem interface). */
+    public static Run develop(Automation a, Optional<DocumentDraft> draft, FunctionalSpec spec, FrameworkCapabilityCatalog cat, Optional<CodegenConfig> declaredTabular,
+                              Path outputDir, DevelopmentStore store, Instant now, Progress progress, BooleanSupplier cancelled) throws IOException {
+        Run r = prepare(a, draft, spec, cat, declaredTabular, outputDir, now, progress, cancelled);
+        store.saveGate(r.gate().record());
+        return write(r, store);
     }
 
     private static Run cancelledRun(Stage reached, Phase at, PddGate.Result gate, DevelopmentPlan plan, Path outputDir) {
-        return new Run(reached, at, gate, plan, List.of(new PythonGenerator.Blocker("CANCELLED", null)), null, outputDir, null,
+        return new Run(reached, at, gate, plan, List.of(new PythonGenerator.Blocker("CANCELLED", null)), null, null, outputDir, null,
                 List.of(QualityIssue.of("CANCELLED", Layer.V3_PLAN, QualityIssue.Kind.INFO, null, "Desenvolvimento", "Cancelado: nenhum arquivo foi gravado.", "")));
     }
 

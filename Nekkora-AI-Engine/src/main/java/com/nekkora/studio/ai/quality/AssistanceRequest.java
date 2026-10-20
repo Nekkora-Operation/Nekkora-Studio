@@ -34,6 +34,15 @@ public record AssistanceRequest(String question, String why, List<Option> option
             return new Option(action, label, basis, null, action);
         }
 
+        /** Resposta curta digitada (só onde a evidência não guarda o dado — ex.: endereço inicial mascarado pela privacidade). */
+        public static Option text(String label, String basis) {
+            return new Option("TEXT", label, basis, null, "TEXT");
+        }
+
+        public boolean isText() {
+            return "TEXT".equals(studioAction);
+        }
+
         public boolean isAnswer() {
             return value != null;
         }

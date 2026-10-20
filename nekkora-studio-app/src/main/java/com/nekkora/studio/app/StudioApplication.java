@@ -79,6 +79,7 @@ public final class StudioApplication {
                 () -> ref.get().guidedDebug().closeRequest().run()));
         studio.useVisualPddHosts(panel -> new com.nekkora.studio.app.pdd.SwingPddHost(() -> frame, panel)); // STUDIO-010
         studio.useCodegenOwner(() -> frame); // STUDIO-011
+        studio.useDevelopmentHosts(panel -> new com.nekkora.studio.app.develop.SwingDevelopmentHost(() -> frame, panel)); // STUDIO-014
         frame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
         frame.addWindowListener(new WindowAdapter() {
             @Override

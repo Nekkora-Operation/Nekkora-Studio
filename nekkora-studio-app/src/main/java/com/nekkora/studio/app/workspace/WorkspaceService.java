@@ -402,6 +402,17 @@ public final class WorkspaceService implements StepIntake, EvidenceIntake {
         });
     }
 
+    /**
+     * STUDIO-014: registra as variáveis DERIVADAS por "Desenvolver automação" (entradas, saídas de Observar e credenciais
+     * por apelido) numa ÚNICA operação desfazível — nenhum valor, nenhuma constante. Devolve quantas mudanças houve.
+     */
+    public int applyDerivedVariables(AutomationId automationId, List<com.nekkora.studio.ai.plan.VariableDeriver.Planned> plan) {
+        return edit(automationId, "Registrar variáveis derivadas", true, (a, c) -> {
+            c.header = true;
+            return com.nekkora.studio.ai.plan.VariableDeriver.apply(a, plan);
+        });
+    }
+
     // ------------------------------------------------------------------ desfazer / refazer
 
     public boolean canUndo(AutomationId id) {

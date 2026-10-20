@@ -162,7 +162,7 @@ public final class DevelopmentPlanner {
         boolean blocked = issues.stream().anyMatch(i -> i.kind().blocking());
         if (!blocked && !caps.environment().isEmpty()) {
             try {
-                cfg = SingleConfig.of(processName(a), caps.environment(), ctx.origins(), ctx.startUrl(), groups, inputs, outputs, effects,
+                cfg = SingleConfig.of(processName(a), caps.environment(), ctx.origins(), gate.spec().startUrl().value(), groups, inputs, outputs, effects,
                         new SingleConfig.Pdd("PDD_READY", gate.record().processRevision(), gate.record().documentRevision(), gate.record().specRevision()));
             } catch (CodegenConfig.Invalid e) {
                 issues.add(QualityIssue.of("PLAN_CONFIG_INVALID", Layer.V3_PLAN, QualityIssue.Kind.BLOCKER, null, "Configuração derivada",

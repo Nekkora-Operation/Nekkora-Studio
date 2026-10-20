@@ -13,16 +13,20 @@ import java.nio.file.StandardCopyOption;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * STUDIO-014 — artefatos do desenvolvimento por automação, no diretório de dados do Studio (o {@code .nekkora} não
  * muda): {@code <dados>/desenvolvimento/<automationId>/} com a especificação funcional ({@code especificacao.json}), o
  * último registro do gate ({@code gate.json}), a configuração técnica DERIVADA ({@code codegen.json}, só para auditoria
  * e Opções avançadas), o último relatório de qualidade ({@code qualidade.json}) e as opções avançadas
- * ({@code opcoes.json}: pasta de saída e Python de verificação). Escrita atômica; nenhum valor, segredo ou pixel.
+ * ({@code opcoes.json}: pasta de saída e Python de verificação). Escrita atômica; nenhum valor, segredo ou pixel. Sem
+ * diretório de dados ({@link #inMemory()}), nada vai para o disco.
  */
 public final class DevelopmentStore {
     private final Path root;
+    private final Map<String, String> memory;
 
     /** Opções avançadas (vazias = padrão). */
     public record Options(Optional<Path> outputDir, Optional<Path> python) {
@@ -33,26 +37,37 @@ public final class DevelopmentStore {
 
     public DevelopmentStore(Path dataDir) {
         this.root = dataDir.resolve("desenvolvimento");
+        this.memory = null;
+    }
+
+    private DevelopmentStore() {
+        this.root = null;
+        this.memory = new ConcurrentHashMap<>();
+    }
+
+    /** Sem disco (testes e Studio sem diretório de dados). */
+    public static DevelopmentStore inMemory() {
+        return new DevelopmentStore();
     }
 
     public Path folder(AutomationId id) {
-        return root.resolve(id.value().toString());
+        return root == null ? null : root.resolve(id.value().toString());
     }
 
     public FunctionalSpec spec(AutomationId id) throws IOException {
-        Path f = folder(id).resolve("especificacao.json");
-        if (!Files.exists(f)) return FunctionalSpec.empty(id);
-        FunctionalSpec s = FunctionalSpec.parse(Files.readString(f, StandardCharsets.UTF_8));
+        Optional<String> t = read(id.value(), "especificacao.json");
+        if (t.isEmpty()) return FunctionalSpec.empty(id);
+        FunctionalSpec s = FunctionalSpec.parse(t.get());
         if (!s.automationId().equals(id)) throw new IOException("especificação de outra automação");
         return s;
     }
 
     public void saveSpec(FunctionalSpec s) throws IOException {
-        write(folder(s.automationId()).resolve("especificacao.json"), s.toJson());
+        write(s.automationId().value(), "especificacao.json", s.toJson());
     }
 
     public Optional<GateRecord> gate(AutomationId id) {
-        return read(folder(id).resolve("gate.json")).flatMap(t -> {
+        return read(id.value(), "gate.json").flatMap(t -> {
             try {
                 return Optional.of(GateRecord.parse(t));
             } catch (RuntimeException e) {
@@ -62,27 +77,31 @@ public final class DevelopmentStore {
     }
 
     public void saveGate(GateRecord r) throws IOException {
-        write(folder(java.util.UUID.fromString(r.automationId())).resolve("gate.json"), r.toJson());
+        write(UUID.fromString(r.automationId()), "gate.json", r.toJson());
     }
 
     public void saveConfig(AutomationId id, String json) throws IOException {
-        write(folder(id).resolve("codegen.json"), json);
+        saveConfig(id.value(), json);
+    }
+
+    public void saveConfig(UUID id, String json) throws IOException {
+        write(id, "codegen.json", json);
     }
 
     public Optional<String> config(AutomationId id) {
-        return read(folder(id).resolve("codegen.json"));
+        return read(id.value(), "codegen.json");
     }
 
     public void saveQuality(AutomationId id, String json) throws IOException {
-        write(folder(id).resolve("qualidade.json"), json);
+        write(id.value(), "qualidade.json", json);
     }
 
     public Optional<String> quality(AutomationId id) {
-        return read(folder(id).resolve("qualidade.json"));
+        return read(id.value(), "qualidade.json");
     }
 
     public Options options(AutomationId id) {
-        return read(folder(id).resolve("opcoes.json")).map(t -> {
+        return read(id.value(), "opcoes.json").map(t -> {
             try {
                 Map<String, Object> m = Json.parseObject(t);
                 Optional<Path> out = m.get("outputDir") instanceof String s && !s.isBlank() ? Optional.of(Path.of(s)) : Optional.empty();
@@ -100,14 +119,12 @@ public final class DevelopmentStore {
         m.put("version", "1.0.0");
         m.put("outputDir", o.outputDir().map(Path::toString).orElse(""));
         m.put("python", o.python().map(Path::toString).orElse(""));
-        write(folder(id).resolve("opcoes.json"), Json.write(m));
+        write(id.value(), "opcoes.json", Json.write(m));
     }
 
-    private Path folder(java.util.UUID id) {
-        return root.resolve(id.toString());
-    }
-
-    private static Optional<String> read(Path f) {
+    private Optional<String> read(UUID id, String name) {
+        if (memory != null) return Optional.ofNullable(memory.get(id + "/" + name));
+        Path f = root.resolve(id.toString()).resolve(name);
         try {
             return Files.exists(f) ? Optional.of(Files.readString(f, StandardCharsets.UTF_8)) : Optional.empty();
         } catch (IOException e) {
@@ -115,7 +132,12 @@ public final class DevelopmentStore {
         }
     }
 
-    static void write(Path target, String text) throws IOException {
+    private void write(UUID id, String name, String text) throws IOException {
+        if (memory != null) {
+            memory.put(id + "/" + name, text);
+            return;
+        }
+        Path target = root.resolve(id.toString()).resolve(name);
         Files.createDirectories(target.getParent());
         Path tmp = Files.createTempFile(target.getParent(), ".dev-", ".tmp");
         try {

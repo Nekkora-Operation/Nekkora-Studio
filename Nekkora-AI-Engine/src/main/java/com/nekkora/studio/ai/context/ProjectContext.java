@@ -29,7 +29,7 @@ import java.util.Optional;
  * pixels. A origem do site (esquema + host + porta) entra só onde a política de execução precisa dela.
  */
 public record ProjectContext(String automationId, long automationRevision, String processRevision, List<Step> steps, List<String> origins,
-                             String startUrl, List<String> declaredVariables, List<String> sessionNames) {
+                             String startUrl, String startTemplate, List<String> declaredVariables, List<String> sessionNames) {
 
     /** De onde vem o valor de um preenchimento — o tipo, nunca o valor. */
     public enum ValueKind { NONE, VARIABLE, CREDENTIAL, LITERAL }
@@ -75,6 +75,7 @@ public record ProjectContext(String automationId, long automationRevision, Strin
         List<Step> out = new ArrayList<>();
         List<String> origins = new ArrayList<>();
         String start = null;
+        String template = null;
         int sn = 0;
         for (LogicalSession s : a.sessions()) {
             sn++;
@@ -102,7 +103,16 @@ public record ProjectContext(String automationId, long automationRevision, Strin
                 String location = st.context().map(c -> c.location()).orElse("");
                 String origin = origin(location);
                 if (origin != null && !origins.contains(origin)) origins.add(origin);
-                if (start == null && origin != null) start = withoutQuery(location);
+                if (template == null && origin != null) template = location;
+                // endereço inicial: uma etapa Navegar com endereço literal; ou o endereço observado, se a política de privacidade o
+                // guardou inteiro (sem trechos mascarados "{…}") — o endereço gravado costuma ser só um MODELO
+                if (start == null && st.actionType() == ActionType.NAVIGATE && v.isPresent() && v.get() instanceof ValueSource.LiteralValue lit) {
+                    String u = withoutQuery(lit.text());
+                    if (!u.isEmpty()) start = u;
+                }
+                if (start == null && origin != null && !location.contains("{") && !location.contains("?") && !location.contains("#")) {
+                    start = withoutQuery(location);
+                }
                 String kind = f == null ? "" : f.targetKind();
                 String name = f == null ? "" : f.targetName();
                 String fp = Hashes.sha256(st.actionType() + "|" + kind + "|" + name + "|" + (e != null && e.sensitive()) + "|" + frame);
@@ -113,19 +123,36 @@ public record ProjectContext(String automationId, long automationRevision, Strin
         }
         List<String> declared = a.variables().stream().map(x -> x.name()).toList();
         List<String> names = p.sections().stream().map(ProcessProjection.SectionFacts::safeName).toList();
-        return new ProjectContext(a.id().value().toString(), a.revision(), p.revision(), out, origins, start == null ? "" : start, declared, names);
+        return new ProjectContext(a.id().value().toString(), a.revision(), p.revision(), out, origins, start == null ? "" : start,
+                template == null ? "" : template, declared, names);
     }
 
-    /** {@code esquema://host[:porta]} de um endereço observado, ou {@code null}. */
-    static String origin(String location) {
+    private static final java.util.regex.Pattern ORIGIN = java.util.regex.Pattern.compile("^(https?)://([A-Za-z0-9.-]+|\\[[0-9a-fA-F:.]+\\])(:[0-9]{1,5})?(?=[/?#]|$)");
+
+    /** {@code esquema://host[:porta]} de um endereço observado (inclusive um MODELO com trechos "{…}"), ou {@code null}. */
+    public static String origin(String location) {
         if (location == null || location.isBlank()) return null;
-        try {
-            URI u = URI.create(location.strip());
-            if (u.getScheme() == null || u.getHost() == null || !u.getScheme().matches("https?")) return null;
-            return u.getScheme() + "://" + u.getHost().toLowerCase(java.util.Locale.ROOT) + (u.getPort() > 0 ? ":" + u.getPort() : "");
-        } catch (IllegalArgumentException e) {
-            return null;
-        }
+        java.util.regex.Matcher m = ORIGIN.matcher(location.strip());
+        if (!m.find()) return null;
+        return m.group(1).toLowerCase(java.util.Locale.ROOT) + "://" + m.group(2).toLowerCase(java.util.Locale.ROOT) + (m.group(3) == null ? "" : m.group(3));
+    }
+
+    /**
+     * O endereço informado casa com o MODELO gravado? Mesma origem, mesmo número de trechos no caminho e os trechos
+     * conhecidos iguais (os mascarados "{…}" aceitam qualquer valor); sem consulta nem fragmento (podem carregar dados).
+     */
+    public static boolean matchesTemplate(String url, String template) {
+        if (url == null || url.isBlank() || url.contains("?") || url.contains("#") || url.length() > 300) return false;
+        String o = origin(url);
+        if (o == null || (template != null && !template.isBlank() && !o.equals(origin(template)))) return false;
+        if (template == null || template.isBlank()) return true;
+        String up = url.replaceFirst("^[^:]+://[^/?#]+", "");
+        String tp = template.replaceFirst("^[^:]+://[^/?#]+", "").replaceFirst("[?#].*$", "");
+        String[] a = up.split("/", -1);
+        String[] b = tp.split("/", -1);
+        if (a.length != b.length) return false;
+        for (int i = 0; i < a.length; i++) if (!b[i].equals("{…}") && !b[i].equals(a[i])) return false;
+        return true;
     }
 
     /** Endereço sem consulta nem fragmento (a consulta pode carregar dados). */

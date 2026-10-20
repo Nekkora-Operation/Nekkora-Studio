@@ -35,7 +35,7 @@ public final class SpecResolver {
     }
 
     public record ResolvedSpec(Map<StepId, Resolved<EffectVocabulary.Effect>> effects, Map<StepId, Resolved<String>> postconditions,
-                               Resolved<StepId> conclusion, List<QualityIssue> issues) {}
+                               Resolved<StepId> conclusion, Resolved<String> startUrl, List<QualityIssue> issues) {}
 
     public static ResolvedSpec resolve(ProjectContext ctx, FunctionalSpec spec) {
         Map<StepId, Resolved<EffectVocabulary.Effect>> effects = new LinkedHashMap<>();
@@ -63,7 +63,9 @@ public final class SpecResolver {
         }
         Resolved<StepId> conclusion = conclusion(ctx, spec);
         if (!conclusion.known()) issues.add(conclusionQuestion(ctx));
-        return new ResolvedSpec(effects, post, conclusion, issues);
+        Resolved<String> start = startUrl(ctx, spec);
+        if (!start.known() && !ctx.origins().isEmpty()) issues.add(startQuestion(ctx));
+        return new ResolvedSpec(effects, post, conclusion, start, issues);
     }
 
     /** Ações que podem mudar algo no sistema-alvo e precisam de classificação. */
@@ -98,6 +100,29 @@ public final class SpecResolver {
             }
         }
         return new Resolved<>(null, Provenance.MISSING, null);
+    }
+
+    /** Endereço inicial: o observado inteiro (ou de uma etapa Navegar) → a decisão que casa com o modelo gravado → pergunta. */
+    static Resolved<String> startUrl(ProjectContext ctx, FunctionalSpec spec) {
+        if (!ctx.startUrl().isEmpty()) return new Resolved<>(ctx.startUrl(), Provenance.DERIVED_LABEL, null);
+        Optional<FunctionalSpec.Decision> d = spec.decision(FunctionalSpec.Field.START_URL, null);
+        if (d.isPresent() && ProjectContext.matchesTemplate(d.get().value(), ctx.startTemplate())) {
+            return new Resolved<>(d.get().value(), Provenance.DECIDED, d.get().actor());
+        }
+        return new Resolved<>(null, Provenance.MISSING, null);
+    }
+
+    private static QualityIssue startQuestion(ProjectContext ctx) {
+        AssistanceRequest help = new AssistanceRequest("Qual endereço o processo abre no início?",
+                "Por privacidade, a gravação guarda o endereço só como modelo (" + ctx.startTemplate() + "). O Studio não adivinha os trechos mascarados; "
+                        + "a resposta é conferida contra esse modelo (mesma origem e mesmos trechos conhecidos, sem consulta).",
+                List.of(AssistanceRequest.Option.text("Endereço inicial", "o mesmo que você abre no navegador para começar"),
+                        AssistanceRequest.Option.action("GO_TO_STEP", "Ir para a primeira etapa", "conferir onde a gravação começou")),
+                FunctionalSpec.Field.START_URL, "Especificação funcional · endereço inicial");
+        ProjectContext.Step first = ctx.steps().isEmpty() ? null : ctx.steps().get(0);
+        return new QualityIssue("SPEC_START_URL_UNKNOWN", Layer.V1_PDD, QualityIssue.Kind.HELP_REQUIRED, first == null ? null : first.stepId(),
+                first == null ? null : first.blockId(), "Processo · início", "O endereço inicial não está guardado por inteiro na gravação.",
+                "Informe o endereço inicial; ele fica na especificação funcional, nunca no código como dado.", help, null, null);
     }
 
     private static ProjectContext.Step next(List<ProjectContext.Step> steps, int i) {

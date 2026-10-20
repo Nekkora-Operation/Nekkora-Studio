@@ -45,8 +45,8 @@ public final class AutomationQualityGate {
 
     /** Entradas da avaliação (tudo do estado atual; {@code checks} vazio = V4/V5 não rodaram nesta avaliação). */
     public record Inputs(Automation automation, ValidationReport staticReport, Optional<DocumentDraft> draft, FunctionalSpec spec, FrameworkCapabilityCatalog catalog,
-                         Path outputDir, Optional<CodegenConfig> declaredTabular, Optional<PythonChecks.Environment> python, List<PythonChecks.Check> checks,
-                         String prompt, Instant now) {}
+                         Path outputDir, Optional<CodegenConfig> declaredTabular, Optional<PythonChecks.Environment> python, boolean pythonPending,
+                         List<PythonChecks.Check> checks, String prompt, Instant now) {}
 
     /** Estado do código gerado na pasta de saída em relação à revisão atual. */
     public record CodeState(boolean exists, boolean current, String manifestHash, String reason) {}
@@ -106,6 +106,9 @@ public final class AutomationQualityGate {
             issues.add(stale);
             layers.put(Layer.V4_CODE, new QualityReport.LayerResult(Layer.V4_CODE, QualityReport.State.ATTENTION, "código desatualizado: não verificado"));
             layers.put(Layer.V5_TESTS, new QualityReport.LayerResult(Layer.V5_TESTS, QualityReport.State.NOT_CHECKED, "código desatualizado"));
+        } else if (in.pythonPending()) {
+            layers.put(Layer.V4_CODE, new QualityReport.LayerResult(Layer.V4_CODE, QualityReport.State.RUNNING, "procurando o Python de verificação…"));
+            layers.put(Layer.V5_TESTS, new QualityReport.LayerResult(Layer.V5_TESTS, QualityReport.State.RUNNING, "aguardando a verificação do código"));
         } else if (in.python().isEmpty()) {
             issues.add(QualityIssue.of("PYTHON_ENV_NOT_CONFIGURED", Layer.V4_CODE, QualityIssue.Kind.INFO, null, "Ambiente de verificação",
                     "Não há interpretador Python com nekkora_rpa, ruff e mypy configurado: as verificações do código não rodaram.",

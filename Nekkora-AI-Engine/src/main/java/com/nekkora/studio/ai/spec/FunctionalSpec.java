@@ -29,7 +29,7 @@ public record FunctionalSpec(AutomationId automationId, List<Decision> decisions
     public static final String SCHEMA = "nekkora-studio/functional-spec";
     public static final String VERSION = "1.0.0";
 
-    public enum Field { EFFECT, POSTCONDITION, CONCLUSION }
+    public enum Field { EFFECT, POSTCONDITION, CONCLUSION, START_URL }
 
     /** Quem decidiu. Nunca "confirmado pelo cliente": é o vocabulário de ator do Studio. */
     public enum Actor { DEVELOPER, TEST_AGENT }
@@ -52,6 +52,8 @@ public record FunctionalSpec(AutomationId automationId, List<Decision> decisions
                 case EFFECT -> require(step != null && fingerprint != null && EFFECTS.contains(value));
                 case POSTCONDITION -> require(step != null && fingerprint != null && POSTCONDITIONS.contains(value));
                 case CONCLUSION -> require(step == null && (NO_CONCLUSION.equals(value) || isUuid(value)));
+                // endereço inicial: o MESMO que a pessoa abriria no navegador, sem consulta nem fragmento (podem carregar dados)
+                case START_URL -> require(step == null && value.matches("https?://[A-Za-z0-9.-]+(:[0-9]{1,5})?(/[^?#\\s]*)?") && value.length() <= 300);
             }
         }
     }

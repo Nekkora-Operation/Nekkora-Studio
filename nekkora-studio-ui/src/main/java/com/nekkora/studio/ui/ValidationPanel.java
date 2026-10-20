@@ -56,6 +56,14 @@ public final class ValidationPanel extends NekkoraPanel {
         void revalidate();
 
         void close();
+
+        /** STUDIO-014: selecionar o lugar de um apontamento das outras camadas (V1–V6). */
+        default void goTo(com.nekkora.studio.ai.quality.QualityIssue issue) {
+        }
+
+        /** STUDIO-014: responder/corrigir/abrir o PDD para um apontamento das outras camadas (abre "Desenvolver automação"). */
+        default void resolve(com.nekkora.studio.ai.quality.QualityIssue issue) {
+        }
     }
 
     /**
@@ -64,12 +72,27 @@ public final class ValidationPanel extends NekkoraPanel {
      *
      * @param editable a etapa existe e pode ser editada agora (não está recebendo uma gravação)
      */
-    public record Item(Finding finding, String place, boolean editable) {}
+    public record Item(Finding finding, com.nekkora.studio.ai.quality.QualityIssue issue, String place, boolean editable) {
+        /** Apontamento da validação estrutural (V0). */
+        public Item(Finding finding, String place, boolean editable) {
+            this(finding, null, place, editable);
+        }
+
+        /** STUDIO-014: apontamento de outra camada (V1–V6). */
+        public static Item of(com.nekkora.studio.ai.quality.QualityIssue issue) {
+            return new Item(null, issue, issue.layer().code() + " " + issue.layer().label() + " · " + issue.title(), false);
+        }
+
+        public boolean structural() {
+            return finding != null;
+        }
+    }
 
     /** Filtro por severidade. */
     public enum Filter {
         ALL("Todos os apontamentos", null), BLOCKERS("Bloqueios", Severity.BLOCKER), WARNINGS("Avisos", Severity.WARNING),
-        INFOS("Informações", Severity.INFO);
+        INFOS("Informações", Severity.INFO), STRUCTURAL("Só o modelo (V0)", null), LAYERS("Só PDD, capacidades, plano e código (V1–V6)", null),
+        HELP("Precisa de ajuda ou de revisão", null);
 
         private final String label;
         private final Severity severity;
@@ -84,7 +107,18 @@ public final class ValidationPanel extends NekkoraPanel {
         }
 
         boolean accepts(Item i) {
-            return severity == null || i.finding().severity() == severity;
+            if (this == STRUCTURAL) return i.structural();
+            if (this == LAYERS) return !i.structural();
+            if (this == HELP) return !i.structural() && (i.issue().kind() == com.nekkora.studio.ai.quality.QualityIssue.Kind.HELP_REQUIRED
+                    || i.issue().kind() == com.nekkora.studio.ai.quality.QualityIssue.Kind.PROPOSE_REVIEW
+                    || i.issue().kind() == com.nekkora.studio.ai.quality.QualityIssue.Kind.AUTO_FIX_SAFE);
+            if (severity == null) return true;
+            if (i.structural()) return i.finding().severity() == severity;
+            return switch (i.issue().kind()) {
+                case BLOCKER, SECURITY_BLOCKED, HELP_REQUIRED -> severity == Severity.BLOCKER;
+                case WARNING, PROPOSE_REVIEW, AUTO_FIX_SAFE -> severity == Severity.WARNING;
+                case INFO -> severity == Severity.INFO;
+            };
         }
     }
 
@@ -108,6 +142,11 @@ public final class ValidationPanel extends NekkoraPanel {
     private final NekkoraText guidance = new NekkoraText("", TextTone.SECONDARY);
     private final NekkoraButton goTo = NekkoraButton.secondary("Ir para etapa").withIcon(IconName.ARROW_RIGHT).withSize(ControlSize.SMALL);
     private final NekkoraButton edit = NekkoraButton.secondary("Editar etapa").withIcon(IconName.EDIT).withSize(ControlSize.SMALL);
+    /** STUDIO-014: responder, corrigir ou abrir o PDD (na janela "Desenvolver automação"). */
+    private final NekkoraButton resolve = NekkoraButton.primary("Resolver…").withSize(ControlSize.SMALL);
+    /** STUDIO-014: estado de cada camada (V0–V6) numa linha; o texto completo vai na dica e na descrição acessível. */
+    private final NekkoraText layers = new NekkoraText("", TextTone.SECONDARY);
+    private List<Item> qualityItems = List.of();
     private final NekkoraIconButton again = new NekkoraIconButton(IconName.REFRESH, "Validar novamente (Ctrl+Shift+V)");
     private String subject = "";
     private List<Item> items = List.of();
@@ -138,6 +177,9 @@ public final class ValidationPanel extends NekkoraPanel {
         head.add(stale);
         counts.getAccessibleContext().setAccessibleName("Totais da validação");
         head.add(counts);
+        layers.getAccessibleContext().setAccessibleName("Camadas da validação");
+        layers.setVisible(false);
+        head.add(layers);
         // filtro em linha própria: na coluna central estreita ele nunca é empurrado para fora
         NekkoraStack filterRow = NekkoraStack.horizontal(Spacing.SPACE_4).align(NekkoraStack.Align.CENTER);
         filterRow.add(new NekkoraText("Mostrar:"));
@@ -149,15 +191,23 @@ public final class ValidationPanel extends NekkoraPanel {
         head.add(filterRow);
         add(head, BorderLayout.NORTH);
 
-        list.withLabel(i -> i.finding().severity().symbol() + "  " + i.finding().severity().label() + " · " + i.place())
-                .withSecondary(i -> i.finding().explanation(), true)
-                .withIcon(i -> switch (i.finding().severity()) {
+        list.withLabel(i -> i.structural() ? i.finding().severity().symbol() + "  " + i.finding().severity().label() + " · " + i.place()
+                        : i.issue().kind().label() + " · " + i.place())
+                .withSecondary(i -> i.structural() ? i.finding().explanation() : i.issue().detail(), true)
+                .withIcon(i -> i.structural() ? switch (i.finding().severity()) {
                     case BLOCKER -> IconName.X_CIRCLE;
                     case WARNING -> IconName.ALERT;
                     case INFO -> IconName.INFO;
+                } : switch (i.issue().kind()) {
+                    case BLOCKER, SECURITY_BLOCKED -> IconName.X_CIRCLE;
+                    case HELP_REQUIRED, WARNING, PROPOSE_REVIEW, AUTO_FIX_SAFE -> IconName.ALERT;
+                    case INFO -> IconName.INFO;
                 });
         list.getAccessibleContext().setAccessibleName("Apontamentos da validação");
-        list.onItemActivated(i -> actions.goTo(i.finding()));
+        list.onItemActivated(i -> {
+            if (i.structural()) actions.goTo(i.finding());
+            else actions.goTo(i.issue());
+        });
         list.addListSelectionListener(e -> {
             if (!e.getValueIsAdjusting()) refreshSelection();
         });
@@ -170,12 +220,20 @@ public final class ValidationPanel extends NekkoraPanel {
         guidance.getAccessibleContext().setAccessibleName("Como corrigir");
         foot.add(guidance);
         NekkoraStack buttons = NekkoraStack.horizontal(Spacing.SPACE_4);
-        goTo.onClick(e -> selected().ifPresent(i -> actions.goTo(i.finding())));
-        edit.onClick(e -> selected().ifPresent(i -> actions.edit(i.finding())));
+        goTo.onClick(e -> selected().ifPresent(i -> {
+            if (i.structural()) actions.goTo(i.finding());
+            else actions.goTo(i.issue());
+        }));
+        edit.onClick(e -> selected().ifPresent(i -> {
+            if (i.structural()) actions.edit(i.finding());
+        }));
+        resolve.onClick(e -> selected().filter(i -> !i.structural()).ifPresent(i -> actions.resolve(i.issue())));
+        resolve.getAccessibleContext().setAccessibleDescription("Abre Desenvolver automação na pendência: responder, aplicar a correção ou abrir o PDD.");
         goTo.getAccessibleContext().setAccessibleDescription("Seleciona no Studio o lugar do apontamento.");
         edit.getAccessibleContext().setAccessibleDescription("Abre o editor da etapa para corrigir o apontamento.");
         buttons.add(goTo);
         buttons.add(edit);
+        buttons.add(resolve);
         buttons.addGlue();
         foot.add(buttons);
         add(foot, BorderLayout.SOUTH);
@@ -206,7 +264,7 @@ public final class ValidationPanel extends NekkoraPanel {
      * @param current        o relatório corresponde ao estado atual (senão: desatualizado)
      */
     public void show(String automationName, ValidationReport report, List<Item> items, boolean current) {
-        Finding keep = selected().map(Item::finding).orElse(null);
+        Finding keep = selected().filter(Item::structural).map(Item::finding).orElse(null);
         this.report = Objects.requireNonNull(report);
         this.items = List.copyOf(items);
         this.subject = automationName == null ? "" : automationName;
@@ -227,7 +285,7 @@ public final class ValidationPanel extends NekkoraPanel {
         applyFilter();
         if (keep != null) {
             for (int i = 0; i < list.getModel().getSize(); i++) {
-                if (list.getModel().getElementAt(i).finding().id().equals(keep.id())) {
+                if (list.getModel().getElementAt(i).structural() && list.getModel().getElementAt(i).finding().id().equals(keep.id())) {
                     list.setSelectedIndex(i);
                     break;
                 }
@@ -272,9 +330,45 @@ public final class ValidationPanel extends NekkoraPanel {
         return current;
     }
 
+    /**
+     * STUDIO-014: estado de cada camada e os apontamentos de V1–V6 (somados à lista da validação estrutural).
+     *
+     * @param note de onde vem o relatório (ex.: "revisão atual" ou "relatório anterior — valide de novo")
+     */
+    public void showLayers(String note, List<com.nekkora.studio.ai.quality.QualityReport.LayerResult> results,
+                           List<com.nekkora.studio.ai.quality.QualityIssue> issues) {
+        Item keep = selected().orElse(null);
+        List<String> shortLine = new java.util.ArrayList<>();
+        List<String> full = new java.util.ArrayList<>();
+        for (com.nekkora.studio.ai.quality.QualityReport.LayerResult r : results) {
+            shortLine.add(r.state().symbol() + " " + r.layer().code() + " " + r.layer().label());
+            full.add(r.line());
+        }
+        layers.setText("Camadas" + (note == null || note.isBlank() ? "" : " (" + note + ")") + ": " + String.join(" · ", shortLine));
+        layers.setToolTipText("<html>" + String.join("<br>", full.stream().map(ValidationPanel::html).toList()) + "</html>");
+        layers.getAccessibleContext().setAccessibleDescription(String.join("; ", full));
+        layers.setVisible(!results.isEmpty());
+        qualityItems = issues.stream().map(Item::of).toList();
+        applyFilter();
+        if (keep != null && !keep.structural()) {
+            for (int i = 0; i < list.getModel().getSize(); i++) {
+                Item it = list.getModel().getElementAt(i);
+                if (!it.structural() && it.issue().id().equals(keep.issue().id())) list.setSelectedIndex(i);
+            }
+        }
+        revalidate();
+        repaint();
+    }
+
+    private static String html(String s) {
+        return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
+    }
+
     private void applyFilter() {
         Filter f = filter.getSelectedValue() == null ? Filter.ALL : filter.getSelectedValue();
-        List<Item> shown = items.stream().filter(f::accepts).toList();
+        List<Item> merged = new java.util.ArrayList<>(items);
+        merged.addAll(qualityItems);
+        List<Item> shown = merged.stream().filter(f::accepts).toList();
         list.setItems(shown);
         empty.setVisible(shown.isEmpty());
         if (!shown.isEmpty() && list.getSelectedIndex() < 0) list.setSelectedIndex(0);
@@ -287,10 +381,20 @@ public final class ValidationPanel extends NekkoraPanel {
 
     private void refreshSelection() {
         Item i = list.getSelectedValue();
-        String how = i == null ? "" : "Como corrigir: " + i.finding().guidance();
+        String how = i == null ? "" : i.structural() ? "Como corrigir: " + i.finding().guidance()
+                : i.issue().assistance().map(h -> "Pergunta: " + h.question() + " ").orElse("")
+                        + (i.issue().guidance().isEmpty() ? "" : "Como seguir: " + i.issue().guidance());
         guidance.setText(how);
         guidance.setToolTipText(how.isEmpty() ? null : how);
         guidance.getAccessibleContext().setAccessibleDescription(how);
+        if (i != null && !i.structural()) {
+            goTo.setEnabled(i.issue().step() != null);
+            goTo.setText("Ir para etapa");
+            edit.setEnabled(false);
+            resolve.setEnabled(true);
+            return;
+        }
+        resolve.setEnabled(false);
         goTo.setEnabled(i != null);
         goTo.setText(i == null || i.finding().scope() == FindingScope.STEP ? "Ir para etapa" : switch (i.finding().scope()) {
             case SESSION -> "Ir para sessão";
@@ -336,6 +440,14 @@ public final class ValidationPanel extends NekkoraPanel {
 
     public NekkoraIconButton revalidateButton() {
         return again;
+    }
+
+    public NekkoraButton resolveButton() {
+        return resolve;
+    }
+
+    public NekkoraText layersText() {
+        return layers;
     }
 
     public Optional<ValidationReport> report() {

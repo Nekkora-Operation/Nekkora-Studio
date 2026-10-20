@@ -69,8 +69,77 @@ public final class Studio {
         view.actions().onVisualPdd(() -> visualPdd().open());
         // pedido da usuária: "Capturar tela" no resumo do Recorder → imagem do bloco das etapas recém-gravadas
         recorderPresenter.usePddCapture((r, status) -> visualPdd().captureAfterRecording(r, status));
-        // STUDIO-011: geração do código Python (janela dona configurada pela aplicação)
+        // STUDIO-011: geração do código Python (janela dona configurada pela aplicação) — desde a STUDIO-014, ferramenta avançada
         view.actions().onPythonCodegen(() -> new com.nekkora.studio.app.codegen.CodegenPresenter(service, codegenOwner).open());
+        // STUDIO-014: Desenvolver automação (um clique) e as camadas V1–V6 depois de Validar automação
+        view.actions().onDevelop(() -> development().open());
+        controller.onValidated(() -> development().validateLayers());
+        view.onQualityResolve(i -> development().resolveFromValidation(i));
+        state.addListener(e -> {
+            // projeto aberto/ativado: o último relatório de qualidade volta com a nota de atualidade (outra revisão nunca vale como atual)
+            com.nekkora.studio.domain.AutomationId now = state.activeId().orElse(null);
+            if (e.has(com.nekkora.studio.app.workspace.StudioChange.ACTIVE_AUTOMATION) && !java.util.Objects.equals(now, qualityShownFor)) {
+                qualityShownFor = now;
+                development().persistedLayers().ifPresentOrElse(l -> view.showQuality(l.note(), l.layers(), l.issues()),
+                        () -> view.showQuality("", java.util.List.of(), java.util.List.of()));
+            }
+        });
+    }
+
+    private java.util.function.Function<com.nekkora.studio.ui.develop.DevelopmentPanel, com.nekkora.studio.app.develop.DevelopmentPresenter.Host> developHosts =
+            p -> com.nekkora.studio.app.develop.DevelopmentPresenter.Host.headless(null, false);
+    private com.nekkora.studio.ai.provider.AIProvider aiProvider = com.nekkora.studio.ai.provider.AIProviders.standard();
+    private com.nekkora.studio.app.develop.DevelopmentPresenter development;
+    /** Automação cujas camadas a aba Validação mostra (troca de automação → relatório persistido dela, nunca o da anterior). */
+    private com.nekkora.studio.domain.AutomationId qualityShownFor;
+
+    /** Janela real de Desenvolver automação (a aplicação configura; os testes ficam sem janela). Antes do primeiro uso. */
+    public void useDevelopmentHosts(java.util.function.Function<com.nekkora.studio.ui.develop.DevelopmentPanel,
+            com.nekkora.studio.app.develop.DevelopmentPresenter.Host> factory) {
+        this.developHosts = java.util.Objects.requireNonNull(factory);
+    }
+
+    /** Provedor de IA (padrão: Anthropic, disponível só com chave no ambiente; testes usam um mock rotulado). Antes do primeiro uso. */
+    public void useAiProvider(com.nekkora.studio.ai.provider.AIProvider provider) {
+        this.aiProvider = provider;
+    }
+
+    /** STUDIO-014: Desenvolver automação + garantia de qualidade por camadas. */
+    public com.nekkora.studio.app.develop.DevelopmentPresenter development() {
+        if (development == null) {
+            development = new com.nekkora.studio.app.develop.DevelopmentPresenter(service, new com.nekkora.studio.app.develop.DevelopmentPresenter.Studio() {
+                public void saveActive() {
+                    controller.saveActive();
+                }
+
+                public void goToStep(com.nekkora.studio.domain.StepId step) {
+                    controller.goToStep(step);
+                }
+
+                public void openPdd(String blockId) {
+                    visualPdd().openAt(blockId);
+                }
+
+                public void openDebug() {
+                    guidedDebug().open();
+                }
+
+                public void showValidation() {
+                    controller.validateActive();
+                }
+
+                public void legacyGenerator() {
+                    new com.nekkora.studio.app.codegen.CodegenPresenter(service, codegenOwner).open();
+                }
+            }, clock, environment.decisionActor(), environment.dataDir().orElse(null), aiProvider, developHosts);
+            // sem diretório de dados, o rascunho do PDD só existe na memória do PDD visual
+            development.useDraftSource(a -> visualPdd().draft().filter(d -> d.automationId().equals(a.id())));
+            development.onLayers(l -> {
+                qualityShownFor = state.activeId().orElse(null);
+                view.showQuality(l.note(), l.layers(), l.issues());
+            });
+        }
+        return development;
     }
 
     private java.util.function.Supplier<java.awt.Window> codegenOwner = () -> null;
@@ -165,6 +234,7 @@ public final class Studio {
         persistence.shutdown();
         if (guidedDebug != null) guidedDebug.dispose();
         if (visualPdd != null) visualPdd.dispose();
+        if (development != null) development.dispose();
         recorderPresenter.dispose();
         recorder.close();
         view.dispose();
