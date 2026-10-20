@@ -25,7 +25,11 @@ public enum ActionType {
     PRESS_KEY("Pressionar tecla", "Pressionar uma tecla num elemento (ex.: Enter num campo).", TargetRequirement.EXPECTED, true, false),
     NAVIGATE("Navegar", "Abrir uma página, tela ou endereço.", TargetRequirement.NONE, true, false),
     WAIT_FOR("Aguardar", "Aguardar até que uma condição seja atendida.", TargetRequirement.OPTIONAL, false, false),
-    OBSERVE("Observar", "Registrar uma observação sobre o processo.", TargetRequirement.OPTIONAL, false, false),
+    /**
+     * Ler um dado da página (com alvo) ou o endereço da página (sem alvo). NEKKORA-E2E-002: o valor, opcional, é a
+     * VARIÁVEL que o dado lido precisa igualar (conferência: ex.: o endereço do artigo esperado).
+     */
+    OBSERVE("Observar", "Ler um dado da página (ou o endereço dela); opcionalmente conferir com uma variável.", TargetRequirement.OPTIONAL, true, false),
     UNKNOWN("Não classificada", "Ação ainda não classificada.", TargetRequirement.OPTIONAL, true, true);
 
     private final String label;

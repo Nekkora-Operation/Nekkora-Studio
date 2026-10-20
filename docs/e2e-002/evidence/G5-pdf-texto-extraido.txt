@@ -1,0 +1,60 @@
+Processo documentado (PDD visual)
+Versão v001 · 20/10/2026 · Nekkora Studio
+Gerado pelo Nekkora Studio a partir das sessões e etapas mapeadas. As imagens são capturas do navegador
+sanitizadas: só rótulos de interface aparecem; campos e o restante da tela foram ocultados. Este documento descreve
+o processo mapeado e não comprova resultado de negócio.
+1. Inicialização do processo
+Sessão sem etapas mapeadas.
+2. Pesquisa do artigo
+Pesquisar o artigo pelo nome
+Imagem indisponível
+Nenhuma captura sanitizada foi associada a este bloco. Nenhuma
+imagem de outra etapa ou tela é usada no lugar.
+Ações observadas na gravação
+1. Executar a etapa indicada na tela
+2. Pressionar a tecla Enter
+3. Extração dos dados
+Ler o endereço e os dados da ficha
+Imagem indisponível
+Nenhuma captura sanitizada foi associada a este bloco. Nenhuma
+imagem de outra etapa ou tela é usada no lugar.
+Etapas declaradas no Studio
+1. Observar a tela exibida
+Etapas do processo
+Imagem indisponível
+Nenhuma captura sanitizada foi associada a este bloco. Nenhuma
+imagem de outra etapa ou tela é usada no lugar.
+Ações observadas na gravação
+1. Observar a tela exibida
+2. Observar a tela exibida
+3. Observar a tela exibida
+4. Observar a tela exibida
+5. Observar a tela exibida
+6. Observar a tela exibida
+7. Observar a tela exibida
+Página 1 de 2Nekkora Studio · PDD visual · descreve o processo mapeado; não comprova resultado de negócio.
+4. Transferência de dados (Excel)
+Sessão sem etapas mapeadas.
+5. Encerramento
+Sessão sem etapas mapeadas.
+Dados do processo
+Fluxo: uma transação por linha de uma lista de entrada (CSV ou XLSX); uma planilha Excel de saída, com
+uma linha por item.
+A planilha só é gravada se TODOS os itens derem certo (tudo ou nada); nada parcial fica com o nome do
+arquivo.
+Entrada: uma coluna por dado de entrada — termo de busca; endereco do artigo.
+Planilha de saída (aba Dados), colunas nesta ordem:
+1. URL ← endereço da página lido (sessão 3, etapa 1) (chave: sem repetição), conferido com a entrada
+2. Nome completo ← linha “Nome completo” da tabela (sessão 3, etapa 3); se não existir na página: título
+da página (sessão 3, etapa 2)
+3. Nascimento ← linha “Nascimento” da tabela (sessão 3, etapa 4)
+Nascimento: data por extenso normalizada para AAAA-MM-DD só se dia, mês e ano estiverem no texto.
+4. Morte ← linha “Morte” da tabela (sessão 3, etapa 5)
+Morte: data por extenso normalizada para AAAA-MM-DD só se dia, mês e ano estiverem no texto.
+5. Nacionalidade ← linha “Nacionalidade” da tabela (sessão 3, etapa 6)
+6. Ocupação ← linha “Ocupação” da tabela (sessão 3, etapa 7); se não existir na página: linha “Campo(s)”
+da tabela (sessão 3, etapa 8)
+Itens de uma lista exibida são unidos por ponto e vírgula; o texto é gravado como texto (nunca fórmula).
+Nada é presumido: dado obrigatório vazio ou data incompleta rejeita o item, e a planilha não é gravada.
+Proveniência separada da planilha: para cada linha, coluna → etapa que forneceu o dado → alvo.
+Página 2 de 2Nekkora Studio · PDD visual · descreve o processo mapeado; não comprova resultado de negócio.

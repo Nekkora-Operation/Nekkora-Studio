@@ -21,7 +21,7 @@ import java.util.regex.Pattern;
  * @param observedAt  instante observado (informativo; a ordem vem da sequência)
  * @param mode        modo de captura
  * @param proposed    proposta (CAPTURE_ONLY: ação não executada) ou interação encaminhada à página
- * @param action      CLICK, FILL, SELECT_OPTION, CHECK, UNCHECK, PRESS_KEY ou UNKNOWN
+ * @param action      CLICK, FILL, SELECT_OPTION, CHECK, UNCHECK, PRESS_KEY, UNKNOWN ou EXTRACT (dado apontado para leitura)
  * @param element     referência do elemento (mapa do contrato ElementRef)
  * @param optionLabel sempre null (CHROME-SECURITY-001: a opção escolhida é valor do usuário e nunca é aceita)
  * @param optionValue sempre null
@@ -39,7 +39,7 @@ public record RecordedStep(String recordingId, String eventId, long sequence, St
                            boolean inFrame, String navigationAfter, List<String> evidence, List<String> notes, long events) {
 
     private static final Pattern ID = Pattern.compile("[A-Za-z0-9._:-]{1,80}");
-    static final Set<String> ACTIONS = Set.of("CLICK", "FILL", "SELECT_OPTION", "CHECK", "UNCHECK", "PRESS_KEY", "UNKNOWN");
+    static final Set<String> ACTIONS = Set.of("CLICK", "FILL", "SELECT_OPTION", "CHECK", "UNCHECK", "PRESS_KEY", "UNKNOWN", "EXTRACT");
 
     public RecordedStep {
         evidence = List.copyOf(evidence);

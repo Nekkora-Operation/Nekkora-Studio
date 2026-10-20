@@ -20,6 +20,10 @@ import java.util.Optional;
  *   <li>efeito de um clique (ou Enter): decisão → link (navega) → vocabulário do rótulo → pergunta;</li>
  *   <li>pós-condição de um clique com efeito externo: só por decisão (o sistema-alvo não se presume) → pergunta;</li>
  *   <li>conclusão observável: decisão → última etapa Observar/Aguardar com alvo → pergunta.</li>
+ *   <li>NEKKORA-E2E-002 — fluxo de dados: decisão → uma execução (JSON); havendo entrada E leitura, a opção "uma transação
+ *       por linha de uma lista, planilha de saída" aparece como pergunta NÃO bloqueante;</li>
+ *   <li>colunas da planilha (só com {@code LIST_XLSX}): decisão → rótulo da linha que ancora o dado (âncora gravada) →
+ *       endereço da página ("URL") para o Observar sem alvo → pergunta (cabeçalho, fonte alternativa ou fora da planilha).</li>
  * </ul>
  */
 public final class SpecResolver {
@@ -28,6 +32,9 @@ public final class SpecResolver {
     /** De onde veio o valor resolvido. */
     public enum Provenance { DECIDED, DERIVED_LABEL, DERIVED_KIND, DERIVED_LAST_OBSERVATION, MISSING }
 
+    /** Cabeçalho derivado para a leitura do endereço da página (Observar sem alvo). */
+    public static final String ADDRESS_HEADER = "URL";
+
     public record Resolved<T>(T value, Provenance provenance, FunctionalSpec.Actor actor) {
         public boolean known() {
             return provenance != Provenance.MISSING;
@@ -35,7 +42,13 @@ public final class SpecResolver {
     }
 
     public record ResolvedSpec(Map<StepId, Resolved<EffectVocabulary.Effect>> effects, Map<StepId, Resolved<String>> postconditions,
-                               Resolved<StepId> conclusion, Resolved<String> startUrl, List<QualityIssue> issues) {}
+                               Resolved<StepId> conclusion, Resolved<String> startUrl, Resolved<String> dataFlow,
+                               Map<StepId, Resolved<String>> columns, List<QualityIssue> issues) {
+        /** Lista de entrada + planilha de saída? */
+        public boolean listToSpreadsheet() {
+            return "LIST_XLSX".equals(dataFlow.value());
+        }
+    }
 
     public static ResolvedSpec resolve(ProjectContext ctx, FunctionalSpec spec) {
         Map<StepId, Resolved<EffectVocabulary.Effect>> effects = new LinkedHashMap<>();
@@ -65,7 +78,118 @@ public final class SpecResolver {
         if (!conclusion.known()) issues.add(conclusionQuestion(ctx));
         Resolved<String> start = startUrl(ctx, spec);
         if (!start.known() && !ctx.origins().isEmpty()) issues.add(startQuestion(ctx));
-        return new ResolvedSpec(effects, post, conclusion, start, issues);
+        Resolved<String> flow = dataFlow(ctx, spec, issues);
+        Map<StepId, Resolved<String>> columns = "LIST_XLSX".equals(flow.value()) ? columns(ctx, spec, issues) : Map.of();
+        return new ResolvedSpec(effects, post, conclusion, start, flow, columns, issues);
+    }
+
+    // ------------------------------------------------------------------------------------------- E2E-002: dados
+
+    static Resolved<String> dataFlow(ProjectContext ctx, FunctionalSpec spec, List<QualityIssue> issues) {
+        Optional<FunctionalSpec.Decision> d = spec.decision(FunctionalSpec.Field.DATA_FLOW, null);
+        if (d.isPresent()) return new Resolved<>(d.get().value(), Provenance.DECIDED, d.get().actor());
+        // preenchimento por variável, ou sem valor e não sensível (vai virar variável de ENTRADA na derivação)
+        boolean input = ctx.steps().stream().anyMatch(s -> s.action() == ActionType.FILL
+                && (s.value() == ProjectContext.ValueKind.VARIABLE || s.value() == ProjectContext.ValueKind.NONE && !s.sensitive()));
+        boolean read = ctx.steps().stream().anyMatch(s -> s.action() == ActionType.OBSERVE);
+        if (input && read) issues.add(dataFlowQuestion(ctx));
+        return new Resolved<>("SINGLE_JSON", Provenance.DERIVED_KIND, null);
+    }
+
+    static Map<StepId, Resolved<String>> columns(ProjectContext ctx, FunctionalSpec spec, List<QualityIssue> issues) {
+        Map<StepId, Resolved<String>> out = new LinkedHashMap<>();
+        List<ProjectContext.Step> missing = new ArrayList<>();
+        for (ProjectContext.Step s : ctx.steps()) {
+            if (s.action() != ActionType.OBSERVE) continue;
+            Optional<FunctionalSpec.Decision> d = valid(spec.decision(FunctionalSpec.Field.OUTPUT_COLUMN, s.stepId()), s);
+            if (d.isPresent()) {
+                out.put(s.stepId(), new Resolved<>(d.get().value(), Provenance.DECIDED, d.get().actor()));
+            } else if (!s.anchor().isEmpty() && FunctionalSpec.headerOk(s.anchor())) {
+                out.put(s.stepId(), new Resolved<>(FunctionalSpec.COLUMN + s.anchor(), Provenance.DERIVED_LABEL, null));
+            } else if (!s.hasTarget()) {
+                out.put(s.stepId(), new Resolved<>(FunctionalSpec.COLUMN + ADDRESS_HEADER, Provenance.DERIVED_KIND, null));
+            } else {
+                out.put(s.stepId(), new Resolved<>(null, Provenance.MISSING, null));
+                missing.add(s);
+            }
+        }
+        Map<String, StepId> headers = new LinkedHashMap<>();
+        for (Map.Entry<StepId, Resolved<String>> e : out.entrySet()) {
+            String v = e.getValue().value();
+            if (v == null || !v.startsWith(FunctionalSpec.COLUMN)) continue;
+            String h = v.substring(FunctionalSpec.COLUMN.length());
+            StepId other = headers.putIfAbsent(h.toLowerCase(java.util.Locale.ROOT), e.getKey());
+            if (other != null) {
+                ProjectContext.Step st = ctx.step(e.getKey()).orElseThrow();
+                issues.add(new QualityIssue("SPEC_OUTPUT_HEADER_DUPLICATE", Layer.V1_PDD, QualityIssue.Kind.BLOCKER, st.stepId(), st.blockId(), place(st),
+                        "Duas leituras vão para a mesma coluna \"" + h + "\".", "Dê outro cabeçalho a uma delas ou declare-a como fonte alternativa.",
+                        columnQuestion(ctx, st, out), null, null));
+            }
+        }
+        for (Map.Entry<StepId, Resolved<String>> e : out.entrySet()) {
+            String v = e.getValue().value();
+            if (v == null || !v.startsWith(FunctionalSpec.FALLBACK)) continue;
+            StepId target = new StepId(java.util.UUID.fromString(v.substring(FunctionalSpec.FALLBACK.length())));
+            Resolved<String> t = out.get(target);
+            if (target.equals(e.getKey()) || t == null || t.value() == null || !t.value().startsWith(FunctionalSpec.COLUMN)) {
+                ProjectContext.Step st = ctx.step(e.getKey()).orElseThrow();
+                issues.add(new QualityIssue("SPEC_OUTPUT_FALLBACK_INVALID", Layer.V1_PDD, QualityIssue.Kind.BLOCKER, st.stepId(), st.blockId(), place(st),
+                        "A fonte alternativa precisa apontar para uma leitura que tem coluna própria.", "Escolha de novo para onde vai esta leitura.",
+                        columnQuestion(ctx, st, out), null, null));
+            }
+        }
+        // coluna DERIVADA do rótulo da linha: revisão NÃO bloqueante (manter, usar como alternativa de outra coluna, ou fora)
+        for (Map.Entry<StepId, Resolved<String>> e : out.entrySet()) {
+            if (e.getValue().provenance() != Provenance.DERIVED_LABEL) continue;
+            ProjectContext.Step st = ctx.step(e.getKey()).orElseThrow();
+            AssistanceRequest base = columnQuestion(ctx, st, out);
+            List<AssistanceRequest.Option> opts = new ArrayList<>();
+            opts.add(AssistanceRequest.Option.answer(e.getValue().value(), "Manter a coluna “" + e.getValue().value().substring(FunctionalSpec.COLUMN.length()) + "”",
+                    "o rótulo da linha nomeia a coluna"));
+            opts.addAll(base.options());
+            issues.add(new QualityIssue("SPEC_OUTPUT_COLUMN_REVIEW", Layer.V1_PDD, QualityIssue.Kind.WARNING, st.stepId(), st.blockId(), place(st),
+                    "Coluna derivada do rótulo da linha: “" + e.getValue().value().substring(FunctionalSpec.COLUMN.length()) + "”.",
+                    "Confirme a coluna, ou declare esta leitura como fonte alternativa de outra coluna (dado ausente na página).",
+                    new AssistanceRequest(base.question(), "Colunas derivadas valem até você decidir; a decisão fica na especificação funcional e no PDD.", opts,
+                            FunctionalSpec.Field.OUTPUT_COLUMN, base.destinationLabel()), null, null));
+        }
+        for (ProjectContext.Step s : missing) issues.add(new QualityIssue("SPEC_OUTPUT_COLUMN_UNKNOWN", Layer.V1_PDD, QualityIssue.Kind.HELP_REQUIRED, s.stepId(),
+                s.blockId(), place(s), "A leitura não tem rótulo de linha que nomeie a coluna da planilha.",
+                "Informe o cabeçalho, use-a como fonte alternativa de outra coluna ou deixe-a fora da planilha.", columnQuestion(ctx, s, out), null, null));
+        if (headers.isEmpty() && missing.isEmpty()) {
+            issues.add(QualityIssue.of("SPEC_OUTPUT_EMPTY", Layer.V1_PDD, QualityIssue.Kind.BLOCKER, null, "Planilha de saída",
+                    "A planilha de saída não teria nenhuma coluna.", "Acrescente uma etapa Observar no dado a ler (modo Selecionar dado)."));
+        }
+        return out;
+    }
+
+    private static QualityIssue dataFlowQuestion(ProjectContext ctx) {
+        AssistanceRequest help = new AssistanceRequest("O processo roda uma vez ou para cada item de uma lista?",
+                "Há um campo preenchido por variável de entrada e dados lidos na página: o mesmo fluxo pode rodar para vários itens. Sem resposta, "
+                        + "o código roda UMA vez e entrega os dados lidos em JSON.",
+                List.of(AssistanceRequest.Option.answer("SINGLE_JSON", "Uma execução; resultado em JSON", "como hoje: um item, nenhuma planilha"),
+                        AssistanceRequest.Option.answer("LIST_XLSX", "Uma transação por linha de uma lista; planilha Excel de saída",
+                                "entrada CSV/XLSX com as variáveis de entrada; uma linha da planilha por item, só se TODOS derem certo")),
+                FunctionalSpec.Field.DATA_FLOW, "Especificação funcional · fluxo de dados");
+        return new QualityIssue("SPEC_DATA_FLOW_OPTIONAL", Layer.V1_PDD, QualityIssue.Kind.WARNING, null, null, "Processo · dados",
+                "O processo pode receber uma lista de itens e gravar uma planilha com os dados lidos.", "Escolha como os dados entram e saem.", help, null, null);
+    }
+
+    private static AssistanceRequest columnQuestion(ProjectContext ctx, ProjectContext.Step s, Map<StepId, Resolved<String>> columns) {
+        List<AssistanceRequest.Option> opts = new ArrayList<>();
+        opts.add(AssistanceRequest.Option.text("Cabeçalho da coluna", "rótulo da coluna na planilha (texto de interface, nunca o dado)"));
+        for (Map.Entry<StepId, Resolved<String>> e : columns.entrySet()) {
+            String v = e.getValue().value();
+            if (e.getKey().equals(s.stepId()) || v == null || !v.startsWith(FunctionalSpec.COLUMN)) continue;
+            String h = v.substring(FunctionalSpec.COLUMN.length());
+            opts.add(AssistanceRequest.Option.answer(FunctionalSpec.FALLBACK + e.getKey().value(), "Usar quando faltar “" + h + "”",
+                    "fonte alternativa declarada: só é lida se o alvo de “" + h + "” não existir na página"));
+        }
+        opts.add(AssistanceRequest.Option.answer(FunctionalSpec.NOT_IN_OUTPUT, "Não vai para a planilha", "a leitura continua no processo, fora das colunas"));
+        opts.add(AssistanceRequest.Option.action("GO_TO_STEP", "Ir para a etapa", "rever o dado apontado"));
+        return new AssistanceRequest("Para qual coluna da planilha vai " + (s.targetName().isEmpty() ? "esta leitura" : "“" + s.targetName() + "”") + "?",
+                "O Studio nomeia a coluna pelo rótulo da linha do dado; este alvo não tem rótulo seguro (ex.: um título), então a decisão é sua.", opts,
+                FunctionalSpec.Field.OUTPUT_COLUMN, "Especificação funcional · colunas da planilha");
     }
 
     /** Ações que podem mudar algo no sistema-alvo e precisam de classificação. */

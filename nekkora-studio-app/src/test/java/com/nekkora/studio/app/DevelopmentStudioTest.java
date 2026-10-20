@@ -181,6 +181,27 @@ class DevelopmentStudioTest {
     }
 
     @Test
+    @DisplayName("E2E-002 — proposta da IA só sai quando obsoleta: etapa removida ou decisão do campo já registrada (re-execuções internas a mantêm)")
+    void propostaObsoleta() throws Exception {
+        start();
+        Case c = consulta("Consultar");
+        com.nekkora.studio.ai.provider.PlanVerifier.Kind effect = com.nekkora.studio.ai.provider.PlanVerifier.Kind.EFFECT;
+        QualityIssue onButton = com.nekkora.studio.app.develop.DevelopmentPresenter.proposalIssue(
+                new com.nekkora.studio.ai.provider.PlanVerifier.Proposal(effect, c.steps().get("consultar"), "NONE", "consulta"));
+        QualityIssue flow = com.nekkora.studio.app.develop.DevelopmentPresenter.proposalIssue(
+                new com.nekkora.studio.ai.provider.PlanVerifier.Proposal(com.nekkora.studio.ai.provider.PlanVerifier.Kind.DATA_FLOW, null, "LIST_XLSX", ""));
+        FunctionalSpec empty = FunctionalSpec.empty(c.a().id());
+        assertFalse(com.nekkora.studio.app.develop.DevelopmentPresenter.obsoleteProposal(onButton, c.a(), empty), "sem decisão: a proposta continua");
+        assertFalse(com.nekkora.studio.app.develop.DevelopmentPresenter.obsoleteProposal(flow, c.a(), empty));
+        FunctionalSpec decided = empty.with(new FunctionalSpec.Decision(FunctionalSpec.Field.EFFECT, c.steps().get("consultar"), "EXTERNAL",
+                FunctionalSpec.Actor.TEST_AGENT, FunctionalSpec.Basis.ANSWER, "fp", StudioFixture.CLOCK.instant()));
+        assertTrue(com.nekkora.studio.app.develop.DevelopmentPresenter.obsoleteProposal(onButton, c.a(), decided), "a pessoa já decidiu o efeito");
+        assertFalse(com.nekkora.studio.app.develop.DevelopmentPresenter.obsoleteProposal(flow, c.a(), decided), "outra decisão não a afeta");
+        Edt.run(() -> studio.service().removeStep(c.a().id(), c.steps().get("consultar")));
+        assertTrue(com.nekkora.studio.app.develop.DevelopmentPresenter.obsoleteProposal(onButton, c.a(), empty), "etapa removida");
+    }
+
+    @Test
     @DisplayName("S014 — um clique com PDD pronto: variáveis derivadas (desfazíveis), Python pelo gerador oficial em <projeto>-python/, sem questionário")
     void umClique() throws Exception {
         start();
@@ -197,6 +218,9 @@ class DevelopmentStudioTest {
         Path out = dir.resolve("consulta-python");
         assertTrue(Files.isRegularFile(out.resolve("manifest.json")), m.statusTitle() + " " + m.pending());
         assertTrue(m.results().stream().anyMatch(r -> r.equals("✓ CODE_GENERATED")), m.results().toString());
+        // E2E-002: gerado o código, a pergunta OPCIONAL (lista → planilha) continua oferecida — a pessoa ainda pode escolher
+        assertTrue(m.pending().stream().anyMatch(i -> i.code().equals("SPEC_DATA_FLOW_OPTIONAL") && i.kind() == QualityIssue.Kind.WARNING),
+                m.pending().toString());
         assertTrue(m.results().stream().anyMatch(r -> r.contains("Registrar variáveis derivadas")));
         assertTrue(m.results().stream().anyMatch(r -> r.startsWith("— Execução real: não executada")));
         assertTrue(m.uses().stream().anyMatch(u -> u.id().equals("actions.read_text") && u.where().contains("nekkora_rpa/libs/actions.py")));
@@ -257,7 +281,7 @@ class DevelopmentStudioTest {
         assertTrue(layers.contains("V1 ×"), layers);
         assertTrue(layers.contains("V4 —") && layers.contains("V6 —"), layers);
         String full = Edt.call(() -> studio.view().validationPanel().layersText().getAccessibleContext().getAccessibleDescription());
-        assertTrue(full.contains("V6 Execução real: não executada pelo Studio"), full);
+        assertTrue(full.contains("V6 Execução real: nenhum teste autorizado desta automação"), full); // E2E-002: só o teste autorizado da revisão conta
         assertFalse(full.toLowerCase().contains("aprovad") || full.toLowerCase().contains("garantid") || full.toLowerCase().contains("produção"), full);
         List<String> items = Edt.call(() -> {
             List<String> out = new ArrayList<>();
@@ -274,7 +298,7 @@ class DevelopmentStudioTest {
         idle();
         String after = Edt.call(() -> studio.view().validationPanel().layersText().getAccessibleContext().getAccessibleDescription());
         assertTrue(after.contains("V1 PDD: PDD_READY"), after);
-        assertTrue(after.contains("V6 Execução real: não executada"), after);
+        assertTrue(after.contains("V6 Execução real: nenhum teste autorizado"), after);
         assertFalse(after.contains("V4 Código Python: código ainda não gerado"), after);
         // o modelo mudou depois da geração → código desatualizado com a correção segura "gerar de novo"
         Edt.run(() -> studio.service().renameSession(c.a().id(), c.a().sessions().get(1).id(), "Consulta de registros"));

@@ -41,11 +41,15 @@ public record ProjectContext(String automationId, long automationRevision, Strin
      * @param targetName  rótulo seguro (política de texto do PDD) ou vazio
      * @param locatorUsable o localizador preferencial é validado e não posicional (exportável)
      * @param fingerprint resumo de ação + alvo (uma decisão da especificação vale enquanto ele não muda)
+     * @param anchor      NEKKORA-E2E-002: rótulo seguro da LINHA/TERMO que identifica o dado lido (ex.: "Nascimento"), ou vazio
+     * @param navigates   a gravação viu o documento mudar logo depois desta etapa (ex.: Enter numa busca)
      */
     public record Step(StepId stepId, int session, int number, ActionType action, boolean hasTarget, String targetKind, String targetName,
                        boolean sensitive, boolean inFrame, boolean inShadow, boolean confirmed, boolean locatorUsable, ValueKind value,
-                       String variableName, String screenKey, boolean screenChangeAfter, String blockId, String fingerprint) {
+                       String variableName, String screenKey, boolean screenChangeAfter, String blockId, String fingerprint, String anchor,
+                       boolean navigates) {
         public Step {
+            anchor = anchor == null ? "" : anchor;
             Objects.requireNonNull(stepId);
             targetKind = targetKind == null ? "" : targetKind;
             targetName = targetName == null ? "" : targetName;
@@ -123,16 +127,42 @@ public record ProjectContext(String automationId, long automationRevision, Strin
                 }
                 String kind = f == null ? "" : f.targetKind();
                 String name = f == null ? "" : f.targetName();
-                String fp = Hashes.sha256(st.actionType() + "|" + kind + "|" + name + "|" + (e != null && e.sensitive()) + "|" + frame);
+                String anchor = e == null ? "" : anchorOf(e);
+                // a âncora entra no resumo só quando existe: as decisões das versões anteriores continuam valendo
+                String fp = Hashes.sha256(st.actionType() + "|" + kind + "|" + name + "|" + (e != null && e.sensitive()) + "|" + frame
+                        + (anchor.isEmpty() ? "" : "|" + anchor));
+                boolean navigates = st.provenance().recordingObservation().map(r -> r.evidence().contains("NAVIGATION_FOLLOWED")).orElse(false);
                 out.add(new Step(st.id(), sn, n, st.actionType(), e != null, kind, name, e != null && e.sensitive(), frame, shadow,
                         st.targetDecision().map(d -> d.confirmed()).orElse(false), usable, vk, var, f == null ? "" : f.screenKey(),
-                        f != null && f.screenChangeAfter(), blockOf.get(st.id()), fp));
+                        f != null && f.screenChangeAfter(), blockOf.get(st.id()), fp, anchor, navigates));
             }
         }
+        out = withInheritedScreens(out);
         List<String> declared = a.variables().stream().map(x -> x.name()).toList();
         List<String> names = p.sections().stream().map(ProcessProjection.SectionFacts::safeName).toList();
         return new ProjectContext(a.id().value().toString(), a.revision(), p.revision(), out, origins, start == null ? "" : start,
                 template == null ? "" : template, declared, names, List.of());
+    }
+
+    /**
+     * NEKKORA-E2E-002: etapa SEM alvo e sem tela registrada (ex.: "Ler o endereço da página", criada no editor) pertence à
+     * tela da PRÓXIMA etapa da mesma sessão (senão, à da anterior): assim ela roda depois da espera de "página nova
+     * pronta" daquela tela — nunca lendo o endereço da página anterior.
+     */
+    static List<Step> withInheritedScreens(List<Step> steps) {
+        List<Step> out = new ArrayList<>(steps);
+        for (int i = 0; i < out.size(); i++) {
+            Step s = out.get(i);
+            if (s.hasTarget() || !s.screenKey().isEmpty()) continue;
+            String inherited = "";
+            for (int j = i + 1; j < out.size() && inherited.isEmpty() && out.get(j).session() == s.session(); j++) inherited = out.get(j).screenKey();
+            for (int j = i - 1; j >= 0 && inherited.isEmpty() && out.get(j).session() == s.session(); j--) inherited = out.get(j).screenKey();
+            if (inherited.isEmpty()) continue;
+            out.set(i, new Step(s.stepId(), s.session(), s.number(), s.action(), false, s.targetKind(), s.targetName(), s.sensitive(), s.inFrame(),
+                    s.inShadow(), s.confirmed(), s.locatorUsable(), s.value(), s.variableName(), inherited, s.screenChangeAfter(), s.blockId(),
+                    s.fingerprint(), s.anchor(), s.navigates()));
+        }
+        return out;
     }
 
     private static final java.util.regex.Pattern ORIGIN = java.util.regex.Pattern.compile("^(https?)://([A-Za-z0-9.-]+|\\[[0-9a-fA-F:.]+\\])(:[0-9]{1,5})?(?=[/?#]|$)");
@@ -171,6 +201,22 @@ public record ProjectContext(String automationId, long automationRevision, Strin
         } catch (IllegalArgumentException e) {
             return "";
         }
+    }
+
+    private static final java.util.regex.Pattern ANCHOR = java.util.regex.Pattern.compile(
+            "(?:th|dt\\[1\\])\\[normalize-space\\(\\.\\)=\"([^\"]{1,80})\"\\]");
+
+    /**
+     * NEKKORA-E2E-002: rótulo da LINHA (tr com th) ou do TERMO (dt) que ancora o alvo — tirado do localizador preferencial
+     * por linha (já aprovado pela política de privacidade nas barreiras da extensão e do Studio). Vazio se não houver.
+     */
+    public static String anchorOf(ElementReference e) {
+        Optional<LocatorCandidate> pref = e.preferredLocator();
+        if (pref.isEmpty() || pref.get().strategy() != LocatorStrategy.ROW_CONTEXT || pref.get().expression() == null) return "";
+        java.util.regex.Matcher m = ANCHOR.matcher(pref.get().expression());
+        if (!m.find()) return "";
+        String label = m.group(1).strip();
+        return com.nekkora.studio.domain.privacy.CapturePrivacy.interfaceText(label) == null ? "" : label;
     }
 
     /** Candidato de localizador do alvo por rótulo (texto de interface) — usado só para nomear chaves e variáveis. */

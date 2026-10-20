@@ -266,6 +266,17 @@ public final class PythonGenerator {
         return t;
     }
 
+    private static final java.util.regex.Pattern ANCHOR = java.util.regex.Pattern.compile(
+            "(?:th|dt\\[1\\])\\[normalize-space\\(\\.\\)=\"([^\"]{1,80})\"\\]");
+
+    /** NEKKORA-E2E-002: rótulo da linha/termo que ancora o alvo (localizador preferencial por linha), ou null. */
+    static String anchorText(ElementReference el) {
+        Optional<LocatorCandidate> p = el.preferredLocator();
+        if (p.isEmpty() || p.get().strategy() != LocatorStrategy.ROW_CONTEXT || p.get().expression() == null) return null;
+        Matcher m = ANCHOR.matcher(p.get().expression());
+        return m.find() ? m.group(1).strip() : null;
+    }
+
     static String labelText(String expression) {
         if (expression == null) return null;
         Matcher m = LABEL_TEXT.matcher(expression);

@@ -75,6 +75,12 @@ public final class PddExporter {
 
     public static Exported export(DocumentDraft d, ProcessProjection current, PddStore store, Path dir, PdfRenderer.Fonts fonts, Clock clock, Cancel cancel)
             throws ExportException, IOException {
+        return export(d, current, store, dir, fonts, clock, cancel, List.of());
+    }
+
+    /** NEKKORA-E2E-002: com o apêndice "Dados do processo" (linhas já pela política de texto do PDD). */
+    public static Exported export(DocumentDraft d, ProcessProjection current, PddStore store, Path dir, PdfRenderer.Fonts fonts, Clock clock, Cancel cancel,
+                                  List<String> appendix) throws ExportException, IOException {
         List<Pending> pending = d.pending(current);
         if (!Pendings.exportable(pending)) throw new ExportException("DRAFT_HAS_BLOCKING_PENDING");
         Map<String, BufferedImage> images = new LinkedHashMap<>();
@@ -92,7 +98,7 @@ public final class PddExporter {
         Files.createDirectories(dir);
         int version = nextVersion(dir);
         LocalDate date = LocalDate.now(clock.withZone(ZoneOffset.UTC));
-        byte[] pdf = PdfRenderer.render(d, images, fonts, new PdfRenderer.Options(label(version), date));
+        byte[] pdf = PdfRenderer.render(d, images, fonts, new PdfRenderer.Options(label(version), date, false, appendix));
         Path tmp = Files.createTempFile(dir, ".pdd-visual-", ".tmp");
         try {
             Files.write(tmp, pdf);

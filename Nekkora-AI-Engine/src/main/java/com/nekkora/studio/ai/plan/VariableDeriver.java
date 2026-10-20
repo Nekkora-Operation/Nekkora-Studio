@@ -28,7 +28,10 @@ import java.util.Set;
  *       acesso nunca vira dado de entrada em claro;</li>
  *   <li>outro preenchimento sem valor → variável de ENTRADA com o nome do rótulo seguro do campo (dados pessoais pelo
  *       vocabulário do rótulo); sem rótulo seguro → nome genérico, para revisar;</li>
- *   <li>Observar com alvo → variável SAÍDA DE ETAPA com a etapa como produtora.</li>
+ *   <li>Observar com alvo → variável SAÍDA DE ETAPA com a etapa como produtora; NEKKORA-E2E-002: nomeada pelo rótulo da
+ *       LINHA que ancora o dado ("Nascimento" → {@code nascimento}), "titulo" para um título; tipo DATA quando o rótulo é de
+ *       data conhecido (nascimento, morte, data…);</li>
+ *   <li>Observar SEM alvo → {@code endereco_da_pagina} (o endereço lido da aba).</li>
  * </ul>
  * Valor já configurado (variável, credencial ou literal) é REUSADO. Nome igual a uma declaração existente compatível
  * reaproveita a declaração; incompatível ganha sufixo. Nenhuma constante é criada: constante exige regra comprovada.
@@ -63,6 +66,10 @@ public final class VariableDeriver {
     }
 
     static final Set<String> USER_LABELS = Set.of("usuario", "login", "user", "username", "email", "matricula", "conta", "acesso", "cpf");
+    /** Rótulos de linha que nomeiam DATAS (o dado é lido como data por extenso e normalizado só se completo). */
+    static final Set<String> DATE_LABELS = Set.of("nascimento", "morte", "falecimento", "obito", "data", "vencimento", "emissao", "validade", "admissao",
+            "demissao", "fundacao");
+
     static final Set<String> PERSONAL = Set.of("cpf", "rg", "nome", "email", "telefone", "celular", "endereco", "nascimento", "cartao", "conta", "paciente",
             "cliente", "cnpj", "cep");
 
@@ -86,17 +93,26 @@ public final class VariableDeriver {
                             "valor fixo não sensível declarado na etapa", false));
                     case NONE -> out.add(fill(s, i, steps, taken, aliases));
                 }
-            } else if (s.action() == ActionType.OBSERVE && s.hasTarget()) {
+            } else if (s.action() == ActionType.OBSERVE) {
                 Optional<VariableDefinition> existing = a.variables().stream()
                         .filter(v -> v.origin().kind() == VariableOrigin.Kind.STEP_OUTPUT && s.stepId().equals(v.origin().producer())).findFirst();
                 if (existing.isPresent()) {
-                    out.add(new Planned(s.stepId(), Kind.REUSE, existing.get().name(), "texto", "STEP_OUTPUT", existing.get().sensitivity(), Provenance.EXISTING,
-                            "saída já declarada para esta etapa", false));
+                    out.add(new Planned(s.stepId(), Kind.REUSE, existing.get().name(), existing.get().type() == VariableType.DATE ? "data" : "texto", "STEP_OUTPUT",
+                            existing.get().sensitivity(), Provenance.EXISTING, "saída já declarada para esta etapa", false));
+                } else if (!s.hasTarget()) {
+                    out.add(new Planned(s.stepId(), Kind.DECLARE_OUTPUT, unique("endereco_da_pagina", taken), "texto", "STEP_OUTPUT", Sensitivity.INTERNAL,
+                            Provenance.DERIVED_OBSERVATION, "endereço da página lido na etapa Observar (sem alvo)", false));
+                } else if (!s.anchor().isEmpty()) {
+                    boolean date = words(s.anchor()).stream().anyMatch(DATE_LABELS::contains);
+                    out.add(new Planned(s.stepId(), Kind.DECLARE_OUTPUT, unique(slug(s.anchor()), taken), date ? "data" : "texto", "STEP_OUTPUT", Sensitivity.INTERNAL,
+                            Provenance.DERIVED_LABEL, "dado da linha “" + s.anchor() + "”" + (date ? " (rótulo de data: lido como data por extenso)" : ""), false));
                 } else {
-                    String base = s.targetName().isEmpty() ? "resultado" : slug(s.targetName());
-                    String name = unique(base.startsWith("resultado") ? base : "resultado_" + base, taken);
+                    boolean heading = "HEADING".equals(s.targetKind());
+                    String base = heading ? "titulo" : s.targetName().isEmpty() ? "resultado" : slug(s.targetName());
+                    String name = unique(heading || base.startsWith("resultado") ? base : "resultado_" + base, taken);
                     out.add(new Planned(s.stepId(), Kind.DECLARE_OUTPUT, name, "texto", "STEP_OUTPUT", Sensitivity.INTERNAL, Provenance.DERIVED_OBSERVATION,
-                            "texto lido na etapa Observar" + (s.targetName().isEmpty() ? "" : " “" + s.targetName() + "”"), s.targetName().isEmpty()));
+                            "texto lido na etapa Observar" + (s.targetName().isEmpty() ? (heading ? " (título)" : "") : " “" + s.targetName() + "”"),
+                            s.targetName().isEmpty() && !heading));
                 }
             }
         }
@@ -115,7 +131,10 @@ public final class VariableDeriver {
                     Provenance.DERIVED_LOGIN_PAIR, "campo" + label(s) + " logo antes da senha: usuário de acesso vem do provedor de segredos", !known);
         }
         boolean generic = s.targetName().isEmpty();
-        String name = unique(generic ? "entrada_etapa_" + s.session() + "_" + s.number() : slug(s.targetName()), taken);
+        // E2E-002: campo de BUSCA sem rótulo seguro (searchbox, ou combobox editável confirmado por Enter) tem nome de busca
+        boolean search = generic && ("SEARCH_INPUT".equals(s.targetKind()) || "COMBOBOX".equals(s.targetKind()) && next != null
+                && next.action() == ActionType.PRESS_KEY && next.session() == s.session());
+        String name = unique(search ? "termo_de_busca" : generic ? "entrada_etapa_" + s.session() + "_" + s.number() : slug(s.targetName()), taken);
         Sensitivity sens = words(s.targetName()).stream().anyMatch(PERSONAL::contains) ? Sensitivity.PERSONAL_DATA : Sensitivity.INTERNAL;
         return new Planned(s.stepId(), Kind.DECLARE_INPUT_AND_BIND, name, "texto", "INPUT", sens, generic ? Provenance.DERIVED_GENERIC : Provenance.DERIVED_LABEL,
                 generic ? "campo sem rótulo seguro: nome provisório" : "campo" + label(s) + ": informado a cada execução", generic);
@@ -138,7 +157,8 @@ public final class VariableDeriver {
                 }
                 case DECLARE_OUTPUT -> {
                     if (a.variableNamed(p.name()).isEmpty()) {
-                        a.declareVariable(VariableDraft.of(p.name(), VariableType.STRING).withOrigin(VariableOrigin.stepOutput(p.step()))
+                        VariableType type = "data".equals(p.type()) ? VariableType.DATE : VariableType.STRING;
+                        a.declareVariable(VariableDraft.of(p.name(), type).withOrigin(VariableOrigin.stepOutput(p.step()))
                                 .withSensitivity(p.sensitivity()).withPurpose("Resultado lido pelo processo (derivado pelo Studio: " + p.basis() + ")"));
                         changed++;
                     }

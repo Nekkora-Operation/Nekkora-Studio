@@ -19,3 +19,5 @@ build/
 # STUDIO-014: segredos locais (chave da IA etc.) nunca entram no repositório
 .env
 .env.*
+__pycache__/
+*.pyc

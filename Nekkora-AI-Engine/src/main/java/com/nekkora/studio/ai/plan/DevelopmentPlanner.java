@@ -35,6 +35,10 @@ import java.util.Set;
  *       de etapas consecutivas da tela — nenhuma classe artificial por sessão;</li>
  *   <li>entradas, saídas e credenciais a partir das ligações do MODELO (as variáveis derivadas já aplicadas);</li>
  *   <li>efeito e confirmação de cada clique a partir da especificação resolvida pelo gate.</li>
+ *   <li>NEKKORA-E2E-002: Enter com efeito declarado; como cada Observar lê (texto, data por extenso, endereço), quais
+ *       leituras são OPCIONAIS (só as de colunas com fonte alternativa declarada) e a conferência com a variável de
+ *       entrada; com o fluxo "lista → planilha", as colunas na ordem das etapas, a chave (a coluna de endereço) e a
+ *       execução em lista (configuração 1.2.0). Sem esses recursos, a 1.1.0 continua igual.</li>
  * </ul>
  */
 public final class DevelopmentPlanner {
@@ -133,14 +137,14 @@ public final class DevelopmentPlanner {
                 if (v.isPresent() && v.get().origin().kind() == VariableOrigin.Kind.INPUT && !inputs.contains(r.name())) inputs.add(r.name());
             } else if (s.action() == ActionType.FILL && st.parameters().value().orElse(null) instanceof ValueSource.CredentialReference c) {
                 variable = c.alias();
-            } else if (s.action() == ActionType.OBSERVE && s.hasTarget()) {
+            } else if (s.action() == ActionType.OBSERVE && (s.hasTarget() || modernReads(ctx, gate))) {
                 Optional<VariableDefinition> v = a.variables().stream()
                         .filter(x -> x.origin().kind() == VariableOrigin.Kind.STEP_OUTPUT && s.stepId().equals(x.origin().producer())).findFirst();
                 if (v.isPresent()) {
                     outputs.put(id, v.get().name());
                     variable = v.get().name();
                 }
-            } else if (s.action() == ActionType.CLICK) {
+            } else if (s.action() == ActionType.CLICK || s.action() == ActionType.PRESS_KEY) {
                 SpecResolver.Resolved<EffectVocabulary.Effect> e = gate.spec().effects().get(s.stepId());
                 if (e != null && e.known()) {
                     effect = e.value().name();
@@ -158,19 +162,108 @@ public final class DevelopmentPlanner {
             pages.add(new DevelopmentPlan.PlannedPage(e.getKey(), prefixOfPage.get(e.getKey()), e.getValue(), count,
                     "uma tela observada na gravação; intenções da tela por chave, sem seletores"));
         }
+        // NEKKORA-E2E-002: leituras tipadas, Enter e planilha (configuração 1.2.0 só quando usados)
+        Map<String, SingleConfig.Read> reads = new LinkedHashMap<>();
+        Map<String, SingleConfig.KeyPress> keys = new LinkedHashMap<>();
+        SingleConfig.Output output = SingleConfig.Output.json();
+        boolean list = gate.spec().listToSpreadsheet();
+        if (modernReads(ctx, gate)) {
+            Map<StepId, StepId> fallbackOf = new LinkedHashMap<>(); // principal → alternativa
+            Set<StepId> alternatives = new LinkedHashSet<>();
+            if (list) {
+                gate.spec().columns().forEach((step, r) -> {
+                    if (r.value() != null && r.value().startsWith(com.nekkora.studio.ai.spec.FunctionalSpec.FALLBACK)) {
+                        StepId primary = new StepId(java.util.UUID.fromString(r.value().substring(com.nekkora.studio.ai.spec.FunctionalSpec.FALLBACK.length())));
+                        fallbackOf.put(primary, step);
+                        alternatives.add(step);
+                    }
+                });
+            }
+            for (ProjectContext.Step s : ctx.steps()) {
+                String id = s.stepId().value().toString();
+                if (s.action() == ActionType.PRESS_KEY) keys.put(id, new SingleConfig.KeyPress("Enter", s.navigates()));
+                if (s.action() != ActionType.OBSERVE || !outputs.containsKey(id)) continue;
+                AutomationStep st = a.step(s.stepId()).orElseThrow();
+                VariableDefinition out = a.variableNamed(outputs.get(id)).orElseThrow();
+                String kind = !s.hasTarget() ? "address" : out.type() == com.nekkora.studio.domain.variable.VariableType.DATE ? "date" : "text";
+                String expected = null;
+                if (st.parameters().value().orElse(null) instanceof ValueSource.VariableReference ref) {
+                    Optional<VariableDefinition> ev = a.variableNamed(ref.name());
+                    if (ev.isPresent() && ev.get().origin().kind() == VariableOrigin.Kind.INPUT) {
+                        expected = ref.name();
+                        if (!inputs.contains(ref.name())) inputs.add(ref.name());
+                    } else {
+                        issues.add(QualityIssue.of("READ_EXPECTED_NOT_INPUT", Layer.V3_PLAN, QualityIssue.Kind.BLOCKER, s.stepId(), "Conferência",
+                                "A conferência de um dado lido só compara com uma variável de ENTRADA.", "Ligue a etapa a uma variável de entrada ou retire o valor."));
+                    }
+                }
+                boolean optional = s.hasTarget() && (alternatives.contains(s.stepId()) || fallbackOf.containsKey(s.stepId()));
+                reads.put(id, new SingleConfig.Read(kind, optional, expected));
+            }
+            if (list) {
+                List<SingleConfig.Column> columns = new ArrayList<>();
+                Set<String> fields = new LinkedHashSet<>();
+                String keyField = null;
+                for (ProjectContext.Step s : ctx.steps()) {
+                    SpecResolver.Resolved<String> r = gate.spec().columns().get(s.stepId());
+                    String id = s.stepId().value().toString();
+                    if (r == null || r.value() == null || !r.value().startsWith(com.nekkora.studio.ai.spec.FunctionalSpec.COLUMN) || !outputs.containsKey(id)) continue;
+                    String header = r.value().substring(com.nekkora.studio.ai.spec.FunctionalSpec.COLUMN.length());
+                    String field = VariableDeriver.slug(header);
+                    for (int n = 2; !fields.add(field); n++) field = VariableDeriver.slug(header) + "_" + n;
+                    SingleConfig.Read read = reads.get(id);
+                    String kind = read == null ? "text" : switch (read.kind()) {
+                        case "address" -> "url";
+                        case "date" -> "iso_date";
+                        default -> "text";
+                    };
+                    if ("url".equals(kind) && keyField == null) keyField = field;
+                    StepId alt = fallbackOf.get(s.stepId());
+                    columns.add(new SingleConfig.Column(header, field, kind, id, alt == null ? null : alt.value().toString()));
+                }
+                if (!columns.isEmpty()) output = new SingleConfig.Output("xlsx", "Dados", columns, keyField == null ? columns.get(0).field() : keyField);
+            }
+        }
         SingleConfig cfg = null;
         boolean blocked = issues.stream().anyMatch(i -> i.kind().blocking());
         if (!blocked && !caps.environment().isEmpty()) {
             try {
                 cfg = SingleConfig.of(processName(a), caps.environment(), ctx.origins(), gate.spec().startUrl().value(), groups, inputs, outputs, effects,
-                        new SingleConfig.Pdd("PDD_READY", gate.record().processRevision(), gate.record().documentRevision(), gate.record().specRevision()));
+                        new SingleConfig.Pdd("PDD_READY", gate.record().processRevision(), gate.record().documentRevision(), gate.record().specRevision()),
+                        list && !output.columns().isEmpty() ? "list" : "single", reads, keys, output);
             } catch (CodegenConfig.Invalid e) {
                 issues.add(QualityIssue.of("PLAN_CONFIG_INVALID", Layer.V3_PLAN, QualityIssue.Kind.BLOCKER, null, "Configuração derivada",
                         "A configuração derivada foi recusada pelo contrato do gerador (" + e.code() + ").", "Valide a automação e veja os apontamentos."));
             }
         }
-        return new DevelopmentPlan(DevelopmentPlan.ExecutionModel.SINGLE, "nenhuma configuração tabular declarada: os dados vêm de uma entrada única",
-                vars, pages, steps, caps.used(), cfg, null, issues, PLANNER);
+        List<String> used = new ArrayList<>(caps.used());
+        if (!reads.isEmpty() || !keys.isEmpty()) {
+            if (!keys.isEmpty()) used.add("actions.press");
+            if (reads.values().stream().anyMatch(r -> !"address".equals(r.kind()))) used.addAll(List.of("actions.read_items", "text.join_items"));
+            if (reads.values().stream().anyMatch(r -> "date".equals(r.kind()))) used.add("text.parse_long_date");
+            if (reads.values().stream().anyMatch(r -> "address".equals(r.kind()))) used.add("actions.current_address");
+            if (reads.values().stream().anyMatch(r -> r.expected() != null)) used.addAll(List.of("text.same_address", "text.normalize_text"));
+            if (reads.values().stream().anyMatch(SingleConfig.Read::optional)) used.add("actions.exists");
+            if (!output.columns().isEmpty()) used.addAll(List.of("tabular.read", "tabular.input", "xlsx.schema", "xlsx.result_sink", "errors.business_rule_rejected"));
+            used.removeIf(id -> cat.find(id).isEmpty());
+        }
+        boolean listed = cfg != null && cfg.list();
+        return new DevelopmentPlan(listed ? DevelopmentPlan.ExecutionModel.LIST : DevelopmentPlan.ExecutionModel.SINGLE, listed ? "uma transação por linha da lista de entrada; planilha de saída (tudo ou nada)"
+                : "nenhuma configuração tabular declarada: os dados vêm de uma entrada única", vars, pages, steps,
+                new ArrayList<>(new LinkedHashSet<>(used)), cfg, null, issues, PLANNER);
+    }
+
+    /**
+     * Precisa da configuração 1.2.0? Lista → planilha, Enter, Observar sem alvo (endereço) ou com conferência, ou leitura
+     * de DATA. Sem nada disso, a 1.1.0 (e o código) continuam idênticos.
+     */
+    static boolean modernReads(ProjectContext ctx, PddGate.Result gate) {
+        if (gate.spec() != null && gate.spec().listToSpreadsheet()) return true;
+        for (ProjectContext.Step s : ctx.steps()) {
+            if (s.action() == ActionType.PRESS_KEY) return true;
+            if (s.action() == ActionType.OBSERVE && (!s.hasTarget() || s.value() == ProjectContext.ValueKind.VARIABLE || !s.anchor().isEmpty())) return true;
+        }
+        return false;
     }
 
     /** Nome técnico do processo (token do framework) a partir do nome da automação. */

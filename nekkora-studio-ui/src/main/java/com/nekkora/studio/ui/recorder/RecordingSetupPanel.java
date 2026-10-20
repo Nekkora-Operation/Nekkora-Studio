@@ -47,6 +47,7 @@ public final class RecordingSetupPanel extends JPanel {
     private final NekkoraButton refresh = NekkoraButton.ghost("Atualizar abas").withIcon(IconName.REFRESH).withSize(ControlSize.SMALL);
     private final NekkoraRadioButton captureOnly = new NekkoraRadioButton(RecordingMode.CAPTURE_ONLY.label());
     private final NekkoraRadioButton captureAndInteract = new NekkoraRadioButton(RecordingMode.CAPTURE_AND_INTERACT.label(), true);
+    private final NekkoraRadioButton selectData = new NekkoraRadioButton(RecordingMode.SELECT_DATA.label());
     private final List<NekkoraRadioButton> tabButtons = new ArrayList<>();
     private final List<BrowserTab> tabs = new ArrayList<>();
     private ButtonGroup tabGroup = new ButtonGroup();
@@ -82,13 +83,15 @@ public final class RecordingSetupPanel extends JPanel {
         col.add(scroll);
         col.add(tabHint);
 
-        NekkoraRadioButton.group(captureOnly, captureAndInteract);
+        NekkoraRadioButton.group(captureOnly, captureAndInteract, selectData);
         captureOnly.setToolTipText(RecordingMode.CAPTURE_ONLY.description());
         captureAndInteract.setToolTipText(RecordingMode.CAPTURE_AND_INTERACT.description());
+        selectData.setToolTipText(RecordingMode.SELECT_DATA.description());
         NekkoraStack modes = NekkoraStack.horizontal(Spacing.SPACE_5);
         modes.add(new NekkoraText("Modo:"));
         modes.add(captureOnly);
         modes.add(captureAndInteract);
+        modes.add(selectData);
         modes.addGlue();
         col.add(modes);
         col.add(note(RecorderText.MODE_NOTICE, TextTone.MUTED));
@@ -185,7 +188,8 @@ public final class RecordingSetupPanel extends JPanel {
         LogicalSession s = session.getSelectedValue();
         for (int i = 0; i < tabButtons.size(); i++) {
             if (tabButtons.get(i).isSelected() && tabButtons.get(i).isEnabled() && s != null) {
-                return Optional.of(new Choice(s.id(), tabs.get(i), captureOnly.isSelected() ? RecordingMode.CAPTURE_ONLY : RecordingMode.CAPTURE_AND_INTERACT));
+                return Optional.of(new Choice(s.id(), tabs.get(i), captureOnly.isSelected() ? RecordingMode.CAPTURE_ONLY
+                        : selectData.isSelected() ? RecordingMode.SELECT_DATA : RecordingMode.CAPTURE_AND_INTERACT));
             }
         }
         return Optional.empty();
@@ -201,7 +205,11 @@ public final class RecordingSetupPanel extends JPanel {
     }
 
     public NekkoraRadioButton modeButton(RecordingMode m) {
-        return m == RecordingMode.CAPTURE_ONLY ? captureOnly : captureAndInteract;
+        return switch (m) {
+            case CAPTURE_ONLY -> captureOnly;
+            case CAPTURE_AND_INTERACT -> captureAndInteract;
+            case SELECT_DATA -> selectData;
+        };
     }
 
     public NekkoraInlineAlert connectionAlert() {

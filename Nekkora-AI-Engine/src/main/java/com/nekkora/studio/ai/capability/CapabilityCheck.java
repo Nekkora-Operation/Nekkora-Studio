@@ -72,7 +72,10 @@ public final class CapabilityCheck {
             if (s.action() == ActionType.NAVIGATE || (!s.hasTarget() && (s.action() == ActionType.WAIT_FOR || s.action() == ActionType.OBSERVE))) {
                 boolean textObservation = declared.map(c -> c.textObservations().containsKey(s.stepId().value().toString())).orElse(false);
                 if (textObservation) used.add("actions.read_text_matching");
-                if (!s.hasTarget() && s.action() != ActionType.NAVIGATE && !textObservation) {
+                // NEKKORA-E2E-002: Observar sem alvo lê o ENDEREÇO da página (nekkora_rpa 0.3.0)
+                boolean address = s.action() == ActionType.OBSERVE && !s.hasTarget() && cat.find("actions.current_address").isPresent();
+                if (address) used.add("actions.current_address");
+                if (!s.hasTarget() && s.action() != ActionType.NAVIGATE && !textObservation && !address) {
                     issues.add(QualityIssue.of(s.action() == ActionType.OBSERVE ? "OBSERVE_WITHOUT_TARGET" : "WAIT_WITHOUT_TARGET", Layer.V2_CAPABILITY,
                             QualityIssue.Kind.BLOCKER, s.stepId(), place(s), "Etapa sem alvo: o código não tem o que ler ou esperar.",
                             "Associe um alvo à etapa (Depurar no navegador → corrigir por seleção) ou remova a etapa.").withBlock(s.blockId()));

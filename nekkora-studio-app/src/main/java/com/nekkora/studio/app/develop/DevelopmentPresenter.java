@@ -78,6 +78,16 @@ public final class DevelopmentPresenter implements DevelopmentPanel.Actions {
 
         Optional<Path> choosePython();
 
+        /** NEKKORA-E2E-002: lista de entrada do teste autorizado (sem janela: nenhuma, e o teste não começa). */
+        default Optional<Path> chooseRunInput(String title) {
+            return Optional.empty();
+        }
+
+        /** NEKKORA-E2E-002: planilha de saída do teste autorizado. */
+        default Optional<Path> chooseRunOutput(String title, String suggestedName) {
+            return Optional.empty();
+        }
+
         void showText(String title, String text);
 
         /** Prévia do envio à IA: true = a pessoa autorizou ESTE envio. */
@@ -157,6 +167,8 @@ public final class DevelopmentPresenter implements DevelopmentPanel.Actions {
     private DevelopmentPanel.Model model = DevelopmentPanel.Model.empty("", false);
     private GenerationOrchestrator.Run last;
     private final List<QualityIssue> aiProposals = new ArrayList<>();
+    /** Automação a que as propostas da IA pertencem (outra automação ativa = propostas descartadas). */
+    private com.nekkora.studio.domain.AutomationId proposalsFor;
     private final Map<String, Integer> fixAttempts = new LinkedHashMap<>();
     private Consumer<QualityReport> reportListener = r -> { };
 
@@ -218,12 +230,12 @@ public final class DevelopmentPresenter implements DevelopmentPanel.Actions {
         var v0 = new AutomationValidator(RuleSet.LATEST).validate(a);
         String promptLabel = prompt == null ? "" : prompt.label();
         AutomationQualityGate.Assessment first = AutomationQualityGate.assess(new AutomationQualityGate.Inputs(a, v0, draft, spec, catalog, out, tabular,
-                Optional.empty(), true, List.of(), promptLabel, clock.instant(), store.options(a.id()).origins()));
+                Optional.empty(), true, List.of(), promptLabel, clock.instant(), store.options(a.id()).origins(), runRecord(a)));
         boolean code = first.code().exists() && first.code().current();
         layersListener.accept(new Layers("revisão atual", List.copyOf(first.report().layers().values()), live(first)));
         if (!code) {
             AutomationQualityGate.Assessment noCode = AutomationQualityGate.assess(new AutomationQualityGate.Inputs(a, v0, draft, spec, catalog, out, tabular,
-                    Optional.empty(), false, List.of(), promptLabel, clock.instant(), store.options(a.id()).origins()));
+                    Optional.empty(), false, List.of(), promptLabel, clock.instant(), store.options(a.id()).origins(), runRecord(a)));
             publish(a, noCode, round);
             return;
         }
@@ -243,7 +255,7 @@ public final class DevelopmentPresenter implements DevelopmentPanel.Actions {
                 if (round != validationRound || active().map(x -> x != a).orElse(true)) return; // outra validação ou outra automação: descartado
                 AutomationQualityGate.Assessment full = AutomationQualityGate.assess(new AutomationQualityGate.Inputs(a, new AutomationValidator(RuleSet.LATEST)
                         .validate(a), loadDraft(a), loadSpec(a), catalog, out, tabular, env, false, done, promptLabel, clock.instant(),
-                        store.options(a.id()).origins()));
+                        store.options(a.id()).origins(), runRecord(a)));
                 publish(a, full, round);
             });
         });
@@ -330,6 +342,7 @@ public final class DevelopmentPresenter implements DevelopmentPanel.Actions {
             panel.show(model);
         }
         host.show();
+        refreshRun(a);
         if (start && !running && projectFile(a).isPresent()) develop();
     }
 
@@ -346,12 +359,12 @@ public final class DevelopmentPresenter implements DevelopmentPanel.Actions {
         }
         running = true;
         cancelled.set(false);
-        aiProposals.clear();
         phases.clear();
         for (GenerationOrchestrator.Phase p : GenerationOrchestrator.Phase.values()) phases.put(p, DevelopmentPanel.PhaseState.PENDING);
         Path out = outputDir(a, project.get());
         Optional<DocumentDraft> draft = loadDraft(a);
         FunctionalSpec spec = loadSpec(a);
+        pruneProposals(a, spec);
         Optional<CodegenConfig> tabular;
         try {
             tabular = declaredTabular(project.get());
@@ -457,6 +470,8 @@ public final class DevelopmentPresenter implements DevelopmentPanel.Actions {
         panel.show(model);
         panel.focusResults();
         if (report != null) reportListener.accept(report);
+        // o relatório é gravado pela fila de trabalho: o estado do teste autorizado é recalculado depois dele
+        worker.submit(() -> SwingUtilities.invokeLater(() -> refreshRun(a)));
     }
 
     private void fail(Automation a, String title, String text) {
@@ -475,7 +490,7 @@ public final class DevelopmentPresenter implements DevelopmentPanel.Actions {
                     } catch (CodegenConfig.Invalid e) {
                         return Optional.empty();
                     }
-                }), env, false, checks, prompt == null ? "" : prompt.label(), clock.instant(), store.options(a.id()).origins()));
+                }), env, false, checks, prompt == null ? "" : prompt.label(), clock.instant(), store.options(a.id()).origins(), runRecord(a)));
         QualityReport r = as.report();
         worker.submit(() -> {
             try {
@@ -549,7 +564,13 @@ public final class DevelopmentPresenter implements DevelopmentPanel.Actions {
                 + " que o plano escolher." : String.join(", ", uses(plan).stream().filter(u -> u.group().startsWith("Libs")).map(DevelopmentPanel.Use::name).toList())));
         out.add(new DevelopmentPanel.Answer("Onde consulto cada função?", "Em \"O que vou utilizar\": selecione e use Ver documentação — assinatura, arquivo e linha "
                 + "no pacote instalado e a seção da documentação do nekkora_rpa " + catalog.version() + "."));
-        if (plan != null && plan.model() == DevelopmentPlan.ExecutionModel.SINGLE && plan.singleConfig().isPresent()) {
+        if (plan != null && plan.model() == DevelopmentPlan.ExecutionModel.LIST && plan.singleConfig().isPresent()) {
+            var cfg = plan.singleConfig().get();
+            out.add(new DevelopmentPanel.Answer("Como meus dados serão recebidos?", "Lista de entrada CSV ou XLSX com as colunas "
+                    + String.join(", ", cfg.inputs()) + ", uma transação por linha; saída numa planilha Excel com as colunas "
+                    + String.join(", ", cfg.output().columns().stream().map(com.nekkora.studio.codegen.SingleConfig.Column::header).toList())
+                    + ", gravada só se todos os itens derem certo."));
+        } else if (plan != null && plan.model() == DevelopmentPlan.ExecutionModel.SINGLE && plan.singleConfig().isPresent()) {
             var cfg = plan.singleConfig().get();
             long creds = plan.variables().stream().filter(v -> "CREDENTIAL".equals(v.origin())).count();
             out.add(new DevelopmentPanel.Answer("Como meus dados serão recebidos?", "Entrada única: um arquivo JSON com "
@@ -561,7 +582,8 @@ public final class DevelopmentPresenter implements DevelopmentPanel.Actions {
         }
         projectFile(a).ifPresent(p -> out.add(new DevelopmentPanel.Answer("Para onde vai o Python?", outputDir(a, p) + " (Opções avançadas para mudar).")));
         long open = run == null ? 0 : run.issues().stream().filter(i -> i.kind() == QualityIssue.Kind.HELP_REQUIRED).count();
-        out.add(new DevelopmentPanel.Answer("O que a IA não sabe?", open == 0 ? "Nenhuma pergunta aberta. O plano é determinístico; a IA não foi usada."
+        out.add(new DevelopmentPanel.Answer("O que a IA não sabe?", open == 0 ? "Nenhuma pergunta aberta. O plano é determinístico; propostas da IA só "
+                + "entram depois de \"Revisar e aplicar\"."
                 : open + " pergunta(s) por etapa na aba Pendências — o Studio não decide sem evidência."));
         return out;
     }
@@ -689,6 +711,10 @@ public final class DevelopmentPresenter implements DevelopmentPanel.Actions {
     public void answerText(QualityIssue issue, String text) {
         if (running) return;
         Automation a = active().orElse(null);
+        if (a != null && issue.step() != null && issue.assistance().map(AssistanceRequest::destination).orElse(null) == FunctionalSpec.Field.OUTPUT_COLUMN) {
+            answerHeader(a, issue, text);
+            return;
+        }
         if (a == null || issue.assistance().map(AssistanceRequest::destination).orElse(null) != FunctionalSpec.Field.START_URL) return;
         String url = text == null ? "" : text.strip();
         ProjectContext ctx = ProjectContext.of(a, loadDraft(a));
@@ -707,6 +733,27 @@ public final class DevelopmentPresenter implements DevelopmentPanel.Actions {
             return;
         }
         develop(); // a resposta muda a especificação: a análise recomeça
+    }
+
+    /** NEKKORA-E2E-002: cabeçalho de coluna digitado — rótulo de interface do vocabulário controlado, nunca dado. */
+    private void answerHeader(Automation a, QualityIssue issue, String text) {
+        String header = text == null ? "" : text.strip().replaceAll("\\s+", " ");
+        if (!FunctionalSpec.headerOk(header)) {
+            host.showText("Cabeçalho recusado", "O cabeçalho precisa ser um rótulo de interface curto (até 60 caracteres), formado só por termos do vocabulário "
+                    + "controlado e sem começar por =, +, - ou @. Ele nomeia a coluna; não é o dado. Nada foi guardado.");
+            return;
+        }
+        ProjectContext ctx = ProjectContext.of(a, loadDraft(a));
+        String fp = ctx.step(issue.step()).map(ProjectContext.Step::fingerprint).orElse(null);
+        if (fp == null) return;
+        try {
+            store.saveSpec(loadSpec(a).with(new FunctionalSpec.Decision(FunctionalSpec.Field.OUTPUT_COLUMN, issue.step(), FunctionalSpec.COLUMN + header,
+                    actorOf(), FunctionalSpec.Basis.ANSWER, fp, clock.instant())));
+        } catch (IOException | IllegalArgumentException e) {
+            host.showText("Cabeçalho recusado", "A resposta não pôde ser guardada na especificação funcional. Nada foi alterado.");
+            return;
+        }
+        develop();
     }
 
     @Override
@@ -865,17 +912,22 @@ public final class DevelopmentPresenter implements DevelopmentPanel.Actions {
         worker.submit(() -> {
             PlanVerifier.Result r;
             String error = null;
+            int status = 0;
+            long t0 = System.nanoTime();
             try {
                 r = AiAssist.run(provider, true, prompt, p, ctx, cancelled::get);
             } catch (AIProvider.AIException e) {
                 r = null;
                 error = e.code().name();
+                status = e.status();
             }
+            recordAiCall(a, p, r, error, status, (System.nanoTime() - t0) / 1_000_000);
             PlanVerifier.Result res = r;
             String err = error;
             SwingUtilities.invokeLater(() -> {
                 running = false;
                 aiProposals.clear();
+                proposalsFor = a.id();
                 if (res != null) {
                     for (PlanVerifier.Proposal x : res.accepted()) aiProposals.add(proposalIssue(x));
                 }
@@ -887,15 +939,87 @@ public final class DevelopmentPresenter implements DevelopmentPanel.Actions {
         });
     }
 
-    private static QualityIssue proposalIssue(PlanVerifier.Proposal p) {
+    /**
+     * NEKKORA-E2E-002: metadados VERIFICÁVEIS de uma chamada real feita pela interface (consentida): provedor e modelo
+     * informados pela resposta, contrato, Prompt-Mestre, tamanho da carga, perguntas, resultado (RESPONSE_VERIFIED ou o
+     * código do erro), aceitas/recusadas pelo verificador, tokens e duração. Nunca a carga, a resposta ou a chave.
+     */
+    private void recordAiCall(Automation a, AiAssist.Payload p, PlanVerifier.Result r, String error, int status, long millis) {
+        java.util.Map<String, Object> ev = new java.util.LinkedHashMap<>();
+        ev.put("schema", "nekkora-studio/ai-call-evidence");
+        ev.put("version", "1.0.0");
+        ev.put("at", clock.instant().toString());
+        ev.put("origin", "UI:Solicitar ajuda");
+        ev.put("actor", actorOf().name());
+        ev.put("provider", provider.id());
+        ev.put("model", r == null ? "" : r.model());
+        ev.put("contract", AiAssist.CONTRACT);
+        ev.put("prompt", prompt.label());
+        ev.put("payloadChars", p.json().length());
+        ev.put("payloadSha256", com.nekkora.studio.ai.Hashes.sha256(p.json()));
+        ev.put("steps", p.steps());
+        ev.put("openQuestions", p.questions());
+        ev.put("consent", "PREVIEW_SHOWN_AND_ACCEPTED");
+        ev.put("outcome", r != null ? "RESPONSE_VERIFIED" : "PROVIDER_ERROR");
+        if (r != null) {
+            ev.put("accepted", r.accepted().stream().map(x -> (Object) (x.kind().name() + (x.step() == null ? "" : "@etapa"))).toList());
+            ev.put("rejected", r.rejected().stream().map(x -> (Object) x.code()).toList());
+            ev.put("inputTokens", r.inputTokens());
+            ev.put("outputTokens", r.outputTokens());
+        } else {
+            ev.put("code", error);
+            ev.put("httpStatus", status);
+        }
+        ev.put("millis", millis);
+        try {
+            store.appendAiCall(a.id(), com.nekkora.studio.bridge.json.Json.write(ev));
+        } catch (IOException ignored) {
+            // a janela mostra o resultado mesmo sem o registro
+        }
+    }
+
+    public static QualityIssue proposalIssue(PlanVerifier.Proposal p) {
         String what = switch (p.kind()) {
             case EFFECT -> "efeito " + ("EXTERNAL".equals(p.value()) ? "externo (grava/envia)" : "nenhum (consulta/navega)");
             case POSTCONDITION -> "confirmação " + p.value();
             case VARIABLE_NAME -> "nome de variável " + p.value();
+            case DATA_FLOW -> "LIST_XLSX".equals(p.value()) ? "uma transação por linha de uma lista e planilha de saída" : "uma execução (JSON)";
+            case OUTPUT_COLUMN -> p.value().startsWith(FunctionalSpec.COLUMN) ? "coluna “" + p.value().substring(FunctionalSpec.COLUMN.length()) + "”"
+                    : p.value().startsWith(FunctionalSpec.FALLBACK) ? "fonte alternativa de outra coluna" : "fora da planilha";
+            case VARIABLE_TYPE -> "DATE".equals(p.value()) ? "ler como data (por extenso → AAAA-MM-DD)" : "ler como texto";
         };
         return new QualityIssue("AI_PROPOSAL", Layer.V3_PLAN, QualityIssue.Kind.PROPOSE_REVIEW, p.step(), null, "IA propõe: " + what,
                 p.rationale().isEmpty() ? "Proposta da IA (sem justificativa aproveitável)." : p.rationale(), "Revise antes de aplicar: a decisão fica registrada com o seu ator.",
                 null, new QualityIssue.Fix("AI:" + p.kind() + ":" + p.value(), what, "", p.value()), null);
+    }
+
+    /**
+     * E2E-002: as propostas da IA ainda não revisadas continuam entre execuções do Desenvolver (inclusive as internas,
+     * como registrar variáveis derivadas) — a pessoa não precisa pedir de novo. Saem quando a automação muda, quando a
+     * etapa deixa de existir ou quando a decisão daquele campo já foi registrada (por proposta aplicada ou resposta).
+     */
+    private void pruneProposals(Automation a, FunctionalSpec spec) {
+        if (!a.id().equals(proposalsFor)) {
+            aiProposals.clear();
+            return;
+        }
+        aiProposals.removeIf(p -> obsoleteProposal(p, a, spec));
+    }
+
+    /** A proposta da IA já não tem o que propor: etapa removida, ou decisão daquele campo já registrada. */
+    public static boolean obsoleteProposal(QualityIssue p, Automation a, FunctionalSpec spec) {
+        String[] parts = p.fix().id().split(":", 3);
+        if (p.step() != null && a.step(p.step()).isEmpty()) return true;
+        return switch (PlanVerifier.Kind.valueOf(parts[1])) {
+            case DATA_FLOW -> spec.decision(FunctionalSpec.Field.DATA_FLOW, null).isPresent();
+            case EFFECT -> spec.decision(FunctionalSpec.Field.EFFECT, p.step()).isPresent();
+            case POSTCONDITION -> spec.decision(FunctionalSpec.Field.POSTCONDITION, p.step()).isPresent();
+            case OUTPUT_COLUMN -> spec.decision(FunctionalSpec.Field.OUTPUT_COLUMN, p.step()).isPresent();
+            case VARIABLE_TYPE -> a.variables().stream().anyMatch(v -> p.step().equals(v.origin().producer())
+                    && v.type() == ("DATE".equals(parts[2]) ? com.nekkora.studio.domain.variable.VariableType.DATE
+                    : com.nekkora.studio.domain.variable.VariableType.STRING));
+            case VARIABLE_NAME -> false;
+        };
     }
 
     private void acceptProposal(Automation a, QualityIssue issue) {
@@ -903,6 +1027,26 @@ public final class DevelopmentPresenter implements DevelopmentPanel.Actions {
         PlanVerifier.Kind kind = PlanVerifier.Kind.valueOf(parts[1]);
         String value = parts[2];
         aiProposals.removeIf(x -> x.id().equals(issue.id()) && x.fix().id().equals(issue.fix().id()));
+        // a mesma decisão (tipo + etapa) não fica oferecida duas vezes; as demais propostas sobrevivem à reanálise
+        aiProposals.removeIf(x -> x.fix() != null && x.fix().id().startsWith("AI:" + kind.name() + ":") && java.util.Objects.equals(x.step(), issue.step()));
+        if (kind == PlanVerifier.Kind.DATA_FLOW) {
+            try {
+                store.saveSpec(loadSpec(a).with(new FunctionalSpec.Decision(FunctionalSpec.Field.DATA_FLOW, null, value, actorOf(),
+                        FunctionalSpec.Basis.PROPOSAL_ACCEPTED, null, clock.instant())));
+            } catch (IOException e) {
+                return;
+            }
+            develop();
+            return;
+        }
+        if (kind == PlanVerifier.Kind.VARIABLE_TYPE) {
+            a.variables().stream().filter(v -> v.origin().producer() != null && v.origin().producer().equals(issue.step())).findFirst().ifPresent(v ->
+                    service.updateVariable(a.id(), v.id(), com.nekkora.studio.domain.variable.VariableDraft.of(v.name(), "DATE".equals(value)
+                            ? com.nekkora.studio.domain.variable.VariableType.DATE : com.nekkora.studio.domain.variable.VariableType.STRING)
+                            .withOrigin(v.origin()).withSensitivity(v.sensitivity()).withPurpose(v.purpose())));
+            develop();
+            return;
+        }
         if (kind == PlanVerifier.Kind.VARIABLE_NAME) {
             AutomationStep st = a.step(issue.step()).orElse(null);
             String current = st == null ? null : st.parameters().value().map(v -> v instanceof com.nekkora.studio.domain.action.ValueSource.VariableReference r ? r.name()
@@ -915,7 +1059,8 @@ public final class DevelopmentPresenter implements DevelopmentPanel.Actions {
         ProjectContext ctx = ProjectContext.of(a, loadDraft(a));
         String fp = ctx.step(issue.step()).map(ProjectContext.Step::fingerprint).orElse(null);
         if (fp == null) return;
-        FunctionalSpec.Field field = kind == PlanVerifier.Kind.EFFECT ? FunctionalSpec.Field.EFFECT : FunctionalSpec.Field.POSTCONDITION;
+        FunctionalSpec.Field field = kind == PlanVerifier.Kind.EFFECT ? FunctionalSpec.Field.EFFECT
+                : kind == PlanVerifier.Kind.OUTPUT_COLUMN ? FunctionalSpec.Field.OUTPUT_COLUMN : FunctionalSpec.Field.POSTCONDITION;
         try {
             store.saveSpec(loadSpec(a).with(new FunctionalSpec.Decision(field, issue.step(), value, actorOf(), FunctionalSpec.Basis.PROPOSAL_ACCEPTED, fp,
                     clock.instant())));
@@ -923,6 +1068,224 @@ public final class DevelopmentPresenter implements DevelopmentPanel.Actions {
             return;
         }
         develop();
+    }
+
+    // ------------------------------------------------------------------------------------------- teste autorizado (E2E-002)
+
+    /**
+     * Por que o TESTE AUTORIZADO não está disponível agora (vazio = disponível). Só lê estado: PDD_READY da revisão atual,
+     * código gerado da revisão atual e verificado (CODE_VALIDATED), processo em lista com planilha e origem autorizada.
+     */
+    Optional<String> runBlocker(Automation a) {
+        Optional<Path> project = projectFile(a);
+        if (project.isEmpty()) return Optional.of("Salve o projeto e desenvolva o código primeiro.");
+        Path out = outputDir(a, project.get());
+        Optional<DocumentDraft> draft = loadDraft(a);
+        com.nekkora.studio.ai.gate.PddGate.Result gate = com.nekkora.studio.ai.gate.PddGate.evaluate(ProjectContext.of(a, draft), draft, loadSpec(a),
+                com.nekkora.studio.pdd.ProcessProjection.of(a), clock.instant());
+        if (!gate.ready()) return Optional.of("O PDD não está pronto (PDD_READY) na revisão atual.");
+        AutomationQualityGate.CodeState code = AutomationQualityGate.codeState(out, a, gate);
+        if (!code.current()) return Optional.of("Não há código gerado da revisão atual (" + code.reason() + "): use Desenvolver.");
+        if (!validated(a, code.manifestHash())) return Optional.of("O código desta revisão ainda não passou na verificação (CODE_VALIDATED).");
+        Optional<com.nekkora.studio.codegen.SingleConfig> cfg = derivedConfig(a);
+        if (cfg.isEmpty() || !cfg.get().list()) return Optional.of("Nesta versão o teste autorizado roda processos em lista com planilha de saída.");
+        boolean lab = cfg.get().allowedOrigins().stream().allMatch(o -> o.startsWith("http://127.0.0.1") || o.startsWith("http://localhost"));
+        if (!lab && !store.options(a.id()).origins().containsAll(cfg.get().allowedOrigins())) {
+            return Optional.of("A origem do processo não está autorizada como site público de treinamento.");
+        }
+        return Optional.empty();
+    }
+
+    /** A verificação real (V4/V5) passou para ESTE manifesto? (relatório de qualidade persistido da revisão.) */
+    private boolean validated(Automation a, String manifest) {
+        return store.quality(a.id()).map(t -> {
+            try {
+                QualityReport r = QualityReport.parse(t);
+                return manifest.equals(r.codeManifest()) && r.layers().get(Layer.V4_CODE).state() == QualityReport.State.PASS
+                        && r.layers().get(Layer.V5_TESTS).state() == QualityReport.State.PASS;
+            } catch (RuntimeException e) {
+                return false;
+            }
+        }).orElse(false);
+    }
+
+    private Optional<com.nekkora.studio.codegen.SingleConfig> derivedConfig(Automation a) {
+        return store.config(a.id()).flatMap(t -> {
+            try {
+                return Optional.of(com.nekkora.studio.codegen.SingleConfig.parse(t));
+            } catch (RuntimeException e) {
+                return Optional.empty();
+            }
+        });
+    }
+
+    Optional<com.nekkora.studio.ai.quality.SupervisedRunRecord> runRecord(Automation a) {
+        return store.supervisedRun(a.id()).flatMap(t -> {
+            try {
+                com.nekkora.studio.ai.quality.SupervisedRunRecord r = com.nekkora.studio.ai.quality.SupervisedRunRecord.parse(t);
+                return r.automationId().equals(a.id().value().toString()) ? Optional.of(r) : Optional.empty();
+            } catch (RuntimeException e) {
+                return Optional.empty();
+            }
+        });
+    }
+
+    private void refreshRun(Automation a) {
+        Optional<String> why = running ? Optional.of("Aguarde o fim da operação em andamento.") : runBlocker(a);
+        panel.runState(why.isEmpty(), why.orElse("Roda o código gerado da revisão atual, com confirmação do site e do destino."));
+    }
+
+    @Override
+    public void supervisedRun() {
+        if (running) return;
+        Automation a = active().orElse(null);
+        if (a == null) return;
+        Optional<String> blocker = runBlocker(a);
+        if (blocker.isPresent()) {
+            host.showText("Teste autorizado indisponível", blocker.get() + "\n\nNada foi executado.");
+            return;
+        }
+        Path out = outputDir(a, projectFile(a).orElseThrow());
+        com.nekkora.studio.codegen.SingleConfig cfg = derivedConfig(a).orElseThrow();
+        Optional<PythonChecks.Environment> env = PythonChecks.resolve(store.options(a.id()).python(), out);
+        if (env.isEmpty() || !catalog.version().equals(env.get().framework())) {
+            host.showText("Teste autorizado indisponível", "O Python configurado precisa ter o nekkora_rpa " + catalog.version() + " (com o extra excel), ruff e mypy. "
+                    + "Configure em Opções avançadas → Python para verificação.\n\nNada foi executado.");
+            return;
+        }
+        Optional<Path> input = host.chooseRunInput("Lista de entrada do teste autorizado (colunas: " + String.join(", ", cfg.inputs()) + ")");
+        if (input.isEmpty()) return;
+        Optional<Path> chosen = host.chooseRunOutput("Planilha de saída do teste autorizado", cfg.processName() + ".xlsx");
+        if (chosen.isEmpty()) return;
+        Path sheet = chosen.get().getFileName().toString().toLowerCase(java.util.Locale.ROOT).endsWith(".xlsx") ? chosen.get()
+                : chosen.get().resolveSibling(chosen.get().getFileName() + ".xlsx");
+        String manifest;
+        try {
+            manifest = com.nekkora.studio.ai.pycheck.SupervisedRun.verifyGenerated(out);
+        } catch (com.nekkora.studio.ai.pycheck.SupervisedRun.Refused r) {
+            host.showText("Teste autorizado recusado", "O código da pasta de saída não corresponde ao que o Studio gerou (" + r.code() + "). Desenvolva de novo; "
+                    + "código editado à mão não é executado.\n\nNada foi executado.");
+            return;
+        }
+        long rows = csvRows(input.get());
+        String message = "Vai acessar: " + String.join(", ", cfg.allowedOrigins()) + " — só estas origens (o framework bloqueia as demais e redirecionamentos "
+                + "para fora).\nVai gravar: " + sheet + (Files.exists(sheet) ? " — o arquivo existente será SUBSTITUÍDO (troca atômica)." : "")
+                + "\nLista: " + input.get() + (rows >= 0 ? " — " + rows + " linha(s)" : "") + "\nNavegador: Chrome visível. Código: revisão " + shortRev(manifest)
+                + " (gerado e verificado), nekkora_rpa " + env.get().framework() + ".\n\nSomente as ações gravadas e documentadas no PDD. Não é execução de "
+                + "produção. Cancelar fecha o navegador e a planilha não é gravada.";
+        if (!host.confirm("Executar teste autorizado?", message, "Executar")) return;
+        try {
+            store.saveRunPaths(a.id(), input.get(), sheet);
+        } catch (IOException ignored) {
+            // conveniência: a próxima escolha começa vazia
+        }
+        Path runDir;
+        try {
+            Path base = store.folder(a.id()) == null ? Files.createTempDirectory("nekkora-teste-") : store.folder(a.id()).resolve("testes");
+            runDir = base.resolve(clock.instant().toString().replace(':', '-').replace('.', '-'));
+            Files.createDirectories(runDir);
+        } catch (IOException e) {
+            host.showText("Teste autorizado não iniciado", "A pasta da execução não pôde ser criada. Nada foi executado.");
+            return;
+        }
+        running = true;
+        cancelled.set(false);
+        Path project = out;
+        Path chosenInput = input.get();
+        render(a, "Teste autorizado em andamento…", "Abrindo o navegador. Itens: 0. Use Cancelar para interromper.", com.nekkora.ui.core.Severity.INFO, List.of(),
+                List.of());
+        panel.runState(false, "Teste autorizado em andamento.");
+        worker.submit(() -> {
+            com.nekkora.studio.ai.pycheck.SupervisedRun.Outcome o = null;
+            String error = null;
+            try {
+                o = com.nekkora.studio.ai.pycheck.SupervisedRun.run(env.get(), new com.nekkora.studio.ai.pycheck.SupervisedRun.Request(project, chosenInput,
+                        sheet, runDir, true, java.time.Duration.ofMinutes(20)), p -> SwingUtilities.invokeLater(() -> runProgress(a, p, rows)), cancelled::get);
+            } catch (com.nekkora.studio.ai.pycheck.SupervisedRun.Refused r) {
+                error = r.code();
+            } catch (IOException e) {
+                error = "IO_ERROR";
+            }
+            Path provenance = null;
+            if (o != null && cfg.spreadsheet()) {
+                try {
+                    String prov = com.nekkora.studio.ai.pycheck.RunProvenance.build(project, runDir, sheet, cfg);
+                    provenance = runDir.resolve("proveniencia.json");
+                    Files.writeString(provenance, prov, java.nio.charset.StandardCharsets.UTF_8);
+                } catch (IOException | RuntimeException e) {
+                    provenance = null;
+                }
+            }
+            if (o != null) {
+                var v = o.verification();
+                com.nekkora.studio.ai.quality.SupervisedRunRecord rec = new com.nekkora.studio.ai.quality.SupervisedRunRecord(a.id().value().toString(), a.revision(),
+                        o.codeRevision(), clock.instant().toString(), actorOf().name(), o.status().name(), o.exitCode(), o.counts(), o.outputStatus(), o.outputRows(),
+                        o.outputDetail(), v != null && v.ok(), v == null ? "" : v.code(), v == null ? 0 : v.rows(), v == null ? List.of() : v.headers(),
+                        v == null ? "" : v.sha256(), o.millis(), "chrome visível");
+                try {
+                    store.saveSupervisedRun(a.id(), rec.toJson());
+                    Files.writeString(runDir.resolve("teste-autorizado.json"), rec.toJson(), java.nio.charset.StandardCharsets.UTF_8);
+                } catch (IOException ignored) {
+                    // o resultado ainda aparece na janela
+                }
+            }
+            com.nekkora.studio.ai.pycheck.SupervisedRun.Outcome done = o;
+            String err = error;
+            Path prov = provenance;
+            SwingUtilities.invokeLater(() -> runFinished(a, done, err, runDir, sheet, prov));
+        });
+    }
+
+    private void runProgress(Automation a, com.nekkora.studio.ai.pycheck.SupervisedRun.Progress p, long total) {
+        if (!running) return;
+        String of = total > 0 ? " de " + total : "";
+        render(a, "Teste autorizado em andamento…", "Itens iniciados: " + p.started() + of + " · concluídos: " + p.succeeded() + " · recusados: " + p.rejected()
+                + " · falhas: " + p.failed() + " · fase " + p.phase() + " · " + (p.elapsedMs() / 1000) + " s. Use Cancelar para interromper.",
+                com.nekkora.ui.core.Severity.INFO, List.of(), List.of());
+    }
+
+    private void runFinished(Automation a, com.nekkora.studio.ai.pycheck.SupervisedRun.Outcome o, String error, Path runDir, Path sheet, Path provenance) {
+        running = false;
+        List<String> results = new ArrayList<>();
+        String title;
+        com.nekkora.ui.core.Severity sev;
+        if (o == null) {
+            title = "Teste autorizado não executado (" + error + ")";
+            sev = com.nekkora.ui.core.Severity.ERROR;
+            results.add("× Teste autorizado recusado antes de iniciar: " + error + ". Nada foi executado.");
+        } else {
+            boolean proven = o.proven();
+            title = proven ? "Teste autorizado terminou: planilha gravada e conferida" : "Teste autorizado terminou sem planilha conferida (" + o.status() + ")";
+            sev = proven ? com.nekkora.ui.core.Severity.SUCCESS : com.nekkora.ui.core.Severity.WARNING;
+            results.add((proven ? "✓ " : "× ") + "Teste autorizado: " + o.status() + " · saída " + (o.outputStatus().isEmpty() ? "—" : o.outputStatus())
+                    + (o.outputDetail().isEmpty() ? "" : " (" + o.outputDetail() + ")") + " · " + (o.millis() / 1000) + " s");
+            results.add("  Itens por estado: " + (o.counts().isEmpty() ? "nenhum" : o.counts().toString()));
+            var v = o.verification();
+            results.add(v == null ? "— Planilha não conferida (não foi gravada)." : (v.ok() ? "✓ " : "× ") + "Planilha reaberta: " + v.rows() + " linha(s), colunas "
+                    + v.headers() + (v.code().isEmpty() ? "" : " — " + v.code()) + " · " + shortRev(v.sha256()));
+            results.add("  Planilha: " + sheet);
+            results.add("  Revisão do código executado: " + shortRev(o.codeRevision()));
+        }
+        results.add("  Execução (eventos sem valores, checkpoint, resumo): " + runDir);
+        if (provenance != null) results.add("  Proveniência (coluna → etapa → alvo, separada da planilha): " + provenance);
+        model = withPaths(new DevelopmentPanel.Model(a.name(), true, false, title, o != null && o.proven()
+                ? "Execução supervisionada pela interface: o Studio lançou o código gerado, acompanhou e conferiu a planilha reabrindo o arquivo. V6 registrado."
+                : "Nada foi dado por executado: veja o resultado e a pasta da execução.", sev, model.phases(), model.uses(), model.answers(), model.variables(),
+                model.pending(), results, "", "", true, provider != null && provider.available()), a);
+        panel.show(model);
+        panel.focusResults();
+        refreshRun(a);
+        validateLayers(); // V6 da revisão atual (a aba Validação recebe o relatório novo)
+    }
+
+    /** Linhas de dados de uma lista CSV (sem o cabeçalho); -1 se não der para contar sem abrir o XLSX. */
+    private static long csvRows(Path p) {
+        if (!p.getFileName().toString().toLowerCase(java.util.Locale.ROOT).endsWith(".csv")) return -1;
+        try (var lines = Files.lines(p, java.nio.charset.StandardCharsets.UTF_8)) {
+            return Math.max(0, lines.filter(l -> !l.isBlank()).count() - 1);
+        } catch (IOException | java.io.UncheckedIOException e) {
+            return -1;
+        }
     }
 
     // ------------------------------------------------------------------------------------------- apoio

@@ -1,0 +1,22 @@
+Tela: java.awt.Rectangle[x=0,y=0,width=1920,height=1032] · java 21.0.12
+Operador: Claude como AGENTE DE TESTE (TEST_AGENT) · ator do Studio: TEST_AGENT
+Prova ANTES (G0) — Studio e extensão da main; site público de documentação: https://pt.wikipedia.org (só leitura)
+Native Host instalado pelo script oficial (install-host.ps1)
+Chrome for Testing: 155.0.8059.39
+  abas vistas pela extensão: [{"u":null,"p":null,"s":"complete"},{"u":"https://pt.wikipedia.org/wiki/Machado_de_Assis","p":null,"s":"complete"},{"u":"chrome-extension://dceigcmhbihcigneokmpmbocdclkhcaj/src/ui/harness.html","p":null,"s":"complete"}]
+OK    Conexão autenticada Studio ⇄ host ⇄ extensão
+  Machado_de_Assis · CAPTURAR E INTERAGIR: 3 cliques em textos informativos → 0 etapa(s) recebida(s) []
+  Machado_de_Assis · SOMENTE CAPTURAR: 3 cliques em textos informativos → 1 etapa(s) recebida(s) [CLICK]
+OK    ANTES Machado_de_Assis: textos informativos NÃO viram etapa de leitura (descartados ou interação não classificada)
+  Clarice_Lispector · CAPTURAR E INTERAGIR: 3 cliques em textos informativos → 0 etapa(s) recebida(s) []
+  Clarice_Lispector · SOMENTE CAPTURAR: 3 cliques em textos informativos → 1 etapa(s) recebida(s) [CLICK, CLICK]
+OK    ANTES Clarice_Lispector: textos informativos NÃO viram etapa de leitura (descartados ou interação não classificada)
+  busca: [FILL, PRESS_KEY]
+OK    ANTES busca: campo de pesquisa gravado (preencher + tecla) sem o valor digitado
+  etapa Seleção CLICK · tipo LINK · nome '' · localizadores [POSITIONAL(posicional), CONTEXTUAL]
+  etapa Seleção CLICK · tipo LINK · nome '' · localizadores [POSITIONAL(posicional), CONTEXTUAL]
+  etapa Busca FILL · tipo COMBOBOX · nome '' · localizadores [NAME, ATTRIBUTE, POSITIONAL(posicional)]
+  etapa Busca PRESS_KEY · tipo COMBOBOX · nome '' · localizadores [NAME, ATTRIBUTE, POSITIONAL(posicional)]
+captura SITES-G0-antes-studio.png (1640x1000)
+  descartes NON_INTERACTIVE vistos nos logs do host: (sem contagem nos logs)
+RESULTADO: 4 verificações, 0 falha(s)

@@ -120,6 +120,47 @@ public final class DevelopmentStore {
         return read(id.value(), "qualidade.json");
     }
 
+    /** NEKKORA-E2E-002: último teste autorizado ({@code teste-autorizado.json}). */
+    public void saveSupervisedRun(AutomationId id, String json) throws IOException {
+        write(id.value(), "teste-autorizado.json", json);
+    }
+
+    public Optional<String> supervisedRun(AutomationId id) {
+        return read(id.value(), "teste-autorizado.json");
+    }
+
+    /** NEKKORA-E2E-002: entrada e destino escolhidos para o teste autorizado (caminhos locais da pessoa). */
+    public void saveRunPaths(AutomationId id, Path input, Path spreadsheet) throws IOException {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("input", input.toString());
+        m.put("spreadsheet", spreadsheet.toString());
+        write(id.value(), "teste-autorizado-caminhos.json", Json.write(m));
+    }
+
+    public Optional<Path[]> runPaths(AutomationId id) {
+        return read(id.value(), "teste-autorizado-caminhos.json").flatMap(t -> {
+            try {
+                Map<String, Object> m = Json.parseObject(t);
+                return Optional.of(new Path[] {Path.of(String.valueOf(m.get("input"))), Path.of(String.valueOf(m.get("spreadsheet")))});
+            } catch (RuntimeException e) {
+                return Optional.empty();
+            }
+        });
+    }
+
+    /**
+     * NEKKORA-E2E-002: metadados de cada chamada REAL ao provedor de IA feita pela interface ({@code ia-chamadas.jsonl}):
+     * provedor, modelo, contrato, Prompt-Mestre, tamanhos, resultado, tokens e duração. Nunca a carga, a resposta ou a chave.
+     */
+    public void appendAiCall(AutomationId id, String json) throws IOException {
+        String before = read(id.value(), "ia-chamadas.jsonl").orElse("");
+        write(id.value(), "ia-chamadas.jsonl", before + json + "\n");
+    }
+
+    public Optional<String> aiCalls(AutomationId id) {
+        return read(id.value(), "ia-chamadas.jsonl");
+    }
+
     public Options options(AutomationId id) {
         return read(id.value(), "opcoes.json").map(t -> {
             try {

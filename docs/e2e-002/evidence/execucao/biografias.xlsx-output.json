@@ -1,0 +1,17 @@
+{
+ "schema": "nekkora-rpa/xlsx-output",
+ "version": "1.1.0",
+ "schema_revision": "sha256:aa68c8d5ca2d9c29d9165949df5efa5c7970451d68918d4fa574ba721bd26634",
+ "target": "biografias.xlsx",
+ "state": "COMMITTED",
+ "rows": {},
+ "blocked": {},
+ "committed_transactions": [
+  "tx-d6d6b1f58d6d1772d93b",
+  "tx-5e36efffb29220375923",
+  "tx-2e2c805a9f90505dfb30",
+  "tx-a84d2105c9229a6721e7"
+ ],
+ "committed_sha256": "sha256:0cf6afa8cf7aad2af601442390f31595b9b336abb00f7796f244a96c458cd26c",
+ "pending_sha256": null
+}

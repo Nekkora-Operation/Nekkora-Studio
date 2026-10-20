@@ -101,7 +101,7 @@ public final class GenerationOrchestrator {
         if (cancelled.getAsBoolean()) return cancelledRun(Stage.PDD_READY, Phase.PDD, gate, null, outputDir);
         progress.phase(Phase.PLAN);
         DevelopmentPlan plan = DevelopmentPlanner.plan(a, ctx, gate, cat, declaredTabular);
-        if (!plan.ready()) return new Run(Stage.PDD_READY, Phase.PLAN, gate, plan, List.of(), null, null, outputDir, null, plan.issues());
+        if (!plan.ready()) return new Run(Stage.PDD_READY, Phase.PLAN, gate, plan, List.of(), null, null, outputDir, null, withGateNotes(gate, plan.issues()));
         if (cancelled.getAsBoolean()) return cancelledRun(Stage.PLAN_VALIDATED, Phase.PLAN, gate, plan, outputDir);
         progress.phase(Phase.VALIDATING);
         var report = new AutomationValidator(RuleSet.V1_1).validate(a);
@@ -121,10 +121,23 @@ public final class GenerationOrchestrator {
                 issues.add(QualityIssue.of("GEN_" + b.code(), Layer.V3_PLAN, QualityIssue.Kind.BLOCKER, b.step(), "Gerador oficial",
                         "O pré-voo do gerador recusou (" + b.code() + "). Nenhum arquivo foi gravado.", "Veja a etapa e valide a automação."));
             }
-            return new Run(Stage.PLAN_VALIDATED, Phase.GENERATING, gate, plan, result.blockers(), null, null, outputDir, configJson, issues);
+            return new Run(Stage.PLAN_VALIDATED, Phase.GENERATING, gate, plan, result.blockers(), null, null, outputDir, configJson, withGateNotes(gate, issues));
         }
         if (cancelled.getAsBoolean()) return cancelledRun(Stage.PLAN_VALIDATED, Phase.GENERATING, gate, plan, outputDir);
-        return new Run(Stage.PLAN_VALIDATED, null, gate, plan, List.of(), result.files(), null, outputDir, configJson, plan.issues());
+        return new Run(Stage.PLAN_VALIDATED, null, gate, plan, List.of(), result.files(), null, outputDir, configJson, withGateNotes(gate, plan.issues()));
+    }
+
+    /**
+     * NEKKORA-E2E-002: com o PDD pronto, os avisos e perguntas OPCIONAIS da especificação (ex.: "uma execução ou uma
+     * transação por item com planilha?", revisão das colunas) continuam visíveis junto das pendências do plano — sem
+     * eles a pessoa não teria como escolher depois da primeira geração.
+     */
+    static List<QualityIssue> withGateNotes(PddGate.Result gate, List<QualityIssue> issues) {
+        List<QualityIssue> out = new ArrayList<>(issues);
+        for (QualityIssue i : gate.issues()) {
+            if (i.kind() == QualityIssue.Kind.WARNING && i.assistance().isPresent() && !out.contains(i)) out.add(i);
+        }
+        return out;
     }
 
     /** Grava o projeto preparado (proteção de edição manual) e os registros de auditoria. Fora da thread de interface. */

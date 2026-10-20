@@ -1,0 +1,224 @@
+Tela: java.awt.Rectangle[x=0,y=0,width=1920,height=1032] · java 21.0.12
+Operador: Claude como AGENTE DE TESTE (TEST_AGENT) · ator do Studio: TEST_AGENT
+Site público de documentação: https://pt.wikipedia.org — só pesquisa e leitura; quatro artigos; nada é editado nem enviado
+IA: provedor REAL configurado por ambiente (chave nunca impressa): presente
+Native Host instalado pelo script oficial (install-host.ps1)
+Chrome for Testing: 155.0.8059.39
+  abas vistas pela extensão: [{"u":null,"p":null,"s":"complete"},{"u":"https://pt.wikipedia.org/wiki/Wikip%C3%A9dia:P%C3%A1gina_principal","p":null,"s":"complete"},{"u":"chrome-extension://dceigcmhbihcigneokmpmbocdclkhcaj/src/ui/harness.html","p":null,"s":"complete"}]
+OK    Conexão autenticada Studio ⇄ host ⇄ extensão
+OK    G1: automação com as cinco sessões funcionais do PDD
+  Pesquisa: [FILL, PRESS_KEY]
+OK    C02: busca = Preencher + Pressionar Enter (o Enter não vira clique inventado)
+OK    C02: valor digitado fora do modelo
+  busca Preencher campo: COMBOBOX · CONTEXTUAL header input[name="search"] ×1
+OK    C02: campo recriado identificado sem posição (localizador preferido único e não posicional)
+  Enter: observação [FORM_SUBMITTED, LOCATORS_VERIFIED_LIVE]
+OK    C02: Enter observado como envio da busca (FORM_SUBMITTED/NAVIGATION_FOLLOWED)
+captura SITES-G1-01-nova-etapa-endereco.png (540x498)
+OK    C03: etapa Observar sem alvo (endereço da página) criada pelo editor
+OK    C03: Selecionar dado não executa nada (link da data não navegou)
+  Extração: [OBSERVE, OBSERVE, OBSERVE, OBSERVE, OBSERVE, OBSERVE, OBSERVE, OBSERVE] · [Ler o endereço da página, Ler o título, Ler “Nome completo”, Ler “Nascimento”, Ler “Morte”, Ler “Nacionalidade”, Ler “Ocupação”, Ler “Campo(s)”]
+OK    C03: sete leituras Observar com alvo (título + seis células), nenhuma interação
+  leitura Ler o título: HEADING · ID h1#firstHeading ×1
+  leitura Ler “Nome completo”: TABLE_CELL · ROW_CONTEXT //tr[th[normalize-space(.)="Nome completo"]]//td ×1
+  leitura Ler “Nascimento”: TABLE_CELL · ROW_CONTEXT //tr[th[normalize-space(.)="Nascimento"]]//td ×1
+  leitura Ler “Morte”: TABLE_CELL · ROW_CONTEXT //tr[th[normalize-space(.)="Morte"]]//td ×1
+  leitura Ler “Nacionalidade”: TABLE_CELL · ROW_CONTEXT //tr[th[normalize-space(.)="Nacionalidade"]]//td ×1
+  leitura Ler “Ocupação”: TABLE_CELL · ROW_CONTEXT //tr[th[normalize-space(.)="Ocupação"]]//td ×1
+  leitura Ler “Campo(s)”: TABLE_CELL · ROW_CONTEXT //tr[th[normalize-space(.)="Campo(s)"]]//td ×1
+OK    C03: cada leitura tem localizador preferido único e sem posição (ID do título; linha da tabela pelo rótulo)
+OK    C03: as células são ancoradas pelo cabeçalho da linha (ROW_CONTEXT com o rótulo)
+OK    C03: nenhum texto do artigo no modelo (só elementos e rótulos de linha)
+captura SITES-G1-02-gravacao-pesquisa-e-extracao.png (1640x1000)
+captura SITES-G1-03-variavel-endereco.png (760x604)
+OK    variável de entrada endereco_do_artigo declarada sem valor
+captura SITES-G1-04-conferencia-endereco.png (760x701)
+OK    C04: o endereço lido será CONFERIDO com a entrada (Observar com valor = variável)
+OK    projeto salvo pelo Studio (.nekkora)
+  abas do debug: [pt.wikipedia.org · Autorizada]
+  debug Página principal etapa 1 Preencher campo: Proposto · verificado tecnicamente · RESOLVED · busca
+  debug Página principal etapa 2 Pressionar Enter: Proposto · verificado tecnicamente · RESOLVED · busca
+  debug Página principal etapa 3 Ler o título: Requer revisão · RESOLVED · alvo presente
+  debug Página principal etapa 4 Ler “Nome completo”: Requer revisão · AMBIGUOUS · alvo AUSENTE nesta página
+  debug Página principal etapa 5 Ler “Nascimento”: Requer revisão · AMBIGUOUS · alvo AUSENTE nesta página
+  debug Página principal etapa 6 Ler “Morte”: Requer revisão · AMBIGUOUS · alvo AUSENTE nesta página
+  debug Página principal etapa 7 Ler “Nacionalidade”: Requer revisão · AMBIGUOUS · alvo AUSENTE nesta página
+  debug Página principal etapa 8 Ler “Ocupação”: Requer revisão · AMBIGUOUS · alvo AUSENTE nesta página
+  debug Página principal etapa 9 Ler “Campo(s)”: Requer revisão · AMBIGUOUS · alvo AUSENTE nesta página
+  abas do debug: [pt.wikipedia.org · Autorizada]
+  debug Machado de Assis etapa 1 Preencher campo: Requer revisão · RESOLVED · busca
+  debug Machado de Assis etapa 2 Pressionar Enter: Requer revisão · RESOLVED · busca
+  debug Machado de Assis etapa 3 Ler o título: Requer revisão · RESOLVED · alvo presente
+OK    G2: Machado de Assis · Ler o título identidade comprovada no elemento certo
+  debug Machado de Assis etapa 4 Ler “Nome completo”: Requer revisão · RESOLVED · alvo presente
+OK    G2: Machado de Assis · Ler “Nome completo” identidade comprovada no elemento certo
+  debug Machado de Assis etapa 5 Ler “Nascimento”: Requer revisão · RESOLVED · alvo presente
+OK    G2: Machado de Assis · Ler “Nascimento” identidade comprovada no elemento certo
+  debug Machado de Assis etapa 6 Ler “Morte”: Requer revisão · RESOLVED · alvo presente
+OK    G2: Machado de Assis · Ler “Morte” identidade comprovada no elemento certo
+  debug Machado de Assis etapa 7 Ler “Nacionalidade”: Requer revisão · RESOLVED · alvo presente
+OK    G2: Machado de Assis · Ler “Nacionalidade” identidade comprovada no elemento certo
+  debug Machado de Assis etapa 8 Ler “Ocupação”: Requer revisão · RESOLVED · alvo presente
+OK    G2: Machado de Assis · Ler “Ocupação” identidade comprovada no elemento certo
+  debug Machado de Assis etapa 9 Ler “Campo(s)”: Requer revisão · AMBIGUOUS · alvo AUSENTE nesta página
+OK    G2: Machado de Assis · Ler “Campo(s)” ausente na página → não confirmado num elemento parecido (AMBIGUOUS)
+  abas do debug: [pt.wikipedia.org · Autorizada]
+  debug Clarice Lispector etapa 1 Preencher campo: Requer revisão · RESOLVED · busca
+  debug Clarice Lispector etapa 2 Pressionar Enter: Requer revisão · RESOLVED · busca
+  debug Clarice Lispector etapa 3 Ler o título: Requer revisão · RESOLVED · alvo presente
+OK    G2: Clarice Lispector · Ler o título identidade comprovada no elemento certo
+  debug Clarice Lispector etapa 4 Ler “Nome completo”: Requer revisão · RESOLVED · alvo presente
+OK    G2: Clarice Lispector · Ler “Nome completo” identidade comprovada no elemento certo
+  debug Clarice Lispector etapa 5 Ler “Nascimento”: Requer revisão · RESOLVED · alvo presente
+OK    G2: Clarice Lispector · Ler “Nascimento” identidade comprovada no elemento certo
+  debug Clarice Lispector etapa 6 Ler “Morte”: Requer revisão · RESOLVED · alvo presente
+OK    G2: Clarice Lispector · Ler “Morte” identidade comprovada no elemento certo
+  debug Clarice Lispector etapa 7 Ler “Nacionalidade”: Requer revisão · RESOLVED · alvo presente
+OK    G2: Clarice Lispector · Ler “Nacionalidade” identidade comprovada no elemento certo
+  debug Clarice Lispector etapa 8 Ler “Ocupação”: Requer revisão · RESOLVED · alvo presente
+OK    G2: Clarice Lispector · Ler “Ocupação” identidade comprovada no elemento certo
+  debug Clarice Lispector etapa 9 Ler “Campo(s)”: Requer revisão · AMBIGUOUS · alvo AUSENTE nesta página
+OK    G2: Clarice Lispector · Ler “Campo(s)” ausente na página → não confirmado num elemento parecido (AMBIGUOUS)
+  abas do debug: [pt.wikipedia.org · Autorizada]
+  debug Marie Curie etapa 1 Preencher campo: Requer revisão · RESOLVED · busca
+  debug Marie Curie etapa 2 Pressionar Enter: Requer revisão · RESOLVED · busca
+  debug Marie Curie etapa 3 Ler o título: Requer revisão · RESOLVED · alvo presente
+OK    G2: Marie Curie · Ler o título identidade comprovada no elemento certo
+  debug Marie Curie etapa 4 Ler “Nome completo”: Requer revisão · RESOLVED · alvo presente
+OK    G2: Marie Curie · Ler “Nome completo” identidade comprovada no elemento certo
+  debug Marie Curie etapa 5 Ler “Nascimento”: Requer revisão · RESOLVED · alvo presente
+OK    G2: Marie Curie · Ler “Nascimento” identidade comprovada no elemento certo
+  debug Marie Curie etapa 6 Ler “Morte”: Requer revisão · RESOLVED · alvo presente
+OK    G2: Marie Curie · Ler “Morte” identidade comprovada no elemento certo
+  debug Marie Curie etapa 7 Ler “Nacionalidade”: Requer revisão · RESOLVED · alvo presente
+OK    G2: Marie Curie · Ler “Nacionalidade” identidade comprovada no elemento certo
+  debug Marie Curie etapa 8 Ler “Ocupação”: Requer revisão · AMBIGUOUS · alvo AUSENTE nesta página
+OK    G2: Marie Curie · Ler “Ocupação” ausente na página → não confirmado num elemento parecido (AMBIGUOUS)
+  debug Marie Curie etapa 9 Ler “Campo(s)”: Requer revisão · RESOLVED · alvo presente
+OK    G2: Marie Curie · Ler “Campo(s)” identidade comprovada no elemento certo
+  abas do debug: [pt.wikipedia.org · Autorizada]
+  debug Albert Einstein etapa 1 Preencher campo: Requer revisão · RESOLVED · busca
+  debug Albert Einstein etapa 2 Pressionar Enter: Requer revisão · RESOLVED · busca
+  debug Albert Einstein etapa 3 Ler o título: Requer revisão · RESOLVED · alvo presente
+OK    G2: Albert Einstein · Ler o título identidade comprovada no elemento certo
+  debug Albert Einstein etapa 4 Ler “Nome completo”: Requer revisão · AMBIGUOUS · alvo AUSENTE nesta página
+OK    G2: Albert Einstein · Ler “Nome completo” ausente na página → não confirmado num elemento parecido (AMBIGUOUS)
+  debug Albert Einstein etapa 5 Ler “Nascimento”: Requer revisão · RESOLVED · alvo presente
+OK    G2: Albert Einstein · Ler “Nascimento” identidade comprovada no elemento certo
+  debug Albert Einstein etapa 6 Ler “Morte”: Requer revisão · RESOLVED · alvo presente
+OK    G2: Albert Einstein · Ler “Morte” identidade comprovada no elemento certo
+  debug Albert Einstein etapa 7 Ler “Nacionalidade”: Requer revisão · RESOLVED · alvo presente
+OK    G2: Albert Einstein · Ler “Nacionalidade” identidade comprovada no elemento certo
+  debug Albert Einstein etapa 8 Ler “Ocupação”: Requer revisão · RESOLVED · alvo presente
+OK    G2: Albert Einstein · Ler “Ocupação” identidade comprovada no elemento certo
+  debug Albert Einstein etapa 9 Ler “Campo(s)”: Requer revisão · AMBIGUOUS · alvo AUSENTE nesta página
+OK    G2: Albert Einstein · Ler “Campo(s)” ausente na página → não confirmado num elemento parecido (AMBIGUOUS)
+OK    G2: todas as etapas com alvo têm decisão CONFIRMED (TEST_AGENT)
+  salvar: o Studio pede para atualizar o formato do projeto (decisões de alvo) — Atualizar e salvar
+  PDD revisado (TEST_AGENT): pendências [Sem imagem: o PDF dirá "Imagem indisponível".] · pode exportar true
+OK    PDD: textos revisados; sem pendência que bloqueie ([Inicialização do processo, Pesquisa do artigo, Extração dos dados, Transferência de dados (Excel), Encerramento])
+  pendências (inicial): [HELP_REQUIRED:SPEC_EFFECT_UNKNOWN@Pressionar Enter, HELP_REQUIRED:SPEC_START_URL_UNKNOWN@Preencher campo, WARNING:SPEC_DATA_FLOW_OPTIONAL, SECURITY_BLOCKED:ORIGIN_NOT_AUTHORIZED_FOR_EXECUTION]
+captura SITES-G4-01-desenvolver-inicial.png (1164x791)
+  pergunta: SPEC_START_URL_UNKNOWN — Qual endereço o processo abre no início?
+  pergunta: ORIGIN_NOT_AUTHORIZED_FOR_EXECUTION — Este é um site público de TREINAMENTO que você autoriza para execução?
+captura SITES-G4-02-autorizar-site.png (420x254)
+  botão de ajuda: Solicitar ajuda (IA opcional)
+OK    G4: IA real disponível na interface (provedor configurado por ambiente)
+OK    G4: a prévia do envio não contém texto de artigo nem chave
+captura SITES-G4-03-consentimento-ia.png (760x511)
+  IA: Propostas da IA: 4 — Cada proposta precisa de "Revisar e aplicar". Recusadas pelo verificador: 0. Consumo: 15441 + 1300 tokens.
+OK    G4: a análise por IA concluiu (resposta verificada)
+captura SITES-G4-04-propostas-ia.png (1164x791)
+  IA propôs: EFFECT @ Pressionar Enter = NONE — A tecla após preencher o campo de busca é seguida só por leituras de resultado, sem sinal de gravação ou envio.
+  IA propôs: DATA_FLOW = LIST_XLSX — Há um único campo de entrada preenchido e várias leituras do resultado, que fazem sentido repetir por item.
+  IA propôs: VARIABLE_TYPE @ Ler “Nascimento” = DATE — O rótulo da linha indica uma data de nascimento.
+  IA propôs: VARIABLE_TYPE @ Ler “Morte” = DATE — O rótulo da linha indica uma data de morte.
+  proposta IA: EFFECT @ Pressionar Enter = NONE → APLICAR (coincide com a decisão da pessoa)
+  proposta IA: DATA_FLOW = LIST_XLSX → APLICAR (coincide com a decisão da pessoa)
+  propostas da IA: aplicadas 2 · não aplicadas 0
+  registro da chamada: {"schema":"nekkora-studio/ai-call-evidence","version":"1.0.0","at":"2026-10-20T17:20:42.536044100Z","origin":"UI:Solicitar ajuda","actor":"TEST_AGENT","provider":"anthropic:claude-sonnet-5-5","model":"claude-sonnet-5-5","contract":"nekkora-ai-engine/assist-request/1.1.0","prompt":"v003 (0.3, sha256:b13c12e441b5c36de4fd58f0dea01b064bbf4ae626e383cd8ccd14c2a523cf4c)","payloadChars":3443,"payloadSha256":"sha256:67207f24b9670a7e394c710113775aedb8c66f815691757d2fa7544492d8c8c7","steps":10,"openQuestions":2,"consent":"PREVIEW_SHOWN_AND_ACCEPTED","outcome":"RESPONSE_VERIFIED","accepted":["EFFECT@etapa","DATA_FLOW","VARIABLE_TYPE@etapa","VARIABLE_TYPE@etapa"],"rejected":[],"inputTokens":15441,"outputTokens":1300,"millis":11272}
+OK    G4: chamada real registrada (RESPONSE_VERIFIED, modelo informado, sem chave)
+  pergunta: SPEC_OUTPUT_COLUMN_REVIEW @ Ler “Nome completo” — Para qual coluna da planilha vai esta leitura? → COLUMN:Nome completo
+  pergunta: SPEC_OUTPUT_COLUMN_REVIEW @ Ler “Nascimento” — Para qual coluna da planilha vai esta leitura? → COLUMN:Nascimento
+  pergunta: SPEC_OUTPUT_COLUMN_REVIEW @ Ler “Morte” — Para qual coluna da planilha vai esta leitura? → COLUMN:Morte
+  pergunta: SPEC_OUTPUT_COLUMN_REVIEW @ Ler “Nacionalidade” — Para qual coluna da planilha vai esta leitura? → COLUMN:Nacionalidade
+  pergunta: SPEC_OUTPUT_COLUMN_REVIEW @ Ler “Ocupação” — Para qual coluna da planilha vai esta leitura? → COLUMN:Ocupação
+  pergunta: SPEC_OUTPUT_COLUMN_REVIEW @ Ler “Campo(s)” — Para qual coluna da planilha vai esta leitura? → fonte alternativa
+  pergunta: SPEC_OUTPUT_COLUMN_UNKNOWN @ Ler o título — Para qual coluna da planilha vai esta leitura? → fonte alternativa
+captura SITES-G4-05-resultado.png (1164x791)
+  pendências finais: []
+  resultado:
+    ✓ PROJECT_ANALYZED
+    ✓ PDD_READY
+    ✓ PLAN_VALIDATED
+    ✓ CODE_GENERATED
+    ✓ CODE_VALIDATED
+    Pasta: C:\Users\nicol\OneDrive\Documentos\teste-rpa\wikipedia-biografias\biografias-python
+      gravado  README.md
+      igual  config/execucao.toml
+      gravado  main.py
+      gravado  paginas.py
+      gravado  processo.py
+      igual  requirements.txt
+      igual  selectors.json
+      gravado  manifest.json
+    ✓ Compilação: sem problema (87 ms)
+    ✓ Importação: sem problema (268 ms)
+    ✓ ruff check: sem problema (111 ms)
+    ✓ ruff format: sem problema (93 ms)
+    ✓ mypy estrito: sem problema (1356 ms)
+    ✓ Testes de contrato: sem problema (279 ms)
+    Ambiente: Python 3.12.10, nekkora_rpa 0.3.0, ruff 0.17.1, mypy 2.4.0
+    — Execução real: não executada (o Studio não age no sistema-alvo; rode só em ambiente autorizado).
+
+OK    G4: código gerado PELO STUDIO e verificado (CODE_VALIDATED)
+OK    G4: código sem texto de artigo e sem 'wikipedia' em nome de função do framework
+OK    G4: código usa a planilha do framework (XlsxResultSink) e as seis colunas na ordem
+OK    G4: só a origem autorizada no código
+captura SITES-G5-01-pdf-exportado.png (1244x811)
+OK    G5: PDF com o apêndice Dados do processo
+OK    G5: PDF lista as seis colunas na ordem
+OK    G5: PDF declara as fontes alternativas (título e Campo(s))
+OK    G5: PDF sem texto de artigo
+  PDD desatualizado: PDD não está pronto: nenhum código foi gerado · [PDD_OUTDATED, SPEC_OUTPUT_HEADER_DUPLICATE]
+captura SITES-G3-02-pdd-desatualizado-bloqueia.png (1164x791)
+OK    G3: PDD desatualizado bloqueia — nenhum código gerado (PDD_OUTDATED)
+OK    G3: Ctrl+Z desfaz a etapa acrescentada (o PDD volta a valer)
+OK    G6: código de novo CODE_VALIDATED na revisão atual
+  Lista de entrada do teste autorizado (colunas: termo_de_busca, endereco_do_artigo)
+OK    G6: o Studio pede a lista com as colunas das variáveis de entrada
+  lista de entrada (dados de teste do agente, não código): [termo_de_busca, endereco_do_artigo] · 4 linhas
+captura SITES-G6-01-escolher-lista.png (654x381)
+  confirmação: Executar teste autorizado? Vai acessar: https://pt.wikipedia.org — só estas origens (o framework bloqueia as demais e redirecionamentos para fora). Vai gravar: C:\Users\nicol\OneDrive\Documentos\teste-rpa\wikipedia-biografias\biografias.xlsx Lista: C:\Users\nicol\OneDrive\Documentos\teste-rpa\wikipedia-biografias\artigos.csv — 4 linha(s) Navegador: Chrome visível. Código: revisão sha256:dcaf83a75313… (gerado e verificado), nekkora_rpa 0.3.0. Somente as ações gravadas e documentadas no PDD. Não é execução de produção. Cancelar fecha o navegador e a planilha não é gravada. Cancelar Executar 
+OK    G6: a confirmação diz o site, o destino, a lista e que não é produção
+captura SITES-G6-02-confirmar-execucao.png (420x407)
+  progresso: Itens iniciados: 1 de 4 · concluídos: 0 · recusados: 0 · falhas: 0 · fase PROCESS · 0 s. Use Cancelar para interromper.
+captura SITES-G6-02b-progresso.png (1164x791)
+  cancelado: Teste autorizado terminou sem planilha conferida (CANCELLED) · × Teste autorizado: CANCELLED · saída — · 2 s
+captura SITES-G6-02c-cancelado.png (1164x791)
+OK    C11: Cancelar interrompe o teste autorizado e a planilha NÃO é gravada
+  Lista de entrada do teste autorizado (colunas: termo_de_busca, endereco_do_artigo)
+OK    G6: o Studio pede a lista com as colunas das variáveis de entrada
+  lista de entrada (dados de teste do agente, não código): [termo_de_busca, endereco_do_artigo] · 4 linhas
+captura SITES-G6-01-escolher-lista.png (654x381)
+  confirmação: Executar teste autorizado? Vai acessar: https://pt.wikipedia.org — só estas origens (o framework bloqueia as demais e redirecionamentos para fora). Vai gravar: C:\Users\nicol\OneDrive\Documentos\teste-rpa\wikipedia-biografias\biografias.xlsx Lista: C:\Users\nicol\OneDrive\Documentos\teste-rpa\wikipedia-biografias\artigos.csv — 4 linha(s) Navegador: Chrome visível. Código: revisão sha256:dcaf83a75313… (gerado e verificado), nekkora_rpa 0.3.0. Somente as ações gravadas e documentadas no PDD. Não é execução de produção. Cancelar fecha o navegador e a planilha não é gravada. Cancelar Executar 
+OK    G6: a confirmação diz o site, o destino, a lista e que não é produção
+captura SITES-G6-02-confirmar-execucao.png (420x407)
+captura SITES-G6-03-teste-resultado.png (1164x791)
+  resultado do teste:
+    ✓ Teste autorizado: COMPLETED · saída COMMITTED · 6 s
+      Itens por estado: {SUCCEEDED=4}
+    ✓ Planilha reaberta: 4 linha(s), colunas [URL, Nome completo, Nascimento, Morte, Nacionalidade, Ocupação] · sha256:0cf6afa8cf7a…
+      Planilha: C:\Users\nicol\OneDrive\Documentos\teste-rpa\wikipedia-biografias\biografias.xlsx
+      Revisão do código executado: sha256:dcaf83a75313…
+      Execução (eventos sem valores, checkpoint, resumo): C:\Users\nicol\.nekkora-e2e2-r14\hs\desenvolvimento\c4bf0e9a-b361-40b1-9408-9ab3a597ce46\testes\2026-10-20T17-22-07-265638600Z
+      Proveniência (coluna → etapa → alvo, separada da planilha): C:\Users\nicol\.nekkora-e2e2-r14\hs\desenvolvimento\c4bf0e9a-b361-40b1-9408-9ab3a597ce46\testes\2026-10-20T17-22-07-265638600Z\proveniencia.json
+
+OK    G6: teste autorizado terminou com planilha gravada e conferida
+OK    G6: planilha no destino escolhido
+  camadas: ! V0 Modelo: avaliação parcial · 0 bloqueio(s), 7 aviso(s) · regras nekkora-validation-rules/1.1.0; ✓ V1 PDD: PDD_READY · 10 de 10 etapas cobertas; ✓ V2 Capacidades: 13 capacidade(s) do nekkora_rpa 0.3.0; ✓ V3 Plano: Lista → planilha: uma transação por item da lista; planilha Excel de saída (tudo ou nada) · 9 variável(is) · 1 Page(s); … V4 Código Python: procurando o Python de verificação…; … V5 Testes: aguardando a verificação do código; ✓ V6 Execução real: teste autorizado executado e conferido: 4 linha(s) na planilha reaberta (sha256:0cf6afa8cf7a…)
+OK    G6: V6 Execução real comprovada pelo teste autorizado desta revisão
+OK    G6: V3 descreve lista → planilha
+captura SITES-G6-04-validacao-v6.png (1640x1000)
+  oráculo: dados visíveis dos 4 artigos gravados para o conferidor independente (fora do relatório)
+RESULTADO: 69 verificações, 0 falha(s)
