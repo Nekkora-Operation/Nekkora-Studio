@@ -49,9 +49,19 @@ public final class AutomationQualityGate {
     public record Inputs(Automation automation, ValidationReport staticReport, Optional<DocumentDraft> draft, FunctionalSpec spec, FrameworkCapabilityCatalog catalog,
                          Path outputDir, Optional<CodegenConfig> declaredTabular, Optional<PythonChecks.Environment> python, boolean pythonPending,
                          List<PythonChecks.Check> checks, String prompt, Instant now, List<String> publicOrigins, Optional<SupervisedRunRecord> supervisedRun,
-                         String environmentProblem) {
+                         String environmentProblem, String frameworkProblem) {
         public Inputs {
             environmentProblem = environmentProblem == null ? "" : environmentProblem;
+            frameworkProblem = frameworkProblem == null ? "" : frameworkProblem;
+        }
+
+        /** Sem diagnóstico de catálogo (PACKAGING-001: vazio = o catálogo confere com a versão do código gerado). */
+        public Inputs(Automation automation, ValidationReport staticReport, Optional<DocumentDraft> draft, FunctionalSpec spec, FrameworkCapabilityCatalog catalog,
+                      Path outputDir, Optional<CodegenConfig> declaredTabular, Optional<PythonChecks.Environment> python, boolean pythonPending,
+                      List<PythonChecks.Check> checks, String prompt, Instant now, List<String> publicOrigins, Optional<SupervisedRunRecord> supervisedRun,
+                      String environmentProblem) {
+            this(automation, staticReport, draft, spec, catalog, outputDir, declaredTabular, python, pythonPending, checks, prompt, now, publicOrigins, supervisedRun,
+                    environmentProblem, "");
         }
 
         /** Sem diagnóstico do ambiente (PACKAGING-001: vazio = ambiente pronto ou não avaliado). */
@@ -101,11 +111,22 @@ public final class AutomationQualityGate {
                 gate.ready() ? "PDD_READY · " + gate.record().coveredSteps() + " de " + gate.record().totalSteps() + " etapas cobertas"
                         : "PDD_BLOCKED · " + gate.record().blockers().size() + " pendência(s)"));
         // V2
-        CapabilityCheck.Result caps = CapabilityCheck.check(a, ctx, in.catalog(), in.declaredTabular());
-        issues.addAll(caps.issues());
-        layers.put(Layer.V2_CAPABILITY, new QualityReport.LayerResult(Layer.V2_CAPABILITY, stateOf(caps.issues(), true),
-                caps.used().size() + " capacidade(s) do nekkora_rpa " + in.catalog().version()
-                        + (caps.issues().isEmpty() ? "" : " · " + QualityIssue.blocking(caps.issues()).size() + " ausência(s) ou bloqueio(s)")));
+        boolean catalogMissing = !in.frameworkProblem().isEmpty();
+        if (catalogMissing) {
+            // PACKAGING-001: a versão declarada pelo código gerado não tem catálogo — o padrão NÃO confere esse código
+            QualityIssue missing = QualityIssue.of("FRAMEWORK_CATALOG_MISSING", Layer.V2_CAPABILITY, QualityIssue.Kind.BLOCKER, null, "Versão do framework",
+                    "Incompatível: " + in.frameworkProblem() + ". As capacidades do código não podem ser conferidas e nada é dado por validado.",
+                    "Desenvolva de novo pelo Studio (gera com uma versão homologada) ou use um Studio que tenha o catálogo dessa versão.");
+            issues.add(missing);
+            layers.put(Layer.V2_CAPABILITY, new QualityReport.LayerResult(Layer.V2_CAPABILITY, QualityReport.State.BLOCKED,
+                    "incompatível: " + in.frameworkProblem()));
+        } else {
+            CapabilityCheck.Result caps = CapabilityCheck.check(a, ctx, in.catalog(), in.declaredTabular());
+            issues.addAll(caps.issues());
+            layers.put(Layer.V2_CAPABILITY, new QualityReport.LayerResult(Layer.V2_CAPABILITY, stateOf(caps.issues(), true),
+                    caps.used().size() + " capacidade(s) do nekkora_rpa " + in.catalog().version()
+                            + (caps.issues().isEmpty() ? "" : " · " + QualityIssue.blocking(caps.issues()).size() + " ausência(s) ou bloqueio(s)")));
+        }
         // V3
         DevelopmentPlan plan = null;
         if (!gate.ready()) {
@@ -132,6 +153,9 @@ public final class AutomationQualityGate {
             issues.add(stale);
             layers.put(Layer.V4_CODE, new QualityReport.LayerResult(Layer.V4_CODE, QualityReport.State.ATTENTION, "código desatualizado: não verificado"));
             layers.put(Layer.V5_TESTS, new QualityReport.LayerResult(Layer.V5_TESTS, QualityReport.State.NOT_CHECKED, "código desatualizado"));
+        } else if (catalogMissing) {
+            layers.put(Layer.V4_CODE, new QualityReport.LayerResult(Layer.V4_CODE, QualityReport.State.NOT_CHECKED, "não validado: versão do framework sem catálogo"));
+            layers.put(Layer.V5_TESTS, new QualityReport.LayerResult(Layer.V5_TESTS, QualityReport.State.NOT_CHECKED, "não validado: versão do framework sem catálogo"));
         } else if (in.pythonPending()) {
             layers.put(Layer.V4_CODE, new QualityReport.LayerResult(Layer.V4_CODE, QualityReport.State.RUNNING, "procurando o Python de verificação…"));
             layers.put(Layer.V5_TESTS, new QualityReport.LayerResult(Layer.V5_TESTS, QualityReport.State.RUNNING, "aguardando a verificação do código"));
@@ -155,13 +179,15 @@ public final class AutomationQualityGate {
             layers.put(Layer.V5_TESTS, checksLayer(Layer.V5_TESTS, in.checks(), in.python().get(), issues));
         }
         // V6 — só o teste autorizado da REVISÃO ATUAL do código comprova a execução
-        layers.put(Layer.V6_EXECUTION, in.environmentProblem().isEmpty() || in.supervisedRun().isEmpty() ? execution(in.supervisedRun(), code, a)
+        layers.put(Layer.V6_EXECUTION, catalogMissing ? new QualityReport.LayerResult(Layer.V6_EXECUTION, QualityReport.State.NOT_CHECKED,
+                "não validado: versão do framework sem catálogo")
+                : in.environmentProblem().isEmpty() || in.supervisedRun().isEmpty() ? execution(in.supervisedRun(), code, a)
                 // PACKAGING-001: o ambiente atual não confere com o exigido — o teste anterior não vale como prova desta configuração
                 : new QualityReport.LayerResult(Layer.V6_EXECUTION, QualityReport.State.NOT_CHECKED, "o ambiente Python atual não confere ("
                         + in.environmentProblem() + "): prepare o ambiente e execute o teste autorizado de novo"));
         QualityReport r = new QualityReport(a.id().value().toString(), a.revision(), projection.revision(), gate.record().documentRevision(),
-                gate.record().specRevision(), code.manifestHash(), in.now(), layers, issues, code.current() ? in.checks() : List.of(), in.prompt(),
-                "nekkora-rpa " + in.catalog().version() + " " + in.catalog().fingerprint());
+                gate.record().specRevision(), code.manifestHash(), in.now(), layers, issues, code.current() && !catalogMissing ? in.checks() : List.of(), in.prompt(),
+                catalogMissing ? "sem catálogo da versão declarada" : "nekkora-rpa " + in.catalog().version() + " " + in.catalog().fingerprint());
         return new Assessment(r, gate, plan, code);
     }
 
