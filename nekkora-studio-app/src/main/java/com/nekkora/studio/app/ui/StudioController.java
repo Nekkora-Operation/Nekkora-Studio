@@ -62,6 +62,13 @@ public final class StudioController {
         this.showValidation = show == null ? () -> { } : show;
     }
 
+    private Runnable afterValidation = () -> { };
+
+    /** STUDIO-014: depois da validação estrutural, as outras camadas (PDD, capacidades, plano, código, execução). */
+    public void onValidated(Runnable after) {
+        this.afterValidation = after == null ? () -> { } : after;
+    }
+
     // ------------------------------------------------------------------ STUDIO-008: variáveis
 
     private java.util.function.Consumer<com.nekkora.studio.domain.variable.VariableId> showVariables = v -> { };
@@ -148,6 +155,7 @@ public final class StudioController {
         active().ifPresent(a -> {
             validation.validate(a.id());
             showValidation.run();
+            afterValidation.run();
         });
     }
 

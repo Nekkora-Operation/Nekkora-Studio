@@ -44,8 +44,10 @@ public final class StudioActions {
     public static final String GUIDED_DEBUG = "studio.automation.guidedDebug";
     /** STUDIO-010: Automação → Gerar documentação → PDD visual. */
     public static final String VISUAL_PDD = "studio.automation.visualPdd";
-    /** STUDIO-011 (NEKKORA-E2E-001): Automação → Gerar código Python. */
+    /** STUDIO-011 (NEKKORA-E2E-001): gerador com configuração manual — desde a STUDIO-014, ferramenta AVANÇADA. */
     public static final String PYTHON_CODEGEN = "studio.automation.pythonCodegen";
+    /** STUDIO-014: Automação → Desenvolver automação (um clique, sem formulário). */
+    public static final String DEVELOP = "studio.automation.develop";
 
     /** Ações que dependem de missões futuras e permanecem desabilitadas. */
     public static final List<String> FUTURE = List.of(RUN);
@@ -107,11 +109,15 @@ public final class StudioActions {
                 .description("Reencontrar e destacar no Chrome o alvo de cada etapa, com Continuar ou Corrigir. Nada é clicado, preenchido ou enviado."));
         registry.register(NekkoraAction.of(VISUAL_PDD, "PDD visual…", () -> visualPddHandler.run()).icon(IconName.FILE).category("Automação")
                 .description("Documento PDF do processo mapeado: sessões, instruções e capturas sanitizadas do laboratório. Não altera a automação."));
-        registry.register(NekkoraAction.of(PYTHON_CODEGEN, "Gerar código Python…", () -> pythonCodegenHandler.run()).icon(IconName.FILE).category("Automação")
-                .description("Projeto Python (nekkora_rpa) gerado do modelo validado e das decisões do debug guiado. Nada é executado."));
+        registry.register(NekkoraAction.of(DEVELOP, "Desenvolver automação", () -> developHandler.run()).icon(IconName.PLAY_CIRCLE)
+                .shortcut(NekkoraKeys.shortcut(KeyEvent.VK_G, InputEvent.SHIFT_DOWN_MASK)).category("Automação")
+                .description("Analisa o PDD e a gravação, escolhe as Libs do framework, deriva variáveis e gera o Python pelo gerador oficial. Nada é executado."));
+        registry.register(NekkoraAction.of(PYTHON_CODEGEN, "Gerador avançado (configuração manual)…", () -> pythonCodegenHandler.run()).icon(IconName.FILE)
+                .category("Automação").description("Ferramenta avançada: gera a partir de um arquivo de configuração escrito à mão (lote tabular). "
+                        + "O caminho principal é Desenvolver automação."));
         future(RUN, "Executar", IconName.PLAY, "A execução de automações chega em uma próxima versão do Studio.");
         for (String id : List.of(NEW_SESSION, NEW_STEP, RENAME_SESSION, RECORD, EDIT, UNDO, REDO, SAVE, SAVE_AS, CLOSE_PROJECT, VALIDATE, VARIABLES,
-                GUIDED_DEBUG, VISUAL_PDD, PYTHON_CODEGEN)) {
+                GUIDED_DEBUG, VISUAL_PDD, PYTHON_CODEGEN, DEVELOP)) {
             get(id).setEnabled(false);
         }
     }
@@ -132,6 +138,13 @@ public final class StudioActions {
     }
 
     private Runnable pythonCodegenHandler = () -> { };
+
+    /** STUDIO-014: abre "Desenvolver automação". */
+    public void onDevelop(Runnable handler) {
+        this.developHandler = handler == null ? () -> { } : handler;
+    }
+
+    private Runnable developHandler = () -> { };
 
     public void onGuidedDebug(Runnable handler) {
         this.guidedDebugHandler = handler == null ? () -> { } : handler;

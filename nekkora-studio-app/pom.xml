@@ -40,6 +40,11 @@
       <artifactId>nekkora-studio-validation</artifactId>
     </dependency>
     <dependency>
+      <!-- STUDIO-014: Desenvolver automação e garantia de qualidade por camadas -->
+      <groupId>com.nekkora</groupId>
+      <artifactId>nekkora-studio-ai-engine</artifactId>
+    </dependency>
+    <dependency>
       <!-- STUDIO-008: contrato semântico — o Studio não o persiste nem o envia. Escopo de COMPILAÇÃO (STUDIO-012 PDD-01, achado
            A3): o debug guiado (nekkora-studio-guided) o usa em tempo de execução; com escopo "test" aqui, esta declaração
            vencia a dependência transitiva e o jar empacotado saía sem ele (NoClassDefFoundError: SemanticContract). -->

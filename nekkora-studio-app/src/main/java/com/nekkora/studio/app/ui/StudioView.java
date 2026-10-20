@@ -201,6 +201,16 @@ public final class StudioView {
             public void close() {
                 hideValidation();
             }
+
+            @Override
+            public void goTo(com.nekkora.studio.ai.quality.QualityIssue issue) {
+                if (issue.step() != null) controller.goToStep(issue.step());
+            }
+
+            @Override
+            public void resolve(com.nekkora.studio.ai.quality.QualityIssue issue) {
+                qualityResolver.accept(issue);
+            }
         });
         controller.onValidationShown(this::showValidation);
         variablesPanel = new com.nekkora.studio.ui.VariablesPanel(new com.nekkora.studio.ui.VariablesPanel.Actions() {
@@ -397,7 +407,10 @@ public final class StudioView {
         com.nekkora.ui.navigation.NekkoraMenu documentation = new com.nekkora.ui.navigation.NekkoraMenu("Gerar documentação"); // STUDIO-010
         documentation.item(actions.get(StudioActions.VISUAL_PDD));
         automation.add(documentation);
-        automation.item(actions.get(StudioActions.PYTHON_CODEGEN)); // STUDIO-011
+        automation.item(actions.get(StudioActions.DEVELOP)); // STUDIO-014: ação primária (um clique, sem formulário)
+        com.nekkora.ui.navigation.NekkoraMenu advanced = new com.nekkora.ui.navigation.NekkoraMenu("Avançado");
+        advanced.item(actions.get(StudioActions.PYTHON_CODEGEN)); // STUDIO-011: configuração manual, fora do fluxo principal
+        automation.add(advanced);
         menuBar = new javax.swing.JMenuBar();
         menuBar.add(file);
         menuBar.add(automation);
@@ -553,7 +566,7 @@ public final class StudioView {
         java.awt.Container parent = split.getParent();
         int h = parent == null ? 0 : parent.getHeight();
         if (h > 0) {
-            split.setDividerLocation((int) Math.round(h * 0.55));
+            split.setDividerLocation(dividerFor(split, h));
             return;
         }
         split.addComponentListener(new java.awt.event.ComponentAdapter() {
@@ -561,9 +574,21 @@ public final class StudioView {
             public void componentResized(java.awt.event.ComponentEvent e) {
                 if (split.getHeight() <= 0) return;
                 split.removeComponentListener(this);
-                split.setDividerLocation((int) Math.round(split.getHeight() * 0.55));
+                split.setDividerLocation(dividerFor(split, split.getHeight()));
             }
         });
+    }
+
+    /**
+     * 55% para a área de trabalho, mas sem dar ao painel de baixo menos que a altura mínima dele (STUDIO-014: com a linha de
+     * camadas, numa janela baixa ou em 150% cabeçalho e rodapé da Validação se sobrepunham); a área de trabalho fica com
+     * pelo menos um terço.
+     */
+    static int dividerFor(com.nekkora.ui.container.NekkoraSplitPane split, int h) {
+        int preferred = (int) Math.round(h * 0.55);
+        java.awt.Component bottom = split.getBottomComponent();
+        int bottomMin = bottom == null ? 0 : bottom.getMinimumSize().height;
+        return Math.max(h / 3, Math.min(preferred, h - bottomMin - split.getDividerSize()));
     }
 
     /** Fecha o painel (o relatório continua guardado e pode ser reaberto validando de novo). */
@@ -579,6 +604,19 @@ public final class StudioView {
 
     public boolean validationVisible() {
         return bottomVisible && bottomTabs.getSelectedComponent() == validationPanel;
+    }
+
+    private java.util.function.Consumer<com.nekkora.studio.ai.quality.QualityIssue> qualityResolver = i -> { };
+
+    /** STUDIO-014: "Resolver…" de um apontamento das outras camadas (a composição liga à janela Desenvolver automação). */
+    public void onQualityResolve(java.util.function.Consumer<com.nekkora.studio.ai.quality.QualityIssue> resolver) {
+        this.qualityResolver = resolver == null ? i -> { } : resolver;
+    }
+
+    /** STUDIO-014: estado das camadas V0–V6 e apontamentos de V1–V6 na aba Validação. */
+    public void showQuality(String note, java.util.List<com.nekkora.studio.ai.quality.QualityReport.LayerResult> layers,
+                            java.util.List<com.nekkora.studio.ai.quality.QualityIssue> issues) {
+        validationPanel.showLayers(note, layers, issues);
     }
 
     public com.nekkora.studio.ui.ValidationPanel validationPanel() {
@@ -679,6 +717,7 @@ public final class StudioView {
         actions.get(StudioActions.GUIDED_DEBUG).setEnabled(a.map(x -> x.stepCount() > 0).orElse(false));
         actions.get(StudioActions.VISUAL_PDD).setEnabled(a.map(x -> x.stepCount() > 0).orElse(false));
         actions.get(StudioActions.PYTHON_CODEGEN).setEnabled(a.map(x -> x.stepCount() > 0).orElse(false));
+        actions.get(StudioActions.DEVELOP).setEnabled(a.map(x -> x.stepCount() > 0).orElse(false));
         boolean canUndo = a.map(x -> controller.service().canUndo(x.id())).orElse(false);
         boolean canRedo = a.map(x -> controller.service().canRedo(x.id())).orElse(false);
         actions.get(StudioActions.UNDO).setEnabled(canUndo);

@@ -513,6 +513,12 @@ public final class PddPresenter implements PddPanel.Actions {
         render();
     }
 
+    /** STUDIO-014: "Abrir PDD" de uma pendência — abre já no bloco (ou seção) apontado; sem lugar, no início. */
+    public void openAt(String place) {
+        open();
+        if (draft != null && place != null && !place.isBlank() && (draft.block(place).isPresent() || place.startsWith("secao-"))) select(place);
+    }
+
     @Override
     public void undo() {
         if (undo.isEmpty()) return;

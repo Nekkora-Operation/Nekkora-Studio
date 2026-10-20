@@ -219,6 +219,15 @@ class ValidationStudioTest {
         assertEquals(before, browser.calls.size(), "nenhuma chamada ao navegador");
     }
 
+    /** Linhas da validação estrutural (V0) na lista (STUDIO-014: as demais camadas vêm depois). */
+    private int structural() {
+        return Edt.call(() -> {
+            int n = 0;
+            for (int i = 0; i < panel().findingList().getModel().getSize(); i++) if (panel().findingList().getModel().getElementAt(i).structural()) n++;
+            return n;
+        });
+    }
+
     @Test
     @DisplayName("S007-044/045 — painel: abre com o relatório, filtra por severidade, navega até a etapa e abre o editor de etapa existente")
     void s007044e045PainelENavegacao() {
@@ -227,12 +236,13 @@ class ValidationStudioTest {
         assertFalse(Edt.call(() -> studio.view().validationVisible()));
         ValidationReport r = validate();
         assertTrue(Edt.call(() -> studio.view().validationVisible()), "o painel aparece ao validar");
-        assertEquals(r.findings().size(), Edt.call(() -> panel().findingList().getModel().getSize()));
+        // STUDIO-014: a lista soma os apontamentos de V1–V6 DEPOIS dos estruturais; aqui contam os estruturais (V0)
+        assertEquals(r.findings().size(), structural());
         assertTrue(StudioFixture.texts(panel()).contains("Estado: " + ValidationStatus.INCOMPLETE.label()));
         assertTrue(Edt.call(() -> panel().counts().getText()).startsWith("× 2 bloqueios"), Edt.call(() -> panel().counts().getText()));
         assertTrue(StudioFixture.texts(panel()).contains(ValidationPanel.NO_EXECUTION));
         Edt.run(() -> panel().filter().setSelectedItem(ValidationPanel.Filter.BLOCKERS));
-        assertEquals(2, (int) Edt.call(() -> panel().findingList().getModel().getSize()));
+        assertEquals(2, structural());
         String first = Edt.call(() -> panel().findingList().getModel().getElementAt(0).place());
         assertEquals("Sessão 1 · Etapa 01 — Preencher pesquisa", first);
 
@@ -343,7 +353,9 @@ class ValidationStudioTest {
         });
         // STUDIO-009 (D-S009-15): o menu Automação ganhou "Depurar no navegador…" (Ctrl+Shift+D); a validação continua no lugar
         // STUDIO-010 (D-S010-13): e o submenu "Gerar documentação" (→ PDD visual…)
-        assertEquals(List.of("Automação", "Nova sessão", "Nova etapa", "Validar automação", "Depurar no navegador…", "Gerar documentação", "Gerar código Python…"), menu);
+        // STUDIO-014: "Desenvolver automação" é a ação primária; o gerador de configuração manual foi para o submenu "Avançado"
+        assertEquals(List.of("Automação", "Nova sessão", "Nova etapa", "Validar automação", "Depurar no navegador…", "Gerar documentação",
+                "Desenvolver automação", "Avançado"), menu);
         var key = studio.view().actions().get(StudioActions.VALIDATE).shortcutKey();
         assertEquals(javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_V, com.nekkora.ui.action.NekkoraKeys.menuMask()
                 | java.awt.event.InputEvent.SHIFT_DOWN_MASK), key);
@@ -372,7 +384,12 @@ class ValidationStudioTest {
         assertTrue(StudioFixture.texts(panel()).contains("Automação ainda não validada"));
         assertEquals(0, (int) Edt.call(() -> panel().findingList().getModel().getSize()));
         Edt.run(() -> studio.controller().openAutomation(a.id()));
-        assertEquals(result(a).report().findings().size(), (int) Edt.call(() -> panel().findingList().getModel().getSize()));
+        // STUDIO-014: a lista soma os apontamentos das camadas V1–V6 da MESMA automação; os estruturais são os do relatório dela
+        assertEquals(result(a).report().findings().size(), (int) Edt.call(() -> {
+            int n = 0;
+            for (int i = 0; i < panel().findingList().getModel().getSize(); i++) if (panel().findingList().getModel().getElementAt(i).structural()) n++;
+            return n;
+        }));
     }
 
     @Test

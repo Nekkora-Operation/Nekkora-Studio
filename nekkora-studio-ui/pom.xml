@@ -28,6 +28,11 @@
       <artifactId>nekkora-studio-validation</artifactId>
     </dependency>
     <dependency>
+      <!-- STUDIO-014: Desenvolver automação e garantia de qualidade por camadas -->
+      <groupId>com.nekkora</groupId>
+      <artifactId>nekkora-studio-ai-engine</artifactId>
+    </dependency>
+    <dependency>
       <groupId>com.nekkora</groupId>
       <artifactId>nekkora-swing-ui</artifactId>
     </dependency>

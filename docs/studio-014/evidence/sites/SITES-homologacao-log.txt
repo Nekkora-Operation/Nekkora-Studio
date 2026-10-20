@@ -1,0 +1,168 @@
+Tela: java.awt.Rectangle[x=0,y=0,width=1920,height=1032] · java 21.0.12
+Operador: Claude como AGENTE DE TESTE (TEST_AGENT) · ator do Studio: TEST_AGENT
+Sites públicos de TREINAMENTO (credenciais de demonstração publicadas pelos próprios sites; nada de dado pessoal)
+Native Host instalado pelo script oficial (install-host.ps1)
+Chrome for Testing: 155.0.8059.39
+Acesso ao site https://the-internet.herokuapp.com/* → concedido pelo controle do Chrome
+Acesso ao site https://quotes.toscrape.com/* → concedido pelo controle do Chrome
+Acesso ao site https://www.saucedemo.com/* → concedido pelo controle do Chrome
+  abas vistas pela extensão: [{"u":null,"p":null,"s":"complete"},{"u":"https://the-internet.herokuapp.com/login","p":null,"s":"complete"},{"u":"chrome-extension://dceigcmhbihcigneokmpmbocdclkhcaj/src/ui/harness.html","p":null,"s":"complete"}]
+OK    Conexão autenticada Studio ⇄ host ⇄ extensão
+  Área segura (the-internet): [Acesso [FILL, FILL, CLICK], Área segura [OBSERVE, CLICK]]
+OK    Área segura (the-internet): nenhuma senha no modelo
+  abas do debug: [the-internet.herokuapp.com · Autorizada]
+  debug login etapa 1 (FILL): Proposto · verificado tecnicamente · RESOLVED
+  debug login etapa 2 (FILL): Proposto · verificado tecnicamente · RESOLVED
+  debug login etapa 3 (CLICK): Proposto · verificado tecnicamente · RESOLVED
+  abas do debug: [the-internet.herokuapp.com · Autorizada]
+  debug área segura etapa 4 (OBSERVE): Proposto · verificado tecnicamente · RESOLVED
+  debug área segura etapa 5 (CLICK): Proposto · verificado tecnicamente · RESOLVED
+  salvar: o Studio pede para atualizar o formato do projeto (decisões de alvo) — Atualizar e salvar
+  PDD revisado (TEST_AGENT): pendências [Sem imagem: o PDF dirá "Imagem indisponível".] · pode exportar true
+OK    PDD: textos revisados; sem pendência que bloqueie ([Acesso, Área segura])
+  the-internet · pergunta: SECURITY_BLOCKED ORIGIN_NOT_AUTHORIZED_FOR_EXECUTION — Este é um site público de TREINAMENTO que você autoriza para execução?
+captura SITES-the-internet-pergunta-0.png (1164x791)
+captura SITES-the-internet-autorizar-site.png (420x254)
+captura SITES-the-internet-resultado.png (1164x791)
+  the-internet · pendências: []
+  the-internet · resultado:
+    ✓ PROJECT_ANALYZED
+    ✓ PDD_READY
+    ✓ PLAN_VALIDATED
+    ✓ CODE_GENERATED
+    ✓ CODE_VALIDATED
+    Pasta: <Documentos>\teste-rpa\the-internet\the-internet-python
+      gravado  README.md
+      gravado  config/execucao.toml
+      gravado  main.py
+      gravado  paginas.py
+      gravado  processo.py
+      gravado  requirements.txt
+      gravado  selectors.json
+      gravado  manifest.json
+    ✓ Compilação: sem problema (88 ms)
+    ✓ Importação: sem problema (252 ms)
+    ✓ ruff check: sem problema (95 ms)
+    ✓ ruff format: sem problema (101 ms)
+    ✓ mypy estrito: sem problema (1257 ms)
+    ✓ Testes de contrato: sem problema (272 ms)
+    Ambiente: Python 3.12.10, nekkora_rpa 0.2.0, ruff 0.17.1, mypy 2.4.0
+    — Execução real: não executada (o Studio não age no sistema-alvo; rode só em ambiente autorizado).
+
+OK    the-internet: código gerado PELO STUDIO e verificado (CODE_VALIDATED) em the-internet-python
+OK    the-internet: sem senhas no código; ambiente benchmark com a origem autorizada
+  python main.py → código de saída 0
+  the-internet · execução: {"execution_id": "ex-b5b9c69bfd6346f29cdd", "status": "COMPLETED", "stop_code": null, "stop_detail": null, "counts": {"SUCCEEDED": 1}}
+OK    the-internet: a EXECUÇÃO do código gerado terminou COMPLETED com 1 transação bem-sucedida
+OK    the-internet: eventos sem senha
+  the-internet · leitura do processo: resultado_logout = Logout
+  Citações (quotes.toscrape): [Acesso [FILL, FILL, CLICK], Navegação [OBSERVE, CLICK, CLICK]]
+OK    Citações (quotes.toscrape): nenhuma senha no modelo
+  abas do debug: [quotes.toscrape.com · Autorizada]
+  debug login etapa 1 (FILL): Proposto · verificado tecnicamente · RESOLVED
+  debug login etapa 2 (FILL): Proposto · verificado tecnicamente · RESOLVED
+  debug login etapa 3 (CLICK): Proposto · verificado tecnicamente · RESOLVED
+  abas do debug: [quotes.toscrape.com · Autorizada]
+  debug lista etapa 4 (OBSERVE): Proposto · verificado tecnicamente · RESOLVED
+  debug lista etapa 5 (CLICK): Proposto · verificado tecnicamente · RESOLVED
+  abas do debug: [quotes.toscrape.com · Autorizada]
+  debug página 2 etapa 6 (CLICK): Proposto · verificado tecnicamente · RESOLVED
+  salvar: o Studio pede para atualizar o formato do projeto (decisões de alvo) — Atualizar e salvar
+  PDD revisado (TEST_AGENT): pendências [Sem imagem: o PDF dirá "Imagem indisponível".] · pode exportar true
+OK    PDD: textos revisados; sem pendência que bloqueie ([Acesso, Navegação])
+  quotes-toscrape · pergunta: SECURITY_BLOCKED ORIGIN_NOT_AUTHORIZED_FOR_EXECUTION — Este é um site público de TREINAMENTO que você autoriza para execução?
+captura SITES-quotes-toscrape-pergunta-0.png (1164x791)
+captura SITES-quotes-toscrape-autorizar-site.png (420x254)
+captura SITES-quotes-toscrape-proposta-localizador.png (1164x791)
+  quotes-toscrape · proposta: [Sessão 2 · Etapa 02 — Next] → Revisar e aplicar; reconfirmar no debug guiado
+  abas do debug: [quotes.toscrape.com · Autorizada]
+  debug Next reconfirmado etapa 5 (CLICK): Requer revisão · RESOLVED
+  PDD revisado (TEST_AGENT): pendências [Sem imagem: o PDF dirá "Imagem indisponível".] · pode exportar true
+OK    PDD: textos revisados; sem pendência que bloqueie ([Acesso, Navegação])
+captura SITES-quotes-toscrape-resultado.png (1164x791)
+  quotes-toscrape · pendências: []
+  quotes-toscrape · resultado:
+    ✓ PROJECT_ANALYZED
+    ✓ PDD_READY
+    ✓ PLAN_VALIDATED
+    ✓ CODE_GENERATED
+    ✓ CODE_VALIDATED
+    Pasta: <Documentos>\teste-rpa\quotes-toscrape\quotes-toscrape-python
+      gravado  README.md
+      gravado  config/execucao.toml
+      gravado  main.py
+      gravado  paginas.py
+      gravado  processo.py
+      gravado  requirements.txt
+      gravado  selectors.json
+      gravado  manifest.json
+    ✓ Compilação: sem problema (71 ms)
+    ✓ Importação: sem problema (248 ms)
+    ✓ ruff check: sem problema (92 ms)
+    ✓ ruff format: sem problema (91 ms)
+    ✓ mypy estrito: sem problema (1230 ms)
+    ✓ Testes de contrato: sem problema (273 ms)
+    Ambiente: Python 3.12.10, nekkora_rpa 0.2.0, ruff 0.17.1, mypy 2.4.0
+    — Execução real: não executada (o Studio não age no sistema-alvo; rode só em ambiente autorizado).
+
+OK    quotes-toscrape: código gerado PELO STUDIO e verificado (CODE_VALIDATED) em quotes-toscrape-python
+OK    quotes-toscrape: sem senhas no código; ambiente benchmark com a origem autorizada
+  python main.py → código de saída 0
+  quotes-toscrape · execução: {"execution_id": "ex-f90a63e4ebb84c27943d", "status": "COMPLETED", "stop_code": null, "stop_detail": null, "counts": {"SUCCEEDED": 1}}
+OK    quotes-toscrape: a EXECUÇÃO do código gerado terminou COMPLETED com 1 transação bem-sucedida
+OK    quotes-toscrape: eventos sem senha
+  quotes-toscrape · leitura do processo: resultado_logout = Logout
+  Produtos (saucedemo): [Acesso [FILL, FILL, CLICK], Produtos [OBSERVE], Saída [CLICK, CLICK]]
+OK    Produtos (saucedemo): nenhuma senha no modelo
+  abas do debug: [www.saucedemo.com · Autorizada]
+  debug login etapa 1 (FILL): Proposto · verificado tecnicamente · RESOLVED
+  debug login etapa 2 (FILL): Proposto · verificado tecnicamente · RESOLVED
+  debug login etapa 3 (CLICK): Proposto · verificado tecnicamente · RESOLVED
+  abas do debug: [www.saucedemo.com · Autorizada]
+  debug produtos e menu etapa 4 (OBSERVE): Proposto · verificado tecnicamente · RESOLVED
+  debug produtos e menu etapa 5 (CLICK): Proposto · verificado tecnicamente · RESOLVED
+  abas do debug: [www.saucedemo.com · Autorizada]
+  debug menu aberto etapa 6 (CLICK): Requer revisão · IDENTITY_MISMATCH
+  corrigir etapa 6: caixa null · página https://www.saucedemo.com/inventory.html · expr document.getElementById('logout_sidebar_link') · inputs 0 · alvo {"x":24,"y":184,"width":252,"height":41,"top":184,"right":276,"bottom":225,"left":24}
+  em correção: página https://www.saucedemo.com/inventory.html
+  salvar: o Studio pede para atualizar o formato do projeto (decisões de alvo) — Atualizar e salvar
+  PDD revisado (TEST_AGENT): pendências [Sem imagem: o PDF dirá "Imagem indisponível".] · pode exportar true
+OK    PDD: textos revisados; sem pendência que bloqueie ([Acesso, Produtos, Saída])
+  saucedemo · pergunta: SECURITY_BLOCKED ORIGIN_NOT_AUTHORIZED_FOR_EXECUTION — Este é um site público de TREINAMENTO que você autoriza para execução?
+captura SITES-saucedemo-pergunta-0.png (1164x791)
+captura SITES-saucedemo-autorizar-site.png (420x254)
+captura SITES-saucedemo-resultado.png (1164x791)
+  saucedemo · pendências: []
+  saucedemo · resultado:
+    ✓ PROJECT_ANALYZED
+    ✓ PDD_READY
+    ✓ PLAN_VALIDATED
+    ✓ CODE_GENERATED
+    ✓ CODE_VALIDATED
+    Pasta: <Documentos>\teste-rpa\saucedemo\saucedemo-python
+      gravado  README.md
+      gravado  config/execucao.toml
+      gravado  main.py
+      gravado  paginas.py
+      gravado  processo.py
+      gravado  requirements.txt
+      gravado  selectors.json
+      gravado  manifest.json
+    ✓ Compilação: sem problema (73 ms)
+    ✓ Importação: sem problema (263 ms)
+    ✓ ruff check: sem problema (89 ms)
+    ✓ ruff format: sem problema (89 ms)
+    ✓ mypy estrito: sem problema (1269 ms)
+    ✓ Testes de contrato: sem problema (289 ms)
+    Ambiente: Python 3.12.10, nekkora_rpa 0.2.0, ruff 0.17.1, mypy 2.4.0
+    — Execução real: não executada (o Studio não age no sistema-alvo; rode só em ambiente autorizado).
+
+OK    saucedemo: código gerado PELO STUDIO e verificado (CODE_VALIDATED) em saucedemo-python
+OK    saucedemo: sem senhas no código; ambiente benchmark com a origem autorizada
+  python main.py → código de saída 0
+  saucedemo · execução: {"execution_id": "ex-adb8546cbc8d4c6997e3", "status": "COMPLETED", "stop_code": null, "stop_detail": null, "counts": {"SUCCEEDED": 1}}
+OK    saucedemo: a EXECUÇÃO do código gerado terminou COMPLETED com 1 transação bem-sucedida
+OK    saucedemo: eventos sem senha
+  saucedemo · leitura do processo: resultado_open_menu = Open Menu
+OK    privacidade: log sem as senhas de demonstração
+RESULTADO: 21 verificações, 0 falha(s)

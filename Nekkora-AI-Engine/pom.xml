@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>com.nekkora</groupId>
+    <artifactId>nekkora-studio-parent</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+  </parent>
+
+  <artifactId>nekkora-studio-ai-engine</artifactId>
+  <name>Nekkora AI Engine</name>
+  <description>STUDIO-014: desenvolvimento assistido sem questionário e garantia de qualidade verificável. Prompt-Mestre
+    versionado (este diretório é o lugar único da versão em uso), catálogo das capacidades reais do nekkora_rpa,
+    especificação funcional ligada ao PDD, gate PDD_READY, plano tipado, orquestração do gerador oficial, validação por
+    camadas (V0–V6), pedidos de ajuda e provedor de IA opcional e substituível. Nada aqui executa ações em sistemas.</description>
+
+  <dependencies>
+    <dependency>
+      <groupId>com.nekkora</groupId>
+      <artifactId>nekkora-studio-domain</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.nekkora</groupId>
+      <artifactId>nekkora-studio-validation</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.nekkora</groupId>
+      <artifactId>nekkora-studio-guided</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.nekkora</groupId>
+      <artifactId>nekkora-studio-pdd</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.nekkora</groupId>
+      <artifactId>nekkora-studio-codegen</artifactId>
+    </dependency>
+    <dependency>
+      <!-- JSON estrito do Studio -->
+      <groupId>com.nekkora</groupId>
+      <artifactId>nekkora-studio-bridge</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <resources>
+      <resource>
+        <directory>src/main/resources</directory>
+      </resource>
+      <!-- o Prompt-Mestre e o índice NÃO são copiados à mão: o jar leva exatamente os arquivos deste diretório -->
+      <resource>
+        <directory>${project.basedir}</directory>
+        <targetPath>nekkora/ai/prompts</targetPath>
+        <includes>
+          <include>prompts.json</include>
+          <include>NEKKORA-PROMPT-MESTRE-*.md</include>
+        </includes>
+      </resource>
+      <resource>
+        <directory>${project.basedir}/catalog</directory>
+        <targetPath>nekkora/ai/catalog</targetPath>
+        <includes>
+          <include>*.json</include>
+        </includes>
+      </resource>
+    </resources>
+  </build>
+</project>
