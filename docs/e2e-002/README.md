@@ -32,10 +32,10 @@ texto e de listas, tecla, endereço da página) e o Studio/extensão, a leitura 
 | C09 | Excel correto | **PASS** | planilha real com 6 colunas exatas, 4 linhas, sem fórmulas; conferidor independente 24/24 células; proveniência separada (linha da planilha → coluna → etapa → alvo) |
 | C10 | Validação segura | **PASS** | V0–V5 efetivas; V6 ✓ só depois do teste autorizado da MESMA revisão; "Validar automação" sem execução |
 | C11 | Execução via Studio | **PASS** | botão "Executar teste autorizado", confirmação, progresso na janela, **Cancelar** (planilha não gravada) e resultado na UI; Python é subprocesso sob comando do Studio |
-| C12 | Sem regressões | **PARCIAL** | Studio 765 testes (Windows) e 703 (Linux, contêiner) sem falhas; framework 354 (Windows) e 353+1 (Linux); extensão: núcleo 223, host 98, Node 221, IT novo; **ITs completos da extensão: interrompidos pelo sistema por memória baixa depois de 16 classes (129 testes, 0 falhas) — as demais classes não rodaram nesta missão** |
+| C12 | Sem regressões | **PASS** | Studio 765 testes (Windows) e 703 (Linux, contêiner) sem falhas; framework 354 (Windows) e 353+1 (Linux), 30/30 mutações; extensão: núcleo 223, host 98, Node 221 e **ITs da suíte padrão 40/40 classes, 305 testes, 0 falhas** (129 da rodada completa interrompida por memória + 8 grupos sequenciais de até 3 classes, memória amostrada — `Nekkora-Extension-Chrome/docs/e2e-002/c12-matriz.md`); defeito PRÉ-EXISTENTE de tempo no `Studio013SitesIT` (falha também na base `main`) corrigido no teste |
 
 ## Rodada final
 
-Commits: `Nekkora-RPA-Framework` 2f36a0a · `Nekkora-Extension-Chrome` 9e4687e · `Nekkora-Studio` 0293b50.
+Commits da homologação: `Nekkora-RPA-Framework` 2f36a0a · `Nekkora-Extension-Chrome` 9e4687e · `Nekkora-Studio` 0293b50 (depois: só documentação e, na extensão, a correção de tempo do `Studio013SitesIT` — commit `7beeb25`, branch `test/e2e-002-c12-regressao`).
 Três rodadas reais completas com 100% (r10, r13, r14). A planilha gerada fica só na estação de homologação
 (`Documentos/teste-rpa/wikipedia-biografias/biografias.xlsx`); não é commitada.
