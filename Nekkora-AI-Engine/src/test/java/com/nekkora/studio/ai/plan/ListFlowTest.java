@@ -84,6 +84,7 @@ public class ListFlowTest {
         Flow f = develop(FichaCase.confirmed());
         SingleConfig cfg = f.plan().singleConfig().orElseThrow();
         assertTrue(cfg.list() && cfg.spreadsheet() && cfg.modern(), cfg.toJson());
+        assertEquals(DevelopmentPlan.ExecutionModel.LIST, f.plan().model(), "lista → planilha não é rotulada como execução única");
         assertTrue(cfg.toJson().contains("\"version\": \"1.2.0\""));
         assertEquals(List.of("URL", "Nome completo", "Nascimento", "Morte", "Nacionalidade", "Ocupação"),
                 cfg.output().columns().stream().map(SingleConfig.Column::header).toList());

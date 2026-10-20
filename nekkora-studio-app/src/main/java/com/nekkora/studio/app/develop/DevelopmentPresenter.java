@@ -564,7 +564,13 @@ public final class DevelopmentPresenter implements DevelopmentPanel.Actions {
                 + " que o plano escolher." : String.join(", ", uses(plan).stream().filter(u -> u.group().startsWith("Libs")).map(DevelopmentPanel.Use::name).toList())));
         out.add(new DevelopmentPanel.Answer("Onde consulto cada função?", "Em \"O que vou utilizar\": selecione e use Ver documentação — assinatura, arquivo e linha "
                 + "no pacote instalado e a seção da documentação do nekkora_rpa " + catalog.version() + "."));
-        if (plan != null && plan.model() == DevelopmentPlan.ExecutionModel.SINGLE && plan.singleConfig().isPresent()) {
+        if (plan != null && plan.model() == DevelopmentPlan.ExecutionModel.LIST && plan.singleConfig().isPresent()) {
+            var cfg = plan.singleConfig().get();
+            out.add(new DevelopmentPanel.Answer("Como meus dados serão recebidos?", "Lista de entrada CSV ou XLSX com as colunas "
+                    + String.join(", ", cfg.inputs()) + ", uma transação por linha; saída numa planilha Excel com as colunas "
+                    + String.join(", ", cfg.output().columns().stream().map(com.nekkora.studio.codegen.SingleConfig.Column::header).toList())
+                    + ", gravada só se todos os itens derem certo."));
+        } else if (plan != null && plan.model() == DevelopmentPlan.ExecutionModel.SINGLE && plan.singleConfig().isPresent()) {
             var cfg = plan.singleConfig().get();
             long creds = plan.variables().stream().filter(v -> "CREDENTIAL".equals(v.origin())).count();
             out.add(new DevelopmentPanel.Answer("Como meus dados serão recebidos?", "Entrada única: um arquivo JSON com "
@@ -576,7 +582,8 @@ public final class DevelopmentPresenter implements DevelopmentPanel.Actions {
         }
         projectFile(a).ifPresent(p -> out.add(new DevelopmentPanel.Answer("Para onde vai o Python?", outputDir(a, p) + " (Opções avançadas para mudar).")));
         long open = run == null ? 0 : run.issues().stream().filter(i -> i.kind() == QualityIssue.Kind.HELP_REQUIRED).count();
-        out.add(new DevelopmentPanel.Answer("O que a IA não sabe?", open == 0 ? "Nenhuma pergunta aberta. O plano é determinístico; a IA não foi usada."
+        out.add(new DevelopmentPanel.Answer("O que a IA não sabe?", open == 0 ? "Nenhuma pergunta aberta. O plano é determinístico; propostas da IA só "
+                + "entram depois de \"Revisar e aplicar\"."
                 : open + " pergunta(s) por etapa na aba Pendências — o Studio não decide sem evidência."));
         return out;
     }

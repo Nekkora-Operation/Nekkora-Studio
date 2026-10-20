@@ -248,7 +248,7 @@ public final class DevelopmentPlanner {
             used.removeIf(id -> cat.find(id).isEmpty());
         }
         boolean listed = cfg != null && cfg.list();
-        return new DevelopmentPlan(DevelopmentPlan.ExecutionModel.SINGLE, listed ? "uma transação por linha da lista de entrada; planilha de saída (tudo ou nada)"
+        return new DevelopmentPlan(listed ? DevelopmentPlan.ExecutionModel.LIST : DevelopmentPlan.ExecutionModel.SINGLE, listed ? "uma transação por linha da lista de entrada; planilha de saída (tudo ou nada)"
                 : "nenhuma configuração tabular declarada: os dados vêm de uma entrada única", vars, pages, steps,
                 new ArrayList<>(new LinkedHashSet<>(used)), cfg, null, issues, PLANNER);
     }

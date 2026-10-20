@@ -18,7 +18,9 @@ public record DevelopmentPlan(ExecutionModel model, String modelBasis, List<Vari
 
     /** Como o processo recebe os dados. */
     public enum ExecutionModel {
-        SINGLE("Execução única (sem planilha)"), TABULAR("Lote tabular: uma transação por linha da planilha");
+        SINGLE("Execução única (sem planilha)"), TABULAR("Lote tabular: uma transação por linha da planilha"),
+        /** NEKKORA-E2E-002: lista de entrada (CSV/XLSX) → uma transação por item → planilha Excel de saída, tudo ou nada. */
+        LIST("Lista → planilha: uma transação por item da lista; planilha Excel de saída (tudo ou nada)");
 
         private final String label;
 
