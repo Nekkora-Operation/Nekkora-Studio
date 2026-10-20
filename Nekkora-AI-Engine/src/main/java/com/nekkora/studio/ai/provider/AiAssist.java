@@ -27,7 +27,8 @@ public final class AiAssist {
     public static final String CONTRACT = "nekkora-ai-engine/assist-request/1.1.0";
     public static final String TOOL = "propor_decisoes";
     public static final int MAX_INPUT_TOKENS = 30_000;
-    public static final int MAX_OUTPUT_TOKENS = 2_048;
+    /** E2E-002: o contrato 1.1.0 propõe coluna e tipo por leitura, com justificativa; 2 048 cortava respostas válidas (PARTIAL_RESPONSE). */
+    public static final int MAX_OUTPUT_TOKENS = 4_096;
     public static final Duration TIMEOUT = Duration.ofSeconds(90);
 
     static final String SCHEMA = """

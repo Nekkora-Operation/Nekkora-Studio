@@ -1,5 +1,11 @@
 package com.nekkora.studio.app.evidence;
 
+import com.nekkora.studio.ui.form.StepForm;
+import com.nekkora.studio.ui.form.VariableForm;
+import com.nekkora.studio.domain.variable.VariableType;
+import com.nekkora.studio.domain.variable.VariableOrigin;
+import com.nekkora.studio.domain.action.ValueSource;
+import javax.swing.JComboBox;
 import com.nekkora.studio.app.StudioApplication;
 import com.nekkora.studio.app.debug.GuidedDebugPresenter;
 import com.nekkora.studio.guided.GuidedPlan;
@@ -151,16 +157,29 @@ public final class E2e002Homologation {
         System.exit(code);
     }
 
-    // ============================================================================== roteiro: prova ANTES (G0)
+    // ============================================================================== roteiro: NEKKORA-E2E-002
 
-    /**
-     * G0 — prova ANTES, com os produtos da main: em dois artigos, o usuário clica em textos informativos (título, célula
-     * "Nome completo", célula "Nascimento") nos dois modos de gravação, e usa a busca. Mede o que o Studio recebeu.
-     */
+    /** Os quatro artigos (lista de entrada controlada): termo pesquisado e caminho do artigo. Nenhum dado biográfico. */
+    private static final String[][] ARTICLES = {{"Machado de Assis", "/wiki/Machado_de_Assis"}, {"Clarice Lispector", "/wiki/Clarice_Lispector"},
+            {"Marie Curie", "/wiki/Marie_Curie"}, {"Albert Einstein", "/wiki/Albert_Einstein"}};
+    private static final String MAIN = "https://pt.wikipedia.org/wiki/Wikip%C3%A9dia:P%C3%A1gina_principal";
+    /** Textos de artigo que NUNCA podem aparecer no modelo, no PDD ou no código (o Recorder não guarda conteúdo). */
+    private static final List<String> PAGE_TEXT = List.of("Joaquim Maria", "21 de junho de 1839", "Chaya", "Skłodowska", "escritor", "brasileiro");
+    private final Map<StepId, String> expectedJs = new LinkedHashMap<>();
+    private Path projectFile;
+    private Automation auto;
+    private LogicalSession sIni;
+    private LogicalSession sPes;
+    private LogicalSession sExt;
+    private List<AutomationStep> readSteps = List.of();
+    private AutomationStep addressStep;
+    private AutomationStep enterStep;
+
     private void run() throws Exception {
         log("Tela: " + GraphicsEnvironment.getLocalGraphicsEnvironment().getMaximumWindowBounds() + " · java " + System.getProperty("java.version"));
         log("Operador: Claude como AGENTE DE TESTE (TEST_AGENT) · ator do Studio: " + System.getProperty("nekkora.studio.decisionActor"));
-        log("Prova ANTES (G0) — Studio e extensão da main; site público de documentação: " + WP + " (só leitura)");
+        log("Site público de documentação: " + WP + " — só pesquisa e leitura; quatro artigos; nada é editado nem enviado");
+        log("IA: provedor REAL configurado por ambiente (chave nunca impressa): " + (System.getenv("NEKKORA_ANTHROPIC_API_KEY") != null ? "presente" : "AUSENTE"));
         prepareEnvironment();
         Path studioData = Path.of(System.getenv().getOrDefault("NEKKORA_STUDIO_DATA_DIR", out.toPath().resolve("studio-data").toString()));
         Files.createDirectories(studioData);
@@ -175,94 +194,584 @@ public final class E2e002Homologation {
         });
         waitFor("janela do Studio", 10, () -> edt(() -> window.frame().isShowing()));
         launchChrome("about:blank");
-        navigate(WP + "/wiki/Machado_de_Assis");
+        navigate(MAIN);
         connect();
+        projectFile = DEST.resolve("wikipedia-biografias").resolve("biografias.nekkora");
+        deleteTree(projectFile.getParent()); // saída de uma rodada anterior deste teste
+        Files.createDirectories(projectFile.getParent());
+
+        // ================================================================ G1 — automação, sessões, gravação
         focusStudio();
-        createAutomation("Prova antes (Wikipédia)", List.of("Leitura", "Seleção", "Busca"));
-        Automation a = active();
-        LogicalSession s1 = edt(() -> a.sessions().get(0));
-        LogicalSession s2 = edt(() -> a.sessions().get(1));
-        LogicalSession s3 = edt(() -> a.sessions().get(2));
-        String h1 = "document.getElementById('firstHeading')";
-        String nome = cell("Nome completo");
-        String nasc = cell("Nascimento");
-        for (String art : List.of("Machado_de_Assis", "Clarice_Lispector")) {
-            navigate(WP + "/wiki/" + art);
-            int before1 = edt(s1::stepCount);
-            // 1) Capturar e interagir: o usuário aponta o título e as células (texto informativo, não interativo)
-            selectSession(a, s1);
-            startRecordingOn("pt.wikipedia.org", RecordingMode.CAPTURE_AND_INTERACT);
-            moveFloatingAway();
-            clickInPage(h1);
-            clickInPage(nome);
-            clickInPage(header("Nascimento")); // no modo interativo, só texto sem link (a data é link e navegaria)
-            sleep(2500);
-            finishRecording();
-            int got1 = edt(s1::stepCount) - before1;
-            log("  " + art + " · CAPTURAR E INTERAGIR: 3 cliques em textos informativos → " + got1 + " etapa(s) recebida(s) " + edt(() -> kinds(s1)));
-            // 2) Somente capturar (selecionar sem executar): mesmos alvos
-            int before2 = edt(s2::stepCount);
-            selectSession(a, s2);
-            startRecordingOn("pt.wikipedia.org", RecordingMode.CAPTURE_ONLY);
-            moveFloatingAway();
-            clickInPage(h1);
-            clickInPage(nome);
-            clickInPage(nasc + ".querySelector('.nickname')");
-            sleep(2500);
-            finishRecording();
-            int got2 = edt(s2::stepCount) - before2;
-            log("  " + art + " · SOMENTE CAPTURAR: 3 cliques em textos informativos → " + got2 + " etapa(s) recebida(s) " + edt(() -> kinds(s2)));
-            check("ANTES " + art + ": textos informativos NÃO viram etapa de leitura (descartados ou interação não classificada)",
-                    got1 + got2 < 6 || edt(() -> a.sessions().stream().flatMap(x -> x.steps().stream()).noneMatch(st -> st.actionType() == ActionType.OBSERVE)));
-        }
-        // 3) Busca: campo editável (deve funcionar já na main) → FILL + PRESS_KEY
-        navigate(WP + "/wiki/Machado_de_Assis");
-        selectSession(a, s3);
+        createAutomation("Biografias da Wikipédia", List.of("Inicialização", "Pesquisa", "Extração", "Transferência de dados (Excel)", "Encerramento"));
+        auto = active();
+        sIni = edt(() -> auto.sessions().get(0));
+        sPes = edt(() -> auto.sessions().get(1));
+        sExt = edt(() -> auto.sessions().get(2));
+        check("G1: automação com as cinco sessões funcionais do PDD", edt(() -> auto.sessions().stream().map(LogicalSession::name).toList())
+                .equals(List.of("Inicialização", "Pesquisa", "Extração", "Transferência de dados (Excel)", "Encerramento")));
+
+        // C02 — campo de busca editável (Capturar e interagir): clique, digitação real, Enter
+        selectSession(auto, sPes);
         startRecordingOn("pt.wikipedia.org", RecordingMode.CAPTURE_AND_INTERACT);
         moveFloatingAway();
-        clickInPage("document.getElementById('searchInput')");
-        insertText("Clarice Lispector");
+        clickInPage("document.getElementById('searchInput') || document.querySelector('header input[name=search]')");
+        typeText("Machado de Assis");
         press(KeyEvent.VK_ENTER);
-        waitPage("/wiki/Clarice_Lispector");
-        waitFor("etapas da busca", 30, () -> edt(s3::stepCount) >= 2);
+        waitPage("/wiki/Machado_de_Assis");
+        waitFor("busca gravada (preencher + Enter)", 30, () -> edt(sPes::stepCount) >= 2);
         finishRecording();
-        log("  busca: " + edt(() -> kinds(s3)));
-        check("ANTES busca: campo de pesquisa gravado (preencher + tecla) sem o valor digitado",
-                edt(() -> kinds(s3)).containsAll(List.of("FILL", "PRESS_KEY")) && !edt(() -> domainText(a)).contains("Clarice Lispector"));
-        for (LogicalSession s : edt(a::sessions)) {
-            for (AutomationStep st : edt(s::steps)) {
-                ElementReference e = edt(() -> st.element().orElse(null));
-                log("  etapa " + edt(s::name) + " " + st.actionType() + " · tipo " + (e == null ? "-" : e.semanticKind()) + " · nome '"
-                        + (e == null ? "" : e.accessibleName()) + "' · localizadores " + (e == null ? "[]" : e.locators().stream()
-                        .map(l -> l.strategy() + (l.strategy() == LocatorStrategy.POSITIONAL ? "(posicional)" : "")).toList()));
-            }
+        log("  Pesquisa: " + edt(() -> kinds(sPes)));
+        AutomationStep fill = edt(() -> sPes.steps().get(0));
+        AutomationStep enter = edt(() -> sPes.steps().get(1));
+        check("C02: busca = Preencher + Pressionar Enter (o Enter não vira clique inventado)", edt(() -> kinds(sPes)).equals(List.of("FILL", "PRESS_KEY")));
+        check("C02: valor digitado fora do modelo", !edt(() -> domainText(auto)).contains("Machado de Assis"));
+        logTarget("busca", fill);
+        check("C02: campo recriado identificado sem posição (localizador preferido único e não posicional)", edt(() -> fill.element().flatMap(e -> e.preferredLocator())
+                .map(l -> l.strategy() != LocatorStrategy.POSITIONAL && l.matchCount() == 1).orElse(false)));
+        log("  Enter: observação " + edt(() -> enter.provenance().recordingObservation().map(r -> r.evidence().toString()).orElse("nenhuma")));
+        check("C02: Enter observado como envio da busca (FORM_SUBMITTED/NAVIGATION_FOLLOWED)", edt(() -> enter.provenance().recordingObservation()
+                .map(r -> r.evidence().contains("NAVIGATION_FOLLOWED") || r.evidence().contains("FORM_SUBMITTED")).orElse(false)));
+        expectedJs.put(fill.id(), SEARCH_JS);
+        expectedJs.put(enter.id(), SEARCH_JS);
+
+        // C03 — etapa do ENDEREÇO (Observar sem alvo), criada no editor, ANTES das leituras: será a coluna URL conferida
+        selectSession(auto, sExt);
+        press(KeyEvent.VK_CONTROL, KeyEvent.VK_E);
+        NekkoraDialog nd = waitDialog("Nova etapa");
+        edt(() -> {
+            StepForm f = find(nd, StepForm.class, x -> true);
+            JComboBox<StepForm.SessionChoice> sc = f.sessionInput();
+            for (int i = 0; i < sc.getItemCount(); i++) if (sc.getItemAt(i).label().endsWith("Extração")) sc.setSelectedIndex(i);
+            f.typeInput().setSelectedItem(ActionType.OBSERVE);
+            return null;
+        });
+        typeIntoFocused("Ler o endereço da página");
+        captureWindow(nd, "G1-01-nova-etapa-endereco");
+        press(KeyEvent.VK_ENTER);
+        waitClosed(nd);
+        AutomationStep address = edt(() -> sExt.steps().get(0));
+        check("C03: etapa Observar sem alvo (endereço da página) criada pelo editor", edt(() -> address.actionType() == ActionType.OBSERVE && address.element().isEmpty()));
+
+        // C03 — Selecionar dado: título e células da infocaixa (texto NÃO interativo), nada é clicado
+        selectSession(auto, sExt);
+        startRecordingOn("pt.wikipedia.org", RecordingMode.SELECT_DATA);
+        moveFloatingAway();
+        String url0 = String.valueOf(page.eval("location.href"));
+        clickInPage(H1_JS);
+        for (String h : List.of("Nome completo", "Nascimento", "Morte", "Nacionalidade", "Ocupação")) {
+            clickInPage(cell(h) + ".querySelector('a') || " + cell(h)); // clicar até no link da data: em Selecionar dado, nada navega
         }
-        Path project = out.toPath().resolve("projeto-antes").resolve("prova-antes.nekkora");
-        Files.createDirectories(project.getParent());
-        saveAs(project);
-        captureStudio("G0-antes-studio");
-        String hl = hostLogs();
-        java.util.regex.Matcher m = java.util.regex.Pattern.compile("NON_INTERACTIVE\\D{0,6}(\\d+)").matcher(hl);
-        int max = 0;
-        while (m.find()) max = Math.max(max, Integer.parseInt(m.group(1)));
-        log("  descartes NON_INTERACTIVE vistos nos logs do host: " + (max == 0 ? "(sem contagem nos logs)" : max));
+        waitFor("seis dados selecionados", 30, () -> edt(sExt::stepCount) >= 7);
+        check("C03: Selecionar dado não executa nada (link da data não navegou)", url0.equals(String.valueOf(page.eval("location.href"))));
+        navigate(WP + "/wiki/Marie_Curie"); // a fonte alternativa da Ocupação (D-E2E2-02) só existe em quem não tem a linha Ocupação
+        clickInPage(cell("Campo(s)"));
+        waitFor("Campo(s) selecionado", 30, () -> edt(sExt::stepCount) >= 8);
+        finishRecording();
+        log("  Extração: " + edt(() -> kinds(sExt)) + " · " + edt(() -> sExt.steps().stream().map(AutomationStep::name).toList()));
+        List<AutomationStep> reads = edt(() -> List.copyOf(sExt.steps().subList(1, sExt.steps().size())));
+        readSteps = reads;
+        addressStep = address;
+        enterStep = enter;
+        check("C03: sete leituras Observar com alvo (título + seis células), nenhuma interação", edt(() -> reads.stream().allMatch(s -> s.actionType() == ActionType.OBSERVE
+                && s.element().isPresent())) && reads.size() == 7);
+        for (AutomationStep s : reads) logTarget("leitura", s);
+        check("C03: cada leitura tem localizador preferido único e sem posição (ID do título; linha da tabela pelo rótulo)", edt(() -> reads.stream().allMatch(s ->
+                s.element().flatMap(e -> e.preferredLocator()).map(l -> l.strategy() != LocatorStrategy.POSITIONAL && l.matchCount() == 1).orElse(false))));
+        check("C03: as células são ancoradas pelo cabeçalho da linha (ROW_CONTEXT com o rótulo)", edt(() -> reads.subList(1, reads.size()).stream().allMatch(s ->
+                s.element().flatMap(e -> e.preferredLocator()).map(l -> l.strategy() == LocatorStrategy.ROW_CONTEXT && l.expression().contains("th[normalize-space(.)=")).orElse(false))));
+        check("C03: nenhum texto do artigo no modelo (só elementos e rótulos de linha)", PAGE_TEXT.stream().noneMatch(edt(() -> domainText(auto))::contains));
+        expectedJs.put(reads.get(0).id(), H1_JS);
+        String[] heads = {"Nome completo", "Nascimento", "Morte", "Nacionalidade", "Ocupação", "Campo(s)"};
+        for (int i = 0; i < heads.length; i++) expectedJs.put(reads.get(i + 1).id(), cell(heads[i]));
+        captureStudio("G1-02-gravacao-pesquisa-e-extracao");
+
+        // variável de ENTRADA para a conferência do endereço (Variáveis e dependências) e ligação no editor da etapa
+        focusStudioWorkspace();
+        press(KeyEvent.VK_CONTROL, KeyEvent.VK_SHIFT, KeyEvent.VK_B);
+        waitFor("Variáveis e dependências", 10, () -> edt(() -> window.studio().view().variablesVisible()));
+        click(edt(() -> window.studio().view().variablesPanel().createButton()));
+        NekkoraDialog vd = waitDialog("Nova variável");
+        VariableForm vf = edt(() -> find(vd.getContentPane(), VariableForm.class, x -> true));
+        typeIntoFocused("endereco_do_artigo");
+        edt(() -> {
+            vf.typeInput().setSelectedItem(VariableType.STRING);
+            vf.originInput().setSelectedItem(VariableOrigin.Kind.INPUT);
+            return null;
+        });
+        captureWindow(vd, "G1-03-variavel-endereco");
+        clickButtonWithText(vd, "Declarar variável");
+        waitClosed(vd);
+        check("variável de entrada endereco_do_artigo declarada sem valor", edt(() -> auto.variableNamed("endereco_do_artigo").map(v -> v.origin().kind()
+                == VariableOrigin.Kind.INPUT).orElse(false)));
+        clickRow(sExt, 0);
+        press(KeyEvent.VK_F2);
+        NekkoraDialog ed = waitDialog("Ler o endereço da página");
+        StepDetailsForm df = edt(() -> find(ed.getContentPane(), StepDetailsForm.class, x -> true));
+        clickTab(df, 1);
+        click(edt(() -> df.modeInput(StepDetailsForm.ValueMode.VARIABLE)));
+        waitFor("variáveis declaradas no editor", 5, () -> edt(() -> df.declaredVariableInput().isShowing()));
+        edt(() -> {
+            df.declaredVariableInput().setSelectedItem("endereco_do_artigo");
+            return null;
+        });
+        captureWindow(ed, "G1-04-conferencia-endereco");
+        clickButtonWithText(ed, "Salvar alterações");
+        waitClosed(ed);
+        check("C04: o endereço lido será CONFERIDO com a entrada (Observar com valor = variável)", edt(() -> new ValueSource.VariableReference("endereco_do_artigo")
+                .equals(auto.step(address.id()).orElseThrow().parameters().value().orElse(null))));
+        saveAs(projectFile);
+        check("projeto salvo pelo Studio (.nekkora)", Files.isRegularFile(projectFile));
+
+        // ================================================================ G2 — debug guiado nos quatro artigos
+        navigate(MAIN);
+        debugArticle("Página principal");
+        if (Boolean.getBoolean("diagBusca")) return; // diagnóstico rápido da busca
+        for (String[] art : ARTICLES) {
+            navigate(WP + art[1]);
+            debugArticle(art[0]);
+        }
+        check("G2: todas as etapas com alvo têm decisão CONFIRMED (TEST_AGENT)", edt(() -> auto.sessions().stream().flatMap(x -> x.steps().stream())
+                .filter(s -> s.element().isPresent()).allMatch(s -> s.targetDecision().map(d -> d.confirmed() && d.actor() == DecisionActor.TEST_AGENT).orElse(false))));
+        save();
+        e2eSecondPart();
     }
 
-    private static String header(String header) {
-        return "[...document.querySelectorAll('table.infobox tr > th')].find(h => h.innerText.trim() === " + Json.write(header) + ")";
-    }
+    private static final String SEARCH_JS = "document.querySelector('header input[name=search]')";
+    private static final String H1_JS = "document.getElementById('firstHeading')";
 
     private static String cell(String header) {
-        return "[...document.querySelectorAll('table.infobox tr')].find(r => r.querySelector(':scope > th') && r.querySelector(':scope > th').innerText.trim() === "
-                + Json.write(header) + ").querySelector(':scope > td')";
+        return "[...document.querySelectorAll('table.infobox tr')].filter(r => r.querySelector(':scope > th') && r.querySelector(':scope > th').innerText.trim() === "
+                + Json.write(header) + ").map(r => r.querySelector(':scope > td'))[0]";
     }
 
-    private interface Step {
-        void run() throws Exception;
+    private void logTarget(String what, AutomationStep s) throws Exception {
+        String info = edt(() -> s.element().map(e -> e.semanticKind() + " · " + e.preferredLocator().map(l -> l.strategy() + " " + l.expression() + " ×" + l.matchCount())
+                .orElse("sem localizador preferido")).orElse("sem alvo"));
+        log("  " + what + " " + edt(s::name) + ": " + info);
     }
 
-    private void logKinds(Automation a) throws Exception {
-        log("  " + edt(a::name) + ": " + edt(() -> a.sessions().stream().map(s -> s.name() + " " + kinds(s)).toList()));
+    /**
+     * Debug guiado no artigo aberto: cada etapa com alvo esperado PRESENTE na página é confirmada se a identidade foi
+     * comprovada no elemento certo (senão corrigida por seleção); alvo AUSENTE na página (fonte alternativa) deve vir
+     * NOT_FOUND e é pulado — nunca "confirmado" num elemento parecido.
+     */
+    private void debugArticle(String label) throws Exception {
+        GuidedDebugPanel dp = openDebugAndStart(t -> t.label().contains("pt.wikipedia.org") || t.label().contains("Autorizada"), 0);
+        List<AutomationStep> steps = edt(() -> auto.sessions().stream().flatMap(x -> x.steps().stream()).filter(x -> x.element().isPresent()).toList()); // o debug só percorre etapas com alvo
+        for (int i = 0; i < steps.size(); i++) {
+            final int n = i;
+            GuidedDebugPanel.Card card = waitCard(label + " etapa " + (i + 1), x -> x.mode() == GuidedDebugPanel.Mode.FINISHED
+                    || x.mode() == GuidedDebugPanel.Mode.STEP && x.badge() != GuidedDebugPanel.Badge.CHECKING && x.progress().startsWith((n + 1) + " de"));
+            if (card.mode() == GuidedDebugPanel.Mode.FINISHED) break;
+            AutomationStep st = steps.get(i);
+            String js = expectedJs.get(st.id());
+            boolean search = js != null && js.equals(SEARCH_JS);
+            boolean present = js != null && !search && page.eval("!!(" + js + ")") == Boolean.TRUE;
+            GuidedDebugClient.Inspection r = lastInspection();
+            log("  debug " + label + " etapa " + (i + 1) + " " + edt(st::name) + ": " + card.badge().label() + (r == null ? "" : " · " + r.status())
+                    + (js == null ? "" : present ? " · alvo presente" : search ? " · busca" : " · alvo AUSENTE nesta página"));
+            boolean main = label.equals("Página principal");
+            if (main && !search) { // na página principal só a busca é conferida
+                if (!card.canNext()) break;
+                click(edt(dp::nextButton));
+                continue;
+            }
+            if (js == null || search) { // a busca é confirmada na página principal, onde é usada
+                if (r != null && r.status() != GuidedDebugClient.Status.RESOLVED && main) {
+                    log("    por quê (busca): " + card.why());
+                    log("    inspeção: " + r);
+                    log("    campos name=search: " + page.eval("JSON.stringify([...document.querySelectorAll('input[name=search]')].map(e => { const c = [];"
+                            + " for (let p = e.parentElement; p && p !== document.body; p = p.parentElement) c.push(p.tagName.toLowerCase() + (p.getAttribute('role') ? '[role=' + p.getAttribute('role') + ']' : '')"
+                            + " + (p.id ? '#' + p.id : '')); return {role: e.getAttribute('role'), type: e.type, aria: e.getAttribute('aria-label'), visivel: !!e.offsetParent, cadeia: c.join(' < ')}; }))"));
+                }
+                if (search && main && r != null && r.status() == GuidedDebugClient.Status.RESOLVED && r.box() != null && boxOn(r.box(), js)) {
+                    click(edt(dp::continueButton));
+                    continue;
+                }
+                if (i == steps.size() - 1) break;
+                click(edt(dp::nextButton));
+                continue;
+            }
+            if (!present) {
+                check("G2: " + label + " · " + edt(st::name) + " ausente na página → não confirmado num elemento parecido (" + (r == null ? "—" : r.status()) + ")",
+                        r == null || r.status() != GuidedDebugClient.Status.RESOLVED);
+                if (i == steps.size() - 1) break;
+                click(edt(dp::nextButton));
+                continue;
+            }
+            boolean ok = r != null && r.status() == GuidedDebugClient.Status.RESOLVED && r.box() != null && boxOn(r.box(), js);
+            if (!ok) log("    por quê: " + card.title() + " · " + card.why() + " · caixa " + (r == null ? null : r.box()));
+            check("G2: " + label + " · " + edt(st::name) + " identidade comprovada no elemento certo", ok);
+            if (ok) {
+                if (card.badge() == GuidedDebugPanel.Badge.REUSED) {
+                    waitCard("avanço", x -> x.mode() == GuidedDebugPanel.Mode.FINISHED || !x.progress().startsWith((n + 1) + " de"));
+                } else {
+                    click(edt(dp::continueButton));
+                }
+            } else {
+                if (i == steps.size() - 1) break;
+                click(edt(dp::nextButton));
+            }
+        }
+        if (edt(dp::card).mode() == GuidedDebugPanel.Mode.FINISHED) {
+            click(edt(dp::finishButton));
+        } else {
+            edt(() -> {
+                window.studio().guidedDebug().finish();
+                return null;
+            });
+        }
+        waitDebugClosed();
+    }
+
+    // ============================================================================== parte 2: PDD → Desenvolver (IA real) → teste autorizado
+
+    private final Path PROJECT_DIR = DEST.resolve("wikipedia-biografias");
+    private final Path SHEET = PROJECT_DIR.resolve("biografias.xlsx");
+    private final Path INPUT = PROJECT_DIR.resolve("artigos.csv");
+    private static final List<String> COLUMNS = List.of("URL", "Nome completo", "Nascimento", "Morte", "Nacionalidade", "Ocupação");
+
+    private void e2eSecondPart() throws Exception {
+        // ================================================================ G3 — PDD revisado pela interface
+        reviewPddWindow(List.of("Inicialização do processo", "Pesquisa do artigo", "Extração dos dados", "Transferência de dados (Excel)", "Encerramento"),
+                List.of("Pesquisar o artigo pelo nome", "Ler o endereço e os dados da ficha"));
+        save();
+
+        // ================================================================ G4 — Desenvolver automação: perguntas, IA real, decisões
+        DevelopmentPanel dp = openDevelopment();
+        waitDevIdle("análise inicial");
+        logPending(dp, "inicial");
+        captureWindow(devDialog(), "G4-01-desenvolver-inicial");
+        answerSetupQuestions(dp);
+        aiRound(dp);
+        answerRemaining(dp);
+        DevelopmentPanel.Model m = waitDevIdle("resultado");
+        captureWindow(devDialog(), "G4-05-resultado");
+        log("  pendências finais: " + m.pending().stream().map(i -> i.kind() + ":" + i.code()).toList());
+        log("  resultado:\n" + String.join("\n", m.results()).indent(4));
+        Path gen = PROJECT_DIR.resolve("biografias-python");
+        check("G4: código gerado PELO STUDIO e verificado (CODE_VALIDATED)", m.results().contains("✓ CODE_VALIDATED") && Files.isRegularFile(gen.resolve("manifest.json")));
+        String code = dirText(gen);
+        check("G4: código sem texto de artigo e sem 'wikipedia' em nome de função do framework", PAGE_TEXT.stream().noneMatch(code::contains));
+        check("G4: código usa a planilha do framework (XlsxResultSink) e as seis colunas na ordem", code.contains("XlsxResultSink") && columnsInOrder(code));
+        check("G4: só a origem autorizada no código", code.contains(WP) && !code.contains("http://"));
+        closeDevelopment();
+        save();
+
+        // ================================================================ G5 — PDF com o apêndice "Dados do processo"
+        exportPdf();
+
+        // ================================================================ G6 — teste autorizado pela interface
+        dp = openDevelopment();
+        waitDevIdle("reabrir");
+        supervisedRunByUi(dp);
+        m = waitDevIdle("teste autorizado", 1500);
+        captureWindow(devDialog(), "G6-03-teste-resultado");
+        log("  resultado do teste:\n" + String.join("\n", m.results()).indent(4));
+        check("G6: teste autorizado terminou com planilha gravada e conferida", m.statusTitle().startsWith("Teste autorizado terminou: planilha gravada e conferida"));
+        check("G6: planilha no destino escolhido", Files.isRegularFile(SHEET));
+        closeDevelopment();
+
+        // V6 na validação
+        focusStudioWorkspace();
+        press(KeyEvent.VK_CONTROL, KeyEvent.VK_SHIFT, KeyEvent.VK_V); // Validar automação
+        waitFor("camadas V0–V6", 120, () -> edt(() -> {
+            String t = window.studio().view().validationPanel().layersText().getAccessibleContext().getAccessibleDescription();
+            return t != null && t.contains("V6") && !t.contains("verificando") && !window.studio().development().running();
+        }));
+        sleep(1500);
+        String layers = edt(() -> window.studio().view().validationPanel().layersText().getAccessibleContext().getAccessibleDescription());
+        log("  camadas: " + layers);
+        check("G6: V6 Execução real comprovada pelo teste autorizado desta revisão", layers.contains("V6 Execução real") && !layers.contains("nenhum teste autorizado"));
+        captureStudio("G6-04-validacao-v6");
+
+        // oráculo: os dados VISÍVEIS de cada artigo, lidos pelo CDP na página (para o conferidor independente)
+        List<Object> pages = new ArrayList<>();
+        for (String[] art : ARTICLES) {
+            navigate(WP + art[1]);
+            pages.add(page.eval("(() => { const rows = {}; for (const r of document.querySelectorAll('table.infobox tr')) { const th = r.querySelector(':scope > th');"
+                    + " const td = r.querySelector(':scope > td'); if (th && td) rows[th.innerText.trim()] = td.innerText; }"
+                    + " return {url: location.href, h1: document.getElementById('firstHeading').innerText, rows}; })()"));
+        }
+        Files.writeString(out.toPath().resolve("oraculo-pagina.json"), Json.write(pages), StandardCharsets.UTF_8);
+        log("  oráculo: dados visíveis dos 4 artigos gravados para o conferidor independente (fora do relatório)");
+        save();
+    }
+
+    private boolean columnsInOrder(String code) {
+        int at = -1;
+        for (String c : COLUMNS) {
+            int i = code.indexOf("\"" + c + "\"", at + 1);
+            if (i < 0) return false;
+            at = i;
+        }
+        return true;
+    }
+
+    private void logPending(DevelopmentPanel dp, String when) throws Exception {
+        DevelopmentPanel.Model m = edt(dp::model);
+        log("  pendências (" + when + "): " + m.pending().stream().map(i -> i.kind() + ":" + i.code() + (i.step() == null ? "" : "@" + stepLabel(i.step()))).toList());
+    }
+
+    private String stepLabel(StepId id) {
+        try {
+            return edt(() -> auto.step(id).map(AutomationStep::name).orElse("?"));
+        } catch (Exception e) {
+            return "?";
+        }
+    }
+
+    /** Endereço inicial e autorização do site público (respostas da pessoa; não são perguntas para a IA). */
+    private void answerSetupQuestions(DevelopmentPanel dp) throws Exception {
+        for (int round = 0; round < 4; round++) {
+            DevelopmentPanel.Model m = edt(dp::model);
+            QualityIssue q = m.pending().stream().filter(i -> i.code().equals("SPEC_START_URL_UNKNOWN") || i.code().equals("ORIGIN_NOT_AUTHORIZED_FOR_EXECUTION"))
+                    .findFirst().orElse(null);
+            if (q == null) return;
+            log("  pergunta: " + q.code() + " — " + q.assistance().map(AssistanceRequest::question).orElse(q.detail()));
+            if (q.code().equals("SPEC_START_URL_UNKNOWN")) {
+                answerText(dp, q.code(), MAIN);
+            } else {
+                clickPendingButton(dp, q.code(), "Autorizar como site público de treinamento…");
+                NekkoraDialog d = (NekkoraDialog) waitValue("confirmação", 15, () -> edt(() -> {
+                    for (Window w : Window.getWindows()) if (w instanceof NekkoraDialog x && x.isShowing() && "Autorizar site público de treinamento?".equals(x.getTitle())) return x;
+                    return null;
+                }));
+                captureWindow(d, "G4-02-autorizar-site");
+                clickButtonWithText(d, "Autorizar");
+                waitClosed(d);
+                waitDevIdle("depois da autorização");
+            }
+        }
+    }
+
+    /** O valor que a pessoa decidiu (D-E2E2-01/02) para cada decisão; a proposta da IA só é aplicada se coincidir. */
+    private String expectedDecision(String kind, StepId step) throws Exception {
+        int r = -1;
+        for (int i = 0; i < readSteps.size(); i++) if (readSteps.get(i).id().equals(step)) r = i;
+        return switch (kind) {
+            case "DATA_FLOW" -> "LIST_XLSX";
+            case "EFFECT" -> enterStep.id().equals(step) ? "NONE" : null;
+            case "OUTPUT_COLUMN" -> r == 0 ? FunctionalSpec.FALLBACK + readSteps.get(1).id().value()
+                    : r == 6 ? FunctionalSpec.FALLBACK + readSteps.get(5).id().value()
+                    : r > 0 ? FunctionalSpec.COLUMN + COLUMNS.get(r)
+                    : addressStep.id().equals(step) ? FunctionalSpec.COLUMN + "URL" : null;
+            case "VARIABLE_TYPE" -> r == 2 || r == 3 ? "DATE" : r >= 0 ? "TEXT" : null;
+            default -> null;
+        };
+    }
+
+    /** Ajuda opcional por IA REAL: consentimento na janela, propostas verificadas, aplicação só do que a pessoa decidiu. */
+    private void aiRound(DevelopmentPanel dp) throws Exception {
+        String help = edt(() -> find(devDialog(), AbstractButton.class, b -> b.getText() != null && b.getText().startsWith("Solicitar ajuda")).getText());
+        log("  botão de ajuda: " + help);
+        check("G4: IA real disponível na interface (provedor configurado por ambiente)", help.equals("Solicitar ajuda (IA opcional)"));
+        clickButtonWithText(devDialog(), help);
+        NekkoraDialog consent = waitDialog("Enviar para análise por IA?");
+        String shown = edt(() -> texts(consent));
+        check("G4: a prévia do envio não contém texto de artigo nem chave", PAGE_TEXT.stream().noneMatch(shown::contains)
+                && (System.getenv("NEKKORA_ANTHROPIC_API_KEY") == null || !shown.contains(System.getenv("NEKKORA_ANTHROPIC_API_KEY"))));
+        captureWindow(consent, "G4-03-consentimento-ia");
+        clickButtonWithText(consent, "Enviar esta análise");
+        waitClosed(consent);
+        DevelopmentPanel.Model m = waitDevIdle("análise por IA", 240);
+        log("  IA: " + m.statusTitle() + " — " + m.statusText());
+        check("G4: a análise por IA concluiu (resposta verificada)", m.statusTitle().startsWith("Propostas da IA"));
+        captureWindow(devDialog(), "G4-04-propostas-ia");
+        for (QualityIssue p : edt(() -> dp.model().pending().stream().filter(i -> i.code().equals("AI_PROPOSAL") && i.fix() != null).toList())) {
+            String[] parts = p.fix().id().split(":", 3);
+            log("  IA propôs: " + parts[1] + (p.step() == null ? "" : " @ " + stepLabel(p.step())) + " = " + shortValue(parts[2]) + " — " + p.detail());
+        }
+        int applied = 0;
+        int declined = 0;
+        java.util.Set<String> seen = new java.util.HashSet<>();
+        for (int round = 0; round < 30; round++) {
+            List<QualityIssue> props = edt(() -> dp.model().pending().stream().filter(i -> i.code().equals("AI_PROPOSAL") && i.fix() != null).toList());
+            QualityIssue next = null;
+            for (QualityIssue p : props) {
+                String key = p.fix().id() + "@" + p.step();
+                if (seen.add(key)) {
+                    next = p;
+                    break;
+                }
+            }
+            if (next == null) break;
+            String[] parts = next.fix().id().split(":", 3);
+            String want = expectedDecision(parts[1], next.step());
+            boolean ok = parts[2].equals(want);
+            log("  proposta IA: " + parts[1] + (next.step() == null ? "" : " @ " + stepLabel(next.step())) + " = " + shortValue(parts[2]) + " → "
+                    + (ok ? "APLICAR (coincide com a decisão da pessoa)" : "NÃO aplicar (decisão da pessoa: " + shortValue(want) + ")"));
+            if (!ok) {
+                declined++;
+                continue;
+            }
+            QualityIssue target = next;
+            selectPendingWhere(dp, "proposta", i -> i.code().equals("AI_PROPOSAL") && i.fix() != null && i.fix().id().equals(target.fix().id())
+                    && java.util.Objects.equals(i.step(), target.step()));
+            AbstractButton b = edt(() -> find(dp.pendingButtons(), AbstractButton.class, x -> x.getText() != null && x.getText().startsWith("Revisar e aplicar")));
+            click(b);
+            waitDevIdle("proposta aplicada");
+            applied++;
+        }
+        log("  propostas da IA: aplicadas " + applied + " · não aplicadas " + declined);
+        Path calls = Path.of(System.getenv().getOrDefault("NEKKORA_STUDIO_DATA_DIR", ""));
+        String ev = "";
+        if (Files.isDirectory(calls)) {
+            try (Stream<Path> st = Files.walk(calls)) {
+                for (Path f : st.filter(x -> x.getFileName().toString().equals("ia-chamadas.jsonl")).toList()) ev += Files.readString(f, StandardCharsets.UTF_8);
+            }
+        }
+        log("  registro da chamada: " + ev.strip().replaceAll("\"payloadSha256\":\"[0-9a-f]+\"", "\"payloadSha256\":\"…\""));
+        check("G4: chamada real registrada (RESPONSE_VERIFIED, modelo informado, sem chave)", ev.contains("RESPONSE_VERIFIED") && !ev.contains("\"model\":\"\"")
+                && (System.getenv("NEKKORA_ANTHROPIC_API_KEY") == null || !ev.contains(System.getenv("NEKKORA_ANTHROPIC_API_KEY"))));
+        Files.writeString(out.toPath().resolve("ia-chamadas.jsonl"), ev, StandardCharsets.UTF_8);
+    }
+
+    private static String shortValue(String v) {
+        return v == null ? "—" : v.startsWith(FunctionalSpec.FALLBACK) ? "fonte alternativa" : v;
+    }
+
+    /** O que a IA não resolveu, a pessoa responde pela janela (as mesmas decisões). */
+    private void answerRemaining(DevelopmentPanel dp) throws Exception {
+        for (int round = 0; round < 25; round++) {
+            DevelopmentPanel.Model m = edt(dp::model);
+            QualityIssue q = m.pending().stream().filter(i -> i.kind() == QualityIssue.Kind.HELP_REQUIRED || i.kind() == QualityIssue.Kind.SECURITY_BLOCKED
+                    || i.code().equals("SPEC_DATA_FLOW_OPTIONAL") || i.code().equals("SPEC_OUTPUT_COLUMN_REVIEW")).findFirst().orElse(null);
+            if (q == null) return;
+            String what = q.code() + (q.step() == null ? "" : " @ " + stepLabel(q.step()));
+            String value = switch (q.code()) {
+                case "SPEC_DATA_FLOW_OPTIONAL" -> "LIST_XLSX";
+                case "SPEC_EFFECT_UNKNOWN" -> "NONE";
+                case "SPEC_POSTCONDITION_MISSING" -> "NEXT_TARGET_VISIBLE";
+                case "SPEC_CONCLUSION_MISSING" -> FunctionalSpec.NO_CONCLUSION;
+                case "SPEC_OUTPUT_COLUMN_UNKNOWN", "SPEC_OUTPUT_COLUMN_REVIEW" -> expectedDecision("OUTPUT_COLUMN", q.step());
+                default -> null;
+            };
+            log("  pergunta: " + what + " — " + q.assistance().map(AssistanceRequest::question).orElse(q.detail()) + " → " + shortValue(value));
+            if (value == null) {
+                captureWindow(devDialog(), "G4-pendencia-sem-resposta-" + round);
+                return;
+            }
+            QualityIssue target = q;
+            selectPendingWhere(dp, what, i -> i.code().equals(target.code()) && java.util.Objects.equals(i.step(), target.step()));
+            QualityIssue sel = edt(() -> dp.pendingList().getSelectedValue());
+            String label = sel.assistance().orElseThrow().options().stream().filter(o -> value.equals(o.value())).findFirst().orElseThrow().label();
+            clickButtonWithText(edt(dp::pendingButtons), label);
+            waitDevIdle("resposta " + q.code());
+        }
+    }
+
+    private QualityIssue selectPendingWhere(DevelopmentPanel dp, String what, java.util.function.Predicate<QualityIssue> p) throws Exception {
+        selectTabOf(dp, 1);
+        int index = (int) waitValue("pendência " + what, 15, () -> edt(() -> {
+            var l = dp.pendingList();
+            for (int i = 0; i < l.getModel().getSize(); i++) if (p.test(l.getModel().getElementAt(i))) return i;
+            return null;
+        }));
+        Rectangle r = edt(() -> {
+            var l = dp.pendingList();
+            l.ensureIndexIsVisible(index);
+            Rectangle cell = l.getCellBounds(index, index);
+            java.awt.Point o = l.getLocationOnScreen();
+            return new Rectangle(o.x + cell.x, o.y + cell.y, cell.width, cell.height);
+        });
+        guardForeground("pendência");
+        robot.mouseMove(r.x + Math.min(r.width / 2, 160), r.y + r.height / 2);
+        robot.mousePress(InputEvent.BUTTON1_DOWN_MASK);
+        robot.mouseRelease(InputEvent.BUTTON1_DOWN_MASK);
+        robot.waitForIdle();
+        waitFor("pendência selecionada", 5, () -> edt(() -> dp.pendingList().getSelectedValue() != null && p.test(dp.pendingList().getSelectedValue())));
+        sleep(300);
+        return edt(() -> dp.pendingList().getSelectedValue());
+    }
+
+    private DevelopmentPanel.Model waitDevIdle(String what, int seconds) throws Exception {
+        sleep(600);
+        waitFor(what, seconds, () -> edt(() -> !window.studio().development().running()));
+        window.studio().development().awaitIdle();
+        sleep(800);
+        return edt(() -> window.studio().development().panel().model());
+    }
+
+    private void exportPdf() throws Exception {
+        menuPath("Automação", "Gerar documentação", "PDD visual…");
+        JDialog dlg = (JDialog) waitValue("janela do PDD", 15, () -> edt(() -> {
+            for (Window w : Window.getWindows()) if (w instanceof JDialog d && d.isShowing() && d.getTitle().startsWith("PDD visual")) return d;
+            return null;
+        }));
+        PddPanel p = edt(() -> window.studio().visualPdd().panel());
+        sleep(800);
+        Path pdfDir = out.toPath().resolve("pdf");
+        Files.createDirectories(pdfDir);
+        click(edt(p::exportButton));
+        waitChooser("Pasta para o PDF (versões anteriores nunca são substituídas)");
+        typePath(pdfDir);
+        waitFor("PDF exportado", 30, () -> "PDF exportado".equals(model(p).bannerTitle()));
+        captureWindow(dlg, "G5-01-pdf-exportado");
+        Path pdf;
+        try (Stream<Path> st = Files.list(pdfDir)) {
+            pdf = st.filter(x -> x.toString().endsWith(".pdf")).sorted().reduce((a, b) -> b).orElseThrow();
+        }
+        try (org.apache.pdfbox.pdmodel.PDDocument doc = org.apache.pdfbox.Loader.loadPDF(pdf.toFile())) {
+            String text = new org.apache.pdfbox.text.PDFTextStripper().getText(doc);
+            Files.writeString(out.toPath().resolve("G5-pdf-texto-extraido.txt"), text, StandardCharsets.UTF_8);
+            String flat = text.replaceAll("\\s+", " ");
+            check("G5: PDF com o apêndice Dados do processo", flat.contains("Dados do processo") && flat.contains("tudo ou nada"));
+            check("G5: PDF lista as seis colunas na ordem", columnsInOrder(flat.replace("1. URL", "\"URL\"").replace("2. Nome completo", "\"Nome completo\"")
+                    .replace("3. Nascimento", "\"Nascimento\"").replace("4. Morte", "\"Morte\"").replace("5. Nacionalidade", "\"Nacionalidade\"")
+                    .replace("6. Ocupação", "\"Ocupação\"")));
+            check("G5: PDF declara as fontes alternativas (título e Campo(s))", flat.contains("se não existir na página: título da página")
+                    && flat.contains("se não existir na página: linha “Campo(s)”"));
+            check("G5: PDF sem texto de artigo", PAGE_TEXT.stream().noneMatch(flat::contains));
+        }
+        closePdd();
+    }
+
+    /** "Executar teste autorizado": lista de entrada e planilha escolhidas nos diálogos do sistema, confirmação e Chrome visível. */
+    private void supervisedRunByUi(DevelopmentPanel dp) throws Exception {
+        click(edt(dp::supervisedRunButton));
+        Window ch = (Window) waitValue("diálogo da lista de entrada", 20, () -> {
+            Window w = fileChooser();
+            return w != null && ((JDialog) w).getTitle().startsWith("Lista de entrada do teste autorizado") ? w : null;
+        });
+        String title = edt(() -> ((JDialog) ch).getTitle());
+        log("  " + title);
+        java.util.regex.Matcher mm = java.util.regex.Pattern.compile("\\(colunas: (.*)\\)").matcher(title);
+        check("G6: o Studio pede a lista com as colunas das variáveis de entrada", mm.find());
+        List<String> cols = List.of(mm.group(1).split(", "));
+        StringBuilder csv = new StringBuilder(String.join(",", cols)).append("\r\n");
+        for (String[] art : ARTICLES) {
+            List<String> row = new ArrayList<>();
+            for (String c : cols) row.add(c.contains("endereco") ? WP + art[1] : art[0]);
+            csv.append(String.join(",", row)).append("\r\n");
+        }
+        Files.writeString(INPUT, csv.toString(), StandardCharsets.UTF_8);
+        log("  lista de entrada (dados de teste do agente, não código): " + cols + " · 4 linhas");
+        captureWindow(ch, "G6-01-escolher-lista");
+        typePathIn(ch, INPUT);
+        waitChooser("Planilha de saída do teste autorizado");
+        Files.deleteIfExists(SHEET);
+        typePathIn(fileChooser(), SHEET);
+        NekkoraDialog c = waitDialog("Executar teste autorizado?");
+        String msg = edt(() -> texts(c));
+        log("  confirmação: " + msg.replaceAll("\\s+", " "));
+        check("G6: a confirmação diz o site, o destino, a lista e que não é produção", msg.contains(WP) && msg.contains(SHEET.toString()) && msg.contains("4 linha")
+                && msg.contains("Não é execução de produção"));
+        captureWindow(c, "G6-02-confirmar-execucao");
+        clickButtonWithText(c, "Executar");
+        waitClosed(c);
+    }
+
+    /** Digita o caminho no diálogo de arquivo indicado e espera ESTE diálogo fechar (outro pode abrir em seguida). */
+    private void typePathIn(Window w, Path p) throws Exception {
+        JTextComponent field = edt(() -> find(w, JTextComponent.class, x -> x.isShowing() && x.isEditable()));
+        click(field);
+        press(KeyEvent.VK_CONTROL, KeyEvent.VK_A);
+        typeAscii(p.toString());
+        sleep(300);
+        press(KeyEvent.VK_ENTER);
+        waitFor("diálogo de arquivo fechado", 15, () -> !edt(w::isShowing));
+        sleep(500);
     }
 
     // ============================================================================== apoio
@@ -1455,6 +1964,10 @@ public final class E2e002Homologation {
         robot.waitForIdle();
         sleep(150);
         Rectangle r = edt(() -> new Rectangle(c.getLocationOnScreen(), c.getSize()));
+        Rectangle win = edt(() -> SwingUtilities.getWindowAncestor(c) == null ? null : SwingUtilities.getWindowAncestor(c).getBounds());
+        if (win == null || !win.contains(r.x + r.width / 2, r.y + r.height / 2)) {
+            throw new IllegalStateException("componente fora da sua janela (clique recusado): " + c.getClass().getSimpleName() + " " + r + " janela " + win);
+        }
         guardForeground("clique");
         robot.mouseMove(r.x + r.width / 2, r.y + r.height / 2);
         robot.mousePress(InputEvent.BUTTON1_DOWN_MASK);

@@ -131,7 +131,10 @@ public final class VariableDeriver {
                     Provenance.DERIVED_LOGIN_PAIR, "campo" + label(s) + " logo antes da senha: usuário de acesso vem do provedor de segredos", !known);
         }
         boolean generic = s.targetName().isEmpty();
-        String name = unique(generic ? "entrada_etapa_" + s.session() + "_" + s.number() : slug(s.targetName()), taken);
+        // E2E-002: campo de BUSCA sem rótulo seguro (searchbox, ou combobox editável confirmado por Enter) tem nome de busca
+        boolean search = generic && ("SEARCH_INPUT".equals(s.targetKind()) || "COMBOBOX".equals(s.targetKind()) && next != null
+                && next.action() == ActionType.PRESS_KEY && next.session() == s.session());
+        String name = unique(search ? "termo_de_busca" : generic ? "entrada_etapa_" + s.session() + "_" + s.number() : slug(s.targetName()), taken);
         Sensitivity sens = words(s.targetName()).stream().anyMatch(PERSONAL::contains) ? Sensitivity.PERSONAL_DATA : Sensitivity.INTERNAL;
         return new Planned(s.stepId(), Kind.DECLARE_INPUT_AND_BIND, name, "texto", "INPUT", sens, generic ? Provenance.DERIVED_GENERIC : Provenance.DERIVED_LABEL,
                 generic ? "campo sem rótulo seguro: nome provisório" : "campo" + label(s) + ": informado a cada execução", generic);

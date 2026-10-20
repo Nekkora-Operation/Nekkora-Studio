@@ -35,6 +35,7 @@ public final class GuidedDebugText {
             Map.entry("DESCRIPTOR_CANNOT_CROSS_SCOPE", "Pelo descritor não é possível atravessar quadros ou componentes fechados."),
             Map.entry("INDISTINGUISHABLE_AT_REGISTRATION", "Já na gravação havia outro elemento idêntico."),
             Map.entry("LOOKALIKES_PRESENT", "Há elementos parecidos na página; o alvo foi diferenciado pelo contexto."),
+            Map.entry("DISAMBIGUATED_BY_RECORDED_LOCATOR", "Entre cópias idênticas, o localizador gravado (pela região da página) aponta só para este — o mesmo que a execução usa."),
             Map.entry("NODE_REPLACED", "A página recriou o elemento desde a gravação (mesma identidade)."),
             Map.entry("ID_ATTRIBUTE_CHANGED", "O atributo id do elemento mudou."),
             Map.entry("NAME_ATTRIBUTE_CHANGED", "O atributo name do elemento mudou."),

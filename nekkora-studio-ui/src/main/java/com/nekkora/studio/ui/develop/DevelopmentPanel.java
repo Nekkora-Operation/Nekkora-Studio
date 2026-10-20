@@ -134,7 +134,10 @@ public final class DevelopmentPanel extends NekkoraPanel {
     private final NekkoraList<Variable> variables = new NekkoraList<>();
     private final NekkoraList<QualityIssue> pending = new NekkoraList<>();
     private final NekkoraParagraph pendingDetail = new NekkoraParagraph("");
-    private final NekkoraStack pendingButtons = NekkoraStack.horizontal(Spacing.SPACE_3);
+    /** Linhas de até {@link #BUTTONS_PER_ROW} botões: perguntas com muitas opções (uma por coluna) nunca saem da janela. */
+    private final NekkoraStack pendingButtons = NekkoraStack.vertical(Spacing.SPACE_2);
+    private static final int BUTTONS_PER_ROW = 3;
+    private NekkoraStack pendingRow;
     private final NekkoraList<String> results = new NekkoraList<>();
     private final NekkoraText output = new NekkoraText("", TextTone.SECONDARY);
     private final NekkoraText python = new NekkoraText("", TextTone.SECONDARY);
@@ -315,6 +318,7 @@ public final class DevelopmentPanel extends NekkoraPanel {
 
     private void refreshPending() {
         pendingButtons.removeAll();
+        pendingRow = null;
         QualityIssue i = pending.getSelectedValue();
         if (i == null) {
             pendingDetail.setText(model.pending().isEmpty() ? "Nenhuma pendência." : "");
@@ -335,8 +339,8 @@ public final class DevelopmentPanel extends NekkoraPanel {
                         NekkoraButton ok = NekkoraButton.primary("Confirmar " + o.label().toLowerCase(java.util.Locale.ROOT)).withSize(ControlSize.SMALL);
                         ok.onClick(e -> actions.answerText(i, field.getText()));
                         field.addActionListener(e -> actions.answerText(i, field.getText()));
-                        pendingButtons.add(field);
-                        pendingButtons.add(ok);
+                        addPendingButton(field);
+                        addPendingButton(ok);
                         continue;
                     }
                     NekkoraButton ob = o.isAnswer() ? NekkoraButton.primary(o.label()) : NekkoraButton.secondary(o.label());
@@ -344,33 +348,44 @@ public final class DevelopmentPanel extends NekkoraPanel {
                     ob.setToolTipText(o.basis());
                     ob.getAccessibleContext().setAccessibleDescription(o.basis());
                     ob.onClick(e -> actions.resolve(i, o));
-                    pendingButtons.add(ob);
+                    addPendingButton(ob);
                 }
             });
             i.correction().ifPresent(f -> {
                 NekkoraButton ab = NekkoraButton.primary(i.kind() == QualityIssue.Kind.AUTO_FIX_SAFE ? f.label() : "Revisar e aplicar: " + f.label())
                         .withSize(ControlSize.SMALL);
                 ab.onClick(e -> actions.apply(i));
-                pendingButtons.add(ab);
+                addPendingButton(ab);
             });
             if (i.step() != null) {
                 NekkoraButton go = NekkoraButton.secondary("Ir para etapa").withIcon(IconName.ARROW_RIGHT).withSize(ControlSize.SMALL);
                 go.onClick(e -> actions.goTo(i));
-                pendingButtons.add(go);
+                addPendingButton(go);
             }
             if (i.layer() == com.nekkora.studio.ai.quality.Layer.V1_PDD) {
                 NekkoraButton pdd = NekkoraButton.secondary("Abrir PDD").withIcon(IconName.FILE).withSize(ControlSize.SMALL);
                 pdd.onClick(e -> actions.openPdd(i));
-                pendingButtons.add(pdd);
+                addPendingButton(pdd);
             }
             if (!i.capability().isEmpty()) {
                 NekkoraButton d = NekkoraButton.secondary("Ver função/documentação").withSize(ControlSize.SMALL);
                 d.onClick(e -> actions.showDocs(i.capability()));
-                pendingButtons.add(d);
+                addPendingButton(d);
             }
         }
         pendingButtons.revalidate();
         pendingButtons.repaint();
+    }
+
+    private void addPendingButton(java.awt.Component c) {
+        if (pendingRow == null || pendingRow.getComponentCount() >= BUTTONS_PER_ROW) {
+            pendingRow = NekkoraStack.horizontal(Spacing.SPACE_3).align(NekkoraStack.Align.CENTER);
+            NekkoraStack line = NekkoraStack.horizontal(Spacing.SPACE_3);
+            line.add(pendingRow);
+            line.addGlue();
+            pendingButtons.add(line);
+        }
+        pendingRow.add(c);
     }
 
     /** NEKKORA-E2E-002: o teste autorizado está disponível? ({@code why} explica quando não está.) */

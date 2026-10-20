@@ -167,7 +167,8 @@ public final class DevelopmentPresenter implements DevelopmentPanel.Actions {
     private DevelopmentPanel.Model model = DevelopmentPanel.Model.empty("", false);
     private GenerationOrchestrator.Run last;
     private final List<QualityIssue> aiProposals = new ArrayList<>();
-    private boolean keepProposals;
+    /** Automação a que as propostas da IA pertencem (outra automação ativa = propostas descartadas). */
+    private com.nekkora.studio.domain.AutomationId proposalsFor;
     private final Map<String, Integer> fixAttempts = new LinkedHashMap<>();
     private Consumer<QualityReport> reportListener = r -> { };
 
@@ -358,14 +359,12 @@ public final class DevelopmentPresenter implements DevelopmentPanel.Actions {
         }
         running = true;
         cancelled.set(false);
-        // E2E-002: depois de "Revisar e aplicar" as OUTRAS propostas ainda abertas continuam (a pessoa não precisa pedir de novo)
-        if (!keepProposals) aiProposals.clear();
-        keepProposals = false;
         phases.clear();
         for (GenerationOrchestrator.Phase p : GenerationOrchestrator.Phase.values()) phases.put(p, DevelopmentPanel.PhaseState.PENDING);
         Path out = outputDir(a, project.get());
         Optional<DocumentDraft> draft = loadDraft(a);
         FunctionalSpec spec = loadSpec(a);
+        pruneProposals(a, spec);
         Optional<CodegenConfig> tabular;
         try {
             tabular = declaredTabular(project.get());
@@ -921,6 +920,7 @@ public final class DevelopmentPresenter implements DevelopmentPanel.Actions {
             SwingUtilities.invokeLater(() -> {
                 running = false;
                 aiProposals.clear();
+                proposalsFor = a.id();
                 if (res != null) {
                     for (PlanVerifier.Proposal x : res.accepted()) aiProposals.add(proposalIssue(x));
                 }
@@ -971,7 +971,7 @@ public final class DevelopmentPresenter implements DevelopmentPanel.Actions {
         }
     }
 
-    private static QualityIssue proposalIssue(PlanVerifier.Proposal p) {
+    public static QualityIssue proposalIssue(PlanVerifier.Proposal p) {
         String what = switch (p.kind()) {
             case EFFECT -> "efeito " + ("EXTERNAL".equals(p.value()) ? "externo (grava/envia)" : "nenhum (consulta/navega)");
             case POSTCONDITION -> "confirmação " + p.value();
@@ -986,6 +986,35 @@ public final class DevelopmentPresenter implements DevelopmentPanel.Actions {
                 null, new QualityIssue.Fix("AI:" + p.kind() + ":" + p.value(), what, "", p.value()), null);
     }
 
+    /**
+     * E2E-002: as propostas da IA ainda não revisadas continuam entre execuções do Desenvolver (inclusive as internas,
+     * como registrar variáveis derivadas) — a pessoa não precisa pedir de novo. Saem quando a automação muda, quando a
+     * etapa deixa de existir ou quando a decisão daquele campo já foi registrada (por proposta aplicada ou resposta).
+     */
+    private void pruneProposals(Automation a, FunctionalSpec spec) {
+        if (!a.id().equals(proposalsFor)) {
+            aiProposals.clear();
+            return;
+        }
+        aiProposals.removeIf(p -> obsoleteProposal(p, a, spec));
+    }
+
+    /** A proposta da IA já não tem o que propor: etapa removida, ou decisão daquele campo já registrada. */
+    public static boolean obsoleteProposal(QualityIssue p, Automation a, FunctionalSpec spec) {
+        String[] parts = p.fix().id().split(":", 3);
+        if (p.step() != null && a.step(p.step()).isEmpty()) return true;
+        return switch (PlanVerifier.Kind.valueOf(parts[1])) {
+            case DATA_FLOW -> spec.decision(FunctionalSpec.Field.DATA_FLOW, null).isPresent();
+            case EFFECT -> spec.decision(FunctionalSpec.Field.EFFECT, p.step()).isPresent();
+            case POSTCONDITION -> spec.decision(FunctionalSpec.Field.POSTCONDITION, p.step()).isPresent();
+            case OUTPUT_COLUMN -> spec.decision(FunctionalSpec.Field.OUTPUT_COLUMN, p.step()).isPresent();
+            case VARIABLE_TYPE -> a.variables().stream().anyMatch(v -> p.step().equals(v.origin().producer())
+                    && v.type() == ("DATE".equals(parts[2]) ? com.nekkora.studio.domain.variable.VariableType.DATE
+                    : com.nekkora.studio.domain.variable.VariableType.STRING));
+            case VARIABLE_NAME -> false;
+        };
+    }
+
     private void acceptProposal(Automation a, QualityIssue issue) {
         String[] parts = issue.fix().id().split(":", 3);
         PlanVerifier.Kind kind = PlanVerifier.Kind.valueOf(parts[1]);
@@ -993,7 +1022,6 @@ public final class DevelopmentPresenter implements DevelopmentPanel.Actions {
         aiProposals.removeIf(x -> x.id().equals(issue.id()) && x.fix().id().equals(issue.fix().id()));
         // a mesma decisão (tipo + etapa) não fica oferecida duas vezes; as demais propostas sobrevivem à reanálise
         aiProposals.removeIf(x -> x.fix() != null && x.fix().id().startsWith("AI:" + kind.name() + ":") && java.util.Objects.equals(x.step(), issue.step()));
-        keepProposals = true;
         if (kind == PlanVerifier.Kind.DATA_FLOW) {
             try {
                 store.saveSpec(loadSpec(a).with(new FunctionalSpec.Decision(FunctionalSpec.Field.DATA_FLOW, null, value, actorOf(),

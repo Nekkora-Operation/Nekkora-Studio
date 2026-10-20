@@ -165,7 +165,7 @@ public class ListFlowTest {
         Path lista = tmp.resolve("lista.csv");
         Files.writeString(lista, String.join(",", cfg.inputs()) + "\n" + "Ana Exemplo," + o + "/leitura/ficha-ana.html\n"
                 + "Fabio Ficticio," + o + "/leitura/ficha-fabio.html\n" + "Gina Inventada," + o + "/leitura/ficha-gina.html\n", StandardCharsets.UTF_8);
-        assertEquals(List.of("entrada_etapa_2_1", "endereco_esperado"), cfg.inputs());
+        assertEquals(List.of("termo_de_busca", "endereco_esperado"), cfg.inputs());
         Process lab = new ProcessBuilder(py.toString(), "-c", "import sys,time; sys.path.insert(0, sys.argv[1]); from lab.server import Lab; "
                 + "Lab(port=18766).start(); print('pronto', flush=True); time.sleep(300)", PythonForTests.frameworkRepo().toString())
                 .redirectErrorStream(true).start();
