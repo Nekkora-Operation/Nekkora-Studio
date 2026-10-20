@@ -16,7 +16,7 @@ Branch: `feat/nekkora-studio-014`, no Studio e na extensão.
 | Testado? | Sim, com ferramentas reais. <ul><li>Compilação, importação, `ruff check`, `ruff format --check`, `mypy --strict` e 7 testes de contrato do projeto gerado.</li><li>Controle negativo: um projeto estragado de propósito é reprovado.</li></ul> |
 | Executado? | Só pela homologação, em laboratório local autorizado, com oráculo independente: <ul><li>Caso A: o servidor registrou a consulta, e o resultado lido confere;</li><li>Caso B: a réplica conferiu 10 de 10 submissões em ordem e corretas.</li></ul> O Studio **não executa**: V6 fica sempre "não verificado". |
 | Sites públicos (objetivo final) | **Sim.** Três sites de treinamento foram mapeados e desenvolvidos pelo Studio, e o código gerado foi executado uma vez em cada um: **21/21**, as três execuções `COMPLETED`. Quatro defeitos achados foram corrigidos no produto: Studio, extensão e framework. Ver [sites-publicos.md](../docs/studio-014/sites-publicos.md). |
-| Anthropic | **Integração real não homologada.** A chamada real com a chave da usuária respondeu HTTP 400, porque a chave não está ligada a um workspace. O cabeçalho do workspace já é enviado quando configurado, e falta o id. Antes: Foram provados o contrato (servidor HTTP local que imita o provedor) e o fluxo na interface (provedor MOCK identificado como mock). Nenhuma chamada real foi feita, e o Claude Code não foi usado como substituto do provedor. |
+| Anthropic | **Integração real homologada pelo motor** (`RealAnthropicCheck`, mesma carga, mesmo Prompt-Mestre e mesmo verificador do Studio): três chamadas reais, cada uma com a chave da usuária lida de `.env` (ignorado no git, nunca impressa) só no ambiente do processo: (1) HTTP 400, chave sem workspace → cabeçalho `anthropic-workspace-id` via `NEKKORA_ANTHROPIC_WORKSPACE_ID`; (2) HTTP 400, `tool_choice` `tool` recusado pelo modelo → `auto` (D-S014-23); (3) **`RESPONSE_VERIFIED`**, com 2 propostas aceitas e nenhuma recusada. Evidência: `docs/studio-014/evidence/D-chamada-real-anthropic.json`. Na interface: Foram provados o contrato (servidor HTTP local que imita o provedor) e o fluxo na interface (provedor MOCK identificado como mock). O Claude Code não foi usado como substituto do provedor. |
 
 ## Gates
 
@@ -92,6 +92,7 @@ Branch: `feat/nekkora-studio-014`, no Studio e na extensão.
 | Nome de link perdido por seta decorativa `aria-hidden` | site público (quotes), gravação | captura na extensão e na segunda linha Java (D-S014-21) |
 | Glifo de ícone e descendente `aria-hidden` no nome pelo Playwright | execução do código gerado nos sites | framework, PR próprio (D-S014-22) |
 | Erro do provedor sem a mensagem dele | chamada real à Anthropic (HTTP 400) | `AIException.detail()` e cabeçalho `anthropic-workspace-id` opcional |
+| `tool_choice` `tool` recusado pelo modelo atual | chamada real à Anthropic (HTTP 400) | `tool_choice` `auto` com uma ferramenta (D-S014-23) |
 
 ## PRs (abertos, SEM merge)
 
@@ -103,7 +104,7 @@ depois extensão, depois Studio.
 
 Ver [known-limitations.md](../docs/studio-014/known-limitations.md). Em resumo:
 - V6 nunca é verificada pelo Studio;
-- Anthropic real não homologada;
+- Anthropic real homologada pelo motor; na interface, só com o mock;
 - execução gerada só para laboratório;
 - sem iframe ou shadow DOM;
 - a leitura do resultado depende de o elemento surgir com o resultado;

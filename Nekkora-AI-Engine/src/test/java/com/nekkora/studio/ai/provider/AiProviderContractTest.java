@@ -31,7 +31,7 @@ import org.junit.jupiter.api.Test;
 
 /**
  * Contrato do provedor de IA — TODOS os casos usam o MOCK ({@link Mock}, identificado como mock) ou um servidor HTTP
- * LOCAL que imita o provedor. Nenhum deles é uma chamada real à Anthropic: a integração real NÃO está homologada.
+ * LOCAL que imita o provedor. Nenhum deles é uma chamada real à Anthropic (essa é o {@link RealAnthropicCheck}, à mão).
  */
 class AiProviderContractTest {
 
@@ -163,6 +163,9 @@ class AiProviderContractTest {
         AnthropicProvider budget = new AnthropicProvider(env::get, "modelo", HttpClient.newHttpClient(), URI.create("http://127.0.0.1:9/"));
         assertEquals(AIProvider.AIException.Code.BUDGET_EXCEEDED, assertThrows(AIProvider.AIException.class, () -> budget.call(huge, () -> false)).code());
         assertFalse(budget.body(req).contains(fake), "a chave nunca vai no corpo");
+        Map<String, Object> sent = com.nekkora.studio.bridge.json.Json.parseObject(budget.body(req));
+        assertEquals(Map.of("type", "auto"), sent.get("tool_choice"), "tool/any são recusados pelos modelos atuais (chamada real, HTTP 400)");
+        assertEquals(1, ((List<?>) sent.get("tools")).size(), "uma só ferramenta: resposta sem ela é INVALID_RESPONSE");
         List<String> seenKeys = new ArrayList<>();
         HttpServer srv = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
         srv.createContext("/ok", h -> {

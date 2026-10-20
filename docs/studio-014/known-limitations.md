@@ -4,10 +4,10 @@
 
 1. **Execução real (V6) nunca é verificada pelo Studio.** O Studio não executa automações. A execução do Caso A no
    laboratório, com o oráculo do servidor, foi feita pela homologação, fora do Studio, e está registrada como evidência.
-2. **Integração real com a Anthropic não homologada.** A única chamada real respondeu HTTP 400, porque a chave não está
-   ligada a um workspace. O cabeçalho `anthropic-workspace-id` (via `NEKKORA_ANTHROPIC_WORKSPACE_ID`) já é enviado
-   quando configurado, mas falta o id. O provedor segue coberto por testes de contrato com um servidor local que imita o
-   provedor e por um mock rotulado.
+2. **Anthropic real homologada só pelo motor.** Uma chamada real respondeu `RESPONSE_VERIFIED` (2 propostas aceitas,
+   nenhuma recusada), com a mesma carga e o mesmo verificador do Studio. O clique em "Revisar com IA" na interface foi
+   provado com o mock rotulado. Um modelo pode responder sem usar a ferramenta (`tool_choice` `auto`, D-S014-23): o
+   resultado é `INVALID_RESPONSE`, e nada é aplicado.
 3. **Framework 0.2.0:** execução única gerada só para o laboratório (loopback) ou para sites públicos de treinamento
    `https` que a pessoa autorizou no projeto (ambiente `benchmark`, D-S014-19). Qualquer outro site fica
    `SECURITY_BLOCKED`, pois não há ambiente de produção. Alvos em iframe ou shadow DOM não são gerados

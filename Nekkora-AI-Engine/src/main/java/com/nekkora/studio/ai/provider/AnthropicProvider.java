@@ -22,7 +22,8 @@ import java.util.function.BooleanSupplier;
 import java.util.function.Function;
 
 /**
- * STUDIO-014 — provedor OPCIONAL da Anthropic (Messages API, uso de ferramenta FORÇADO com {@code input_schema}).
+ * STUDIO-014 — provedor OPCIONAL da Anthropic (Messages API, UMA ferramenta com {@code input_schema}, {@code tool_choice}
+ * {@code auto}: os modelos atuais recusam {@code tool}/{@code any}; resposta sem a ferramenta vira {@code INVALID_RESPONSE}).
  *
  * <ul>
  *   <li>Chave: SÓ por variável de ambiente ({@code NEKKORA_ANTHROPIC_API_KEY} ou {@code ANTHROPIC_API_KEY}). Nunca no
@@ -81,9 +82,9 @@ public final class AnthropicProvider implements AIProvider {
         tool.put("name", r.toolName());
         tool.put("description", r.toolDescription());
         tool.put("input_schema", Json.parseObject(r.toolSchema()));
+        // "tool"/"any" são recusados pelos modelos atuais (HTTP 400 na chamada real); com uma só ferramenta, "auto" basta
         Map<String, Object> choice = new LinkedHashMap<>();
-        choice.put("type", "tool");
-        choice.put("name", r.toolName());
+        choice.put("type", "auto");
         Map<String, Object> msg = new LinkedHashMap<>();
         msg.put("role", "user");
         msg.put("content", r.payload());
