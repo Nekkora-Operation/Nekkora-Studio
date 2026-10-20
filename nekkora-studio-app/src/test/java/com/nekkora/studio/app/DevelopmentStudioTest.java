@@ -338,6 +338,64 @@ class DevelopmentStudioTest {
         assertTrue(stale.contains("V1 PDD: PDD_BLOCKED"), "renomear a sessão mudou o processo: o PDD precisa ser atualizado — " + stale);
     }
 
+    String validate() throws Exception {
+        Edt.run(() -> studio.view().actions().get(com.nekkora.studio.app.ui.StudioActions.VALIDATE).actionPerformed(new java.awt.event.ActionEvent(this, 0, "v")));
+        idle();
+        return Edt.call(() -> studio.view().validationPanel().layersText().getAccessibleContext().getAccessibleDescription());
+    }
+
+    List<String> findings() throws Exception {
+        return Edt.call(() -> {
+            List<String> out = new ArrayList<>();
+            var l = studio.view().validationPanel().findingList();
+            for (int i = 0; i < l.getModel().getSize(); i++) if (!l.getModel().getElementAt(i).structural()) out.add(l.getModel().getElementAt(i).issue().code());
+            return out;
+        });
+    }
+
+    static void declareFramework(Path out, String framework) throws Exception {
+        Path m = out.resolve("manifest.json");
+        String text = Files.readString(m, java.nio.charset.StandardCharsets.UTF_8);
+        String changed = text.replaceFirst("\"framework\"\\s*:\\s*\"[^\"]*\"", "\"framework\": \"" + framework + "\"");
+        assertFalse(text.equals(changed), "o manifesto gerado declara o framework");
+        Files.writeString(m, changed, java.nio.charset.StandardCharsets.UTF_8);
+    }
+
+    @Test
+    @DisplayName("PACKAGING-001 — Validar automação usa o catálogo da versão declarada (0.2.0, 0.3.0); versão desconhecida = incompatível, nada validado; sem manifesto = como antes")
+    void catalogoDaVersaoDeclarada() throws Exception {
+        start();
+        Case c = consulta("Consultar");
+        reviewedPdd(c.a());
+        develop();
+        answerStart(START);
+        Path out = dir.resolve("consulta-python");
+        // 0.2.0 (contrato legado gerado de verdade): conferido com o catálogo 0.2.0
+        String v020 = validate();
+        assertTrue(v020.contains("capacidade(s) do nekkora_rpa 0.2.0"), v020);
+        assertFalse(findings().contains("FRAMEWORK_CATALOG_MISSING"));
+        // versão desconhecida declarada: V2 bloqueado com o diagnóstico; V4/V5/V6 não validados; o padrão não a substitui
+        declareFramework(out, "nekkora-rpa==0.9.9");
+        String unknown = validate();
+        assertTrue(unknown.contains("V2 Capacidades: incompatível: o código gerado exige nekkora-rpa==0.9.9"), unknown);
+        assertFalse(unknown.contains("capacidade(s) do nekkora_rpa"), "o catálogo padrão não confere esse código: " + unknown);
+        assertTrue(unknown.contains("V4 Código Python: não validado") && unknown.contains("V5 Testes: não validado")
+                && unknown.contains("V6 Execução real: não validado"), unknown);
+        assertTrue(findings().contains("FRAMEWORK_CATALOG_MISSING"), findings().toString());
+        assertTrue(Edt.call(() -> studio.view().validationPanel().layersText().getText()).contains("V2 ×"));
+        // 0.3.0 declarado: catálogo 0.3.0, sem incompatibilidade
+        declareFramework(out, "nekkora-rpa[excel]==0.3.0");
+        String v030 = validate();
+        assertTrue(v030.contains("capacidade(s) do nekkora_rpa 0.3.0"), v030);
+        assertFalse(findings().contains("FRAMEWORK_CATALOG_MISSING"));
+        // sem manifesto (como antes de gerar): catálogo padrão, sem diagnóstico de incompatibilidade
+        Files.delete(out.resolve("manifest.json"));
+        String none = validate();
+        assertTrue(none.contains("capacidade(s) do nekkora_rpa " + com.nekkora.studio.ai.capability.FrameworkCapabilityCatalog.bundled().version()), none);
+        assertTrue(none.contains("V4 Código Python: código ainda não gerado"), none);
+        assertFalse(findings().contains("FRAMEWORK_CATALOG_MISSING"));
+    }
+
     @Test
     @DisplayName("S014 — regressão tabular: o projeto da E2E-001 com a configuração declarada gera EXATAMENTE os mesmos arquivos do gerador antigo")
     void regressaoTabular() throws Exception {

@@ -1,5 +1,6 @@
 package com.nekkora.studio.app.develop;
 
+import com.nekkora.studio.ai.capability.CatalogResolution;
 import com.nekkora.studio.ai.capability.FrameworkCapabilityCatalog;
 import com.nekkora.studio.ai.context.ProjectContext;
 import com.nekkora.studio.ai.generation.GenerationOrchestrator;
@@ -98,6 +99,11 @@ public final class DevelopmentPresenter implements DevelopmentPanel.Actions {
         /** Confirmação explícita (autorizar site público de treinamento). Sem janela que pergunte, nada é confirmado. */
         default boolean confirm(String title, String message, String action) {
             return false;
+        }
+
+        /** Confirmação do plano de instalação do ambiente (não é ação destrutiva): um item do plano por parágrafo. */
+        default boolean confirmPlan(String title, List<String> plan, String action) {
+            return confirm(title, String.join("\n\n", plan), action);
         }
 
         static Host headless(Path folder, boolean consents) {
@@ -237,13 +243,15 @@ public final class DevelopmentPresenter implements DevelopmentPanel.Actions {
         });
         var v0 = new AutomationValidator(RuleSet.LATEST).validate(a);
         String promptLabel = prompt == null ? "" : prompt.label();
-        AutomationQualityGate.Assessment first = AutomationQualityGate.assess(new AutomationQualityGate.Inputs(a, v0, draft, spec, catalog, out, tabular,
-                Optional.empty(), true, List.of(), promptLabel, clock.instant(), store.options(a.id()).origins(), runRecord(a)));
+        CatalogResolution resolved = catalogFor(out);
+        FrameworkCapabilityCatalog cat = resolved.catalog();
+        AutomationQualityGate.Assessment first = AutomationQualityGate.assess(new AutomationQualityGate.Inputs(a, v0, draft, spec, cat, out, tabular,
+                Optional.empty(), true, List.of(), promptLabel, clock.instant(), store.options(a.id()).origins(), runRecord(a), "", resolved.problem()));
         boolean code = first.code().exists() && first.code().current();
         layersListener.accept(new Layers("revisão atual", List.copyOf(first.report().layers().values()), live(first)));
         if (!code) {
-            AutomationQualityGate.Assessment noCode = AutomationQualityGate.assess(new AutomationQualityGate.Inputs(a, v0, draft, spec, catalog, out, tabular,
-                    Optional.empty(), false, List.of(), promptLabel, clock.instant(), store.options(a.id()).origins(), runRecord(a)));
+            AutomationQualityGate.Assessment noCode = AutomationQualityGate.assess(new AutomationQualityGate.Inputs(a, v0, draft, spec, cat, out, tabular,
+                    Optional.empty(), false, List.of(), promptLabel, clock.instant(), store.options(a.id()).origins(), runRecord(a), "", resolved.problem()));
             publish(a, noCode, round);
             return;
         }
@@ -262,8 +270,8 @@ public final class DevelopmentPresenter implements DevelopmentPanel.Actions {
             SwingUtilities.invokeLater(() -> {
                 if (round != validationRound || active().map(x -> x != a).orElse(true)) return; // outra validação ou outra automação: descartado
                 AutomationQualityGate.Assessment full = AutomationQualityGate.assess(new AutomationQualityGate.Inputs(a, new AutomationValidator(RuleSet.LATEST)
-                        .validate(a), loadDraft(a), loadSpec(a), catalog, out, tabular, env, false, done, promptLabel, clock.instant(),
-                        store.options(a.id()).origins(), runRecord(a), environmentProblem()));
+                        .validate(a), loadDraft(a), loadSpec(a), cat, out, tabular, env, false, done, promptLabel, clock.instant(),
+                        store.options(a.id()).origins(), runRecord(a), environmentProblem(), resolved.problem()));
                 publish(a, full, round);
             });
         });
@@ -447,7 +455,9 @@ public final class DevelopmentPresenter implements DevelopmentPanel.Actions {
 
     private void finish(Automation a, GenerationOrchestrator.Run run, Optional<PythonChecks.Environment> env, List<PythonChecks.Check> checks, List<String> notes) {
         running = false;
-        boolean allPass = !checks.isEmpty() && checks.stream().allMatch(c -> c.status() == PythonChecks.Status.PASS);
+        CatalogResolution resolved = catalogFor(run.outputDir());
+        // versão declarada sem catálogo: as verificações podem ter rodado, mas o código NÃO é dado por validado
+        boolean allPass = resolved.compatible() && !checks.isEmpty() && checks.stream().allMatch(c -> c.status() == PythonChecks.Status.PASS);
         phases.put(GenerationOrchestrator.Phase.CHECKING, env.isEmpty() || checks.isEmpty() ? DevelopmentPanel.PhaseState.SKIPPED
                 : allPass ? DevelopmentPanel.PhaseState.DONE : DevelopmentPanel.PhaseState.BLOCKED);
         List<String> results = new ArrayList<>(notes);
@@ -456,6 +466,7 @@ public final class DevelopmentPresenter implements DevelopmentPanel.Actions {
         results.add("Pasta: " + run.outputDir());
         run.written().files().forEach((f, st) -> results.add("  " + statusLabel(st) + "  " + f));
         if (run.written().protectedAny()) results.add("! Arquivo editado à mão preservado: veja os .novo e .diff ao lado dele.");
+        if (!resolved.compatible()) results.add("× Versão do framework incompatível: " + resolved.problem() + ". Nada foi dado por validado.");
         if (env.isEmpty()) {
             var le = lastEnvironment;
             results.add(le == null ? "— Código não verificado: configure o Python para verificação (Opções avançadas). Nada foi dado por aprovado."
@@ -470,12 +481,15 @@ public final class DevelopmentPresenter implements DevelopmentPanel.Actions {
         }
         results.add("— Execução real: não executada (o Studio não age no sistema-alvo; rode só em ambiente autorizado).");
         QualityReport report = assess(a, env, checks);
-        String title = allPass ? "Código gerado e verificado" : env.isEmpty() ? "Código gerado (não verificado)" : "Código gerado com problemas na verificação";
+        String title = allPass ? "Código gerado e verificado" : !resolved.compatible() ? "Código gerado com versão do framework incompatível"
+                : env.isEmpty() ? "Código gerado (não verificado)" : "Código gerado com problemas na verificação";
         String text = allPass ? "Gerado pelo gerador oficial e conferido por compilação, importação, ruff, mypy e testes de contrato. Execução real: não verificada."
-                : env.isEmpty() ? "O projeto foi gravado. Sem o Python de verificação, as camadas V4/V5 ficam \"não verificado\"."
+                : !resolved.compatible() ? "Incompatível: " + resolved.problem() + ". O catálogo padrão não substitui o da versão declarada; nada foi dado por validado."
+                : env.isEmpty() ? (lastEnvironment != null ? "O projeto foi gravado. O ambiente Python da automação não está pronto: V4/V5 ficam \"não verificado\" "
+                        + "(Pendências → Preparar ambiente)." : "O projeto foi gravado. Sem o Python de verificação, as camadas V4/V5 ficam \"não verificado\".")
                 : "Veja o resultado: a correção vai para o gerador ou para o modelo, não para o arquivo.";
         model = withPaths(new DevelopmentPanel.Model(a.name(), true, false, title, text, allPass ? com.nekkora.ui.core.Severity.SUCCESS
-                : com.nekkora.ui.core.Severity.WARNING, phaseRows(), uses(run.plan()), answers(a, run), variables(run.plan()), pending(withEnvironment(run.issues())), results,
+                : com.nekkora.ui.core.Severity.WARNING, phaseRows(), uses(run.plan()), answers(a, run), variables(run.plan()), pending(withCatalog(withEnvironment(run.issues()), report)), results,
                 "", "", true, provider != null && provider.available()), a);
         panel.show(model);
         panel.focusResults();
@@ -493,14 +507,16 @@ public final class DevelopmentPresenter implements DevelopmentPanel.Actions {
     /** Relatório de qualidade da revisão atual (persistido) — o mesmo que "Validar automação" produz. */
     private QualityReport assess(Automation a, Optional<PythonChecks.Environment> env, List<PythonChecks.Check> checks) {
         Optional<Path> project = projectFile(a);
+        CatalogResolution resolved = catalogFor(project.map(p -> outputDir(a, p)).orElse(null));
         AutomationQualityGate.Assessment as = AutomationQualityGate.assess(new AutomationQualityGate.Inputs(a, new AutomationValidator(RuleSet.LATEST).validate(a),
-                loadDraft(a), loadSpec(a), catalog, project.map(p -> outputDir(a, p)).orElse(null), project.flatMap(p -> {
+                loadDraft(a), loadSpec(a), resolved.catalog(), project.map(p -> outputDir(a, p)).orElse(null), project.flatMap(p -> {
                     try {
                         return declaredTabular(p);
                     } catch (CodegenConfig.Invalid e) {
                         return Optional.empty();
                     }
-                }), env, false, checks, prompt == null ? "" : prompt.label(), clock.instant(), store.options(a.id()).origins(), runRecord(a), environmentProblem()));
+                }), env, false, checks, prompt == null ? "" : prompt.label(), clock.instant(), store.options(a.id()).origins(), runRecord(a), environmentProblem(),
+                resolved.problem()));
         QualityReport r = as.report();
         worker.submit(() -> {
             try {
@@ -546,8 +562,9 @@ public final class DevelopmentPresenter implements DevelopmentPanel.Actions {
     private List<DevelopmentPanel.Use> uses(DevelopmentPlan plan) {
         List<DevelopmentPanel.Use> out = new ArrayList<>();
         List<String> ids = plan == null || plan.capabilities().isEmpty() ? List.of() : plan.capabilities();
+        FrameworkCapabilityCatalog cat = activeCatalog();
         for (String id : ids) {
-            catalog.find(id).ifPresent(c -> out.add(new DevelopmentPanel.Use(c.id(), c.name(), c.group(), c.purpose(), c.whereToRead(catalog.version()))));
+            cat.find(id).ifPresent(c -> out.add(new DevelopmentPanel.Use(c.id(), c.name(), c.group(), c.purpose(), c.whereToRead(cat.version()))));
         }
         return out;
     }
@@ -570,10 +587,12 @@ public final class DevelopmentPresenter implements DevelopmentPanel.Actions {
             out.add(new DevelopmentPanel.Answer("De onde vieram as etapas?", "Do PDD (" + r.state() + ", documento " + shortRev(r.documentRevision()) + ") e de "
                     + r.totalSteps() + " etapa(s) do modelo, cada uma pelo seu StepId; " + r.coveredSteps() + " de " + r.totalSteps() + " descritas no PDD."));
         }
-        out.add(new DevelopmentPanel.Answer("Quais funções serão utilizadas?", plan == null ? "As do catálogo do nekkora_rpa " + catalog.version()
-                + " que o plano escolher." : String.join(", ", uses(plan).stream().filter(u -> u.group().startsWith("Libs")).map(DevelopmentPanel.Use::name).toList())));
+        CatalogResolution resolved = catalogFor(a);
+        out.add(new DevelopmentPanel.Answer("Quais funções serão utilizadas?", !resolved.compatible() ? "Não conferido: " + resolved.problem() + "."
+                : plan == null ? "As do catálogo do nekkora_rpa " + resolved.catalog().version() + " que o plano escolher."
+                : String.join(", ", uses(plan).stream().filter(u -> u.group().startsWith("Libs")).map(DevelopmentPanel.Use::name).toList())));
         out.add(new DevelopmentPanel.Answer("Onde consulto cada função?", "Em \"O que vou utilizar\": selecione e use Ver documentação — assinatura, arquivo e linha "
-                + "no pacote instalado e a seção da documentação do nekkora_rpa " + catalog.version() + "."));
+                + "no pacote instalado e a seção da documentação do nekkora_rpa " + resolved.catalog().version() + "."));
         if (plan != null && plan.model() == DevelopmentPlan.ExecutionModel.LIST && plan.singleConfig().isPresent()) {
             var cfg = plan.singleConfig().get();
             out.add(new DevelopmentPanel.Answer("Como meus dados serão recebidos?", "Lista de entrada CSV ou XLSX com as colunas "
@@ -815,6 +834,7 @@ public final class DevelopmentPresenter implements DevelopmentPanel.Actions {
 
     @Override
     public void showDocs(String capabilityId) {
+        FrameworkCapabilityCatalog catalog = activeCatalog();
         catalog.find(capabilityId).ifPresentOrElse(c -> host.showText(c.name(), c.name() + "  (" + c.group() + ")\n\n" + c.importLine() + "\n" + c.name()
                 + c.signature() + "\n\n" + c.summary() + "\n\nFinalidade: " + c.purpose() + "\nEfeito: " + c.effect() + (c.limitations().isEmpty() ? ""
                 : "\nLimitações:\n- " + String.join("\n- ", c.limitations())) + "\n\nOnde consultar:\n- código no pacote instalado: " + c.source().file() + ", linha "
@@ -871,6 +891,24 @@ public final class DevelopmentPresenter implements DevelopmentPanel.Actions {
     // ------------------------------------------------------------------------------------------- ambiente Python (PACKAGING-001)
 
     /**
+     * O catálogo da versão que o código gerado em {@code out} exige (0.2.0 nos contratos legados, 0.3.0 na lista →
+     * planilha): o 0.3.0 nunca valida um runtime 0.2.0 nem o contrário. Versão declarada sem catálogo neste Studio =
+     * diagnóstico de incompatibilidade (o embutido NÃO a substitui em silêncio). Sem código gerado, o embutido mais novo —
+     * é ele que o planejamento usa para escolher o contrato.
+     */
+    private CatalogResolution catalogFor(Path out) {
+        return CatalogResolution.forGeneratedProject(out, catalog);
+    }
+
+    private CatalogResolution catalogFor(Automation a) {
+        return catalogFor(projectFile(a).map(p -> outputDir(a, p)).orElse(null));
+    }
+
+    private FrameworkCapabilityCatalog activeCatalog() {
+        return active().map(a -> catalogFor(a).catalog()).orElse(catalog);
+    }
+
+    /**
      * O ambiente para o código de {@code out}, SEM instalar e sem rede: (1) o Python indicado em Opções avançadas, sempre
      * conferido contra o requisito do projeto (divergência = diagnóstico, nunca troca silenciosa); (2) a venv da automação
      * preparada pelo Dependency Manager; (3) {@code NEKKORA_PYTHON} ou a {@code .venv} da pasta gerada, só se passarem na
@@ -923,6 +961,14 @@ public final class DevelopmentPresenter implements DevelopmentPanel.Actions {
         return le == null || le.ready() ? "" : le.diagnosis().title() + " — " + le.detail();
     }
 
+    /** A incompatibilidade de versão do framework (V2 do relatório) também vira pendência da janela Desenvolver. */
+    private static List<QualityIssue> withCatalog(List<QualityIssue> issues, QualityReport report) {
+        if (report == null) return issues;
+        List<QualityIssue> out = new ArrayList<>(issues);
+        report.issues().stream().filter(i -> i.code().equals("FRAMEWORK_CATALOG_MISSING")).forEach(out::add);
+        return out;
+    }
+
     private List<QualityIssue> withEnvironment(List<QualityIssue> issues) {
         var le = lastEnvironment;
         if (le == null || le.ready()) return issues;
@@ -969,7 +1015,7 @@ public final class DevelopmentPresenter implements DevelopmentPanel.Actions {
             return;
         }
         var plan = as.plan().get();
-        if (!host.confirm("Preparar o ambiente Python da automação?", String.join("\n\n", plan.summary()), "Preparar ambiente")) return;
+        if (!host.confirmPlan("Preparar o ambiente Python da automação?", plan.summary(), "Preparar ambiente")) return;
         running = true;
         cancelled.set(false);
         render(a, "Preparando o ambiente Python da automação…", "Etapa 1 de 6. Use Cancelar para interromper.", com.nekkora.ui.core.Severity.INFO,

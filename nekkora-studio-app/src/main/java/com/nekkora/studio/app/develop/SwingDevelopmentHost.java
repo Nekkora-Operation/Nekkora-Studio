@@ -65,7 +65,9 @@ public final class SwingDevelopmentHost implements DevelopmentPresenter.Host {
 
     @Override
     public Optional<Path> choosePython() {
-        return NekkoraFileDialogs.openFile(dialog, "Python para verificação (com nekkora_rpa, ruff e mypy)", "Interpretador Python", "exe", "");
+        // fora do Windows o interpretador não tem extensão: sem filtro (o FileNameExtensionFilter recusa extensão vazia)
+        String[] ext = System.getProperty("os.name", "").startsWith("Windows") ? new String[] {"exe"} : new String[0];
+        return NekkoraFileDialogs.openFile(dialog, "Python para verificação (com nekkora_rpa, ruff e mypy)", "Interpretador Python", ext);
     }
 
     @Override
@@ -116,6 +118,27 @@ public final class SwingDevelopmentHost implements DevelopmentPresenter.Host {
     @Override
     public boolean confirm(String title, String message, String action) {
         return com.nekkora.ui.dialog.NekkoraConfirmationDialog.confirmDanger(dialog, title, message, action);
+    }
+
+    /**
+     * PACKAGING-001: o plano de instalação numa janela própria — instalar não é ação destrutiva (sem marcador de perigo),
+     * o texto rola dentro da janela e nunca cobre os botões; Cancelar continua sendo o padrão seguro do Esc.
+     */
+    @Override
+    public boolean confirmPlan(String title, List<String> plan, String action) {
+        NekkoraDialog d = new NekkoraDialog(dialog, title);
+        d.setDialogSize(NekkoraDialog.Size.LARGE);
+        d.setDescription("Nada é instalado sem a sua confirmação. Confira o que será feito:");
+        NekkoraMonospaceTextArea area = new NekkoraMonospaceTextArea(String.join("\n\n", plan), 16);
+        area.setEditable(false);
+        area.setLineWrap(true);
+        area.setWrapStyleWord(true);
+        area.setCaretPosition(0);
+        area.getAccessibleContext().setAccessibleName("Plano de instalação do ambiente");
+        d.setContent(new NekkoraScrollPane(area));
+        d.addSecondary("Cancelar");
+        d.addPrimary(action);
+        return d.showDialog() == NekkoraDialog.Result.CONFIRMED;
     }
 
     @Override

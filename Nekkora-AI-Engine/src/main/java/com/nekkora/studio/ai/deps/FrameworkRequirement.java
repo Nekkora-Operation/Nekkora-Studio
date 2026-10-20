@@ -33,11 +33,19 @@ public record FrameworkRequirement(String version, List<String> extras) {
 
     /** O requisito gravado no {@code manifest.json} do projeto gerado (vazio se não há código gerado ou o campo falta). */
     public static Optional<FrameworkRequirement> ofGeneratedProject(Path projectDir) {
+        return declaredIn(projectDir).flatMap(FrameworkRequirement::parse);
+    }
+
+    /**
+     * O texto do campo {@code framework} do {@code manifest.json}, como gravado (vazio se não há código gerado, o manifesto
+     * não é legível ou o campo falta) — inclusive quando NÃO é um requisito reconhecido.
+     */
+    public static Optional<String> declaredIn(Path projectDir) {
         Path manifest = projectDir == null ? null : projectDir.resolve("manifest.json");
         if (manifest == null || !Files.isRegularFile(manifest)) return Optional.empty();
         try {
             Map<String, Object> m = Json.parseObject(Files.readString(manifest, StandardCharsets.UTF_8));
-            return m.get("framework") instanceof String s ? parse(s) : Optional.empty();
+            return m.get("framework") instanceof String s ? Optional.of(s) : Optional.empty();
         } catch (IOException | RuntimeException e) {
             return Optional.empty();
         }

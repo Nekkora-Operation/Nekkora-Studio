@@ -47,7 +47,7 @@ public class ListFlowTest {
 
     public record Flow(FichaCase c, DevelopmentPlan plan, PythonGenerator.Result result, List<QualityIssue> specIssues) {}
 
-    static FunctionalSpec spec(FichaCase c, ProjectContext ctx) {
+    public static FunctionalSpec spec(FichaCase c, ProjectContext ctx) {
         FunctionalSpec s = FunctionalSpec.empty(c.a.id());
         var now = ConsultaCase.CLOCK.instant();
         s = s.with(new FunctionalSpec.Decision(FunctionalSpec.Field.DATA_FLOW, null, "LIST_XLSX", FunctionalSpec.Actor.TEST_AGENT, FunctionalSpec.Basis.ANSWER, null, now));

@@ -1,0 +1,41 @@
+Tela: java.awt.Rectangle[x=0,y=0,width=1920,height=1032] · java 21.0.12 · modo rede
+Operador: Claude como AGENTE DE TESTE (TEST_AGENT) · ator do Studio: TEST_AGENT
+Área isolada: C:\Users\nicol\Nekkora Homologação – pacote r1 (espaço, acento e travessão no caminho)
+OK    pré: NEKKORA_PYTHON ausente (nenhum Python de desenvolvimento no caminho)
+Python do sistema: C:\Users\nicol\AppData\Local\Programs\Python\Python312\python.exe · Python 3.12.10
+OK    pré: o Python do sistema NÃO tem nekkora_rpa (nada instalado globalmente)
+pré: pacotes do Python do sistema: 56
+Studio 1.0.0-SNAPSHOT
+Rede: HTTPS_PROXY=http://127.0.0.1:9 (porta fechada: simula rede indisponível)
+projeto aberto: C:\Users\nicol\Nekkora Homologação – pacote r1\projetos\the-internet\the-internet.nekkora
+  R1 pendências: [WARNING:ENVIRONMENT_NOT_READY]
+  R1 resultado:
+    ✓ PROJECT_ANALYZED
+    ✓ PDD_READY
+    ✓ PLAN_VALIDATED
+    ✓ CODE_GENERATED
+    — CODE_VALIDATED
+    Pasta: C:\Users\nicol\Nekkora Homologação – pacote r1\projetos\the-internet\the-internet-python
+      igual  README.md
+      igual  config/execucao.toml
+      igual  main.py
+      igual  paginas.py
+      igual  processo.py
+      igual  requirements.txt
+      igual  selectors.json
+      igual  manifest.json
+    — Código não verificado: ambiente Python da automação — Ambiente ainda não preparado (a venv desta automação ainda não existe). Nada foi dado por aprovado.
+    — Execução real: não executada (o Studio não age no sistema-alvo; rode só em ambiente autorizado).
+
+  R1 python: ambiente da automação: Ambiente ainda não preparado
+OK    R1: aviso 'Ambiente Python da automação' com a versão exata do código
+OK    R1: nada é dado por aprovado sem ambiente (V4/V5 não verificados)
+OK    R1: a janela diz em que ambiente o código é verificado
+  sem rede: Proxy ou certificado bloqueou o download · Instalando as dependências (por hash): ERROR: No matching distribution found for et_xmlfile==2.0.0. Configure o proxy (HTTPS_PROXY) ou o certificado da rede e tente de novo. O projeto, o PDD e o código gerado continuam como estavam. · [× Ambiente Python da automação: PROXY_OR_SSL — Instalando as dependências (por hash): ERROR: No matching distribution found for et_xmlfile==2.0.0]
+captura PKG-R1-01-sem-rede.png (1164x791)
+OK    R1: sem rede = diagnóstico de rede/proxy (não 'erro desconhecido')
+OK    R1: nenhum ambiente dado como pronto
+OK    R1: a pendência continua com a ação de preparar (recuperável)
+OK    pós: Python do sistema intocado (pip freeze idêntico, sem nekkora_rpa)
+OK    pós: nenhuma venv dentro das pastas dos projetos
+RESULTADO: 10 verificações, 0 falha(s)

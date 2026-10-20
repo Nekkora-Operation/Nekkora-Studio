@@ -95,10 +95,10 @@ public final class DependencyManager {
     static final int DEEPEST_IN_SITE_PACKAGES = 110;
     static final int WINDOWS_MAX_PATH = 259;
 
-    /** O caminho mais fundo da instalação caberia no limite do Windows (sem caminhos longos habilitados)? */
-    static boolean fitsWindowsPath(Path environmentDir, boolean windows, boolean longPathsEnabled) {
+    /** O caminho mais fundo da instalação caberia no limite do Windows (sem caminhos longos habilitados)? Recebe o caminho ABSOLUTO como texto. */
+    static boolean fitsWindowsPath(String absoluteEnvironmentDir, boolean windows, boolean longPathsEnabled) {
         if (!windows || longPathsEnabled) return true;
-        int deepest = environmentDir.toAbsolutePath().toString().length() + "\\venv\\Lib\\site-packages\\".length() + DEEPEST_IN_SITE_PACKAGES;
+        int deepest = absoluteEnvironmentDir.length() + "\\venv\\Lib\\site-packages\\".length() + DEEPEST_IN_SITE_PACKAGES;
         return deepest <= WINDOWS_MAX_PATH;
     }
 
@@ -147,7 +147,7 @@ public final class DependencyManager {
         }
         boolean partial = Files.exists(dir) && record.isEmpty();
         return withPlan(req, artifact.get(), dir, partial ? Diagnosis.ENV_CORRUPTED : Diagnosis.NEEDS_INSTALL,
-                partial ? "ambiente incompleto de uma preparação anterior (será refeito)" : "a venv desta automação ainda não existe", chosenBase);
+                partial ? "preparação anterior interrompida ou incompleta (o ambiente será refeito do zero)" : "a venv desta automação ainda não existe", chosenBase);
     }
 
     private Assessment withPlan(FrameworkRequirement req, FrameworkArtifacts.Artifact artifact, Path dir, Diagnosis d, String detail, Optional<Path> chosenBase) {
@@ -208,7 +208,7 @@ public final class DependencyManager {
         } catch (IOException e) {
             throw new DependencyException(Diagnosis.PERMISSION_DENIED, "a pasta de ambientes não pode ser criada");
         }
-        if (!fitsWindowsPath(dir, windows(), longPathsEnabled())) {
+        if (!fitsWindowsPath(dir.toAbsolutePath().toString(), windows(), longPathsEnabled())) {
             throw new DependencyException(Diagnosis.PATH_TOO_LONG, "pasta do ambiente com " + dir.toAbsolutePath().toString().length() + " caracteres");
         }
         try {
