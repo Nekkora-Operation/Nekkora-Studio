@@ -1,0 +1,254 @@
+Tela: java.awt.Rectangle[x=0,y=0,width=1920,height=1032] · java 21.0.12 · modo principal
+Operador: Claude como AGENTE DE TESTE (TEST_AGENT) · ator do Studio: TEST_AGENT
+Área isolada: C:\Users\nicol\Nekkora Homologação – pacote t6 (espaço, acento e travessão no caminho)
+OK    pré: NEKKORA_PYTHON ausente (nenhum Python de desenvolvimento no caminho)
+Python do sistema: C:\Users\nicol\AppData\Local\Programs\Python\Python312\python.exe · Python 3.12.10
+OK    pré: o Python do sistema NÃO tem nekkora_rpa (nada instalado globalmente)
+pré: pacotes do Python do sistema: 56
+Studio 1.0.0-SNAPSHOT
+projeto aberto: C:\Users\nicol\Nekkora Homologação – pacote t6\projetos\the-internet\the-internet.nekkora
+  P1 pendências: [WARNING:ENVIRONMENT_NOT_READY]
+  P1 resultado:
+    ✓ PROJECT_ANALYZED
+    ✓ PDD_READY
+    ✓ PLAN_VALIDATED
+    ✓ CODE_GENERATED
+    — CODE_VALIDATED
+    Pasta: C:\Users\nicol\Nekkora Homologação – pacote t6\projetos\the-internet\the-internet-python
+      igual  README.md
+      igual  config/execucao.toml
+      igual  main.py
+      igual  paginas.py
+      igual  processo.py
+      igual  requirements.txt
+      igual  selectors.json
+      igual  manifest.json
+    — Código não verificado: ambiente Python da automação — Ambiente ainda não preparado (a venv desta automação ainda não existe). Nada foi dado por aprovado.
+    — Execução real: não executada (o Studio não age no sistema-alvo; rode só em ambiente autorizado).
+
+  P1 python: ambiente da automação: Ambiente ainda não preparado
+OK    P1: o código gerado exige exatamente nekkora-rpa==0.2.0 (legado preservado)
+OK    P1: aviso 'Ambiente Python da automação' com a versão exata do código
+OK    P1: nada é dado por aprovado sem ambiente (V4/V5 não verificados)
+OK    P1: a janela diz em que ambiente o código é verificado
+captura PKG-P1-01-ambiente-ausente.png (1164x791)
+  plano:
+    Preparar o ambiente Python da automação?
+    Nada é instalado sem a sua confirmação. Confira o que será feito:
+    
+    Pacote: nekkora-rpa 0.2.0 — exatamente o que o código gerado exige (nekkora-rpa==0.2.0).
+    
+    Origem do framework: artefato homologado embutido no Studio (commit 23cc6de, SHA-256 29d2c29db452…); não é baixado.
+    
+    Dependências e ferramentas de verificação: do PyPI oficial (https://pypi.org/simple/), versões exatas conferidas por hash — playwright, openpyxl, ruff 0.17.1, mypy 2.4.0 e o que elas exigem (cerca de 150 MB).
+    
+    Python base: C:\Users\nicol\AppData\Local\Programs\Python\Python312\python.exe (3.12.10, lançador py -3.12) — não é alterado.
+    
+    Destino: C:\Users\nicol\Nekkora Homologação – pacote t6\dados do Studio\ambientes\6183b8e60e28\0.2.0\venv (venv exclusiva desta automação; nada vai para o Python global nem para a pasta do projeto).
+    
+    Nada do projeto (.nekkora, PDD, planilhas, credenciais) é enviado ao índice de pacotes. Não instala navegadores.
+    
+    
+    
+    
+    Cancelar
+    Preparar ambiente
+
+OK    P1: o plano mostra pacote/versão, origem conferida, Python base, destino e o que NÃO é enviado
+captura PKG-P1-02-plano-confirmacao.png (760x461)
+OK    P1: recusar a confirmação não cria venv nenhuma
+  progresso: Etapa 3 de 6: Instalando as dependências (por hash). Use Cancelar para interromper.
+captura PKG-P1-03-progresso.png (1164x791)
+  pronto: Código gerado e verificado · python: C:\Users\nicol\Nekkora Homologação – pacote t6\dados do Studio\ambientes\6183b8e60e28\0.2.0\venv\Scripts\python.exe · nekkora-rpa 0.2.0 (venv da automação)
+  resultado:
+    ✓ PROJECT_ANALYZED
+    ✓ PDD_READY
+    ✓ PLAN_VALIDATED
+    ✓ CODE_GENERATED
+    ✓ CODE_VALIDATED
+    Pasta: C:\Users\nicol\Nekkora Homologação – pacote t6\projetos\the-internet\the-internet-python
+      igual  README.md
+      igual  config/execucao.toml
+      igual  main.py
+      igual  paginas.py
+      igual  processo.py
+      igual  requirements.txt
+      igual  selectors.json
+      igual  manifest.json
+    ✓ Compilação: sem problema (76 ms)
+    ✓ Importação: sem problema (274 ms)
+    ✓ ruff check: sem problema (468 ms)
+    ✓ ruff format: sem problema (94 ms)
+    ✓ mypy estrito: sem problema (1556 ms)
+    ✓ Testes de contrato: sem problema (291 ms)
+    Ambiente: Python 3.12.10, nekkora_rpa 0.2.0, ruff 0.17.1, mypy 2.4.0
+    — Execução real: não executada (o Studio não age no sistema-alvo; rode só em ambiente autorizado).
+
+captura PKG-P1-04-ambiente-pronto.png (1164x791)
+captura PKG-P1-04b-plano-ambiente.png (1164x791)
+captura PKG-P1-04c-opcoes-avancadas.png (1164x791)
+OK    P1: código verificado no ambiente preparado (CODE_VALIDATED, V4/V5)
+OK    P1: sem pendência de ambiente
+OK    P1: versão visível na janela: nekkora-rpa 0.2.0 (venv da automação)
+OK    P1: resposta do ambiente cita o requisito exato
+OK    P1: venv nova dentro da pasta de dados do Studio (caminho com acento)
+  P1 ambiente.json: {"schema":"nekkora-studio/python-environment","version":"1.0.0","requirement":"nekkora-rpa==0.2.0","wheelSha256":"29d2c29db4526b2cac87feb0b77f400df61991b735a04fe789c36ea4ed91f6ca","source":"BUNDLED","commit":"23cc6de32b9cf04643e2c7413e1d848cdd9a8ecc","dependenciesLockSha256":"e67ab86e057cd251208433e5302d44250717f837cc49fd5b75d0284ed95d1555","toolsLockSha256":"b97c402cf8b996564d4794f6a102f06f8400e6e2e61e842b0e518a9e5f179dd6","dependencyIndex":"https://pypi.org/simple/","pythonBase":"~\\AppData\\Local\\Programs\\Python\\Python312\\python.exe","python":"3.12.10","verified":"nekkora-rpa 0.2.0, Python 3.12.10","installedAt":"2026-10-20T20:57:17.357654900Z"}
+OK    P1: ambiente.json registra o requisito, a origem homologada e o hash do wheel
+  P1 camadas: ! V0 Modelo: avaliação parcial · 0 bloqueio(s), 2 aviso(s) · regras nekkora-validation-rules/1.1.0; ✓ V1 PDD: PDD_READY · 5 de 5 etapas cobertas; ✓ V2 Capacidades: 12 capacidade(s) do nekkora_rpa 0.2.0; ✓ V3 Plano: Execução única (sem planilha) · 3 variável(is) · 2 Page(s); ✓ V4 Código Python: 5 de 5 verificação(ões) sem problema · Python 3.12.10, ruff 0.17.1, mypy 2.4.0, nekkora_rpa 0.2.0; ✓ V5 Testes: 7 teste(s) de contrato, 1 de 1 verificação(ões) sem problema · nekkora_rpa 0.2.0; — V6 Execução real: nenhum teste autorizado desta automação
+OK    P1: Validar automação — V4 Código verificado no ambiente da automação (sem 'ambiente não pronto')
+OK    P1: Validar automação — V5 sem falha
+captura PKG-P1-05-validar.png (1180x1000)
+projeto aberto: C:\Users\nicol\Nekkora Homologação – pacote t6\projetos\wikipedia-biografias\biografias.nekkora
+  P2 pendências: [WARNING:ENVIRONMENT_NOT_READY]
+  P2 resultado:
+    ✓ PROJECT_ANALYZED
+    ✓ PDD_READY
+    ✓ PLAN_VALIDATED
+    ✓ CODE_GENERATED
+    — CODE_VALIDATED
+    Pasta: C:\Users\nicol\Nekkora Homologação – pacote t6\projetos\wikipedia-biografias\biografias-python
+      igual  README.md
+      igual  config/execucao.toml
+      igual  main.py
+      igual  paginas.py
+      igual  processo.py
+      igual  requirements.txt
+      igual  selectors.json
+      igual  manifest.json
+    — Código não verificado: ambiente Python da automação — Ambiente ainda não preparado (a venv desta automação ainda não existe). Nada foi dado por aprovado.
+    — Execução real: não executada (o Studio não age no sistema-alvo; rode só em ambiente autorizado).
+
+  P2 python: ambiente da automação: Ambiente ainda não preparado
+OK    P2: o código gerado exige exatamente nekkora-rpa[excel]==0.3.0
+OK    P2: aviso 'Ambiente Python da automação' com a versão exata do código
+OK    P2: nada é dado por aprovado sem ambiente (V4/V5 não verificados)
+OK    P2: a janela diz em que ambiente o código é verificado
+captura PKG-P2-01-ambiente-ausente.png (1164x791)
+OK    P2: o plano cita o extra excel
+  cancelado: Preparação cancelada · [× Ambiente Python da automação: CANCELLED — cancelado pela pessoa]
+captura PKG-P2-02-cancelado.png (1164x791)
+OK    P2: Cancelar interrompe a instalação com diagnóstico claro (CANCELLED)
+OK    P2: instalação cancelada não deixa ambiente dado como pronto (sem ambiente.json)
+OK    P2: o projeto e o código gerado continuam como estavam
+  pronto: Código gerado e verificado · python: C:\Users\nicol\Nekkora Homologação – pacote t6\dados do Studio\ambientes\c4bf0e9ab361\0.3.0-excel\venv\Scripts\python.exe · nekkora-rpa 0.3.0 (venv da automação)
+  resultado:
+    ✓ PROJECT_ANALYZED
+    ✓ PDD_READY
+    ✓ PLAN_VALIDATED
+    ✓ CODE_GENERATED
+    ✓ CODE_VALIDATED
+    Pasta: C:\Users\nicol\Nekkora Homologação – pacote t6\projetos\wikipedia-biografias\biografias-python
+      igual  README.md
+      igual  config/execucao.toml
+      igual  main.py
+      igual  paginas.py
+      igual  processo.py
+      igual  requirements.txt
+      igual  selectors.json
+      igual  manifest.json
+    ✓ Compilação: sem problema (72 ms)
+    ✓ Importação: sem problema (293 ms)
+    ✓ ruff check: sem problema (471 ms)
+    ✓ ruff format: sem problema (94 ms)
+    ✓ mypy estrito: sem problema (1552 ms)
+    ✓ Testes de contrato: sem problema (282 ms)
+    Ambiente: Python 3.12.10, nekkora_rpa 0.3.0, ruff 0.17.1, mypy 2.4.0
+    — Execução real: não executada (o Studio não age no sistema-alvo; rode só em ambiente autorizado).
+
+captura PKG-P2-03-ambiente-pronto.png (1164x791)
+captura PKG-P2-03b-plano-ambiente.png (1164x791)
+captura PKG-P2-03c-opcoes-avancadas.png (1164x791)
+OK    P2: código verificado no ambiente preparado (CODE_VALIDATED, V4/V5)
+OK    P2: sem pendência de ambiente
+OK    P2: versão visível na janela: nekkora-rpa 0.3.0 (venv da automação)
+OK    P2: resposta do ambiente cita o requisito exato
+OK    P2: venv nova dentro da pasta de dados do Studio (caminho com acento)
+  P2 ambiente.json: {"schema":"nekkora-studio/python-environment","version":"1.0.0","requirement":"nekkora-rpa[excel]==0.3.0","wheelSha256":"53acee25542af54d011c7e70a1fbeace29b72f3f138a90e7b41cc4114c7e791c","source":"BUNDLED","commit":"2f36a0acca5a4a84cbba91aa698f31e834b60a9b","dependenciesLockSha256":"e67ab86e057cd251208433e5302d44250717f837cc49fd5b75d0284ed95d1555","toolsLockSha256":"b97c402cf8b996564d4794f6a102f06f8400e6e2e61e842b0e518a9e5f179dd6","dependencyIndex":"https://pypi.org/simple/","pythonBase":"~\\AppData\\Local\\Programs\\Python\\Python312\\python.exe","python":"3.12.10","verified":"nekkora-rpa 0.3.0 [excel], Python 3.12.10","installedAt":"2026-10-20T20:58:09.770790800Z"}
+OK    P2: ambiente.json registra o requisito, a origem homologada e o hash do wheel
+  P2 camadas: ! V0 Modelo: avaliação parcial · 0 bloqueio(s), 7 aviso(s) · regras nekkora-validation-rules/1.1.0; ✓ V1 PDD: PDD_READY · 10 de 10 etapas cobertas; ✓ V2 Capacidades: 13 capacidade(s) do nekkora_rpa 0.3.0; ✓ V3 Plano: Lista → planilha: uma transação por item da lista; planilha Excel de saída (tudo ou nada) · 9 variável(is) · 1 Page(s); ✓ V4 Código Python: 5 de 5 verificação(ões) sem problema · Python 3.12.10, ruff 0.17.1, mypy 2.4.0, nekkora_rpa 0.3.0; ✓ V5 Testes: 7 teste(s) de contrato, 1 de 1 verificação(ões) sem problema · nekkora_rpa 0.3.0; — V6 Execução real: nenhum teste autorizado desta automação
+OK    P2: Validar automação — V4 Código verificado no ambiente da automação (sem 'ambiente não pronto')
+OK    P2: Validar automação — V5 sem falha
+captura PKG-P2-04-validar.png (1180x1000)
+OK    compat: 0.2.0 e 0.3.0[excel] em venvs SEPARADAS (nenhuma migração silenciosa)
+OK    N1: módulo nekkora_rpa.xlsx presente antes do dano
+  N1 pendências: [WARNING:ENVIRONMENT_NOT_READY]
+  N1 resultado:
+    ✓ PROJECT_ANALYZED
+    ✓ PDD_READY
+    ✓ PLAN_VALIDATED
+    ✓ CODE_GENERATED
+    — CODE_VALIDATED
+    Pasta: C:\Users\nicol\Nekkora Homologação – pacote t6\projetos\wikipedia-biografias\biografias-python
+      igual  README.md
+      igual  config/execucao.toml
+      igual  main.py
+      igual  paginas.py
+      igual  processo.py
+      igual  requirements.txt
+      igual  selectors.json
+      igual  manifest.json
+    — Código não verificado: ambiente Python da automação — Ambiente danificado (arquivos instalados ausentes ou alterados em nekkora-rpa (1), ex.: nekkora_rpa/xlsx.py). Nada foi dado por aprovado.
+    — Execução real: não executada (o Studio não age no sistema-alvo; rode só em ambiente autorizado).
+
+  N1 python: ambiente da automação: Ambiente danificado
+  venv danificada: Ambiente danificado: arquivos instalados ausentes ou alterados em nekkora-rpa (1), ex.: nekkora_rpa/xlsx.py.
+OK    N1: venv danificada vira pendência do ambiente (não é aprovada)
+OK    N1: código NÃO dado por verificado com a venv danificada
+captura PKG-N1-01-venv-danificada.png (1164x791)
+  pronto: Código gerado e verificado · python: C:\Users\nicol\Nekkora Homologação – pacote t6\dados do Studio\ambientes\c4bf0e9ab361\0.3.0-excel\venv\Scripts\python.exe · nekkora-rpa 0.3.0 (venv da automação)
+  resultado:
+    ✓ PROJECT_ANALYZED
+    ✓ PDD_READY
+    ✓ PLAN_VALIDATED
+    ✓ CODE_GENERATED
+    ✓ CODE_VALIDATED
+    Pasta: C:\Users\nicol\Nekkora Homologação – pacote t6\projetos\wikipedia-biografias\biografias-python
+      igual  README.md
+      igual  config/execucao.toml
+      igual  main.py
+      igual  paginas.py
+      igual  processo.py
+      igual  requirements.txt
+      igual  selectors.json
+      igual  manifest.json
+    ✓ Compilação: sem problema (67 ms)
+    ✓ Importação: sem problema (291 ms)
+    ✓ ruff check: sem problema (446 ms)
+    ✓ ruff format: sem problema (93 ms)
+    ✓ mypy estrito: sem problema (1560 ms)
+    ✓ Testes de contrato: sem problema (283 ms)
+    Ambiente: Python 3.12.10, nekkora_rpa 0.3.0, ruff 0.17.1, mypy 2.4.0
+    — Execução real: não executada (o Studio não age no sistema-alvo; rode só em ambiente autorizado).
+
+OK    N1: reparo pelo mesmo fluxo (Preparar ambiente) volta a verificar o código
+captura PKG-N1-02-reparado.png (1164x791)
+projeto aberto: C:\Users\nicol\Nekkora Homologação – pacote t6\projetos\the-internet\the-internet.nekkora
+captura PKG-N2-01-python-sem-pacote-recusado.png (760x464)
+OK    N2: Python sem nekkora_rpa/ruff/mypy é recusado e nada muda
+  N3 pendências: [WARNING:ENVIRONMENT_NOT_READY]
+  N3 resultado:
+    ✓ PROJECT_ANALYZED
+    ✓ PDD_READY
+    ✓ PLAN_VALIDATED
+    ✓ CODE_GENERATED
+    — CODE_VALIDATED
+    Pasta: C:\Users\nicol\Nekkora Homologação – pacote t6\projetos\the-internet\the-internet-python
+      igual  README.md
+      igual  config/execucao.toml
+      igual  main.py
+      igual  paginas.py
+      igual  processo.py
+      igual  requirements.txt
+      igual  selectors.json
+      igual  manifest.json
+    — Código não verificado: ambiente Python da automação — Versão diferente da exigida (Python indicado em Opções avançadas: instalado nekkora-rpa 0.3.0; o projeto exige 0.2.0). Nada foi dado por aprovado.
+    — Execução real: não executada (o Studio não age no sistema-alvo; rode só em ambiente autorizado).
+
+  N3 python: ambiente da automação: Versão diferente da exigida
+  Python indicado 0.3.0 para código 0.2.0: Versão diferente da exigida: Python indicado em Opções avançadas: instalado nekkora-rpa 0.3.0; o projeto exige 0.2.0. · python: ambiente da automação: Versão diferente da exigida
+OK    N3: versão divergente do Python indicado vira diagnóstico (VERSION_MISMATCH), sem trocar de ambiente em silêncio
+OK    N3: código NÃO dado por verificado com a versão errada
+captura PKG-N3-01-versao-divergente.png (1164x791)
+OK    pós: Python do sistema intocado (pip freeze idêntico, sem nekkora_rpa)
+OK    pós: nenhuma venv dentro das pastas dos projetos
+RESULTADO: 42 verificações, 0 falha(s)

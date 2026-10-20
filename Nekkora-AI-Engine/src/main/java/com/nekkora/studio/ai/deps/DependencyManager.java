@@ -147,7 +147,7 @@ public final class DependencyManager {
         }
         boolean partial = Files.exists(dir) && record.isEmpty();
         return withPlan(req, artifact.get(), dir, partial ? Diagnosis.ENV_CORRUPTED : Diagnosis.NEEDS_INSTALL,
-                partial ? "ambiente incompleto de uma preparação anterior (será refeito)" : "a venv desta automação ainda não existe", chosenBase);
+                partial ? "preparação anterior interrompida ou incompleta (o ambiente será refeito do zero)" : "a venv desta automação ainda não existe", chosenBase);
     }
 
     private Assessment withPlan(FrameworkRequirement req, FrameworkArtifacts.Artifact artifact, Path dir, Diagnosis d, String detail, Optional<Path> chosenBase) {

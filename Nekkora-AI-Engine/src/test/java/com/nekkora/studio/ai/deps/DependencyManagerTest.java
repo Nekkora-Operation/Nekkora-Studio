@@ -191,6 +191,20 @@ class DependencyManagerTest {
         // o Python da 0.2.0 indicado para um projeto 0.3.0 → VERSION_MISMATCH (o catálogo 0.3.0 nunca valida o runtime 0.2.0)
         DependencyManager.Assessment wrong = dm.assess(ID, v3, Optional.of(r2.environment().orElseThrow().python()), Optional.empty());
         assertEquals(Diagnosis.VERSION_MISMATCH, wrong.diagnosis(), wrong.detail());
+        // submódulo do framework apagado / arquivo alterado (o pacote raiz ainda importa) → ENV_CORRUPTED pelo RECORD, não "erro do código"
+        Path pkg = dm.environmentDir(ID, v3).resolve("venv").resolve(Path.of("Lib", "site-packages", "nekkora_rpa"));
+        if (!Files.isDirectory(pkg)) pkg = Files.walk(dm.environmentDir(ID, v3).resolve("venv")).filter(p -> p.endsWith("nekkora_rpa") && Files.isDirectory(p))
+                .findFirst().orElseThrow();
+        Path xlsx = pkg.resolve("xlsx.py");
+        byte[] original = Files.readAllBytes(xlsx);
+        Files.delete(xlsx);
+        DependencyManager.Assessment missing = dm.assess(ID, v3, Optional.empty(), Optional.empty());
+        assertEquals(Diagnosis.ENV_CORRUPTED, missing.diagnosis(), missing.detail());
+        assertTrue(missing.detail().contains("nekkora_rpa/xlsx.py") && missing.plan().isPresent(), missing.detail());
+        Files.write(xlsx, (new String(original, StandardCharsets.UTF_8) + "\n# alterado\n").getBytes(StandardCharsets.UTF_8));
+        assertEquals(Diagnosis.ENV_CORRUPTED, dm.assess(ID, v3, Optional.empty(), Optional.empty()).diagnosis(), "conteúdo alterado também");
+        Files.write(xlsx, original);
+        assertEquals(Diagnosis.READY, dm.assess(ID, v3, Optional.empty(), Optional.empty()).diagnosis(), "restaurado → pronto de novo");
         // venv danificada → ENV_CORRUPTED com plano de refazer
         Files.delete(DependencyManager.pythonOf(dm.environmentDir(ID, v2).resolve("venv")));
         DependencyManager.Assessment broken = dm.assess(ID, v2, Optional.empty(), Optional.empty());
