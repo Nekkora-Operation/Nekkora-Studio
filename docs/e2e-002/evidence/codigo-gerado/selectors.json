@@ -1,0 +1,115 @@
+{
+  "schema": "nekkora-rpa/selectors",
+  "version": "1.1.0",
+  "system": "processo",
+  "targets": {
+    "processo.pesquisa.fill": {
+      "preferred": {
+        "strategy": "css",
+        "expression": "header input[name=\"search\"]"
+      },
+      "expected": {
+        "tag": "input"
+      },
+      "provenance": {
+        "studioStepId": "afb51a78-579b-4e81-9256-90d974ccb3e0"
+      }
+    },
+    "processo.pesquisa.press_key": {
+      "preferred": {
+        "strategy": "css",
+        "expression": "header input[name=\"search\"]"
+      },
+      "expected": {
+        "tag": "input"
+      },
+      "provenance": {
+        "studioStepId": "2f54a685-66d6-4f38-8572-c6b8cd22b654"
+      }
+    },
+    "processo.pesquisa.titulo": {
+      "preferred": {
+        "strategy": "css",
+        "expression": "h1#firstHeading"
+      },
+      "expected": {
+        "tag": "h1"
+      },
+      "provenance": {
+        "studioStepId": "3e133b8f-2605-4851-9632-035f8200a323"
+      }
+    },
+    "processo.pesquisa.nome_completo": {
+      "preferred": {
+        "strategy": "xpath",
+        "expression": "//tr[th[normalize-space(.)=\"Nome completo\"]]//td"
+      },
+      "expected": {
+        "tag": "td"
+      },
+      "provenance": {
+        "studioStepId": "d209853d-4e12-4cf6-816b-5c33c22114b0"
+      }
+    },
+    "processo.pesquisa.nascimento": {
+      "preferred": {
+        "strategy": "xpath",
+        "expression": "//tr[th[normalize-space(.)=\"Nascimento\"]]//td"
+      },
+      "expected": {
+        "tag": "td"
+      },
+      "provenance": {
+        "studioStepId": "42ec8f2d-fa8e-4410-ba74-f181e2553d06"
+      }
+    },
+    "processo.pesquisa.morte": {
+      "preferred": {
+        "strategy": "xpath",
+        "expression": "//tr[th[normalize-space(.)=\"Morte\"]]//td"
+      },
+      "expected": {
+        "tag": "td"
+      },
+      "provenance": {
+        "studioStepId": "1d766bbb-cf1c-42d5-9341-eb240f3ba82d"
+      }
+    },
+    "processo.pesquisa.nacionalidade": {
+      "preferred": {
+        "strategy": "xpath",
+        "expression": "//tr[th[normalize-space(.)=\"Nacionalidade\"]]//td"
+      },
+      "expected": {
+        "tag": "td"
+      },
+      "provenance": {
+        "studioStepId": "5b39cbb3-d4a4-4e9e-b6b3-636878f220cd"
+      }
+    },
+    "processo.pesquisa.ocupacao": {
+      "preferred": {
+        "strategy": "xpath",
+        "expression": "//tr[th[normalize-space(.)=\"Ocupação\"]]//td"
+      },
+      "expected": {
+        "tag": "td"
+      },
+      "provenance": {
+        "studioStepId": "57bb22fb-6ba2-4c8a-bac2-f0bf8875a604"
+      }
+    },
+    "processo.pesquisa.campo_s": {
+      "preferred": {
+        "strategy": "xpath",
+        "expression": "//tr[th[normalize-space(.)=\"Campo(s)\"]]//td"
+      },
+      "expected": {
+        "tag": "td"
+      },
+      "provenance": {
+        "studioStepId": "c53b033e-8236-4f8b-9973-e835a5587196"
+      }
+    }
+  }
+}

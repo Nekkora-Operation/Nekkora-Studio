@@ -461,9 +461,29 @@ public final class E2e002Homologation {
         // ================================================================ G5 — PDF com o apêndice "Dados do processo"
         exportPdf();
 
+        // ================================================================ G3b — PDD desatualizado bloqueia o desenvolvimento
+        stalePddBlocks();
+
         // ================================================================ G6 — teste autorizado pela interface
         dp = openDevelopment();
         waitDevIdle("reabrir");
+        click(edt(dp::developButton)); // o modelo mudou (etapa acrescentada + desfeita): gerar e verificar de novo antes de executar
+        m = waitDevIdle("desenvolver de novo", 300);
+        check("G6: código de novo CODE_VALIDATED na revisão atual", m.results().contains("✓ CODE_VALIDATED"));
+        // C11: progresso visível e CANCELAR pela interface — a planilha não é gravada
+        DevelopmentPanel live = dp;
+        supervisedRunByUi(live);
+        waitFor("progresso do teste autorizado", 120, () -> edt(() -> live.model().statusTitle().startsWith("Teste autorizado em andamento")
+                && live.model().statusText().contains("Itens iniciados: 1")));
+        log("  progresso: " + edt(() -> live.model().statusText()));
+        bringDevelopmentToFront(); // o Chrome da execução abriu à frente: a pessoa volta ao Studio para cancelar
+        captureWindow(devDialog(), "G6-02b-progresso");
+        click(edt(() -> find(live, AbstractButton.class, x -> "develop.cancel".equals(x.getName()))));
+        m = waitDevIdle("teste cancelado", 120);
+        log("  cancelado: " + m.statusTitle() + " · " + m.results().stream().findFirst().orElse(""));
+        captureWindow(devDialog(), "G6-02c-cancelado");
+        check("C11: Cancelar interrompe o teste autorizado e a planilha NÃO é gravada", m.results().stream().anyMatch(r -> r.contains("CANCELLED"))
+                && !Files.exists(SHEET));
         supervisedRunByUi(dp);
         m = waitDevIdle("teste autorizado", 1500);
         captureWindow(devDialog(), "G6-03-teste-resultado");
@@ -482,7 +502,8 @@ public final class E2e002Homologation {
         sleep(1500);
         String layers = edt(() -> window.studio().view().validationPanel().layersText().getAccessibleContext().getAccessibleDescription());
         log("  camadas: " + layers);
-        check("G6: V6 Execução real comprovada pelo teste autorizado desta revisão", layers.contains("V6 Execução real") && !layers.contains("nenhum teste autorizado"));
+        check("G6: V6 Execução real comprovada pelo teste autorizado desta revisão", layers.contains("✓ V6 Execução real"));
+        check("G6: V3 descreve lista → planilha", layers.contains("V3 Plano: Lista → planilha"));
         captureStudio("G6-04-validacao-v6");
 
         // oráculo: os dados VISÍVEIS de cada artigo, lidos pelo CDP na página (para o conferidor independente)
@@ -490,7 +511,8 @@ public final class E2e002Homologation {
         for (String[] art : ARTICLES) {
             navigate(WP + art[1]);
             pages.add(page.eval("(() => { const rows = {}; for (const r of document.querySelectorAll('table.infobox tr')) { const th = r.querySelector(':scope > th');"
-                    + " const td = r.querySelector(':scope > td'); if (th && td) rows[th.innerText.trim()] = td.innerText; }"
+                    + " const td = r.querySelector(':scope > td'); if (!th || !td) continue; const lis = [...td.querySelectorAll('li')].filter(li => li.offsetParent !== null && !li.querySelector('li'));"
+                    + " rows[th.innerText.trim()] = lis.length ? lis.map(li => li.innerText.trim()).join('\\n') : td.innerText; }"
                     + " return {url: location.href, h1: document.getElementById('firstHeading').innerText, rows}; })()"));
         }
         Files.writeString(out.toPath().resolve("oraculo-pagina.json"), Json.write(pages), StandardCharsets.UTF_8);
@@ -772,6 +794,57 @@ public final class E2e002Homologation {
         press(KeyEvent.VK_ENTER);
         waitFor("diálogo de arquivo fechado", 15, () -> !edt(w::isShowing));
         sleep(500);
+    }
+
+    /** Acrescentar uma etapa pelo editor (Ctrl+E) depois do PDD revisado: Desenvolver recusa (PDD_OUTDATED); Ctrl+Z volta. */
+    private void stalePddBlocks() throws Exception {
+        int before = edt(sExt::stepCount);
+        selectSession(auto, sExt);
+        press(KeyEvent.VK_CONTROL, KeyEvent.VK_E);
+        NekkoraDialog nd = waitDialog("Nova etapa");
+        edt(() -> {
+            StepForm f = find(nd, StepForm.class, x -> true);
+            JComboBox<StepForm.SessionChoice> sc = f.sessionInput();
+            for (int i = 0; i < sc.getItemCount(); i++) if (sc.getItemAt(i).label().endsWith("Extração")) sc.setSelectedIndex(i);
+            f.typeInput().setSelectedItem(ActionType.OBSERVE);
+            return null;
+        });
+        typeIntoFocused("Ler o resumo");
+        press(KeyEvent.VK_ENTER);
+        waitClosed(nd);
+        waitFor("etapa acrescentada", 10, () -> edt(sExt::stepCount) == before + 1);
+        DevelopmentPanel dp = openDevelopment();
+        waitDevIdle("análise com o PDD desatualizado");
+        click(edt(dp::developButton));
+        DevelopmentPanel.Model m = waitDevIdle("desenvolver com o PDD desatualizado");
+        log("  PDD desatualizado: " + m.statusTitle() + " · " + m.pending().stream().filter(i -> i.kind() == QualityIssue.Kind.BLOCKER).map(QualityIssue::code).toList());
+        captureWindow(devDialog(), "G3-02-pdd-desatualizado-bloqueia");
+        check("G3: PDD desatualizado bloqueia — nenhum código gerado (PDD_OUTDATED)", !m.results().contains("✓ CODE_GENERATED")
+                && m.pending().stream().anyMatch(i -> i.code().equals("PDD_OUTDATED")));
+        closeDevelopment();
+        focusStudioWorkspace();
+        press(KeyEvent.VK_CONTROL, KeyEvent.VK_Z);
+        waitFor("etapa desfeita", 10, () -> edt(sExt::stepCount) == before);
+        check("G3: Ctrl+Z desfaz a etapa acrescentada (o PDD volta a valer)", true);
+        save();
+    }
+
+    /** Traz a janela Desenvolver à frente sem clicar em outra janela: ALT libera a troca de primeiro plano no Windows. */
+    private void bringDevelopmentToFront() throws Exception {
+        for (int attempt = 0; attempt < 5; attempt++) {
+            robot.keyPress(KeyEvent.VK_ALT);
+            robot.keyRelease(KeyEvent.VK_ALT);
+            robot.waitForIdle();
+            edt(() -> {
+                JDialog d = devDialog();
+                d.toFront();
+                d.requestFocus();
+                return null;
+            });
+            sleep(500);
+            if (edt(() -> devDialog().isActive())) return;
+        }
+        throw new IllegalStateException("a janela Desenvolver não voltou à frente");
     }
 
     // ============================================================================== apoio

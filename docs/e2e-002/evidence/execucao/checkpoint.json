@@ -1,0 +1,43 @@
+{
+ "body": {
+  "process_name": "biografias_da_wikipedia",
+  "salt": "7763a050dd38ec6ebea8208187f2edfa",
+  "schema": "nekkora-rpa/checkpoint",
+  "transactions": {
+   "tx-2e2c805a9f90505dfb30": {
+    "attempts": 1,
+    "delivery": "COMMITTED",
+    "execution_id": "ex-c628822a4ccc4ce1bda1",
+    "side_effects": 0,
+    "status": "SUCCEEDED",
+    "updated_utc": "2026-10-20T17:22:11.658Z"
+   },
+   "tx-5e36efffb29220375923": {
+    "attempts": 1,
+    "delivery": "COMMITTED",
+    "execution_id": "ex-c628822a4ccc4ce1bda1",
+    "side_effects": 0,
+    "status": "SUCCEEDED",
+    "updated_utc": "2026-10-20T17:22:10.630Z"
+   },
+   "tx-a84d2105c9229a6721e7": {
+    "attempts": 1,
+    "delivery": "COMMITTED",
+    "execution_id": "ex-c628822a4ccc4ce1bda1",
+    "side_effects": 0,
+    "status": "SUCCEEDED",
+    "updated_utc": "2026-10-20T17:22:12.749Z"
+   },
+   "tx-d6d6b1f58d6d1772d93b": {
+    "attempts": 1,
+    "delivery": "COMMITTED",
+    "execution_id": "ex-c628822a4ccc4ce1bda1",
+    "side_effects": 0,
+    "status": "SUCCEEDED",
+    "updated_utc": "2026-10-20T17:22:09.520Z"
+   }
+  },
+  "version": "1.1.0"
+ },
+ "integrity": "sha256:428b0b423f17556a00f9efd007b67adc2b60e412eb129b20846dc015a7955874"
+}
