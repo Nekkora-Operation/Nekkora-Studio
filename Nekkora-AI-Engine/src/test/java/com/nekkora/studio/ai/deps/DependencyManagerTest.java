@@ -139,8 +139,9 @@ class DependencyManagerTest {
         DependencyManager dm = new DependencyManager(Path.of("C:\\Users\\pessoa\\AppData\\Local\\Nekkora\\Studio\\data"), FrameworkArtifacts.bundled(), CLOCK);
         Path dir = dm.environmentDir(ID, FrameworkRequirement.parse("nekkora-rpa[excel]==0.3.0").orElseThrow());
         assertTrue(dir.toString().endsWith("ambientes\\3f1c2a9e5b7d\\0.3.0-excel") || dir.toString().endsWith("ambientes/3f1c2a9e5b7d/0.3.0-excel"), dir.toString());
-        assertTrue(DependencyManager.fitsWindowsPath(Path.of("C:\\Users\\pessoa\\AppData\\Local\\Nekkora\\Studio\\data\\ambientes\\3f1c2a9e5b7d\\0.3.0-excel"), true, false));
-        Path deep = Path.of("C:\\" + "pasta-muito-longa\\".repeat(8) + "ambientes\\3f1c2a9e5b7d\\0.3.0-excel");
+        // caminhos do Windows como texto: no Linux, Path.of("C:\\…") é relativo e ganharia a pasta atual na frente
+        assertTrue(DependencyManager.fitsWindowsPath("C:\\Users\\pessoa\\AppData\\Local\\Nekkora\\Studio\\data\\ambientes\\3f1c2a9e5b7d\\0.3.0-excel", true, false));
+        String deep = "C:\\" + "pasta-muito-longa\\".repeat(8) + "ambientes\\3f1c2a9e5b7d\\0.3.0-excel";
         assertFalse(DependencyManager.fitsWindowsPath(deep, true, false));
         assertTrue(DependencyManager.fitsWindowsPath(deep, true, true), "com LongPathsEnabled, cabe");
         assertTrue(DependencyManager.fitsWindowsPath(deep, false, false), "fora do Windows não há esse limite");
