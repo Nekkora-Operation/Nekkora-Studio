@@ -104,6 +104,11 @@ public final class SwingDevelopmentHost implements DevelopmentPresenter.Host {
     }
 
     @Override
+    public boolean confirm(String title, String message, String action) {
+        return com.nekkora.ui.dialog.NekkoraConfirmationDialog.confirmDanger(dialog, title, message, action);
+    }
+
+    @Override
     public void openFolder(Path p) {
         try {
             if (Desktop.isDesktopSupported()) Desktop.getDesktop().open(p.toFile());

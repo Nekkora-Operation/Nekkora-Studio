@@ -6,7 +6,6 @@ import com.nekkora.studio.domain.action.ActionType;
 import com.nekkora.studio.guided.GuidedPlan;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -167,6 +166,31 @@ final class SingleEmitter {
         }
     }
 
+    /** Ordem natural dos nomes importados (a do isort do ruff): "Tela2" antes de "Tela10" e de "TelaAcesso". */
+    static int natural(String a, String b) {
+        int i = 0;
+        int j = 0;
+        while (i < a.length() && j < b.length()) {
+            char x = a.charAt(i);
+            char y = b.charAt(j);
+            if (Character.isDigit(x) && Character.isDigit(y)) {
+                int ei = i;
+                int ej = j;
+                while (ei < a.length() && Character.isDigit(a.charAt(ei))) ei++;
+                while (ej < b.length() && Character.isDigit(b.charAt(ej))) ej++;
+                int c = new java.math.BigInteger(a.substring(i, ei)).compareTo(new java.math.BigInteger(b.substring(j, ej)));
+                if (c != 0) return c;
+                i = ei;
+                j = ej;
+            } else {
+                if (x != y) return Character.compare(x, y);
+                i++;
+                j++;
+            }
+        }
+        return Integer.compare(a.length() - i, b.length() - j);
+    }
+
     private static String rel(String key) {
         return key.substring(key.lastIndexOf('.') + 1);
     }
@@ -189,7 +213,8 @@ final class SingleEmitter {
         if (!errs.isEmpty()) b.append("from nekkora_rpa.errors import ").append(String.join(", ", errs)).append('\n');
         if (!secrets.isEmpty()) b.append("from nekkora_rpa.security.secrets import SecretProvider\n");
         b.append('\n');
-        b.append("from paginas import ").append(String.join(", ", new LinkedHashSet<>(groups.stream().map(g -> g.group().page()).toList()))).append("\n\n");
+        b.append("from paginas import ").append(String.join(", ", groups.stream().map(g -> g.group().page()).distinct().sorted(SingleEmitter::natural).toList()))
+                .append("\n\n");
         b.append("URL_INICIAL = ").append(Py.str(cfg.startUrl())).append('\n');
         if (inputs) {
             b.append("ENTRADAS = (").append(String.join(", ", cfg.inputs().stream().map(Py::str).toList())).append(cfg.inputs().size() == 1 ? ",)" : ")")

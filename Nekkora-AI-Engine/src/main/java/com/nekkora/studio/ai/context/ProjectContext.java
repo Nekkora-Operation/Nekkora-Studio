@@ -29,7 +29,8 @@ import java.util.Optional;
  * pixels. A origem do site (esquema + host + porta) entra só onde a política de execução precisa dela.
  */
 public record ProjectContext(String automationId, long automationRevision, String processRevision, List<Step> steps, List<String> origins,
-                             String startUrl, String startTemplate, List<String> declaredVariables, List<String> sessionNames) {
+                             String startUrl, String startTemplate, List<String> declaredVariables, List<String> sessionNames,
+                             List<String> authorizedPublicOrigins) {
 
     /** De onde vem o valor de um preenchimento — o tipo, nunca o valor. */
     public enum ValueKind { NONE, VARIABLE, CREDENTIAL, LITERAL }
@@ -59,6 +60,13 @@ public record ProjectContext(String automationId, long automationRevision, Strin
         origins = List.copyOf(origins);
         declaredVariables = List.copyOf(declaredVariables);
         sessionNames = List.copyOf(sessionNames);
+        authorizedPublicOrigins = List.copyOf(authorizedPublicOrigins);
+    }
+
+    /** A mesma fotografia com as origens públicas de treinamento AUTORIZADAS pela pessoa (opções do projeto). */
+    public ProjectContext withAuthorizedPublicOrigins(java.util.Collection<String> origins) {
+        return new ProjectContext(automationId, automationRevision, processRevision, steps, this.origins, startUrl, startTemplate, declaredVariables,
+                sessionNames, List.copyOf(origins));
     }
 
     public Optional<Step> step(StepId id) {
@@ -124,7 +132,7 @@ public record ProjectContext(String automationId, long automationRevision, Strin
         List<String> declared = a.variables().stream().map(x -> x.name()).toList();
         List<String> names = p.sections().stream().map(ProcessProjection.SectionFacts::safeName).toList();
         return new ProjectContext(a.id().value().toString(), a.revision(), p.revision(), out, origins, start == null ? "" : start,
-                template == null ? "" : template, declared, names);
+                template == null ? "" : template, declared, names, List.of());
     }
 
     private static final java.util.regex.Pattern ORIGIN = java.util.regex.Pattern.compile("^(https?)://([A-Za-z0-9.-]+|\\[[0-9a-fA-F:.]+\\])(:[0-9]{1,5})?(?=[/?#]|$)");

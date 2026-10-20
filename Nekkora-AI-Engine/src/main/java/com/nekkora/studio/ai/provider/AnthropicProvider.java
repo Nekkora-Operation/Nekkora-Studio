@@ -101,8 +101,15 @@ public final class AnthropicProvider implements AIProvider {
     public Response call(Request r, BooleanSupplier cancelled) throws AIException {
         String k = key().orElseThrow(() -> new AIException(AIException.Code.NO_KEY));
         if (r.estimatedInputTokens() > r.maxInputTokens()) throw new AIException(AIException.Code.BUDGET_EXCEEDED);
-        HttpRequest req = HttpRequest.newBuilder(endpoint).timeout(r.timeout()).header("content-type", "application/json")
-                .header("x-api-key", k).header("anthropic-version", API_VERSION).POST(HttpRequest.BodyPublishers.ofString(body(r), StandardCharsets.UTF_8)).build();
+        HttpRequest.Builder rb = HttpRequest.newBuilder(endpoint).timeout(r.timeout()).header("content-type", "application/json")
+                .header("x-api-key", k).header("anthropic-version", API_VERSION);
+        // chave sem workspace vinculado: o provedor exige o workspace no cabeçalho (também só pelo ambiente, nunca no projeto)
+        String ws = env.apply("NEKKORA_ANTHROPIC_WORKSPACE_ID");
+        if (ws != null && !ws.isBlank()) {
+            if (!ws.strip().matches("[A-Za-z0-9_-]{1,128}")) throw new AIException(AIException.Code.NO_KEY, 0, "workspace inválido");
+            rb.header("anthropic-workspace-id", ws.strip());
+        }
+        HttpRequest req = rb.POST(HttpRequest.BodyPublishers.ofString(body(r), StandardCharsets.UTF_8)).build();
         CompletableFuture<HttpResponse<String>> f = http.sendAsync(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
         long deadline = System.nanoTime() + r.timeout().toNanos();
         HttpResponse<String> resp;
@@ -135,12 +142,26 @@ public final class AnthropicProvider implements AIProvider {
         return parse(resp.statusCode(), resp.body(), r.toolName());
     }
 
+    /** Tipo e mensagem do erro do provedor ({@code {"error": {"type", "message"}}}), curtos e sem controle. */
+    static String errorDetail(String body) {
+        try {
+            if (Json.parseObject(body).get("error") instanceof Map<?, ?> e) {
+                String t = String.valueOf(e.get("type")) + ": " + String.valueOf(e.get("message"));
+                t = t.replaceAll("\\p{Cntrl}", " ").replaceAll("sk-[A-Za-z0-9_-]+", "<chave>");
+                return t.length() > 240 ? t.substring(0, 240) : t;
+            }
+        } catch (RuntimeException ignored) {
+            // corpo não é JSON
+        }
+        return "";
+    }
+
     /** Interpreta a resposta HTTP (separado para os testes de contrato). */
     @SuppressWarnings("unchecked")
     static Response parse(int status, String body, String toolName) throws AIException {
         if (status == 429) throw new AIException(AIException.Code.RATE_LIMITED, status);
         if (status == 529) throw new AIException(AIException.Code.OVERLOADED, status);
-        if (status != 200) throw new AIException(AIException.Code.HTTP_ERROR, status);
+        if (status != 200) throw new AIException(AIException.Code.HTTP_ERROR, status, errorDetail(body));
         Map<String, Object> m;
         try {
             m = Json.parseObject(body);

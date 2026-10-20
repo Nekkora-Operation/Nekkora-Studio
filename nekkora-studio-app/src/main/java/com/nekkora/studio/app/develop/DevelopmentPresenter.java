@@ -85,6 +85,11 @@ public final class DevelopmentPresenter implements DevelopmentPanel.Actions {
 
         void openFolder(Path p);
 
+        /** Confirmação explícita (autorizar site público de treinamento). Sem janela que pergunte, nada é confirmado. */
+        default boolean confirm(String title, String message, String action) {
+            return false;
+        }
+
         static Host headless(Path folder, boolean consents) {
             return new Host() {
                 public void show() {}
@@ -106,6 +111,10 @@ public final class DevelopmentPresenter implements DevelopmentPanel.Actions {
                 }
 
                 public void openFolder(Path p) {}
+
+                public boolean confirm(String title, String message, String action) {
+                    return consents;
+                }
             };
         }
     }
@@ -209,12 +218,12 @@ public final class DevelopmentPresenter implements DevelopmentPanel.Actions {
         var v0 = new AutomationValidator(RuleSet.LATEST).validate(a);
         String promptLabel = prompt == null ? "" : prompt.label();
         AutomationQualityGate.Assessment first = AutomationQualityGate.assess(new AutomationQualityGate.Inputs(a, v0, draft, spec, catalog, out, tabular,
-                Optional.empty(), true, List.of(), promptLabel, clock.instant()));
+                Optional.empty(), true, List.of(), promptLabel, clock.instant(), store.options(a.id()).origins()));
         boolean code = first.code().exists() && first.code().current();
         layersListener.accept(new Layers("revisão atual", List.copyOf(first.report().layers().values()), live(first)));
         if (!code) {
             AutomationQualityGate.Assessment noCode = AutomationQualityGate.assess(new AutomationQualityGate.Inputs(a, v0, draft, spec, catalog, out, tabular,
-                    Optional.empty(), false, List.of(), promptLabel, clock.instant()));
+                    Optional.empty(), false, List.of(), promptLabel, clock.instant(), store.options(a.id()).origins()));
             publish(a, noCode, round);
             return;
         }
@@ -233,7 +242,8 @@ public final class DevelopmentPresenter implements DevelopmentPanel.Actions {
             SwingUtilities.invokeLater(() -> {
                 if (round != validationRound || active().map(x -> x != a).orElse(true)) return; // outra validação ou outra automação: descartado
                 AutomationQualityGate.Assessment full = AutomationQualityGate.assess(new AutomationQualityGate.Inputs(a, new AutomationValidator(RuleSet.LATEST)
-                        .validate(a), loadDraft(a), loadSpec(a), catalog, out, tabular, env, false, done, promptLabel, clock.instant()));
+                        .validate(a), loadDraft(a), loadSpec(a), catalog, out, tabular, env, false, done, promptLabel, clock.instant(),
+                        store.options(a.id()).origins()));
                 publish(a, full, round);
             });
         });
@@ -360,7 +370,8 @@ public final class DevelopmentPresenter implements DevelopmentPanel.Actions {
             int n = service.applyDerivedVariables(a.id(), derived);
             if (n > 0) notes.add("✓ " + n + " variável(is)/ligação(ões) derivada(s) registrada(s) no modelo — Ctrl+Z desfaz (Registrar variáveis derivadas)");
         }
-        GenerationOrchestrator.Run run = GenerationOrchestrator.prepare(a, draft, spec, catalog, tabular, out, clock.instant(), this::phase, cancelled::get);
+        GenerationOrchestrator.Run run = GenerationOrchestrator.prepare(a, draft, spec, catalog, tabular, store.options(a.id()).origins(), out, clock.instant(),
+                this::phase, cancelled::get);
         last = run;
         if (run.stoppedAt() != null) {
             phases.put(run.stoppedAt(), DevelopmentPanel.PhaseState.BLOCKED);
@@ -372,7 +383,8 @@ public final class DevelopmentPresenter implements DevelopmentPanel.Actions {
             boolean pdd = run.stoppedAt() == GenerationOrchestrator.Phase.PDD;
             List<QualityIssue> shown = new ArrayList<>(run.issues());
             if (pdd) { // o código espera o PDD, mas o diagnóstico continua: capacidades (V2) já aparecem
-                shown.addAll(com.nekkora.studio.ai.capability.CapabilityCheck.check(a, ProjectContext.of(a, draft), catalog, tabular).issues());
+                shown.addAll(com.nekkora.studio.ai.capability.CapabilityCheck.check(a, ProjectContext.of(a, draft)
+                        .withAuthorizedPublicOrigins(store.options(a.id()).origins()), catalog, tabular).issues());
             }
             render(a, pdd ? "PDD não está pronto: nenhum código foi gerado" : "Nenhum código foi gerado",
                     pdd ? "Resolva as pendências do PDD (aba Pendências). As análises que não dependem dele continuam disponíveis em Validar automação."
@@ -463,7 +475,7 @@ public final class DevelopmentPresenter implements DevelopmentPanel.Actions {
                     } catch (CodegenConfig.Invalid e) {
                         return Optional.empty();
                     }
-                }), env, false, checks, prompt == null ? "" : prompt.label(), clock.instant()));
+                }), env, false, checks, prompt == null ? "" : prompt.label(), clock.instant(), store.options(a.id()).origins()));
         QualityReport r = as.report();
         worker.submit(() -> {
             try {
@@ -620,6 +632,7 @@ public final class DevelopmentPresenter implements DevelopmentPanel.Actions {
                         + "\n\nUma Lib nova entra no nekkora_rpa com contrato público, efeito classificado, prazo, identidade do alvo, eventos sem valores e testes "
                         + "positivos, negativos e de regressão — nunca uma Lib de um site específico. Enquanto ela não existir, o Studio não gera aproximações.");
                 case "GO_TO_LAST_STEP" -> lastStep(a).ifPresent(studio::goToStep);
+                case "AUTHORIZE_PUBLIC_SITE" -> authorizePublicSite(a);
                 default -> {
                 }
             }
@@ -642,6 +655,34 @@ public final class DevelopmentPresenter implements DevelopmentPanel.Actions {
             return;
         }
         develop(); // a resposta muda a especificação: o gate anterior não vale; a análise recomeça
+    }
+
+    /**
+     * Autoriza a execução nos sites públicos de TREINAMENTO desta automação (ambiente benchmark do framework): origens https
+     * exatas observadas na gravação, com confirmação explícita; registrado com o ator e a data nas opções do projeto. Nunca
+     * para sistemas de clientes; nunca misturado com laboratório.
+     */
+    private void authorizePublicSite(Automation a) {
+        ProjectContext ctx = ProjectContext.of(a, loadDraft(a));
+        List<String> origins = ctx.origins().stream().filter(o -> o.startsWith("https://")).toList();
+        if (origins.isEmpty() || origins.size() != ctx.origins().size()) return;
+        if (!host.confirm("Autorizar site público de treinamento?", "Origens: " + String.join(", ", origins) + ".\n\nUse só para sites públicos feitos para "
+                + "praticar automação. O código gerado vai executar ações nesses sites quando você rodá-lo; nada é executado agora. Sistemas de clientes "
+                + "continuam bloqueados (não há ambiente de produção no nekkora_rpa 0.2.0).", "Autorizar")) {
+            return;
+        }
+        DevelopmentStore.Options o = store.options(a.id());
+        List<DevelopmentStore.PublicOrigin> pub = new ArrayList<>(o.publicOrigins());
+        for (String origin : origins) {
+            if (pub.stream().noneMatch(x -> x.origin().equals(origin))) pub.add(new DevelopmentStore.PublicOrigin(origin, actorOf().name(), clock.instant().toString()));
+        }
+        try {
+            store.saveOptions(a.id(), new DevelopmentStore.Options(o.outputDir(), o.python(), pub));
+        } catch (IOException e) {
+            service.report(new Notice(Notice.Kind.WARNING, "Autorização não guardada", "As opções do projeto não puderam ser gravadas."));
+            return;
+        }
+        develop();
     }
 
     @Override
@@ -751,7 +792,7 @@ public final class DevelopmentPresenter implements DevelopmentPanel.Actions {
         host.chooseFolder("Pasta do projeto Python (arquivos editados à mão nunca são sobrescritos)").ifPresent(p -> {
             DevelopmentStore.Options o = store.options(a.id());
             try {
-                store.saveOptions(a.id(), new DevelopmentStore.Options(Optional.of(p), o.python()));
+                store.saveOptions(a.id(), new DevelopmentStore.Options(Optional.of(p), o.python(), o.publicOrigins()));
             } catch (IOException e) {
                 service.report(new Notice(Notice.Kind.WARNING, "Opção não guardada", "A pasta escolhida não pôde ser registrada."));
             }
@@ -771,7 +812,7 @@ public final class DevelopmentPresenter implements DevelopmentPanel.Actions {
             }
             DevelopmentStore.Options o = store.options(a.id());
             try {
-                store.saveOptions(a.id(), new DevelopmentStore.Options(o.outputDir(), Optional.of(p)));
+                store.saveOptions(a.id(), new DevelopmentStore.Options(o.outputDir(), Optional.of(p), o.publicOrigins()));
             } catch (IOException e) {
                 service.report(new Notice(Notice.Kind.WARNING, "Opção não guardada", "O interpretador escolhido não pôde ser registrado."));
             }

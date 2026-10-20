@@ -79,4 +79,21 @@ class CapabilityCheckTest {
                 codes(r).toString());
         assertEquals("", r.environment());
     }
+
+    @Test
+    @DisplayName("site público https AUTORIZADO nas opções do projeto → benchmark; misturado com laboratório → bloqueado sem autorização possível")
+    void benchmarkAutorizado() {
+        ConsultaCase c = ConsultaCase.confirmedAt("https://treino.exemplo.test");
+        ProjectContext ctx = ProjectContext.of(c.a, Optional.empty());
+        CapabilityCheck.Result blocked = CapabilityCheck.check(c.a, ctx, FrameworkCapabilityCatalog.bundled());
+        QualityIssue q = blocked.issues().stream().filter(i -> i.code().equals("ORIGIN_NOT_AUTHORIZED_FOR_EXECUTION")).findFirst().orElseThrow();
+        assertTrue(q.assistance().orElseThrow().options().stream().anyMatch(o -> "AUTHORIZE_PUBLIC_SITE".equals(o.studioAction())));
+        CapabilityCheck.Result ok = CapabilityCheck.check(c.a, ctx.withAuthorizedPublicOrigins(List.of("https://treino.exemplo.test")),
+                FrameworkCapabilityCatalog.bundled());
+        assertEquals("benchmark", ok.environment());
+        assertEquals(List.of(), codes(ok));
+        CapabilityCheck.Result other = CapabilityCheck.check(c.a, ctx.withAuthorizedPublicOrigins(List.of("https://outro.exemplo.test")),
+                FrameworkCapabilityCatalog.bundled());
+        assertEquals("", other.environment(), "autorização de OUTRA origem não vale");
+    }
 }

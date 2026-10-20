@@ -167,6 +167,7 @@ class AiProviderContractTest {
         HttpServer srv = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
         srv.createContext("/ok", h -> {
             seenKeys.add(h.getRequestHeaders().getFirst("x-api-key"));
+            seenKeys.add("ws=" + h.getRequestHeaders().getFirst("anthropic-workspace-id"));
             byte[] b = ("{\"model\": \"simulado\", \"stop_reason\": \"tool_use\", \"usage\": {\"input_tokens\": 10, \"output_tokens\": 5}, \"content\": "
                     + "[{\"type\": \"tool_use\", \"name\": \"propor_decisoes\", \"input\": {\"proposals\": []}}]}").getBytes(StandardCharsets.UTF_8);
             h.sendResponseHeaders(200, b.length);
@@ -190,7 +191,11 @@ class AiProviderContractTest {
             AnthropicProvider ok = new AnthropicProvider(env::get, "modelo", HttpClient.newHttpClient(), URI.create(base + "/ok"));
             AIProvider.Response r = ok.call(req, () -> false);
             assertEquals("{\"proposals\":[]}", r.toolInput().replace(" ", ""));
-            assertEquals(List.of(fake), seenKeys, "a chave vai só no cabeçalho");
+            assertEquals(List.of(fake, "ws=null"), seenKeys, "a chave vai só no cabeçalho; sem workspace, nenhum cabeçalho de workspace");
+            seenKeys.clear();
+            Map<String, String> envWs = Map.of("NEKKORA_ANTHROPIC_API_KEY", fake, "NEKKORA_ANTHROPIC_WORKSPACE_ID", "wrkspc_teste01");
+            new AnthropicProvider(envWs::get, "modelo", HttpClient.newHttpClient(), URI.create(base + "/ok")).call(req, () -> false);
+            assertEquals(List.of(fake, "ws=wrkspc_teste01"), seenKeys, "workspace do ambiente vai no cabeçalho anthropic-workspace-id");
             AIProvider.Request quick = new AIProvider.Request(req.system(), req.payload(), req.toolName(), req.toolDescription(), req.toolSchema(), 100,
                     Duration.ofMillis(500), AiAssist.MAX_INPUT_TOKENS);
             AnthropicProvider slow = new AnthropicProvider(env::get, "modelo", HttpClient.newHttpClient(), URI.create(base + "/lento"));

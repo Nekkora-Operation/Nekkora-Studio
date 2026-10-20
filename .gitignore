@@ -15,3 +15,7 @@ build/
 
 # Renderizações geradas quando um golden screenshot falha (diagnóstico local)
 *.actual.png
+
+# STUDIO-014: segredos locais (chave da IA etc.) nunca entram no repositório
+.env
+.env.*

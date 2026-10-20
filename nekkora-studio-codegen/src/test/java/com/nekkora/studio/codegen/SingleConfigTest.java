@@ -39,4 +39,11 @@ class SingleConfigTest {
         assertEquals("CONFIG_ENVIRONMENT", code(j.replace("\"lab\"", "\"producao\"")));
         assertEquals("CONFIG_GROUPS_STEPS", code(j.replace("\"" + S2 + "\"\n", "\"" + S1 + "\"\n")));
     }
+
+    @Test
+    @DisplayName("telas importadas na ordem do isort do ruff (achado nos sites públicos: \"TelaAcesso, Tela2\" → I001)")
+    void ordemDosImports() {
+        assertEquals(List.of("Tela2", "Tela10", "TelaAcesso"),
+                List.of("TelaAcesso", "Tela10", "Tela2").stream().sorted(SingleEmitter::natural).toList());
+    }
 }

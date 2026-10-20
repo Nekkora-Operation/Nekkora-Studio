@@ -664,7 +664,7 @@ public final class Studio014Homologation {
     /** Debug guiado do Studio sobre as etapas [from, to): identidade comprovada → Continuar; senão Corrigir por seleção; o resto, Próxima. */
     private void debugPass(String label, int from, int to) throws Exception {
         Automation a = active();
-        GuidedDebugPanel dp = openDebugAndStart(t -> t.label().contains("Laboratório local") || t.label().contains("127.0.0.1"), 0);
+        GuidedDebugPanel dp = openDebugAndStart(t -> t.label().contains("Laboratório local") || t.label().contains("127.0.0.1") || t.label().contains("Autorizada"), 0);
         List<AutomationStep> steps = edt(() -> a.sessions().stream().flatMap(x -> x.steps().stream()).toList());
         for (int i = 0; i < steps.size(); i++) {
             final int n = i;

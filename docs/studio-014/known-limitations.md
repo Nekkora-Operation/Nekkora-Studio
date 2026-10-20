@@ -4,11 +4,13 @@
 
 1. **Execução real (V6) nunca é verificada pelo Studio.** O Studio não executa automações. A execução do Caso A no
    laboratório, com o oráculo do servidor, foi feita pela homologação, fora do Studio, e está registrada como evidência.
-2. **Integração real com a Anthropic não homologada.** Não havia chave nesta máquina. O provedor está implementado e
-   coberto por testes de contrato com um servidor local que imita o provedor e por um mock rotulado; nenhuma chamada real
-   foi feita.
-3. **Framework 0.2.0:** execução única gerada só para origens de laboratório (loopback); um site real fica
-   `SECURITY_BLOCKED` até existir um ambiente autorizado no framework. Alvos em iframe ou shadow DOM não são gerados
+2. **Integração real com a Anthropic não homologada.** A única chamada real respondeu HTTP 400, porque a chave não está
+   ligada a um workspace. O cabeçalho `anthropic-workspace-id` (via `NEKKORA_ANTHROPIC_WORKSPACE_ID`) já é enviado
+   quando configurado, mas falta o id. O provedor segue coberto por testes de contrato com um servidor local que imita o
+   provedor e por um mock rotulado.
+3. **Framework 0.2.0:** execução única gerada só para o laboratório (loopback) ou para sites públicos de treinamento
+   `https` que a pessoa autorizou no projeto (ambiente `benchmark`, D-S014-19). Qualquer outro site fica
+   `SECURITY_BLOCKED`, pois não há ambiente de produção. Alvos em iframe ou shadow DOM não são gerados
    (pedido de ajuda). Ações suportadas pelo gerador: Navegar, Preencher, Clicar, Aguardar e Observar; as demais
    (selecionar opção, marcar, tecla…) aparecem como `UNSUPPORTED_CAPABILITY`, com o caminho de extensão.
 4. **Leitura de resultado:** o código lê o alvo assim que ele existe. Se o elemento já estiver na tela antes de o
@@ -23,5 +25,8 @@
    planilha; o Studio não deduz cabeçalhos.
 9. **Ferramentas Python:** V4/V5 só rodam com um interpretador que tenha `nekkora_rpa`, ruff e mypy (Opções avançadas,
    `NEKKORA_PYTHON` ou `.venv` na pasta gerada). Sem ele, as camadas ficam "não verificado".
-10. **Revisão humana:** o gate registra os revisores dos textos do PDD (`DEVELOPER` ou `TEST_AGENT`); revisão do agente
+10. **Alvo que só se distingue por dado de negócio** (ex.: o "Add to cart" de um produto, pelo nome do produto): a
+    privacidade retém o dado, a gravação marca o alvo como não resolvido e o Studio não gera localizador posicional.
+    Ver [sites-publicos.md](sites-publicos.md).
+11. **Revisão humana:** o gate registra os revisores dos textos do PDD (`DEVELOPER` ou `TEST_AGENT`); revisão do agente
     não é aprovação de negócio. Nesta homologação o operador foi o agente de teste.

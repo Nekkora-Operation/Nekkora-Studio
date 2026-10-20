@@ -50,11 +50,22 @@ public interface AIProvider {
 
         private final Code code;
         private final int status;
+        private final String detail;
 
         public AIException(Code code, int status) {
+            this(code, status, "");
+        }
+
+        /** {@code detail}: tipo e mensagem de erro devolvidos pelo PROVEDOR (curtos; nunca o pedido nem a chave). */
+        public AIException(Code code, int status, String detail) {
             super(code.name() + (status > 0 ? " " + status : ""));
             this.code = code;
             this.status = status;
+            this.detail = detail == null ? "" : detail;
+        }
+
+        public String detail() {
+            return detail;
         }
 
         public AIException(Code code) {

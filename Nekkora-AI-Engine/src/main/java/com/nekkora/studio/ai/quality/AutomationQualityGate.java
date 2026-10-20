@@ -46,7 +46,13 @@ public final class AutomationQualityGate {
     /** Entradas da avaliação (tudo do estado atual; {@code checks} vazio = V4/V5 não rodaram nesta avaliação). */
     public record Inputs(Automation automation, ValidationReport staticReport, Optional<DocumentDraft> draft, FunctionalSpec spec, FrameworkCapabilityCatalog catalog,
                          Path outputDir, Optional<CodegenConfig> declaredTabular, Optional<PythonChecks.Environment> python, boolean pythonPending,
-                         List<PythonChecks.Check> checks, String prompt, Instant now) {}
+                         List<PythonChecks.Check> checks, String prompt, Instant now, List<String> publicOrigins) {
+        public Inputs(Automation automation, ValidationReport staticReport, Optional<DocumentDraft> draft, FunctionalSpec spec, FrameworkCapabilityCatalog catalog,
+                      Path outputDir, Optional<CodegenConfig> declaredTabular, Optional<PythonChecks.Environment> python, boolean pythonPending,
+                      List<PythonChecks.Check> checks, String prompt, Instant now) {
+            this(automation, staticReport, draft, spec, catalog, outputDir, declaredTabular, python, pythonPending, checks, prompt, now, List.of());
+        }
+    }
 
     /** Estado do código gerado na pasta de saída em relação à revisão atual. */
     public record CodeState(boolean exists, boolean current, String manifestHash, String reason) {}
@@ -55,7 +61,7 @@ public final class AutomationQualityGate {
 
     public static Assessment assess(Inputs in) {
         Automation a = in.automation();
-        ProjectContext ctx = ProjectContext.of(a, in.draft());
+        ProjectContext ctx = ProjectContext.of(a, in.draft()).withAuthorizedPublicOrigins(in.publicOrigins());
         ProcessProjection projection = ProcessProjection.of(a);
         Map<Layer, QualityReport.LayerResult> layers = new EnumMap<>(Layer.class);
         List<QualityIssue> issues = new ArrayList<>();

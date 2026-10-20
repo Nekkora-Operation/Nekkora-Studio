@@ -15,7 +15,8 @@ Branch: `feat/nekkora-studio-014`, no Studio e na extensão.
 | Gerado? | Sim. O gerador oficial cobre dois casos: <ul><li>execução única: `codegen-config/1.1.0`, novo;</li><li>lote tabular: `1.0.0`, mesmos bytes do gerador antigo.</li></ul> |
 | Testado? | Sim, com ferramentas reais. <ul><li>Compilação, importação, `ruff check`, `ruff format --check`, `mypy --strict` e 7 testes de contrato do projeto gerado.</li><li>Controle negativo: um projeto estragado de propósito é reprovado.</li></ul> |
 | Executado? | Só pela homologação, em laboratório local autorizado, com oráculo independente: <ul><li>Caso A: o servidor registrou a consulta, e o resultado lido confere;</li><li>Caso B: a réplica conferiu 10 de 10 submissões em ordem e corretas.</li></ul> O Studio **não executa**: V6 fica sempre "não verificado". |
-| Anthropic | **Integração real não homologada.** Não há chave nesta máquina. Foram provados o contrato (servidor HTTP local que imita o provedor) e o fluxo na interface (provedor MOCK identificado como mock). Nenhuma chamada real foi feita, e o Claude Code não foi usado como substituto do provedor. |
+| Sites públicos (objetivo final) | **Sim.** Três sites de treinamento foram mapeados e desenvolvidos pelo Studio, e o código gerado foi executado uma vez em cada um: **21/21**, as três execuções `COMPLETED`. Quatro defeitos achados foram corrigidos no produto: Studio, extensão e framework. Ver [sites-publicos.md](../docs/studio-014/sites-publicos.md). |
+| Anthropic | **Integração real não homologada.** A chamada real com a chave da usuária respondeu HTTP 400, porque a chave não está ligada a um workspace. O cabeçalho do workspace já é enviado quando configurado, e falta o id. Antes: Foram provados o contrato (servidor HTTP local que imita o provedor) e o fluxo na interface (provedor MOCK identificado como mock). Nenhuma chamada real foi feita, e o Claude Code não foi usado como substituto do provedor. |
 
 ## Gates
 
@@ -27,8 +28,8 @@ Branch: `feat/nekkora-studio-014`, no Studio e na extensão.
 | G3 plano, variáveis e geração | ✓ | variáveis derivadas numa operação desfazível; Pages por tela; `SingleGenerator`; regressão tabular com os mesmos bytes |
 | G4 validação por camadas | ✓ | V0–V6, correções seguras, revisar e aplicar, pedidos de ajuda, bloqueio de segurança |
 | G5 UI | ✓ | 4 temas, 1366×768 e 150%: botões visíveis; a aba Validação rola em vez de sobrepor |
-| G6 testes | ✓ | Windows 690/690; Linux 686 + 4 pulados; mutação 17/17 |
-| G7 homologação real | ✓ | 41/41 e, em 150%, 6/6 (logs em `docs/studio-014/evidence/`) |
+| G6 testes | ✓ | Windows 692/692; Linux 686 + 4 pulados (antes dos sites públicos); mutação 17/17 |
+| G7 homologação real | ✓ | 41/41 e, em 150%, 6/6 (logs em `docs/studio-014/evidence/`); sites públicos 21/21 (`evidence/sites/`) |
 | G8 qualidade e compatibilidade | ✓ | validação sem rede; cancelamento; trabalho em segundo plano fora da EDT; PDD antigos lidos como antes (testes da STUDIO-010/012/013 verdes) |
 | G9 PRs | abertos, sem merge | ver "PRs" abaixo |
 
@@ -36,7 +37,7 @@ Branch: `feat/nekkora-studio-014`, no Studio e na extensão.
 
 | Ambiente | Resultado |
 |---|---|
-| Windows 11, MS OpenJDK 21.0.12 (`./mvnw test`) | **690/690**, 0 pulados. Os 3 testes "Python real" rodaram com a venv do framework: Python 3.12.10, ruff 0.17.1, mypy 2.4.0. |
+| Windows 11, MS OpenJDK 21.0.12 (`./mvnw test`) | **692/692**, 0 pulados (690 + ordem dos imports + site público autorizado). Os 3 testes "Python real" rodaram com a venv do framework: Python 3.12.10, ruff 0.17.1, mypy 2.4.0. |
 | Linux, Temurin 21.0.12 em contêiner fixado (`tools/golden-linux.sh verify`, HEAD `8a05d21`) | **686 aprovados + 4 pulados**, 0 falhas. Pulados: <ul><li>1 só para Windows, o mesmo de sempre;</li><li>3 "Python real", porque não há o interpretador do framework no contêiner. Eles **não** foram dados por aprovados.</li></ul> |
 | Testes novos da missão | 34: <ul><li>motor: 28 (prompt 3, catálogo 4, gate 7, fluxo de execução única 4, contrato da IA 5, endereço inicial 2, capacidades 3);</li><li>gerador: `SingleConfigTest` 1;</li><li>app: `DevelopmentStudioTest` 5.</li></ul> |
 | Controle negativo (mutação) | **17/17 mortas**: gate, especificação, verificador da IA, consentimento, chave, variáveis, endereço, iframe, origem, ruff, contrato, gate no gerador, idempotência do envio, PDD bloqueado, V6, resposta fora do modelo. A M14 sobreviveria a uma checagem fraca; o teste foi reforçado e ela morre pela razão certa. |
@@ -87,11 +88,16 @@ Branch: `feat/nekkora-studio-014`, no Studio e na extensão.
 | 150%: cabeçalho e rodapé da Validação sobrepostos | captura em 150% | o painel rola; o divisor respeita a altura mínima |
 | Com o PDD bloqueado, o iframe não aparecia | homologação C3 | diagnóstico V2 junto das pendências do PDD |
 | Envio idempotente passaria despercebido (teste fraco) | mutação M14 | teste reforçado |
+| Imports de telas fora da ordem do ruff (I001) | site público, V5 real | `SingleEmitter.natural` (D-S014-20) |
+| Nome de link perdido por seta decorativa `aria-hidden` | site público (quotes), gravação | captura na extensão e na segunda linha Java (D-S014-21) |
+| Glifo de ícone e descendente `aria-hidden` no nome pelo Playwright | execução do código gerado nos sites | framework, PR próprio (D-S014-22) |
+| Erro do provedor sem a mensagem dele | chamada real à Anthropic (HTTP 400) | `AIException.detail()` e cabeçalho `anthropic-workspace-id` opcional |
 
 ## PRs (abertos, SEM merge)
 
 Ordem sugerida: o PR da extensão primeiro, porque só traz o laboratório e não muda nada no Studio. Depois o do Studio.
-Nenhum PR no framework: nenhuma lacuna demonstrada exigiu API nova.
+Os sites públicos geraram também um PR no framework (`fix/nome-com-glifo-de-icone`). A ordem é: framework,
+depois extensão, depois Studio.
 
 ## O que permanece limitado
 

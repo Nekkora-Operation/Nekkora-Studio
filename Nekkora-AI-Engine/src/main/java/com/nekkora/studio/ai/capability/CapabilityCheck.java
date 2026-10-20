@@ -119,17 +119,32 @@ public final class CapabilityCheck {
                     "Grave o processo pelo Recorder (o endereço observado entra no modelo) ou acrescente uma etapa Navegar."));
             return "";
         }
+        boolean allLoopback = true;
+        boolean allAuthorized = true;
         for (String o : ctx.origins()) {
             String host = URI.create(o).getHost().toLowerCase(Locale.ROOT);
-            if (!LOOPBACK.contains(host)) {
-                issues.add(QualityIssue.of("ORIGIN_NOT_AUTHORIZED_FOR_EXECUTION", Layer.V2_CAPABILITY, QualityIssue.Kind.SECURITY_BLOCKED, null, "Processo",
-                        "O processo usa um site fora do laboratório local. O nekkora_rpa 0.2.0 só executa em laboratório (loopback) ou num benchmark "
-                                + "público autorizado por lista fechada; não há ambiente de produção nesta versão.",
-                        "Não há atalho: gerar para este site exige uma autorização e uma versão do framework com o ambiente correspondente."));
-                return "";
-            }
+            if (!LOOPBACK.contains(host)) allLoopback = false;
+            if (LOOPBACK.contains(host) || !o.startsWith("https://") || !ctx.authorizedPublicOrigins().contains(o)) allAuthorized = false;
         }
-        return "lab";
+        if (allLoopback) return "lab";
+        // site público de TREINAMENTO autorizado explicitamente (lista fechada de origens https exatas): ambiente benchmark do
+        // framework — nunca produção, nunca misturado com laboratório
+        if (allAuthorized) return "benchmark";
+        List<String> candidates = ctx.origins().stream().filter(o -> o.startsWith("https://") && !LOOPBACK.contains(URI.create(o).getHost())).toList();
+        AssistanceRequest help = candidates.size() == ctx.origins().size()
+                ? new AssistanceRequest("Este é um site público de TREINAMENTO que você autoriza para execução?",
+                        "O nekkora_rpa 0.2.0 só executa em laboratório ou num site público de treinamento autorizado por lista fechada de origens (ambiente "
+                                + "benchmark). Não há ambiente de produção: um sistema real de cliente continua bloqueado.",
+                        List.of(AssistanceRequest.Option.action("AUTHORIZE_PUBLIC_SITE", "Autorizar como site público de treinamento…",
+                                "registra a autorização (origem exata, ator e data) nas opções do projeto; pede confirmação")),
+                        null, "Opções do projeto · origens públicas autorizadas")
+                : null;
+        issues.add(new QualityIssue("ORIGIN_NOT_AUTHORIZED_FOR_EXECUTION", Layer.V2_CAPABILITY, QualityIssue.Kind.SECURITY_BLOCKED, null, null, "Processo",
+                "O processo usa um site fora do laboratório local (" + String.join(", ", ctx.origins()) + "). O nekkora_rpa 0.2.0 só executa em laboratório "
+                        + "(loopback) ou num site público de treinamento autorizado (benchmark); não há ambiente de produção nesta versão.",
+                help == null ? "Origem sem https ou misturada com o laboratório: não há autorização possível." : "Autorize só sites públicos feitos para "
+                        + "praticar automação; sistemas de clientes continuam bloqueados.", help, null, null));
+        return "";
     }
 
     private static QualityIssue unsupported(ProjectContext.Step s, FrameworkCapabilityCatalog cat, String code, String detail) {

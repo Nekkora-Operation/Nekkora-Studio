@@ -23,10 +23,19 @@ ganharam versão nova (as anteriores continuam iguais, byte a byte).
 | D-S014-16 | Com o PDD bloqueado, nenhum código é gerado, mas o diagnóstico de capacidades (V2) continua na janela. | "Apenas análise e diagnóstico podem continuar". | `DevelopmentPresenter.develop` |
 | D-S014-17 | Observar logo depois de um clique na mesma tela gera AVISO: o código lê assim que o alvo existir; o 0.2.0 não tem a espera "texto mudou". | Suposição declarada, não escondida. | `DevelopmentPlanner` |
 | D-S014-18 | Laboratório do Caso A: páginas ESTÁTICAS novas em `Nekkora-Extension-Chrome/test-lab/pages/studio014/` (login → consulta → resultado → sair), reaproveitando o oráculo de servidor da STUDIO-009. Nenhum código da extensão mudou. A área do resultado é focável: o Recorder descarta cliques em elementos não interativos, e é assim que a gravação a aponta; no Studio, a etapa passa a Observar (edição do agente de teste). | Nenhum laboratório existente tinha login → consulta sem iframe. | extensão, branch `feat/nekkora-studio-014` |
+| D-S014-19 | **Site público de treinamento** como ambiente `benchmark`: a origem `https` só vale depois que a pessoa a autoriza na janela ("Autorizar site público de treinamento?", ator e data guardados nas opções do projeto, `publicOrigins`). Todas as origens do modelo precisam estar autorizadas; misturar laboratório e site público, ou autorizar outra origem, continua `ORIGIN_NOT_AUTHORIZED_FOR_EXECUTION`. Produção segue sem ambiente. | Objetivo final da usuária: mapear e desenvolver 3 sites públicos pelo Studio, sem abrir a porta para sistemas reais. | `CapabilityCheck.environment`, `ProjectContext.withAuthorizedPublicOrigins`, `DevelopmentStore.Options.publicOrigins`, `DevelopmentPresenter.authorizePublicSite` |
+| D-S014-20 | Telas importadas em `processo.py` na **ordem natural** do isort do ruff (`Tela2`, `Tela10`, `TelaAcesso`). | Achado nos sites públicos: `from paginas import TelaAcesso, Tela2` → `ruff check` I001 (V5 reprovou o código gerado). | `SingleEmitter.natural` |
+| D-S014-21 | Captura (extensão, JS e a segunda linha em Java): subárvore `aria-hidden="true"` **abaixo** do portador fica fora da aprovação do vocabulário, e o texto dela nunca sai. O nome por conteúdo só fica "incompleto" por texto retido no conteúdo EXPOSTO. | Achado no quotes.toscrape: `Next <span aria-hidden>→</span>` perdia o nome inteiro por causa da seta decorativa (que nem compõe o nome acessível), e o alvo virava posicional. | `capture.js` (`carrierOk`, `textEligible`), `SnapshotPrivacy`, `PageModel.exposedTextSuppressedWithin`, IT `C002-037` (`#a-seta`) |
+| D-S014-22 | Framework (`nekkora_rpa`, PR próprio): identidade pelo nome acessível EXPOSTO, tolerando só glifos de fonte de ícones nas pontas. | Achados na execução do código gerado: `"\uf090 Login"` (the-internet) e `"Next →"` (quotes) recusados por `TARGET_IDENTITY_MISMATCH:name`. Corrigido no framework, nunca no código gerado. | `Nekkora-RPA-Framework`: `resolver.accessible_name`, `identity_mismatch` (S014-A1, S014-A2) |
 
 ## Ressalvas
 
-- O framework não mudou: nenhuma lacuna demonstrada exigiu API nova. A espera "o texto mudou" (D-S014-17) e o ambiente
-  de produção (D-S014-10) ficam como evolução proposta, não implementada.
-- A integração real com a Anthropic **não foi homologada**: não há chave nesta máquina. Tudo o que envolve IA foi
-  provado com um provedor MOCK identificado como mock e com um servidor HTTP local que imita o provedor.
+- O framework não ganhou API nova. Os sites públicos revelaram dois defeitos de identidade, corrigidos num PR próprio
+  do framework (D-S014-22). A espera "o texto mudou" (D-S014-17) e o ambiente de produção (D-S014-10) ficam como
+  evolução proposta, não implementada.
+- A extensão mudou só na captura de nomes (D-S014-21); o laboratório da D-S014-18 continua sem código.
+- A integração real com a Anthropic **não foi homologada**. Foi feita uma chamada real com a chave da usuária (lida de
+  `.env`, ignorado no git, nunca impressa), e o provedor respondeu HTTP 400: a chave não está ligada a um workspace e
+  exige o cabeçalho `anthropic-workspace-id`. O Studio passou a enviar esse cabeçalho quando
+  `NEKKORA_ANTHROPIC_WORKSPACE_ID` existe, e a mensagem do provedor aparece na falha. Falta o id do workspace (ou uma
+  chave de workspace) para a nova tentativa. Evidência: `evidence/D-chamada-real-anthropic.json`, só com metadados.

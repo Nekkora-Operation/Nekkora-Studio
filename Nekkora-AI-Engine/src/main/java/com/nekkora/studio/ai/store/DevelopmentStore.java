@@ -11,6 +11,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -29,9 +30,28 @@ public final class DevelopmentStore {
     private final Map<String, String> memory;
 
     /** Opções avançadas (vazias = padrão). */
-    public record Options(Optional<Path> outputDir, Optional<Path> python) {
+    public record Options(Optional<Path> outputDir, Optional<Path> python, List<PublicOrigin> publicOrigins) {
+        public Options {
+            publicOrigins = List.copyOf(publicOrigins);
+        }
+
+        public Options(Optional<Path> outputDir, Optional<Path> python) {
+            this(outputDir, python, List.of());
+        }
+
         public static Options defaults() {
-            return new Options(Optional.empty(), Optional.empty());
+            return new Options(Optional.empty(), Optional.empty(), List.of());
+        }
+
+        public List<String> origins() {
+            return publicOrigins.stream().map(PublicOrigin::origin).toList();
+        }
+    }
+
+    /** Autorização de execução num site público de TREINAMENTO (benchmark): origem https exata, quem autorizou e quando. */
+    public record PublicOrigin(String origin, String actor, String at) {
+        public PublicOrigin {
+            if (!origin.matches("https://[a-z0-9.-]+(:[0-9]{1,5})?")) throw new IllegalArgumentException("ORIGIN_INVALID");
         }
     }
 
@@ -106,7 +126,15 @@ public final class DevelopmentStore {
                 Map<String, Object> m = Json.parseObject(t);
                 Optional<Path> out = m.get("outputDir") instanceof String s && !s.isBlank() ? Optional.of(Path.of(s)) : Optional.empty();
                 Optional<Path> py = m.get("python") instanceof String s && !s.isBlank() ? Optional.of(Path.of(s)) : Optional.empty();
-                return new Options(out, py);
+                List<PublicOrigin> pub = new java.util.ArrayList<>();
+                if (m.get("publicOrigins") instanceof List<?> l) {
+                    for (Object o : l) {
+                        if (o instanceof Map<?, ?> x && x.get("origin") instanceof String or && x.get("actor") instanceof String ac && x.get("at") instanceof String at) {
+                            pub.add(new PublicOrigin(or, ac, at));
+                        }
+                    }
+                }
+                return new Options(out, py, pub);
             } catch (RuntimeException e) {
                 return Options.defaults();
             }
@@ -119,6 +147,15 @@ public final class DevelopmentStore {
         m.put("version", "1.0.0");
         m.put("outputDir", o.outputDir().map(Path::toString).orElse(""));
         m.put("python", o.python().map(Path::toString).orElse(""));
+        List<Object> pub = new java.util.ArrayList<>();
+        for (PublicOrigin p : o.publicOrigins()) {
+            Map<String, Object> x = new LinkedHashMap<>();
+            x.put("origin", p.origin());
+            x.put("actor", p.actor());
+            x.put("at", p.at());
+            pub.add(x);
+        }
+        m.put("publicOrigins", pub);
         write(id.value(), "opcoes.json", Json.write(m));
     }
 

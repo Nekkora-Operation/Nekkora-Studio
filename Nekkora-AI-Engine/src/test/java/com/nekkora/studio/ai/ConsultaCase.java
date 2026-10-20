@@ -47,11 +47,22 @@ public final class ConsultaCase {
     public StepId exit;
 
     private ConsultaCase(String queryLabel, boolean withObserve) {
+        this(queryLabel, withObserve, ORIGIN);
+    }
+
+    /** O mesmo caso gravado em outra origem (ex.: site público de treinamento https). */
+    public static ConsultaCase confirmedAt(String origin) {
+        ConsultaCase c = new ConsultaCase("Consultar", true, origin);
+        c.ids.forEach(c::decide);
+        return c;
+    }
+
+    private ConsultaCase(String queryLabel, boolean withObserve, String origin) {
         a = Automation.create("Consulta de registro (sintética)", "", CLOCK);
         LogicalSession login = a.addSession("Acesso", null);
         LogicalSession consulta = a.addSession("Consulta", null);
-        StepContext p1 = new StepContext("Navegador", "Portal — entrar", ORIGIN + "/lab/studio014/portal.html");
-        StepContext p2 = new StepContext("Navegador", "Portal — consulta", ORIGIN + "/lab/studio014/portal.html?tela=consulta");
+        StepContext p1 = new StepContext("Navegador", "Portal — entrar", origin + "/lab/studio014/portal.html");
+        StepContext p2 = new StepContext("Navegador", "Portal — consulta", origin + "/lab/studio014/portal.html?tela=consulta");
         user = add(login, ActionType.FILL, p1, el("TEXT_INPUT", "input", "Usuário", "#usuario", false));
         password = add(login, ActionType.FILL, p1, el("TEXT_INPUT", "input", "Senha", "#senha", true));
         enter = add(login, ActionType.CLICK, p1, el("BUTTON", "button", "Entrar", "#entrar", false));

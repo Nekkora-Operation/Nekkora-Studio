@@ -8,6 +8,7 @@ Nada é executado no sistema-alvo, e a IA é opcional.
 - Decisões e contratos: [decisions.md](decisions.md)
 - Segurança e privacidade: [security-and-privacy.md](security-and-privacy.md)
 - O que não é garantido: [known-limitations.md](known-limitations.md)
+- Objetivo final — três sites públicos mapeados e desenvolvidos pelo Studio: [sites-publicos.md](sites-publicos.md)
 - Relatório final: [../../reports/studio-014-final-report.md](../../reports/studio-014-final-report.md)
 - Motor, Prompt-Mestre e catálogo: [../../Nekkora-AI-Engine/README.md](../../Nekkora-AI-Engine/README.md)
 

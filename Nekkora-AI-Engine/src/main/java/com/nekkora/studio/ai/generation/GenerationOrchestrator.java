@@ -86,8 +86,15 @@ public final class GenerationOrchestrator {
     /** Fases puras (sem disco): gate, plano, validação e geração. Chamar na thread dona do modelo. */
     public static Run prepare(Automation a, Optional<DocumentDraft> draft, FunctionalSpec spec, FrameworkCapabilityCatalog cat,
                               Optional<CodegenConfig> declaredTabular, Path outputDir, Instant now, Progress progress, BooleanSupplier cancelled) {
+        return prepare(a, draft, spec, cat, declaredTabular, List.of(), outputDir, now, progress, cancelled);
+    }
+
+    /** {@code publicOrigins}: sites públicos de treinamento autorizados nas opções do projeto (ambiente benchmark). */
+    public static Run prepare(Automation a, Optional<DocumentDraft> draft, FunctionalSpec spec, FrameworkCapabilityCatalog cat,
+                              Optional<CodegenConfig> declaredTabular, List<String> publicOrigins, Path outputDir, Instant now, Progress progress,
+                              BooleanSupplier cancelled) {
         progress.phase(Phase.ANALYZING);
-        ProjectContext ctx = ProjectContext.of(a, draft);
+        ProjectContext ctx = ProjectContext.of(a, draft).withAuthorizedPublicOrigins(publicOrigins);
         progress.phase(Phase.PDD);
         PddGate.Result gate = PddGate.evaluate(ctx, draft, spec, ProcessProjection.of(a), now);
         if (!gate.ready()) return new Run(Stage.PROJECT_ANALYZED, Phase.PDD, gate, null, List.of(), null, null, outputDir, null, gate.issues());
