@@ -60,14 +60,12 @@ final class SingleEmitter {
             files.put("paginas.py", PyWrap.wrap(Modern.pages(groups.stream().map(x -> new Modern.G(x.group(), x.steps())).toList())));
             files.put("processo.py", PyWrap.wrap(Modern.process(cfg, groups.stream().map(x -> new Modern.G(x.group(), x.steps())).toList(), steps)));
             files.put("main.py", PyWrap.wrap(Modern.main(cfg)));
-            files.put("requirements.txt", "# GERADO pelo Nekkora Studio (NEKKORA-E2E-002). Instale o wheel do framework com as versões travadas:\n"
-                    + "#   pip install \"<nekkora_rpa-0.3.0-py3-none-any.whl>[excel]\" -c <constraints/lab.txt>\n" + SingleGenerator.FRAMEWORK_REQUIREMENT_LIST + "\n");
+            files.put("requirements.txt", InstallHint.requirementsTxt("NEKKORA-E2E-002", SingleGenerator.FRAMEWORK_REQUIREMENT_LIST));
         } else {
             files.put("paginas.py", PyWrap.wrap(pages(groups)));
             files.put("processo.py", PyWrap.wrap(process(cfg, groups, steps)));
             files.put("main.py", PyWrap.wrap(main(cfg)));
-            files.put("requirements.txt", "# GERADO pelo Nekkora Studio (STUDIO-014). Instale o wheel do framework com as versões travadas:\n"
-                    + "#   pip install <nekkora_rpa-0.2.0-py3-none-any.whl> -c <constraints/lab.txt>\n" + SingleGenerator.FRAMEWORK_REQUIREMENT + "\n");
+            files.put("requirements.txt", InstallHint.requirementsTxt("STUDIO-014", SingleGenerator.FRAMEWORK_REQUIREMENT));
         }
         files.put("README.md", readme(cfg, steps));
         files.put("manifest.json", manifest(a, plan, cfg, steps, files));
@@ -325,9 +323,8 @@ final class SingleEmitter {
                     .append(String.join(", ", secrets.stream().map(x -> "`NK_SECRET_" + x.toUpperCase().replace('.', '_').replace('-', '_') + "`").toList()))
                     .append(". ");
         }
-        b.append("\n\n```sh\npython -m venv .venv\n.venv/Scripts/python -m pip install <nekkora_rpa-0.2.0-py3-none-any.whl> -c <constraints/lab.txt>\n")
-                .append(".venv/Scripts/python main.py --saida <pasta-da-execucao>").append(cfg.inputs().isEmpty() ? "" : " --entrada <entrada.json>")
-                .append(" --console\n```\n\n");
+        b.append("\n\n").append(InstallHint.readmeBlock(SingleGenerator.FRAMEWORK_REQUIREMENT, "python main.py --saida <pasta-da-execucao>"
+                + (cfg.inputs().isEmpty() ? "" : " --entrada <entrada.json>") + " --console"));
         b.append("Saída: `resultados/` (o desfecho da execução, com as leituras) e `execucao/` (eventos JSONL sem valores, checkpoint, resumo).\n");
         b.append("Gerar código não é executar: rode somente em ambiente autorizado (").append(cfg.environment()).append(").\n");
         return b.toString();

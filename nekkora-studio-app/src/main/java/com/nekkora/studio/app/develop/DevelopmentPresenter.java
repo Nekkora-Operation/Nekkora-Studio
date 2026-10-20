@@ -151,6 +151,12 @@ public final class DevelopmentPresenter implements DevelopmentPanel.Actions {
     private final DevelopmentStore store;
     private final PddStore pdds;
     private final FrameworkCapabilityCatalog catalog = FrameworkCapabilityCatalog.bundled();
+    /** PACKAGING-001: ambiente Python por automação (nulo sem diretório de dados — testes em memória: comportamento anterior). */
+    private final com.nekkora.studio.ai.deps.DependencyManager deps;
+    /** Última avaliação do ambiente (escrita no worker, lida na EDT). */
+    private volatile com.nekkora.studio.ai.deps.DependencyManager.Assessment lastEnvironment;
+    /** Python BASE indicado pela pessoa quando nenhum 3.12+ foi encontrado (só nesta sessão; não muda o Python dela). */
+    private Optional<Path> chosenBase = Optional.empty();
     private final PromptRepository.Prompt prompt;
     private final AIProvider provider;
     private final DevelopmentPanel panel = new DevelopmentPanel(this);
@@ -181,6 +187,8 @@ public final class DevelopmentPresenter implements DevelopmentPanel.Actions {
         // sem diretório de dados (testes, uso em memória): nada é gravado fora dos arquivos do projeto e da pasta de saída
         this.store = dataDir == null ? DevelopmentStore.inMemory() : new DevelopmentStore(dataDir);
         this.pdds = dataDir == null ? null : new PddStore(dataDir);
+        this.deps = dataDir == null ? null
+                : new com.nekkora.studio.ai.deps.DependencyManager(dataDir, com.nekkora.studio.ai.deps.FrameworkArtifacts.bundled(), clock);
         this.provider = provider;
         this.hosts = hosts;
         PromptRepository.Prompt p;
@@ -241,7 +249,7 @@ public final class DevelopmentPresenter implements DevelopmentPanel.Actions {
         }
         Optional<Path> pythonSetting = store.options(a.id()).python();
         worker.submit(() -> {
-            Optional<PythonChecks.Environment> env = PythonChecks.resolve(pythonSetting, out);
+            Optional<PythonChecks.Environment> env = environmentFor(a, out);
             List<PythonChecks.Check> checks = List.of();
             if (env.isPresent()) {
                 try {
@@ -255,7 +263,7 @@ public final class DevelopmentPresenter implements DevelopmentPanel.Actions {
                 if (round != validationRound || active().map(x -> x != a).orElse(true)) return; // outra validação ou outra automação: descartado
                 AutomationQualityGate.Assessment full = AutomationQualityGate.assess(new AutomationQualityGate.Inputs(a, new AutomationValidator(RuleSet.LATEST)
                         .validate(a), loadDraft(a), loadSpec(a), catalog, out, tabular, env, false, done, promptLabel, clock.instant(),
-                        store.options(a.id()).origins(), runRecord(a)));
+                        store.options(a.id()).origins(), runRecord(a), environmentProblem()));
                 publish(a, full, round);
             });
         });
@@ -423,7 +431,7 @@ public final class DevelopmentPresenter implements DevelopmentPanel.Actions {
                 render(a, "Validando a saída…", "Compilação, importação, ruff, mypy e testes de contrato (sem rede, sem executar o processo).",
                         com.nekkora.ui.core.Severity.INFO, notes, written.issues());
             });
-            Optional<PythonChecks.Environment> env = PythonChecks.resolve(pythonSetting, written.outputDir());
+            Optional<PythonChecks.Environment> env = environmentFor(a, written.outputDir());
             List<PythonChecks.Check> checks = List.of();
             if (env.isPresent() && !cancelled.get()) {
                 try {
@@ -449,7 +457,9 @@ public final class DevelopmentPresenter implements DevelopmentPanel.Actions {
         run.written().files().forEach((f, st) -> results.add("  " + statusLabel(st) + "  " + f));
         if (run.written().protectedAny()) results.add("! Arquivo editado à mão preservado: veja os .novo e .diff ao lado dele.");
         if (env.isEmpty()) {
-            results.add("— Código não verificado: configure o Python para verificação (Opções avançadas). Nada foi dado por aprovado.");
+            var le = lastEnvironment;
+            results.add(le == null ? "— Código não verificado: configure o Python para verificação (Opções avançadas). Nada foi dado por aprovado."
+                    : "— Código não verificado: ambiente Python da automação — " + le.diagnosis().title() + " (" + le.detail() + "). Nada foi dado por aprovado.");
         } else {
             for (PythonChecks.Check c : checks) {
                 results.add((c.status() == PythonChecks.Status.PASS ? "✓ " : c.status() == PythonChecks.Status.FAIL ? "× " : "— ") + label(c) + ": "
@@ -465,7 +475,7 @@ public final class DevelopmentPresenter implements DevelopmentPanel.Actions {
                 : env.isEmpty() ? "O projeto foi gravado. Sem o Python de verificação, as camadas V4/V5 ficam \"não verificado\"."
                 : "Veja o resultado: a correção vai para o gerador ou para o modelo, não para o arquivo.";
         model = withPaths(new DevelopmentPanel.Model(a.name(), true, false, title, text, allPass ? com.nekkora.ui.core.Severity.SUCCESS
-                : com.nekkora.ui.core.Severity.WARNING, phaseRows(), uses(run.plan()), answers(a, run), variables(run.plan()), pending(run.issues()), results,
+                : com.nekkora.ui.core.Severity.WARNING, phaseRows(), uses(run.plan()), answers(a, run), variables(run.plan()), pending(withEnvironment(run.issues())), results,
                 "", "", true, provider != null && provider.available()), a);
         panel.show(model);
         panel.focusResults();
@@ -490,7 +500,7 @@ public final class DevelopmentPresenter implements DevelopmentPanel.Actions {
                     } catch (CodegenConfig.Invalid e) {
                         return Optional.empty();
                     }
-                }), env, false, checks, prompt == null ? "" : prompt.label(), clock.instant(), store.options(a.id()).origins(), runRecord(a)));
+                }), env, false, checks, prompt == null ? "" : prompt.label(), clock.instant(), store.options(a.id()).origins(), runRecord(a), environmentProblem()));
         QualityReport r = as.report();
         worker.submit(() -> {
             try {
@@ -581,6 +591,12 @@ public final class DevelopmentPresenter implements DevelopmentPanel.Actions {
                     + plan.tabularConfig().get().input().columns().size() + " coluna(s), como declarado no projeto."));
         }
         projectFile(a).ifPresent(p -> out.add(new DevelopmentPanel.Answer("Para onde vai o Python?", outputDir(a, p) + " (Opções avançadas para mudar).")));
+        var le = lastEnvironment;
+        if (le != null) {
+            out.add(new DevelopmentPanel.Answer("Em que ambiente o código é verificado?", le.requirement().pip() + " — "
+                    + (le.ready() ? le.detail() + "; " + le.environment().map(e -> e.python().toString()).orElse("")
+                    : le.diagnosis().title() + " (" + le.detail() + "). " + le.diagnosis().recovery())));
+        }
         long open = run == null ? 0 : run.issues().stream().filter(i -> i.kind() == QualityIssue.Kind.HELP_REQUIRED).count();
         out.add(new DevelopmentPanel.Answer("O que a IA não sabe?", open == 0 ? "Nenhuma pergunta aberta. O plano é determinístico; propostas da IA só "
                 + "entram depois de \"Revisar e aplicar\"."
@@ -655,6 +671,11 @@ public final class DevelopmentPresenter implements DevelopmentPanel.Actions {
                         + "positivos, negativos e de regressão — nunca uma Lib de um site específico. Enquanto ela não existir, o Studio não gera aproximações.");
                 case "GO_TO_LAST_STEP" -> lastStep(a).ifPresent(studio::goToStep);
                 case "AUTHORIZE_PUBLIC_SITE" -> authorizePublicSite(a);
+                case "PREPARE_ENVIRONMENT" -> prepareEnvironment(a);
+                case "CHOOSE_BASE_PYTHON" -> host.choosePython().ifPresent(p -> {
+                    chosenBase = Optional.of(p);
+                    prepareEnvironment(a);
+                });
                 default -> {
                 }
             }
@@ -845,6 +866,147 @@ public final class DevelopmentPresenter implements DevelopmentPanel.Actions {
             }
             panel.show(model = withPaths(model, a));
         });
+    }
+
+    // ------------------------------------------------------------------------------------------- ambiente Python (PACKAGING-001)
+
+    /**
+     * O ambiente para o código de {@code out}, SEM instalar e sem rede: (1) o Python indicado em Opções avançadas, sempre
+     * conferido contra o requisito do projeto (divergência = diagnóstico, nunca troca silenciosa); (2) a venv da automação
+     * preparada pelo Dependency Manager; (3) {@code NEKKORA_PYTHON} ou a {@code .venv} da pasta gerada, só se passarem na
+     * mesma verificação de versão; senão o diagnóstico e o plano de "Preparar ambiente". Sem código gerado (ou sem pasta
+     * de dados), o comportamento anterior.
+     */
+    Optional<PythonChecks.Environment> environmentFor(Automation a, Path out) {
+        Optional<Path> configured = store.options(a.id()).python();
+        Optional<com.nekkora.studio.ai.deps.FrameworkRequirement> req = com.nekkora.studio.ai.deps.FrameworkRequirement.ofGeneratedProject(out);
+        if (deps == null || req.isEmpty()) {
+            lastEnvironment = null;
+            return PythonChecks.resolve(configured, out);
+        }
+        String id = a.id().value().toString();
+        if (configured.isPresent()) {
+            var as = deps.assess(id, req.get(), configured, Optional.empty());
+            lastEnvironment = as;
+            return as.environment();
+        }
+        var as = deps.assess(id, req.get(), Optional.empty(), chosenBase);
+        if (!as.ready()) {
+            for (Path p : developerPythons(out)) {
+                var v = com.nekkora.studio.ai.deps.IntegrityVerifier.verify(p, req.get(), deps.artifacts(), false);
+                if (v.ok()) {
+                    lastEnvironment = new com.nekkora.studio.ai.deps.DependencyManager.Assessment(req.get(), v.diagnosis(),
+                            "Python de desenvolvimento (" + p.getFileName() + "): " + v.detail(), v.environment(), Optional.empty(), as.environmentDir(), true);
+                    return v.environment();
+                }
+            }
+        }
+        lastEnvironment = as;
+        return as.environment();
+    }
+
+    private static List<Path> developerPythons(Path out) {
+        List<Path> out2 = new ArrayList<>();
+        String env = System.getenv("NEKKORA_PYTHON");
+        if (env != null && !env.isBlank()) out2.add(Path.of(env));
+        if (out != null) {
+            out2.add(out.resolve(".venv/Scripts/python.exe"));
+            out2.add(out.resolve(".venv/bin/python"));
+        }
+        return out2.stream().filter(Files::isRegularFile).toList();
+    }
+
+    /** A pendência do ambiente (quando ele não está pronto), com as ações de preparar e de indicar o Python. */
+    /** O diagnóstico do ambiente em uma linha (vazio = pronto ou não avaliado) para o gate de qualidade. */
+    private String environmentProblem() {
+        var le = lastEnvironment;
+        return le == null || le.ready() ? "" : le.diagnosis().title() + " — " + le.detail();
+    }
+
+    private List<QualityIssue> withEnvironment(List<QualityIssue> issues) {
+        var le = lastEnvironment;
+        if (le == null || le.ready()) return issues;
+        List<AssistanceRequest.Option> opts = new ArrayList<>();
+        if (le.configured()) {
+            opts.add(AssistanceRequest.Option.action("PREPARE_ENVIRONMENT", "Preparar ambiente da automação…",
+                    "deixa o Python de Opções avançadas de lado só se você limpar a opção; prepara a venv própria da automação"));
+        } else if (le.diagnosis() == com.nekkora.studio.ai.deps.Diagnosis.PYTHON_MISSING) {
+            opts.add(AssistanceRequest.Option.action("CHOOSE_BASE_PYTHON", "Indicar o Python 3.12…", "o interpretador base da venv (não é alterado)"));
+        } else if (le.plan().isPresent()) {
+            opts.add(AssistanceRequest.Option.action("PREPARE_ENVIRONMENT", "Preparar ambiente…", "mostra o que será instalado e pede sua confirmação"));
+        }
+        List<QualityIssue> out = new ArrayList<>(issues);
+        // aviso acionável (não é pergunta da especificação): não impede gerar; impede só a verificação V4/V5 e o teste autorizado
+        out.add(new QualityIssue("ENVIRONMENT_NOT_READY", Layer.V4_CODE, QualityIssue.Kind.WARNING, null, null, "Ambiente Python da automação",
+                le.diagnosis().title() + ": " + le.detail() + ".", le.diagnosis().recovery(),
+                new AssistanceRequest("Preparar o ambiente Python desta automação (" + le.requirement().pip() + ")?",
+                        "O código gerado exige exatamente esta versão. A venv é exclusiva da automação; nada é instalado sem sua confirmação.", opts, null,
+                        "Ambiente Python da automação"), null, null));
+        return out;
+    }
+
+    /**
+     * "Preparar ambiente": plano → CONFIRMAÇÃO da pessoa com pacote, versão, extras, origem, destino e efeitos → instalação
+     * no worker (progresso, Cancelar) → verificação completa → Desenvolver de novo (V4/V5 com o ambiente novo).
+     */
+    void prepareEnvironment(Automation a) {
+        if (running || deps == null) return;
+        Path out = projectFile(a).map(p -> outputDir(a, p)).orElse(null);
+        Optional<com.nekkora.studio.ai.deps.FrameworkRequirement> req = out == null ? Optional.empty()
+                : com.nekkora.studio.ai.deps.FrameworkRequirement.ofGeneratedProject(out);
+        if (req.isEmpty()) {
+            host.showText("Preparar ambiente", "Use Desenvolver antes: o ambiente segue a versão exigida pelo código gerado.");
+            return;
+        }
+        var as = deps.assess(a.id().value().toString(), req.get(), Optional.empty(), chosenBase);
+        lastEnvironment = as;
+        if (as.ready()) {
+            develop();
+            return;
+        }
+        if (as.plan().isEmpty()) {
+            host.showText(as.diagnosis().title(), as.detail() + ".\n\n" + as.diagnosis().recovery());
+            return;
+        }
+        var plan = as.plan().get();
+        if (!host.confirm("Preparar o ambiente Python da automação?", String.join("\n\n", plan.summary()), "Preparar ambiente")) return;
+        running = true;
+        cancelled.set(false);
+        render(a, "Preparando o ambiente Python da automação…", "Etapa 1 de 6. Use Cancelar para interromper.", com.nekkora.ui.core.Severity.INFO,
+                List.of(), List.of());
+        worker.submit(() -> {
+            com.nekkora.studio.ai.deps.IntegrityVerifier.Result r = null;
+            com.nekkora.studio.ai.deps.DependencyException err = null;
+            try {
+                r = deps.install(plan, p -> SwingUtilities.invokeLater(() -> environmentProgress(a, p)), cancelled::get);
+            } catch (com.nekkora.studio.ai.deps.DependencyException e) {
+                err = e;
+            }
+            var done = r;
+            var failed = err;
+            SwingUtilities.invokeLater(() -> {
+                running = false;
+                if (done != null && done.ok()) {
+                    service.report(new Notice(Notice.Kind.SUCCESS, "Ambiente pronto", plan.requirement().pip() + " — " + done.detail() + "."));
+                    develop();
+                    return;
+                }
+                var d = failed != null ? failed.diagnosis() : done.diagnosis();
+                String detail = failed != null ? failed.getMessage() : done.detail();
+                lastEnvironment = deps.assess(a.id().value().toString(), plan.requirement(), Optional.empty(), chosenBase);
+                render(a, d.title(), detail + ". " + d.recovery() + " O projeto, o PDD e o código gerado continuam como estavam.",
+                        d == com.nekkora.studio.ai.deps.Diagnosis.CANCELLED ? com.nekkora.ui.core.Severity.WARNING : com.nekkora.ui.core.Severity.ERROR,
+                        List.of("× Ambiente Python da automação: " + d.name() + " — " + detail), withEnvironment(List.of()));
+                panel.focusPending();
+            });
+        });
+    }
+
+    private void environmentProgress(Automation a, com.nekkora.studio.ai.deps.DependencyManager.Progress p) {
+        if (!running) return;
+        render(a, "Preparando o ambiente Python da automação…", "Etapa " + p.step() + " de " + p.steps() + ": " + p.label()
+                + (p.line().isBlank() ? "" : " · " + (p.line().length() > 140 ? p.line().substring(0, 140) + "…" : p.line())) + ". Use Cancelar para interromper.",
+                com.nekkora.ui.core.Severity.INFO, List.of(), List.of());
     }
 
     @Override
@@ -1147,10 +1309,14 @@ public final class DevelopmentPresenter implements DevelopmentPanel.Actions {
         }
         Path out = outputDir(a, projectFile(a).orElseThrow());
         com.nekkora.studio.codegen.SingleConfig cfg = derivedConfig(a).orElseThrow();
-        Optional<PythonChecks.Environment> env = PythonChecks.resolve(store.options(a.id()).python(), out);
-        if (env.isEmpty() || !catalog.version().equals(env.get().framework())) {
-            host.showText("Teste autorizado indisponível", "O Python configurado precisa ter o nekkora_rpa " + catalog.version() + " (com o extra excel), ruff e mypy. "
-                    + "Configure em Opções avançadas → Python para verificação.\n\nNada foi executado.");
+        Optional<PythonChecks.Environment> env = environmentFor(a, out);
+        Optional<com.nekkora.studio.ai.deps.FrameworkRequirement> required = com.nekkora.studio.ai.deps.FrameworkRequirement.ofGeneratedProject(out);
+        if (env.isEmpty() || required.isEmpty() || !required.get().version().equals(env.get().framework())) {
+            var le = lastEnvironment;
+            host.showText("Teste autorizado indisponível", "O ambiente Python da automação precisa ter exatamente "
+                    + required.map(com.nekkora.studio.ai.deps.FrameworkRequirement::pip).orElse("a versão do código gerado") + ", ruff e mypy"
+                    + (le == null || le.ready() ? "." : ": " + le.diagnosis().title() + " — " + le.detail() + ". " + le.diagnosis().recovery())
+                    + "\n\nUse \"Preparar ambiente\" em Pendências.\n\nNada foi executado.");
             return;
         }
         Optional<Path> input = host.chooseRunInput("Lista de entrada do teste autorizado (colunas: " + String.join(", ", cfg.inputs()) + ")");
@@ -1323,7 +1489,11 @@ public final class DevelopmentPresenter implements DevelopmentPanel.Actions {
 
     private DevelopmentPanel.Model withPaths(DevelopmentPanel.Model m, Automation a) {
         String out = projectFile(a).map(p -> outputDir(a, p).toString()).orElse("");
-        String py = store.options(a.id()).python().map(Path::toString).orElse(System.getenv("NEKKORA_PYTHON") == null ? "" : "NEKKORA_PYTHON");
+        var le = lastEnvironment;
+        String py = le != null && le.environment().isPresent()
+                ? le.environment().get().python() + " · nekkora-rpa " + le.environment().get().framework() + (le.configured() ? " (indicado)" : " (venv da automação)")
+                : le != null ? "ambiente da automação: " + le.diagnosis().title()
+                : store.options(a.id()).python().map(Path::toString).orElse(System.getenv("NEKKORA_PYTHON") == null ? "" : "NEKKORA_PYTHON");
         return new DevelopmentPanel.Model(m.subject(), m.projectSaved(), m.running(), m.statusTitle(), m.statusText(), m.severity(), m.phases(), m.uses(),
                 m.answers(), m.variables(), m.pending(), m.results(), out, py, m.canOpenCode() || outputExists(a), provider != null && provider.available());
     }

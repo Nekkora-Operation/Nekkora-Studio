@@ -181,6 +181,36 @@ class DevelopmentStudioTest {
     }
 
     @Test
+    @DisplayName("PACKAGING-001 — sem ambiente: aviso 'Ambiente Python da automação' com a versão EXATA do código; recusar a confirmação não instala nada")
+    void ambienteSemConsentimento() throws Exception {
+        start();
+        Case c = consulta("Consultar");
+        reviewedPdd(c.a());
+        develop();
+        answerStart(START);
+        DevelopmentPanel.Model m = model();
+        Path out = dir.resolve("consulta-python");
+        assertTrue(Files.isRegularFile(out.resolve("manifest.json")), m.statusTitle());
+        String required = com.nekkora.studio.ai.deps.FrameworkRequirement.ofGeneratedProject(out).orElseThrow().pip();
+        assertEquals("nekkora-rpa==0.2.0", required, "execução única 1.1.0 continua no contrato 0.2.0 (sem migração silenciosa)");
+        QualityIssue env = m.pending().stream().filter(i -> i.code().equals("ENVIRONMENT_NOT_READY")).findFirst()
+                .orElseThrow(() -> new AssertionError(m.pending().toString()));
+        assertEquals(QualityIssue.Kind.WARNING, env.kind(), "aviso acionável, não pergunta da especificação");
+        assertTrue(env.assistance().orElseThrow().question().contains(required), env.assistance().orElseThrow().question());
+        assertTrue(m.results().stream().anyMatch(r -> r.startsWith("— Código não verificado: ambiente Python da automação")), m.results().toString());
+        assertTrue(m.answers().stream().anyMatch(x -> x.question().equals("Em que ambiente o código é verificado?") && x.answer().startsWith(required)));
+        AssistanceRequest.Option action = env.assistance().orElseThrow().options().stream()
+                .filter(o -> "PREPARE_ENVIRONMENT".equals(o.studioAction()) || "CHOOSE_BASE_PYTHON".equals(o.studioAction())).findFirst().orElseThrow();
+        Edt.run(() -> studio.development().resolve(env, action)); // o host de teste RECUSA a confirmação
+        idle();
+        Path ambientes = dir.resolve("dados").resolve("ambientes");
+        try (var s = Files.exists(ambientes) ? Files.walk(ambientes) : java.util.stream.Stream.<Path>empty()) {
+            assertTrue(s.noneMatch(p -> p.getFileName().toString().equals("venv")), "nenhuma venv criada sem a confirmação da pessoa");
+        }
+        assertFalse(studio.development().running());
+    }
+
+    @Test
     @DisplayName("E2E-002 — proposta da IA só sai quando obsoleta: etapa removida ou decisão do campo já registrada (re-execuções internas a mantêm)")
     void propostaObsoleta() throws Exception {
         start();

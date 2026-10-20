@@ -48,7 +48,19 @@ public final class AutomationQualityGate {
     /** Entradas da avaliação (tudo do estado atual; {@code checks} vazio = V4/V5 não rodaram nesta avaliação). */
     public record Inputs(Automation automation, ValidationReport staticReport, Optional<DocumentDraft> draft, FunctionalSpec spec, FrameworkCapabilityCatalog catalog,
                          Path outputDir, Optional<CodegenConfig> declaredTabular, Optional<PythonChecks.Environment> python, boolean pythonPending,
-                         List<PythonChecks.Check> checks, String prompt, Instant now, List<String> publicOrigins, Optional<SupervisedRunRecord> supervisedRun) {
+                         List<PythonChecks.Check> checks, String prompt, Instant now, List<String> publicOrigins, Optional<SupervisedRunRecord> supervisedRun,
+                         String environmentProblem) {
+        public Inputs {
+            environmentProblem = environmentProblem == null ? "" : environmentProblem;
+        }
+
+        /** Sem diagnóstico do ambiente (PACKAGING-001: vazio = ambiente pronto ou não avaliado). */
+        public Inputs(Automation automation, ValidationReport staticReport, Optional<DocumentDraft> draft, FunctionalSpec spec, FrameworkCapabilityCatalog catalog,
+                      Path outputDir, Optional<CodegenConfig> declaredTabular, Optional<PythonChecks.Environment> python, boolean pythonPending,
+                      List<PythonChecks.Check> checks, String prompt, Instant now, List<String> publicOrigins, Optional<SupervisedRunRecord> supervisedRun) {
+            this(automation, staticReport, draft, spec, catalog, outputDir, declaredTabular, python, pythonPending, checks, prompt, now, publicOrigins, supervisedRun, "");
+        }
+
         public Inputs(Automation automation, ValidationReport staticReport, Optional<DocumentDraft> draft, FunctionalSpec spec, FrameworkCapabilityCatalog catalog,
                       Path outputDir, Optional<CodegenConfig> declaredTabular, Optional<PythonChecks.Environment> python, boolean pythonPending,
                       List<PythonChecks.Check> checks, String prompt, Instant now, List<String> publicOrigins) {
@@ -123,6 +135,12 @@ public final class AutomationQualityGate {
         } else if (in.pythonPending()) {
             layers.put(Layer.V4_CODE, new QualityReport.LayerResult(Layer.V4_CODE, QualityReport.State.RUNNING, "procurando o Python de verificação…"));
             layers.put(Layer.V5_TESTS, new QualityReport.LayerResult(Layer.V5_TESTS, QualityReport.State.RUNNING, "aguardando a verificação do código"));
+        } else if (in.python().isEmpty() && !in.environmentProblem().isEmpty()) {
+            // PACKAGING-001: o Dependency Manager disse o MOTIVO (pacote ausente, versão errada, falta preparar...)
+            issues.add(QualityIssue.of("ENVIRONMENT_NOT_READY", Layer.V4_CODE, QualityIssue.Kind.INFO, null, "Ambiente Python da automação",
+                    in.environmentProblem() + ": as verificações do código não rodaram.", "Desenvolver automação → Pendências → Preparar ambiente."));
+            layers.put(Layer.V4_CODE, new QualityReport.LayerResult(Layer.V4_CODE, QualityReport.State.NOT_CHECKED, "ambiente da automação: " + in.environmentProblem()));
+            layers.put(Layer.V5_TESTS, new QualityReport.LayerResult(Layer.V5_TESTS, QualityReport.State.NOT_CHECKED, "ambiente da automação não está pronto"));
         } else if (in.python().isEmpty()) {
             issues.add(QualityIssue.of("PYTHON_ENV_NOT_CONFIGURED", Layer.V4_CODE, QualityIssue.Kind.INFO, null, "Ambiente de verificação",
                     "Não há interpretador Python com nekkora_rpa, ruff e mypy configurado: as verificações do código não rodaram.",
@@ -137,7 +155,10 @@ public final class AutomationQualityGate {
             layers.put(Layer.V5_TESTS, checksLayer(Layer.V5_TESTS, in.checks(), in.python().get(), issues));
         }
         // V6 — só o teste autorizado da REVISÃO ATUAL do código comprova a execução
-        layers.put(Layer.V6_EXECUTION, execution(in.supervisedRun(), code, a));
+        layers.put(Layer.V6_EXECUTION, in.environmentProblem().isEmpty() || in.supervisedRun().isEmpty() ? execution(in.supervisedRun(), code, a)
+                // PACKAGING-001: o ambiente atual não confere com o exigido — o teste anterior não vale como prova desta configuração
+                : new QualityReport.LayerResult(Layer.V6_EXECUTION, QualityReport.State.NOT_CHECKED, "o ambiente Python atual não confere ("
+                        + in.environmentProblem() + "): prepare o ambiente e execute o teste autorizado de novo"));
         QualityReport r = new QualityReport(a.id().value().toString(), a.revision(), projection.revision(), gate.record().documentRevision(),
                 gate.record().specRevision(), code.manifestHash(), in.now(), layers, issues, code.current() ? in.checks() : List.of(), in.prompt(),
                 "nekkora-rpa " + in.catalog().version() + " " + in.catalog().fingerprint());
