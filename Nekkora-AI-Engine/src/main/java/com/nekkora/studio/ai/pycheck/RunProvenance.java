@@ -49,17 +49,20 @@ public final class RunProvenance {
                 if ("read_items".equals(e.get("action")) || "current_address".equals(e.get("action"))) readsByTx.computeIfAbsent(tx, k -> new LinkedHashSet<>()).add(sid);
             }
         }
-        // linhas preparadas pela planilha (estado do XlsxResultSink): transação → valores na ordem das colunas
+        // transações da planilha pelo estado do XlsxResultSink (1.1.0): gravadas → na ordem das linhas da planilha (sem
+        // valores: depois do commit o estado só guarda as transações); retidas → as preparadas, sem linha na planilha
         String stem = spreadsheet.getFileName().toString().replaceFirst("(?i)\\.xlsx$", "");
         Path state = runDir.resolve("execucao").resolve(stem + ".xlsx-output.json");
-        Map<String, Object> rows = Files.isRegularFile(state)
-                ? (Map<String, Object>) Json.parseObject(Files.readString(state, StandardCharsets.UTF_8)).get("rows") : Map.of();
+        Map<String, Object> st = Files.isRegularFile(state) ? Json.parseObject(Files.readString(state, StandardCharsets.UTF_8)) : Map.of();
+        List<String> committed = st.get("committed_transactions") instanceof List<?> l ? l.stream().map(String::valueOf).toList() : List.of();
+        List<String> order = !committed.isEmpty() ? committed
+                : st.get("rows") instanceof Map<?, ?> m ? m.keySet().stream().map(String::valueOf).toList() : List.of();
         int keyIndex = 0;
         for (int i = 0; i < cfg.output().columns().size(); i++) if (cfg.output().columns().get(i).field().equals(cfg.output().keyField())) keyIndex = i;
         List<Object> txs = new ArrayList<>();
-        for (Map.Entry<String, Object> r : rows.entrySet()) {
-            List<Object> values = (List<Object>) r.getValue();
-            Set<String> read = readsByTx.getOrDefault(r.getKey(), Set.of());
+        for (int n = 0; n < order.size(); n++) {
+            String tx = order.get(n);
+            Set<String> read = readsByTx.getOrDefault(tx, Set.of());
             List<Object> fields = new ArrayList<>();
             for (SingleConfig.Column c : cfg.output().columns()) {
                 boolean primary = read.contains(c.step());
@@ -74,18 +77,19 @@ public final class RunProvenance {
                 fields.add(f);
             }
             Map<String, Object> t = new LinkedHashMap<>();
-            t.put("transactionId", r.getKey());
-            t.put("rowKey", values.size() > keyIndex ? values.get(keyIndex) : null);
+            t.put("transactionId", tx);
+            t.put("sheetRow", committed.isEmpty() ? null : n + 2); // linha 1 = cabeçalho
             t.put("fields", fields);
             txs.add(t);
         }
         Map<String, Object> doc = new LinkedHashMap<>();
         doc.put("schema", SCHEMA);
-        doc.put("version", "1.0.0");
+        doc.put("version", "1.1.0");
         doc.put("keyColumn", cfg.output().columns().get(keyIndex).header());
         doc.put("transactions", txs);
-        doc.put("note", "Sem valores além da chave da linha. Coluna → etapa (StepId) que forneceu o dado nesta transação → alvo (chave e localizador do "
-                + "registro). Fonte alternativa só quando a principal não foi lida (alvo ausente na página).");
+        doc.put("note", "Sem valores: cada transação aponta a LINHA da planilha (sheetRow; o valor da coluna-chave está lá). Coluna → etapa "
+                + "(StepId) que forneceu o dado nesta transação → alvo (chave e localizador do registro). Fonte alternativa só quando a principal não "
+                + "foi lida (alvo ausente na página).");
         return Json.write(doc);
     }
 }

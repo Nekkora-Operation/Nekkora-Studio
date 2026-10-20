@@ -6,7 +6,7 @@
     "version": "0.3.0",
     "fingerprint": "sha256:d331c5756a2a302d979a6f08f17080d4c9c612b911e5f9bc26c007cebe145b50",
     "repository": "Nekkora-Operation/Nekkora-RPA-Framework",
-    "commit": "e248c8f8da4e4a0dcdead26bbe26058c348974fd"
+    "commit": "2f36a0acca5a4a84cbba91aa698f31e834b60a9b"
   },
   "extending": {
     "file": "docs/extending.md",
@@ -689,7 +689,7 @@
       ],
       "source": {
         "file": "nekkora_rpa/xlsx.py",
-        "line": 383
+        "line": 384
       },
       "docs": {
         "file": "docs/framework-003.md",
@@ -708,7 +708,7 @@
       "limitations": [],
       "source": {
         "file": "nekkora_rpa/xlsx.py",
-        "line": 118
+        "line": 119
       },
       "docs": {
         "file": "docs/framework-003.md",

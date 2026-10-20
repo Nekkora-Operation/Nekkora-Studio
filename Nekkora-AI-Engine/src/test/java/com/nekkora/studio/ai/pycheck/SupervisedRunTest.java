@@ -86,13 +86,14 @@ class SupervisedRunTest {
             assertEquals(3, txs.size());
             String all = prov;
             assertTrue(all.contains("\"ALTERNATIVA\"") && all.contains("\"PRINCIPAL\""), prov);
-            assertFalse(all.contains("Georgina") || all.contains("1867"), "a proveniência não leva valores além da chave da linha");
+            assertFalse(all.contains("Georgina") || all.contains("1867") || all.contains("ficha-"), "a proveniência não leva valores (nem a chave)");
+            // linhas da planilha na ordem da lista: 2 = Ana, 3 = Fábio, 4 = Gina (linha 1 = cabeçalho)
             // Fábio não tem "Nome completo": a coluna veio do título (alternativa); Gina não tem "Ocupação": veio de "Campo(s)"
-            assertEquals("ALTERNATIVA", source(txs, "ficha-fabio", "Nome completo"));
-            assertEquals("PRINCIPAL", source(txs, "ficha-fabio", "Ocupação"));
-            assertEquals("ALTERNATIVA", source(txs, "ficha-gina", "Ocupação"));
-            assertEquals("PRINCIPAL", source(txs, "ficha-gina", "Nome completo"));
-            assertEquals("PRINCIPAL", source(txs, "ficha-ana", "Nascimento"));
+            assertEquals("ALTERNATIVA", source(txs, 3, "Nome completo"));
+            assertEquals("PRINCIPAL", source(txs, 3, "Ocupação"));
+            assertEquals("ALTERNATIVA", source(txs, 4, "Ocupação"));
+            assertEquals("PRINCIPAL", source(txs, 4, "Nome completo"));
+            assertEquals("PRINCIPAL", source(txs, 2, "Nascimento"));
         } finally {
             lab.descendants().forEach(ProcessHandle::destroyForcibly);
             lab.destroyForcibly();
@@ -100,10 +101,10 @@ class SupervisedRunTest {
     }
 
     @SuppressWarnings("unchecked")
-    static String source(List<Object> txs, String row, String column) {
+    static String source(List<Object> txs, int sheetRow, String column) {
         for (Object t : txs) {
             Map<String, Object> m = (Map<String, Object>) t;
-            if (!String.valueOf(m.get("rowKey")).contains(row)) continue;
+            if (!(m.get("sheetRow") instanceof Number n) || n.intValue() != sheetRow) continue;
             for (Object f : (List<Object>) m.get("fields")) {
                 Map<String, Object> x = (Map<String, Object>) f;
                 if (column.equals(x.get("column"))) return String.valueOf(x.get("source"));
