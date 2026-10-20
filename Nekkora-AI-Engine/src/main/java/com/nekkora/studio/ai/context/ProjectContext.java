@@ -137,10 +137,32 @@ public record ProjectContext(String automationId, long automationRevision, Strin
                         f != null && f.screenChangeAfter(), blockOf.get(st.id()), fp, anchor, navigates));
             }
         }
+        out = withInheritedScreens(out);
         List<String> declared = a.variables().stream().map(x -> x.name()).toList();
         List<String> names = p.sections().stream().map(ProcessProjection.SectionFacts::safeName).toList();
         return new ProjectContext(a.id().value().toString(), a.revision(), p.revision(), out, origins, start == null ? "" : start,
                 template == null ? "" : template, declared, names, List.of());
+    }
+
+    /**
+     * NEKKORA-E2E-002: etapa SEM alvo e sem tela registrada (ex.: "Ler o endereço da página", criada no editor) pertence à
+     * tela da PRÓXIMA etapa da mesma sessão (senão, à da anterior): assim ela roda depois da espera de "página nova
+     * pronta" daquela tela — nunca lendo o endereço da página anterior.
+     */
+    static List<Step> withInheritedScreens(List<Step> steps) {
+        List<Step> out = new ArrayList<>(steps);
+        for (int i = 0; i < out.size(); i++) {
+            Step s = out.get(i);
+            if (s.hasTarget() || !s.screenKey().isEmpty()) continue;
+            String inherited = "";
+            for (int j = i + 1; j < out.size() && inherited.isEmpty() && out.get(j).session() == s.session(); j++) inherited = out.get(j).screenKey();
+            for (int j = i - 1; j >= 0 && inherited.isEmpty() && out.get(j).session() == s.session(); j--) inherited = out.get(j).screenKey();
+            if (inherited.isEmpty()) continue;
+            out.set(i, new Step(s.stepId(), s.session(), s.number(), s.action(), false, s.targetKind(), s.targetName(), s.sensitive(), s.inFrame(),
+                    s.inShadow(), s.confirmed(), s.locatorUsable(), s.value(), s.variableName(), inherited, s.screenChangeAfter(), s.blockId(),
+                    s.fingerprint(), s.anchor(), s.navigates()));
+        }
+        return out;
     }
 
     private static final java.util.regex.Pattern ORIGIN = java.util.regex.Pattern.compile("^(https?)://([A-Za-z0-9.-]+|\\[[0-9a-fA-F:.]+\\])(:[0-9]{1,5})?(?=[/?#]|$)");
