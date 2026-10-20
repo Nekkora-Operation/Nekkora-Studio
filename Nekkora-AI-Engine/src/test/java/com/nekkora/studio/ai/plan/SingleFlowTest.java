@@ -117,6 +117,31 @@ class SingleFlowTest {
         assertNotNull(checks.stream().filter(x -> x.id().equals("CONTRACT_TESTS")).findFirst().orElseThrow().codes().get("TOTAL"));
     }
 
+    @Test
+    @DisplayName("[Python real] controle negativo: projeto estragado (import sobrando, erro de tipo, valor escrito no preenchimento) é REPROVADO")
+    void pythonRealNegativo() throws Exception {
+        Path py = PythonForTests.framework();
+        Assumptions.assumeTrue(py != null, "sem o interpretador do framework neste ambiente");
+        Flow f = develop(ConsultaCase.confirmed());
+        Path out = tmp.resolve("estragado");
+        OutputWriter.write(out, f.result().files());
+        Path pages = out.resolve("paginas.py");
+        String src = java.nio.file.Files.readString(pages);
+        src = src.replace("from __future__ import annotations\n", "from __future__ import annotations\n\nimport os\n")
+                .replace("a.fill(self.k(\"codigo_do_registro\"), codigo_do_registro,", "a.fill(self.k(\"codigo_do_registro\"), \"REG-0001\",")
+                .replace("        return saidas\n", "        x: int = \"texto\"\n        return saidas\n");
+        java.nio.file.Files.writeString(pages, src);
+        PythonChecks.Environment env = PythonChecks.resolve(Optional.of(py), out).orElseThrow();
+        Map<String, PythonChecks.Check> by = new java.util.LinkedHashMap<>();
+        for (PythonChecks.Check c : PythonChecks.run(env, out, () -> false)) by.put(c.id(), c);
+        assertEquals(PythonChecks.Status.FAIL, by.get("RUFF_CHECK").status(), by.get("RUFF_CHECK").toString());
+        assertTrue(by.get("RUFF_CHECK").codes().containsKey("F401"), by.get("RUFF_CHECK").codes().toString());
+        assertEquals(PythonChecks.Status.FAIL, by.get("MYPY_STRICT").status(), by.get("MYPY_STRICT").toString());
+        assertEquals(PythonChecks.Status.FAIL, by.get("CONTRACT_TESTS").status(), "hash do manifesto e valor escrito no preenchimento");
+        assertTrue(by.get("CONTRACT_TESTS").codes().containsKey("MANIFEST_HASH_MISMATCH") && by.get("CONTRACT_TESTS").codes().containsKey("FILL_LITERAL_VALUE"),
+                by.get("CONTRACT_TESTS").codes().toString());
+    }
+
     static String dump(Path out) {
         try {
             return java.nio.file.Files.readString(out.resolve("paginas.py")) + "\n-----\n" + java.nio.file.Files.readString(out.resolve("processo.py"));

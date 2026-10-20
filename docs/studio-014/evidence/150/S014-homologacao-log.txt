@@ -1,0 +1,26 @@
+Tela: java.awt.Rectangle[x=0,y=0,width=1280,height=688] · java 21.0.12
+Operador: Claude como AGENTE DE TESTE (TEST_AGENT; nenhuma confirmação humana) · ator do Studio: TEST_AGENT
+Laboratório: http://127.0.0.1:18765/lab/studio014/portal.html (dados 100% fictícios; oráculo do servidor /api/studio009/estado)
+Python de verificação do Studio (NEKKORA_PYTHON): definido
+Native Host instalado pelo script oficial (install-host.ps1)
+  150%: Código gerado e verificado · [✓ CODE_GENERATED, ✓ CODE_VALIDATED]
+OK    150%: Desenvolver automação conclui na revisão salva (CODE_VALIDATED)
+captura S014-E-150-sakura-dark-aba-0.png (1170x642)
+captura S014-E-150-sakura-dark-aba-1.png (1170x642)
+captura S014-E-150-sakura-dark-aba-2.png (1170x642)
+OK    150% · tema sakura-dark: Desenvolver de novo, Abrir código, Validar novamente e Fechar visíveis dentro da janela
+captura S014-E-150-midnight-dark-aba-0.png (1170x642)
+captura S014-E-150-midnight-dark-aba-1.png (1170x642)
+captura S014-E-150-midnight-dark-aba-2.png (1170x642)
+OK    150% · tema midnight-dark: Desenvolver de novo, Abrir código, Validar novamente e Fechar visíveis dentro da janela
+captura S014-E-150-porcelain-light-aba-0.png (1170x642)
+captura S014-E-150-porcelain-light-aba-1.png (1170x642)
+captura S014-E-150-porcelain-light-aba-2.png (1170x642)
+OK    150% · tema porcelain-light: Desenvolver de novo, Abrir código, Validar novamente e Fechar visíveis dentro da janela
+captura S014-E-150-sage-light-aba-0.png (1170x642)
+captura S014-E-150-sage-light-aba-1.png (1170x642)
+captura S014-E-150-sage-light-aba-2.png (1170x642)
+OK    150% · tema sage-light: Desenvolver de novo, Abrir código, Validar novamente e Fechar visíveis dentro da janela
+captura S014-E-150-validar-camadas.png (1280x666)
+OK    150%: aba Validação com as camadas (V4 e V5 verificadas, V6 não executada)
+RESULTADO: 6 verificações, 0 falha(s)

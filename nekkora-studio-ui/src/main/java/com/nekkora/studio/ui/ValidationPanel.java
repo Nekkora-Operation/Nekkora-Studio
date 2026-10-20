@@ -147,6 +147,50 @@ public final class ValidationPanel extends NekkoraPanel {
     /** STUDIO-014: estado de cada camada (V0–V6) numa linha; o texto completo vai na dica e na descrição acessível. */
     private final NekkoraText layers = new NekkoraText("", TextTone.SECONDARY);
     private List<Item> qualityItems = List.of();
+    private final Body body = new Body();
+
+    /** Conteúdo que acompanha a altura do painel enquanto cabe; abaixo do mínimo, rola (nada se sobrepõe). */
+    private final class Body extends NekkoraPanel implements javax.swing.Scrollable {
+        Body() {
+            super(new BorderLayout());
+            setSurface(Background.SURFACE);
+        }
+
+        @Override
+        public Dimension getPreferredScrollableViewportSize() {
+            return getPreferredSize();
+        }
+
+        @Override
+        public int getScrollableUnitIncrement(java.awt.Rectangle r, int orientation, int direction) {
+            return Scale.px(16);
+        }
+
+        @Override
+        public int getScrollableBlockIncrement(java.awt.Rectangle r, int orientation, int direction) {
+            return Math.max(Scale.px(16), r.height - Scale.px(32));
+        }
+
+        @Override
+        public boolean getScrollableTracksViewportWidth() {
+            return true;
+        }
+
+        @Override
+        public boolean getScrollableTracksViewportHeight() {
+            return getParent() instanceof javax.swing.JViewport v && v.getHeight() >= contentMinimum();
+        }
+
+        @Override
+        public Dimension getPreferredSize() {
+            Dimension d = super.getPreferredSize();
+            return new Dimension(d.width, Math.max(d.height, contentMinimum()));
+        }
+    }
+
+    private int contentMinimum() {
+        return head.getPreferredSize().height + foot.getPreferredSize().height + Scale.px(56);
+    }
     private final NekkoraIconButton again = new NekkoraIconButton(IconName.REFRESH, "Validar novamente (Ctrl+Shift+V)");
     private String subject = "";
     private List<Item> items = List.of();
@@ -189,7 +233,7 @@ public final class ValidationPanel extends NekkoraPanel {
         filterRow.add(filter);
         filterRow.addGlue();
         head.add(filterRow);
-        add(head, BorderLayout.NORTH);
+        body.add(head, BorderLayout.NORTH);
 
         list.withLabel(i -> i.structural() ? i.finding().severity().symbol() + "  " + i.finding().severity().label() + " · " + i.place()
                         : i.issue().kind().label() + " · " + i.place())
@@ -215,7 +259,7 @@ public final class ValidationPanel extends NekkoraPanel {
         middle.add(new NekkoraScrollPane(list), BorderLayout.CENTER);
         empty.setVisible(false);
         middle.add(empty, BorderLayout.NORTH);
-        add(middle, BorderLayout.CENTER);
+        body.add(middle, BorderLayout.CENTER);
 
         guidance.getAccessibleContext().setAccessibleName("Como corrigir");
         foot.add(guidance);
@@ -236,7 +280,11 @@ public final class ValidationPanel extends NekkoraPanel {
         buttons.add(resolve);
         buttons.addGlue();
         foot.add(buttons);
-        add(foot, BorderLayout.SOUTH);
+        body.add(foot, BorderLayout.SOUTH);
+        // STUDIO-014: numa área baixa (150%, janela pequena) o painel ROLA inteiro em vez de sobrepor cabeçalho e rodapé
+        NekkoraScrollPane outer = new NekkoraScrollPane(body); // o próprio corpo decide quando rolar (Scrollable)
+        outer.setHorizontalScrollBarPolicy(javax.swing.ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+        add(outer, BorderLayout.CENTER);
 
         getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).put(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), "validation.close");
         getActionMap().put("validation.close", new javax.swing.AbstractAction() {
@@ -341,7 +389,7 @@ public final class ValidationPanel extends NekkoraPanel {
         List<String> shortLine = new java.util.ArrayList<>();
         List<String> full = new java.util.ArrayList<>();
         for (com.nekkora.studio.ai.quality.QualityReport.LayerResult r : results) {
-            shortLine.add(r.state().symbol() + " " + r.layer().code() + " " + r.layer().label());
+            shortLine.add(r.layer().code() + " " + r.state().symbol()); // compacto: cabe na coluna estreita; o detalhe vai na dica
             full.add(r.line());
         }
         layers.setText("Camadas" + (note == null || note.isBlank() ? "" : " (" + note + ")") + ": " + String.join(" · ", shortLine));

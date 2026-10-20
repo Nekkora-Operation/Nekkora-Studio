@@ -1,0 +1,126 @@
+Tela: java.awt.Rectangle[x=0,y=0,width=1920,height=1032] · java 21.0.12
+Operador: Claude como AGENTE DE TESTE (TEST_AGENT; nenhuma confirmação humana) · ator do Studio: TEST_AGENT
+Laboratório: http://127.0.0.1:18765/lab/studio014/portal.html (dados 100% fictícios; oráculo do servidor /api/studio009/estado)
+Python de verificação do Studio (NEKKORA_PYTHON): definido
+Native Host instalado pelo script oficial (install-host.ps1)
+Chrome for Testing: 155.0.8059.39
+  abas vistas pela extensão: [{"u":null,"p":null,"s":"complete"},{"u":"http://127.0.0.1:18765/lab/studio014/portal.html","p":null,"s":"complete"},{"u":"chrome-extension://dceigcmhbihcigneokmpmbocdclkhcaj/src/ui/harness.html","p":null,"s":"complete"}]
+OK    Conexão autenticada Studio ⇄ host ⇄ extensão
+Oráculo do laboratório zerado
+  etapas: [FILL, FILL, CLICK] · [FILL, CLICK, UNKNOWN, CLICK]
+OK    A: Acesso = preencher, preencher, clicar; Consulta = preencher, clicar, interação (área do resultado), clicar
+OK    A: nenhum valor digitado no modelo (usuário, senha e código ficam fora)
+OK    A: a área do resultado vira etapa Observar com o alvo gravado
+OK    A: projeto salvo (.nekkora)
+  abas do debug: [Entrar · Laboratório local]
+  debug portal etapa 1 (FILL): Proposto · verificado tecnicamente · RESOLVED
+  debug portal etapa 2 (FILL): Proposto · verificado tecnicamente · RESOLVED
+  debug portal etapa 3 (CLICK): Proposto · verificado tecnicamente · RESOLVED
+  abas do debug: [Consulta de registro · Laboratório local]
+  debug consulta etapa 4 (FILL): Proposto · verificado tecnicamente · RESOLVED
+  debug consulta etapa 5 (CLICK): Proposto · verificado tecnicamente · RESOLVED
+  debug consulta etapa 6 (OBSERVE): Requer revisão · RESOLVED
+  debug consulta etapa 7 (CLICK): Proposto · verificado tecnicamente · RESOLVED
+OK    A: todas as etapas com decisão CONFIRMED no debug guiado (TEST_AGENT)
+  salvar: o Studio pede para atualizar o formato do projeto (decisões de alvo) — Atualizar e salvar
+  PDD revisado (TEST_AGENT): pendências [Sem imagem: o PDF dirá "Imagem indisponível".] · pode exportar true
+OK    PDD: textos revisados; sem pendência que bloqueie ([Acesso, Consulta])
+captura S014-A-01-desenvolver-pergunta-endereco.png (1164x791)
+  fases: ✓ Analisando projeto   × Verificando PDD   — Organizando arquitetura e variáveis   — Validando modelo   — Gerando Python   — Validando saída
+  pendências: [HELP_REQUIRED:SPEC_START_URL_UNKNOWN]
+OK    A: um clique já analisa (sem formulário nem *.codegen.json); a única pergunta é o endereço inicial (mascarado pela privacidade)
+OK    A: nenhum *.codegen.json pedido ou criado ao lado do projeto
+OK    A: endereço fora do modelo gravado é recusado (consulta pode carregar dados)
+captura S014-A-01b-endereco-recusado.png (760x464)
+captura S014-A-02-desenvolver-resultado.png (1164x791)
+  resultado:
+    ✓ 4 variável(is)/ligação(ões) derivada(s) registrada(s) no modelo — Ctrl+Z desfaz (Registrar variáveis derivadas)
+    ✓ PROJECT_ANALYZED
+    ✓ PDD_READY
+    ✓ PLAN_VALIDATED
+    ✓ CODE_GENERATED
+    ✓ CODE_VALIDATED
+    Pasta: C:\Users\nicol\AppData\Local\Temp\claude\C--Users-nicol-nekkora\39f2b4e1-a8ee-40ab-af9d-b002a2370095\scratchpad\s014\homolog\out\projeto\consulta-registro-python
+      gravado  README.md
+      gravado  config/execucao.toml
+      gravado  main.py
+      gravado  paginas.py
+      gravado  processo.py
+      gravado  requirements.txt
+      gravado  selectors.json
+      gravado  manifest.json
+    ✓ Compilação: sem problema (80 ms)
+    ✓ Importação: sem problema (249 ms)
+    ✓ ruff check: sem problema (99 ms)
+    ✓ ruff format: sem problema (91 ms)
+    ✓ mypy estrito: sem problema (1232 ms)
+    ✓ Testes de contrato: sem problema (262 ms)
+    Ambiente: Python 3.12.10, nekkora_rpa 0.2.0, ruff 0.17.1, mypy 2.4.0
+    — Execução real: não executada (o Studio não age no sistema-alvo; rode só em ambiente autorizado).
+
+OK    A: CODE_GENERATED pelo gerador oficial em <projeto>-python/
+OK    A: CODE_VALIDATED — compilação, importação, ruff, ruff format, mypy estrito e testes de contrato REAIS sem problema
+OK    A: variáveis derivadas registradas (desfazível) — entrada, saída e 2 credenciais, sem constantes
+captura S014-A-03-o-que-vou-utilizar.png (1164x791)
+captura S014-A-03b-desenvolver-1366x768.png (1164x679)
+OK    UX: em 1366×768 os botões Desenvolver, Abrir código, Validar novamente e Fechar ficam visíveis dentro da janela
+  o que vou utilizar: [RpaProcess, Engine, SingleInputProvider, TransactionItem, ProcessResult, load_config, BasePage, JsonDirectoryResultSink, Actions.fill, Actions.click, Actions.read_text, EnvSecretProvider, BusinessRuleRejected]
+OK    A: 'O que vou utilizar' vem do catálogo real (import, arquivo e linha do pacote instalado)
+OK    A: código gerado sem os valores digitados e sem localizador posicional
+OK    A: StepId de cada etapa no código
+captura S014-A-04-validar-camadas.png (1920x1000)
+  camadas: ! V0 Modelo: avaliação parcial · 0 bloqueio(s), 4 aviso(s) · regras nekkora-validation-rules/1.1.0; ✓ V1 PDD: PDD_READY · 7 de 7 etapas cobertas; ✓ V2 Capacidades: 13 capacidade(s) do nekkora_rpa 0.2.0; ! V3 Plano: Execução única (sem planilha) · 4 variável(is) · 2 Page(s); ✓ V4 Código Python: 5 de 5 verificação(ões) sem problema · Python 3.12.10, ruff 0.17.1, mypy 2.4.0, nekkora_rpa 0.2.0; ✓ V5 Testes: 7 teste(s) de contrato, 1 de 1 verificação(ões) sem problema · nekkora_rpa 0.2.0; — V6 Execução real: não executada pelo Studio (nenhuma ação no sistema-alvo)
+OK    A: Validar automação — V1 PDD_READY, V4 e V5 com as ferramentas reais, V6 'não executada pelo Studio'
+OK    A: vocabulário honesto (nada de aprovado, garantido, pronto para produção, testado em execução)
+  oráculo antes: 2 consulta(s) (depois do debug: 2)
+  python main.py → código de saída 0
+  execução (resumo do processo): {"execution_id": "ex-a032a00a2b154ffbaa88", "status": "COMPLETED", "stop_code": null, "stop_detail": null, "counts": {"SUCCEEDED": 1}}
+  oráculo depois: 3 consulta(s); última: o código da entrada
+OK    A: EXECUÇÃO no laboratório — o oráculo do SERVIDOR registrou exatamente 1 consulta nova, com o código da entrada
+OK    A: o resultado lido pelo processo é o que o oráculo responde para o registro (situação SUSPENSO)
+OK    A: eventos do processo sem usuário, senha, código ou resultado
+captura S014-C1-01-pdd-desatualizado.png (1164x679)
+OK    C1: modelo mudou → PDD_OUTDATED bloqueia em Verificando PDD; nenhum arquivo muda
+  PDD revisado (TEST_AGENT): pendências [Sem imagem: o PDF dirá "Imagem indisponível".] · pode exportar true
+OK    PDD: textos revisados; sem pendência que bloqueie ([Acesso, Consulta de registro])
+OK    C1: depois de atualizar o PDD, a análise retoma e o código é regenerado na revisão nova
+OK    C2: o botão "Calcular" foi gravado com o rótulo (de interface, mas fora do vocabulário de efeitos)
+  abas do debug: [Consulta de registro · Laboratório local]
+  debug processar etapa 1 (FILL): Proposto · verificado tecnicamente · RESOLVED
+  debug processar etapa 2 (CLICK): Proposto · verificado tecnicamente · RESOLVED
+  debug processar etapa 3 (CLICK): Proposto · verificado tecnicamente · RESOLVED
+  salvar: o Studio pede para atualizar o formato do projeto (decisões de alvo) — Atualizar e salvar
+  PDD revisado (TEST_AGENT): pendências [Sem imagem: o PDF dirá "Imagem indisponível".] · pode exportar true
+OK    PDD: textos revisados; sem pendência que bloqueie ([Processamento])
+  pendências: [HELP_REQUIRED:SPEC_EFFECT_UNKNOWN, HELP_REQUIRED:SPEC_CONCLUSION_MISSING, HELP_REQUIRED:SPEC_START_URL_UNKNOWN]
+OK    C2: perguntas objetivas por etapa — efeito do clique sem rótulo, conclusão e endereço inicial; nenhum arquivo
+captura S014-C2-01-pergunta-efeito.png (1164x679)
+captura S014-D-01-previa-do-envio.png (760x511)
+OK    D: a prévia mostra o que vai e o que NÃO vai (sem URL, valores, credenciais)
+OK    D: recusar o envio não chama o provedor
+  a prévia não abriu nesta tentativa; de novo
+captura S014-D-02-proposta-da-ia-mock.png (1164x679)
+  propostas: [IA propõe: efeito externo (grava/envia)] · Cada proposta precisa de "Revisar e aplicar". Recusadas pelo verificador: 1. Consumo: 0 + 0 tokens.
+OK    D: provedor MOCK chamado uma vez; as propostas passam pelo verificador (StepId inventado recusado)
+OK    D: proposta aceita vira decisão da especificação com ator e base PROPOSAL_ACCEPTED
+captura S014-C2-02-gerado-apos-respostas.png (1164x679)
+OK    C2: respondidas as perguntas, a análise retoma e gera — o envio sai uma vez, confirmado pela etapa seguinte
+  PDD revisado (TEST_AGENT): pendências [Sem imagem: o PDF dirá "Imagem indisponível".] · pode exportar true
+OK    PDD: textos revisados; sem pendência que bloqueie ([Menu])
+  pendências: [HELP_REQUIRED:SPEC_CONCLUSION_MISSING, HELP_REQUIRED:SPEC_START_URL_UNKNOWN, HELP_REQUIRED:TARGET_IN_FRAME_NOT_SUPPORTED]
+captura S014-C3-01-iframe-nao-suportado.png (1164x679)
+OK    C3: alvo em iframe → pedido de ajuda (rever a etapa ou estender o framework pelo guia); nenhum código
+  PDD revisado (TEST_AGENT): pendências [Sem imagem: o PDF dirá "Imagem indisponível".] · pode exportar true
+OK    PDD: textos revisados; sem pendência que bloqueie ([Preparação, Preenchimento por registro, Conclusão])
+  pergunta do caso tabular: SPEC_EFFECT_UNKNOWN → NONE
+  pergunta do caso tabular: SPEC_POSTCONDITION_MISSING → FIRST_FIELD_REPLACED
+captura S014-B-01-tabular-gerado.png (1164x679)
+OK    B: projeto da E2E-001 com a configuração DECLARADA → lote tabular pelo gerador STUDIO-011
+captura S014-B-02-gerador-avancado.png (760x591)
+OK    B: o gerador avançado (configuração manual, menu Avançado) continua funcionando
+OK    B: mesmos bytes do gerador antigo em todos os arquivos
+  python g6_replica.py → código de saída 0
+  réplica: {"exit": 0, "resumo_engine": "{\"execution_id\": \"ex-175e3bce353d4d9d8ac9\", \"status\": \"COMPLETED\", \"stop_code\": null, \"stop_detail\": null, \"counts\": {\"SUCCEEDED\": 10}}", "oraculo": {"inicios": 1, "submissoes": 10, "rodadas_em_ordem": true, "todas_corretas": true}, "placar_lido_pelo_codigo_gerado": {"ed12c86a-ac06-431b-9e87-1e5216f01f11": "Your success rate is 100% ( 70 out of 70 fields) in 4158 milliseconds"}}
+OK    B: código tabular gerado roda na RÉPLICA local e o oráculo DELA confere (1 início, 10 submissões em ordem, valores corretos)
+OK    privacidade: log da homologação sem usuário, senha ou código
+RESULTADO: 41 verificações, 0 falha(s)

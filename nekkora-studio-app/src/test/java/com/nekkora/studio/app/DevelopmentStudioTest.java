@@ -239,6 +239,9 @@ class DevelopmentStudioTest {
         assertTrue(Files.isRegularFile(dir.resolve("consulta-python/paginas.py")), model().pending().toString());
         String pages = Files.readString(dir.resolve("consulta-python/paginas.py"));
         assertTrue(pages.contains("postcondition=lambda: a.exists(\"processo.consulta.resultado_da_consulta\")"), "envio confirmado pela etapa seguinte");
+        String send = pages.substring(pages.indexOf("step_id=\"" + c.steps().get("consultar").value() + "\""));
+        send = send.substring(0, send.indexOf("# etapa"));
+        assertFalse(send.contains("idempotent=True"), "envio com efeito externo sai UMA vez (não idempotente): " + send);
         FunctionalSpec spec = studio.development().store().spec(c.a().id());
         assertEquals(FunctionalSpec.Actor.DEVELOPER, spec.decision(FunctionalSpec.Field.EFFECT, c.steps().get("consultar")).orElseThrow().actor());
     }
@@ -251,8 +254,8 @@ class DevelopmentStudioTest {
         Edt.run(() -> studio.view().actions().get(com.nekkora.studio.app.ui.StudioActions.VALIDATE).actionPerformed(new java.awt.event.ActionEvent(this, 0, "v")));
         idle();
         String layers = Edt.call(() -> studio.view().validationPanel().layersText().getText());
-        assertTrue(layers.contains("× V1 PDD"), layers);
-        assertTrue(layers.contains("— V4 Código Python") && layers.contains("— V6 Execução real"), layers);
+        assertTrue(layers.contains("V1 ×"), layers);
+        assertTrue(layers.contains("V4 —") && layers.contains("V6 —"), layers);
         String full = Edt.call(() -> studio.view().validationPanel().layersText().getAccessibleContext().getAccessibleDescription());
         assertTrue(full.contains("V6 Execução real: não executada pelo Studio"), full);
         assertFalse(full.toLowerCase().contains("aprovad") || full.toLowerCase().contains("garantid") || full.toLowerCase().contains("produção"), full);

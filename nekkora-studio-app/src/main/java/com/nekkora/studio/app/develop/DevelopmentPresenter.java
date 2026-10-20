@@ -370,9 +370,13 @@ public final class DevelopmentPresenter implements DevelopmentPanel.Actions {
             running = false;
             worker.submit(() -> saveGate(run));
             boolean pdd = run.stoppedAt() == GenerationOrchestrator.Phase.PDD;
+            List<QualityIssue> shown = new ArrayList<>(run.issues());
+            if (pdd) { // o código espera o PDD, mas o diagnóstico continua: capacidades (V2) já aparecem
+                shown.addAll(com.nekkora.studio.ai.capability.CapabilityCheck.check(a, ProjectContext.of(a, draft), catalog, tabular).issues());
+            }
             render(a, pdd ? "PDD não está pronto: nenhum código foi gerado" : "Nenhum código foi gerado",
                     pdd ? "Resolva as pendências do PDD (aba Pendências). As análises que não dependem dele continuam disponíveis em Validar automação."
-                            : "O plano ou o pré-voo do gerador encontrou bloqueios. Veja a aba Pendências.", com.nekkora.ui.core.Severity.WARNING, notes, run.issues());
+                            : "O plano ou o pré-voo do gerador encontrou bloqueios. Veja a aba Pendências.", com.nekkora.ui.core.Severity.WARNING, notes, shown);
             panel.focusPending();
             return;
         }

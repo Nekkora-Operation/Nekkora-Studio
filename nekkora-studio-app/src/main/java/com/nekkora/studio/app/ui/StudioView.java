@@ -566,7 +566,7 @@ public final class StudioView {
         java.awt.Container parent = split.getParent();
         int h = parent == null ? 0 : parent.getHeight();
         if (h > 0) {
-            split.setDividerLocation((int) Math.round(h * 0.55));
+            split.setDividerLocation(dividerFor(split, h));
             return;
         }
         split.addComponentListener(new java.awt.event.ComponentAdapter() {
@@ -574,9 +574,21 @@ public final class StudioView {
             public void componentResized(java.awt.event.ComponentEvent e) {
                 if (split.getHeight() <= 0) return;
                 split.removeComponentListener(this);
-                split.setDividerLocation((int) Math.round(split.getHeight() * 0.55));
+                split.setDividerLocation(dividerFor(split, split.getHeight()));
             }
         });
+    }
+
+    /**
+     * 55% para a área de trabalho, mas sem dar ao painel de baixo menos que a altura mínima dele (STUDIO-014: com a linha de
+     * camadas, numa janela baixa ou em 150% cabeçalho e rodapé da Validação se sobrepunham); a área de trabalho fica com
+     * pelo menos um terço.
+     */
+    static int dividerFor(com.nekkora.ui.container.NekkoraSplitPane split, int h) {
+        int preferred = (int) Math.round(h * 0.55);
+        java.awt.Component bottom = split.getBottomComponent();
+        int bottomMin = bottom == null ? 0 : bottom.getMinimumSize().height;
+        return Math.max(h / 3, Math.min(preferred, h - bottomMin - split.getDividerSize()));
     }
 
     /** Fecha o painel (o relatório continua guardado e pode ser reaberto validando de novo). */
