@@ -1,0 +1,65 @@
+{
+ "schema": "nekkora-ai-engine/framework-artifacts",
+ "version": "1.0.0",
+ "distribution": "nekkora-rpa",
+ "requiresPython": ">=3.12",
+ "versions": {
+  "0.2.0": {
+   "wheel": "nekkora_rpa-0.2.0-py3-none-any.whl",
+   "sha256": "29d2c29db4526b2cac87feb0b77f400df61991b735a04fe789c36ea4ed91f6ca",
+   "bytes": 79886,
+   "commit": "23cc6de32b9cf04643e2c7413e1d848cdd9a8ecc",
+   "catalog": "nekkora-rpa-0.2.0.json",
+   "schemas": [
+    "checkpoint-1.0.0.schema.json",
+    "checkpoint-1.1.0.schema.json",
+    "events-1.0.0.schema.json",
+    "events-1.1.0.schema.json",
+    "result-1.0.0.schema.json",
+    "result-1.1.0.schema.json",
+    "run-summary-1.0.0.schema.json",
+    "run-summary-1.1.0.schema.json",
+    "selectors-1.0.0.schema.json",
+    "selectors-1.1.0.schema.json"
+   ],
+   "source": "BUNDLED",
+   "index": null
+  },
+  "0.3.0": {
+   "wheel": "nekkora_rpa-0.3.0-py3-none-any.whl",
+   "sha256": "53acee25542af54d011c7e70a1fbeace29b72f3f138a90e7b41cc4114c7e791c",
+   "bytes": 95252,
+   "commit": "2f36a0acca5a4a84cbba91aa698f31e834b60a9b",
+   "catalog": "nekkora-rpa-0.3.0.json",
+   "schemas": [
+    "checkpoint-1.0.0.schema.json",
+    "checkpoint-1.1.0.schema.json",
+    "events-1.0.0.schema.json",
+    "events-1.1.0.schema.json",
+    "events-1.2.0.schema.json",
+    "result-1.0.0.schema.json",
+    "result-1.1.0.schema.json",
+    "run-summary-1.0.0.schema.json",
+    "run-summary-1.1.0.schema.json",
+    "run-summary-1.2.0.schema.json",
+    "selectors-1.0.0.schema.json",
+    "selectors-1.1.0.schema.json"
+   ],
+   "source": "BUNDLED",
+   "index": null
+  }
+ },
+ "dependencies": {
+  "lock": "dependencias.lock",
+  "sha256": "e67ab86e057cd251208433e5302d44250717f837cc49fd5b75d0284ed95d1555",
+  "index": "https://pypi.org/simple/"
+ },
+ "tools": {
+  "lock": "verificacao.lock",
+  "sha256": "b97c402cf8b996564d4794f6a102f06f8400e6e2e61e842b0e518a9e5f179dd6",
+  "index": "https://pypi.org/simple/",
+  "ruff": "0.17.1",
+  "mypy": "2.4.0"
+ },
+ "frameworkRepository": "Nekkora-Operation/Nekkora-RPA-Framework"
+}

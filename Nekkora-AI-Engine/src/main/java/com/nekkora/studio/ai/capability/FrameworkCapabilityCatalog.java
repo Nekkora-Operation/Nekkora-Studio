@@ -114,6 +114,21 @@ public final class FrameworkCapabilityCatalog {
         }
     }
 
+    /**
+     * PACKAGING-001: o catálogo da versão EXATA (o runtime 0.2.0 nunca é conferido contra o catálogo 0.3.0, nem o
+     * contrário). Vazio se o Studio não tem o catálogo dessa versão.
+     */
+    public static Optional<FrameworkCapabilityCatalog> forVersion(String version) {
+        if (version == null || !version.matches("\\d+\\.\\d+\\.\\d+")) return Optional.empty();
+        try (InputStream in = FrameworkCapabilityCatalog.class.getResourceAsStream("/nekkora/ai/catalog/nekkora-rpa-" + version + ".json")) {
+            if (in == null) return Optional.empty();
+            FrameworkCapabilityCatalog c = parse(new String(in.readAllBytes(), StandardCharsets.UTF_8));
+            return version.equals(c.version()) ? Optional.of(c) : Optional.empty();
+        } catch (IOException e) {
+            return Optional.empty();
+        }
+    }
+
     @SuppressWarnings("unchecked")
     public static FrameworkCapabilityCatalog parse(String json) {
         Map<String, Object> m = Json.parseObject(json);
