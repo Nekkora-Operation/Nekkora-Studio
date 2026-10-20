@@ -1,0 +1,536 @@
+{
+  "schema": "nekkora-ai-engine/framework-capabilities",
+  "version": "1.0.0",
+  "framework": {
+    "name": "nekkora-rpa",
+    "version": "0.2.0",
+    "fingerprint": "sha256:7d79edc97544f056528d05a097a55a8045bb3f6b14f608bb740e07bf8e730013",
+    "repository": "Nekkora-Operation/Nekkora-RPA-Framework",
+    "commit": "ac8133cec6a037c4aa632ea7e22b4ade9dcd4609"
+  },
+  "extending": {
+    "file": "docs/extending.md",
+    "section": "## Nova operação (Lib)"
+  },
+  "capabilities": [
+    {
+      "id": "actions.navigate",
+      "name": "Actions.navigate",
+      "group": "Libs (Actions)",
+      "import": "from nekkora_rpa import Actions",
+      "signature": "(url: 'str', *, timeout_ms: 'int | None' = None, step_id: 'str | None' = None, wait_until: 'WaitUntil' = 'load', idempotent: 'bool' = True) -> 'None'",
+      "summary": "Navega para ``url`` (absoluta ou relativa à ``base_url``). O destino é conferido ANTES de qualquer requisição; redirecionamento para fora da allowlist é bloqueado na rede e vira ``SECURITY_POLICY_BLOCKED``. GET é tratado como idempotente; ``idempotent=False`` faz falha depois do despacho virar ``OUTCOME_UNKNOWN``. A URL nunca é registrada (pode conter dados).",
+      "purpose": "Abrir um endereço permitido pela política de origens.",
+      "effect": "NAVIGATION",
+      "limitations": [
+        "Só origens da allowlist do ambiente (lab = loopback; benchmark = lista fechada).",
+        "A URL nunca é registrada."
+      ],
+      "source": {
+        "file": "nekkora_rpa/libs/actions.py",
+        "line": 588
+      },
+      "docs": {
+        "file": "docs/contracts.md",
+        "section": "## 2. Ações — `nekkora_rpa.Actions`"
+      }
+    },
+    {
+      "id": "actions.fill",
+      "name": "Actions.fill",
+      "group": "Libs (Actions)",
+      "import": "from nekkora_rpa import Actions",
+      "signature": "(key: 'str', value: 'str | Secret', *, timeout_ms: 'int | None' = None, step_id: 'str | None' = None, verify: 'bool' = True) -> 'None'",
+      "summary": "Preenche o campo verificado. Idempotente (pode ser repetido pela política). Com ``verify``, confere que o campo ficou com o valor pedido (a comparação acontece aqui; o valor nunca é registrado).",
+      "purpose": "Preencher um campo identificado por chave do registro de alvos (texto ou segredo).",
+      "effect": "NONE",
+      "limitations": [
+        "O valor nunca é registrado.",
+        "Segredos só como Secret (provedor de segredos)."
+      ],
+      "source": {
+        "file": "nekkora_rpa/libs/actions.py",
+        "line": 361
+      },
+      "docs": {
+        "file": "docs/contracts.md",
+        "section": "## 2. Ações — `nekkora_rpa.Actions`"
+      }
+    },
+    {
+      "id": "actions.click",
+      "name": "Actions.click",
+      "group": "Libs (Actions)",
+      "import": "from nekkora_rpa import Actions",
+      "signature": "(key: 'str', *, timeout_ms: 'int | None' = None, mode: 'str' = 'pointer', click_count: 'int' = 1, step_id: 'str | None' = None, postcondition: 'Postcondition | None' = None, idempotent: 'bool' = False) -> 'None'",
+      "summary": "Clique do Playwright na página (``mode=\"pointer\"``; não é o mouse do sistema operacional).",
+      "purpose": "Clicar num alvo por chave, com pós-condição objetiva quando o clique tem efeito.",
+      "effect": "MAY_AFFECT_TARGET",
+      "limitations": [
+        "Não idempotente por padrão: falha depois do despacho vira OUTCOME_UNKNOWN, sem repetição.",
+        "Sem force, sem clique por JavaScript, sem posição."
+      ],
+      "source": {
+        "file": "nekkora_rpa/libs/actions.py",
+        "line": 250
+      },
+      "docs": {
+        "file": "docs/contracts.md",
+        "section": "## 2. Ações — `nekkora_rpa.Actions`"
+      }
+    },
+    {
+      "id": "actions.wait_visible",
+      "name": "Actions.wait_visible",
+      "group": "Libs (Actions)",
+      "import": "from nekkora_rpa import Actions",
+      "signature": "(key: 'str', *, timeout_ms: 'int | None' = None, step_id: 'str | None' = None) -> 'None'",
+      "summary": "Espera o alvo (com identidade verificada) ficar visível.",
+      "purpose": "Esperar o alvo ficar visível (espera nativa, com prazo).",
+      "effect": "NONE",
+      "limitations": [],
+      "source": {
+        "file": "nekkora_rpa/libs/actions.py",
+        "line": 406
+      },
+      "docs": {
+        "file": "docs/contracts.md",
+        "section": "## 2. Ações — `nekkora_rpa.Actions`"
+      }
+    },
+    {
+      "id": "actions.wait_hidden",
+      "name": "Actions.wait_hidden",
+      "group": "Libs (Actions)",
+      "import": "from nekkora_rpa import Actions",
+      "signature": "(key: 'str', *, timeout_ms: 'int | None' = None, step_id: 'str | None' = None) -> 'None'",
+      "summary": "Espera não haver nenhum elemento VISÍVEL para nenhum candidato do alvo (ausência não exige identidade).",
+      "purpose": "Esperar o alvo sumir (pós-condição de formulário enviado).",
+      "effect": "NONE",
+      "limitations": [],
+      "source": {
+        "file": "nekkora_rpa/libs/actions.py",
+        "line": 460
+      },
+      "docs": {
+        "file": "docs/contracts.md",
+        "section": "## 2. Ações — `nekkora_rpa.Actions`"
+      }
+    },
+    {
+      "id": "actions.read_text",
+      "name": "Actions.read_text",
+      "group": "Libs (Actions)",
+      "import": "from nekkora_rpa import Actions",
+      "signature": "(key: 'str', *, timeout_ms: 'int | None' = None, step_id: 'str | None' = None) -> 'str'",
+      "summary": "Lê o texto (ou o valor, em campos) do alvo verificado. O retorno é do processo: nunca é registrado.",
+      "purpose": "Ler o texto do alvo verificado (resultado de consulta).",
+      "effect": "READ",
+      "limitations": [
+        "O texto lido é do processo e nunca é registrado."
+      ],
+      "source": {
+        "file": "nekkora_rpa/libs/actions.py",
+        "line": 567
+      },
+      "docs": {
+        "file": "docs/contracts.md",
+        "section": "## 2. Ações — `nekkora_rpa.Actions`"
+      }
+    },
+    {
+      "id": "actions.read_text_matching",
+      "name": "Actions.read_text_matching",
+      "group": "Libs (Actions)",
+      "import": "from nekkora_rpa import Actions",
+      "signature": "(pattern: 'str', *, timeout_ms: 'int | None' = None, step_id: 'str | None' = None) -> 'str'",
+      "summary": "Lê o texto do ÚNICO elemento cujo texto casa ``pattern`` — para observar uma mensagem que não tem rótulo nem identidade exportável (ex.: resultado de um processo). ``pattern`` é um CONTRATO DE CONTEÚDO declarado por quem configura o processo, não um seletor: precisa ser ancorado (``^...$``) e ter até 300 caracteres. Nenhum elemento → espera até o prazo (``TARGET_NOT_FOUND``); mais de um → ``TAR...",
+      "purpose": "Ler a única mensagem cujo texto casa um padrão ancorado declarado.",
+      "effect": "READ",
+      "limitations": [
+        "O padrão é contrato de conteúdo, não seletor (^...$, até 300 caracteres)."
+      ],
+      "source": {
+        "file": "nekkora_rpa/libs/actions.py",
+        "line": 524
+      },
+      "docs": {
+        "file": "docs/framework-002.md",
+        "section": "## 5. Ações novas"
+      }
+    },
+    {
+      "id": "actions.mark",
+      "name": "Actions.mark",
+      "group": "Libs (Actions)",
+      "import": "from nekkora_rpa import Actions",
+      "signature": "(key: 'str', *, step_id: 'str | None' = None) -> 'ElementMark'",
+      "summary": "Marca o nó ATUAL do alvo (identidade verificada) para depois saber se ele foi substituído — prova objetiva de que a página avançou (ex.: formulário re-renderizado depois de um envio). A marca é opaca e não é registrada.",
+      "purpose": "Marcar o nó atual de um alvo para provar depois que ele foi substituído.",
+      "effect": "NONE",
+      "limitations": [],
+      "source": {
+        "file": "nekkora_rpa/libs/actions.py",
+        "line": 435
+      },
+      "docs": {
+        "file": "docs/framework-002.md",
+        "section": "## 5. Ações novas"
+      }
+    },
+    {
+      "id": "actions.replaced",
+      "name": "Actions.replaced",
+      "group": "Libs (Actions)",
+      "import": "from nekkora_rpa import Actions",
+      "signature": "(mark: 'ElementMark') -> 'bool'",
+      "summary": "``True`` quando o nó marcado saiu do documento (foi substituído ou removido). Sem espera, sem eventos; próprio para ``postcondition``.",
+      "purpose": "Pós-condição: o nó marcado foi substituído (formulário recriado).",
+      "effect": "NONE",
+      "limitations": [],
+      "source": {
+        "file": "nekkora_rpa/libs/actions.py",
+        "line": 452
+      },
+      "docs": {
+        "file": "docs/framework-002.md",
+        "section": "## 5. Ações novas"
+      }
+    },
+    {
+      "id": "actions.exists",
+      "name": "Actions.exists",
+      "group": "Libs (Actions)",
+      "import": "from nekkora_rpa import Actions",
+      "signature": "(key: 'str', *, step_id: 'str | None' = None) -> 'bool'",
+      "summary": "Consulta sem espera: ``True`` só com exatamente um elemento de identidade verificada; ``False`` se não há nenhum. Ambiguidade e identidade divergente são ERROS (nunca \"existe\").",
+      "purpose": "Consultar se o alvo existe agora (pós-condição de navegação).",
+      "effect": "NONE",
+      "limitations": [],
+      "source": {
+        "file": "nekkora_rpa/libs/actions.py",
+        "line": 484
+      },
+      "docs": {
+        "file": "docs/contracts.md",
+        "section": "## 2. Ações — `nekkora_rpa.Actions`"
+      }
+    },
+    {
+      "id": "actions.download",
+      "name": "Actions.download",
+      "group": "Libs (Actions)",
+      "import": "from nekkora_rpa import Actions",
+      "signature": "(key: 'str', *, dest_dir: 'Path', file_name: 'str', allowed_extensions: 'tuple[str, ...]' = ('.xlsx', '.csv'), max_bytes: 'int' = 10485760, magic: 'bytes | None' = None, timeout_ms: 'int | None' = None, step_id: 'str | None' = None) -> 'DownloadedFile'",
+      "summary": "Clica no alvo ``key`` e recebe o download que ele dispara. Valida a origem do download, a extensão do nome de DESTINO (escolhido por quem chama, nunca o sugerido pelo site), o tamanho, a assinatura (``magic``) e grava de forma atômica em ``dest_dir`` sem sobrescrever. Devolve caminho, tamanho e SHA-256 (nunca registrados com o conteúdo).",
+      "purpose": "Baixar um arquivo por clique num alvo, com extensão, tamanho e assinatura conferidos.",
+      "effect": "LOCAL_FILES",
+      "limitations": [
+        "Só .xlsx/.csv por padrão; até 10 MiB."
+      ],
+      "source": {
+        "file": "nekkora_rpa/libs/actions.py",
+        "line": 635
+      },
+      "docs": {
+        "file": "docs/framework-002.md",
+        "section": "## 2. Download — `Actions.download`"
+      }
+    },
+    {
+      "id": "core.rpa_process",
+      "name": "RpaProcess",
+      "group": "Core",
+      "import": "from nekkora_rpa import RpaProcess",
+      "signature": "(/, *args, **kwargs)",
+      "summary": "Base de um processo. Sobrescreva ``process``; as demais fases são opcionais.",
+      "purpose": "Base do processo: INIT → PROCESS (por item) → END, com recover e reconcile.",
+      "effect": "NONE",
+      "limitations": [],
+      "source": {
+        "file": "nekkora_rpa/core/contracts.py",
+        "line": 189
+      },
+      "docs": {
+        "file": "docs/contracts.md",
+        "section": "## 5. Ciclo de vida — `Engine`, `RpaProcess`, `Runtime`"
+      }
+    },
+    {
+      "id": "core.engine",
+      "name": "Engine",
+      "group": "Core",
+      "import": "from nekkora_rpa import Engine",
+      "signature": "(process: 'RpaProcess', provider: 'InputProvider', sink: 'ResultSink', config: 'RuntimeConfig', *, secrets: 'SecretProvider | None' = None, registry: 'SelectorRegistry | None' = None, run_dir: 'Path | None' = None, checkpoint: 'CheckpointStore | None' = None, event_sinks: 'list[EventSink] | None' = None, console: 'bool' = False, cancel: 'CancelToken | None' = None, clock: 'Clock | None' = None, session_factory: 'Callable[[RuntimeConfig], BrowserSession] | None' = None, execution_id: 'str | None' = None) -> 'None'",
+      "summary": "",
+      "purpose": "Executa o processo: navegador, transações, checkpoint, eventos e resumo.",
+      "effect": "NONE",
+      "limitations": [
+        "Não promete exactly-once: desfecho desconhecido vai para revisão."
+      ],
+      "source": {
+        "file": "nekkora_rpa/core/engine.py",
+        "line": 138
+      },
+      "docs": {
+        "file": "docs/contracts.md",
+        "section": "## 5. Ciclo de vida — `Engine`, `RpaProcess`, `Runtime`"
+      }
+    },
+    {
+      "id": "core.single_input",
+      "name": "SingleInputProvider",
+      "group": "Dados",
+      "import": "from nekkora_rpa import SingleInputProvider",
+      "signature": "(item: 'TransactionItem') -> 'None'",
+      "summary": "Entrada única (processo sem lote).",
+      "purpose": "Entrada única: processo sem lote (uma execução).",
+      "effect": "NONE",
+      "limitations": [],
+      "source": {
+        "file": "nekkora_rpa/core/contracts.py",
+        "line": 119
+      },
+      "docs": {
+        "file": "docs/contracts.md",
+        "section": "## 5. Ciclo de vida — `Engine`, `RpaProcess`, `Runtime`"
+      }
+    },
+    {
+      "id": "core.transaction_item",
+      "name": "TransactionItem",
+      "group": "Dados",
+      "import": "from nekkora_rpa import TransactionItem",
+      "signature": "(reference: 'str', data: 'Mapping[str, object]' = <factory>) -> None",
+      "summary": "Um item de trabalho.",
+      "purpose": "Um item de trabalho (referência estável + dados, nunca registrados).",
+      "effect": "NONE",
+      "limitations": [],
+      "source": {
+        "file": "nekkora_rpa/core/contracts.py",
+        "line": 58
+      },
+      "docs": {
+        "file": "docs/contracts.md",
+        "section": "## 5. Ciclo de vida — `Engine`, `RpaProcess`, `Runtime`"
+      }
+    },
+    {
+      "id": "core.process_result",
+      "name": "ProcessResult",
+      "group": "Dados",
+      "import": "from nekkora_rpa import ProcessResult",
+      "signature": "(output: 'Mapping[str, object]' = <factory>) -> None",
+      "summary": "Saída de negócio de uma transação bem-sucedida, entregue ao ``ResultSink`` (nunca registrada).",
+      "purpose": "Saída de negócio da transação, entregue ao destino de resultados.",
+      "effect": "NONE",
+      "limitations": [],
+      "source": {
+        "file": "nekkora_rpa/core/contracts.py",
+        "line": 73
+      },
+      "docs": {
+        "file": "docs/contracts.md",
+        "section": "## 5. Ciclo de vida — `Engine`, `RpaProcess`, `Runtime`"
+      }
+    },
+    {
+      "id": "config.load_config",
+      "name": "load_config",
+      "group": "Core",
+      "import": "from nekkora_rpa import load_config",
+      "signature": "(path: 'Path | str', overrides: 'Mapping[str, object] | None' = None) -> 'RuntimeConfig'",
+      "summary": "",
+      "purpose": "Carregar a configuração TOML (ambiente, origens, prazos, navegador).",
+      "effect": "NONE",
+      "limitations": [
+        "Ambientes: lab (loopback) e benchmark (lista fechada). Não há ambiente de produção nesta versão."
+      ],
+      "source": {
+        "file": "nekkora_rpa/core/config.py",
+        "line": 161
+      },
+      "docs": {
+        "file": "docs/contracts.md",
+        "section": "## 7. Configuração — TOML"
+      }
+    },
+    {
+      "id": "security.env_secrets",
+      "name": "EnvSecretProvider",
+      "group": "Segurança",
+      "import": "from nekkora_rpa import EnvSecretProvider",
+      "signature": "(allowed: 'Iterable[str]', *, prefix: 'str' = 'NK_SECRET_', environ: 'Mapping[str, str] | None' = None)",
+      "summary": "Lê ``<prefix><NOME>`` do ambiente. Só nomes declarados em ``allowed`` podem ser pedidos.",
+      "purpose": "Segredos por variável de ambiente NK_SECRET_<NOME> (só os nomes declarados).",
+      "effect": "NONE",
+      "limitations": [
+        "Opção do laboratório; produção precisa de um provedor de cofre próprio."
+      ],
+      "source": {
+        "file": "nekkora_rpa/security/secrets.py",
+        "line": 56
+      },
+      "docs": {
+        "file": "docs/security.md",
+        "section": "## Credenciais"
+      }
+    },
+    {
+      "id": "data.json_result_sink",
+      "name": "JsonDirectoryResultSink",
+      "group": "Dados",
+      "import": "from nekkora_rpa.data import JsonDirectoryResultSink",
+      "signature": "(directory: 'Path | str') -> 'None'",
+      "summary": "",
+      "purpose": "Gravar o desfecho de cada item num arquivo JSON da pasta de saída.",
+      "effect": "LOCAL_FILES",
+      "limitations": [],
+      "source": {
+        "file": "nekkora_rpa/data.py",
+        "line": 60
+      },
+      "docs": {
+        "file": "docs/contracts.md",
+        "section": "## 5. Ciclo de vida — `Engine`, `RpaProcess`, `Runtime`"
+      }
+    },
+    {
+      "id": "pages.base_page",
+      "name": "BasePage",
+      "group": "Pages",
+      "import": "from nekkora_rpa.pages import BasePage",
+      "signature": "(actions: 'Actions') -> 'None'",
+      "summary": "",
+      "purpose": "Modelo de uma tela: intenções por chave relativa ao prefixo, sem seletores.",
+      "effect": "NONE",
+      "limitations": [],
+      "source": {
+        "file": "nekkora_rpa/pages/__init__.py",
+        "line": 13
+      },
+      "docs": {
+        "file": "docs/extending.md",
+        "section": "## Nova Page"
+      }
+    },
+    {
+      "id": "modules.login",
+      "name": "LoginModule",
+      "group": "Modules",
+      "import": "from nekkora_rpa.modules import LoginModule",
+      "signature": "(actions: 'Actions', keys: 'LoginKeys', *, step_prefix: 'str' = 'LOGIN') -> 'None'",
+      "summary": "Autenticação por formulário. Login é tratado como idempotente (não tem efeito de negócio), por isso o clique pode ser repetido pela política se falhar antes de confirmar. Credencial recusada → ``INVALID_CONFIGURATION`` (``login_rejected``): o lote para, em vez de insistir e bloquear a conta.",
+      "purpose": "Autenticação por formulário com pós-condição de sucesso.",
+      "effect": "NONE",
+      "limitations": [
+        "Usa StepIds próprios (LOGIN-01..03): o código gerado preserva o StepId de cada etapa gravada e não o usa."
+      ],
+      "source": {
+        "file": "nekkora_rpa/modules/__init__.py",
+        "line": 34
+      },
+      "docs": {
+        "file": "docs/extending.md",
+        "section": "## Novo Module"
+      }
+    },
+    {
+      "id": "tabular.input",
+      "name": "TabularInputProvider",
+      "group": "Dados",
+      "import": "from nekkora_rpa.tabular import TabularInputProvider",
+      "signature": "(data: 'TabularData') -> 'None'",
+      "summary": "Uma linha = um item. Referência estável para retomada: ``<sha256 do arquivo>:<número da linha>`` (o framework só registra o ``transaction_id`` pseudônimo derivado dela). Problemas de célula vão em ``data[PROBLEMS_KEY]``: o processo decide (tipicamente ``BusinessRuleRejected``).",
+      "purpose": "Uma transação por linha de planilha .xlsx/.csv (esquema de colunas declarado).",
+      "effect": "NONE",
+      "limitations": [
+        "Precisa do extra [excel] para .xlsx."
+      ],
+      "source": {
+        "file": "nekkora_rpa/tabular.py",
+        "line": 310
+      },
+      "docs": {
+        "file": "docs/framework-002.md",
+        "section": "## 1. Dados tabulares — `nekkora_rpa.tabular`"
+      }
+    },
+    {
+      "id": "tabular.deferred_input",
+      "name": "DeferredTabularInputProvider",
+      "group": "Dados",
+      "import": "from nekkora_rpa.tabular import DeferredTabularInputProvider",
+      "signature": "(source: 'Callable[[], Path | str | None]', schema: 'TabularSchema', limits: 'Limits | None' = None) -> 'None'",
+      "summary": "Lê o arquivo só no primeiro ``next_item`` (ex.: planilha baixada pelo próprio processo no INIT). ``source`` é chamado nesse momento e devolve o caminho; até lá, nada é lido.",
+      "purpose": "Planilha obtida durante o INIT (ex.: baixada pelo próprio processo).",
+      "effect": "NONE",
+      "limitations": [],
+      "source": {
+        "file": "nekkora_rpa/tabular.py",
+        "line": 332
+      },
+      "docs": {
+        "file": "docs/framework-002.md",
+        "section": "## 1. Dados tabulares — `nekkora_rpa.tabular`"
+      }
+    },
+    {
+      "id": "tabular.schema",
+      "name": "TabularSchema",
+      "group": "Dados",
+      "import": "from nekkora_rpa.tabular import TabularSchema",
+      "signature": "(columns: 'tuple[Column, ...]', sheet: 'str | None' = None, reject_extra_columns: 'bool' = False) -> None",
+      "summary": "TabularSchema(columns: 'tuple[Column, ...]', sheet: 'str | None' = None, reject_extra_columns: 'bool' = False)",
+      "purpose": "Esquema das colunas esperadas da planilha.",
+      "effect": "NONE",
+      "limitations": [],
+      "source": {
+        "file": "nekkora_rpa/tabular.py",
+        "line": 60
+      },
+      "docs": {
+        "file": "docs/framework-002.md",
+        "section": "## 1. Dados tabulares — `nekkora_rpa.tabular`"
+      }
+    },
+    {
+      "id": "tabular.column",
+      "name": "Column",
+      "group": "Dados",
+      "import": "from nekkora_rpa.tabular import Column",
+      "signature": "(header: 'str', required: 'bool' = True, kind: \"Literal['text']\" = 'text', integer_as_text: 'bool' = False) -> None",
+      "summary": "Column(header: 'str', required: 'bool' = True, kind: \"Literal['text']\" = 'text', integer_as_text: 'bool' = False)",
+      "purpose": "Uma coluna do esquema (cabeçalho exato).",
+      "effect": "NONE",
+      "limitations": [],
+      "source": {
+        "file": "nekkora_rpa/tabular.py",
+        "line": 50
+      },
+      "docs": {
+        "file": "docs/framework-002.md",
+        "section": "## 1. Dados tabulares — `nekkora_rpa.tabular`"
+      }
+    },
+    {
+      "id": "errors.business_rule_rejected",
+      "name": "BusinessRuleRejected",
+      "group": "Erros",
+      "import": "from nekkora_rpa.errors import BusinessRuleRejected",
+      "signature": "(reason: 'str', *, step_id: 'str | None' = None) -> 'None'",
+      "summary": "Lançada pelo processo quando uma regra de negócio recusa o item. ``reason`` deve ser um código do processo (ex.: ``CLIENTE_INEXISTENTE``), nunca um valor do item.",
+      "purpose": "Recusar um item por regra de negócio antes de qualquer ação.",
+      "effect": "NONE",
+      "limitations": [],
+      "source": {
+        "file": "nekkora_rpa/errors/exceptions.py",
+        "line": 89
+      },
+      "docs": {
+        "file": "docs/contracts.md",
+        "section": "## 3. Erros — `nekkora_rpa.errors`"
+      }
+    }
+  ]
+}

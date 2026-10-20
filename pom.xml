@@ -24,6 +24,7 @@
     <module>nekkora-studio-guided</module>
     <module>nekkora-studio-pdd</module>
     <module>nekkora-studio-codegen</module>
+    <module>Nekkora-AI-Engine</module>
     <module>nekkora-studio-ui</module>
     <module>nekkora-studio-app</module>
   </modules>
@@ -91,6 +92,11 @@
       <dependency>
         <groupId>com.nekkora</groupId>
         <artifactId>nekkora-studio-codegen</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.nekkora</groupId>
+        <artifactId>nekkora-studio-ai-engine</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>

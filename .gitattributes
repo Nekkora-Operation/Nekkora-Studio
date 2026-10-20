@@ -7,3 +7,7 @@ mvnw text eol=lf
 *.nekkora binary
 # evidências da E2E-001: byte a byte (o manifesto do código gerado confere SHA-256 de cada arquivo)
 docs/e2e-001/evidence/** -text
+# STUDIO-014: o Prompt-Mestre e o catálogo de capacidades são conferidos por SHA-256 (byte a byte em qualquer checkout)
+Nekkora-AI-Engine/NEKKORA-PROMPT-MESTRE-*.md -text
+Nekkora-AI-Engine/prompts.json -text
+Nekkora-AI-Engine/catalog/*.json -text

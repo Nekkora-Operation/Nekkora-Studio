@@ -1,0 +1,14 @@
+{
+  "schema": "nekkora-ai-engine/prompts",
+  "version": "1.0.0",
+  "current": "v003",
+  "prompts": [
+    {
+      "id": "v003",
+      "version": "0.3",
+      "title": "Prompt-Mestre de desenvolvimento RPA — PDD-first, geração sem questionário",
+      "file": "NEKKORA-PROMPT-MESTRE-DESENVOLVIMENTO-RPA-v003.md",
+      "sha256": "sha256:b13c12e441b5c36de4fd58f0dea01b064bbf4ae626e383cd8ccd14c2a523cf4c"
+    }
+  ]
+}
