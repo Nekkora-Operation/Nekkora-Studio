@@ -1,2 +1,2 @@
 oráculo antes=2 depois=3 último código confere=true
-{"execution_id": "ex-a032a00a2b154ffbaa88", "status": "COMPLETED", "stop_code": null, "stop_detail": null, "counts": {"SUCCEEDED": 1}}
+{"execution_id": "ex-68cb798e012541e6a146", "status": "COMPLETED", "stop_code": null, "stop_detail": null, "counts": {"SUCCEEDED": 1}}

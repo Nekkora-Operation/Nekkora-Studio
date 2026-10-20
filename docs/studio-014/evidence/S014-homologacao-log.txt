@@ -49,12 +49,12 @@ captura S014-A-02-desenvolver-resultado.png (1164x791)
       gravado  requirements.txt
       gravado  selectors.json
       gravado  manifest.json
-    ✓ Compilação: sem problema (80 ms)
-    ✓ Importação: sem problema (249 ms)
-    ✓ ruff check: sem problema (99 ms)
-    ✓ ruff format: sem problema (91 ms)
-    ✓ mypy estrito: sem problema (1232 ms)
-    ✓ Testes de contrato: sem problema (262 ms)
+    ✓ Compilação: sem problema (79 ms)
+    ✓ Importação: sem problema (271 ms)
+    ✓ ruff check: sem problema (92 ms)
+    ✓ ruff format: sem problema (95 ms)
+    ✓ mypy estrito: sem problema (1261 ms)
+    ✓ Testes de contrato: sem problema (269 ms)
     Ambiente: Python 3.12.10, nekkora_rpa 0.2.0, ruff 0.17.1, mypy 2.4.0
     — Execução real: não executada (o Studio não age no sistema-alvo; rode só em ambiente autorizado).
 
@@ -74,7 +74,7 @@ OK    A: Validar automação — V1 PDD_READY, V4 e V5 com as ferramentas reais,
 OK    A: vocabulário honesto (nada de aprovado, garantido, pronto para produção, testado em execução)
   oráculo antes: 2 consulta(s) (depois do debug: 2)
   python main.py → código de saída 0
-  execução (resumo do processo): {"execution_id": "ex-a032a00a2b154ffbaa88", "status": "COMPLETED", "stop_code": null, "stop_detail": null, "counts": {"SUCCEEDED": 1}}
+  execução (resumo do processo): {"execution_id": "ex-68cb798e012541e6a146", "status": "COMPLETED", "stop_code": null, "stop_detail": null, "counts": {"SUCCEEDED": 1}}
   oráculo depois: 3 consulta(s); última: o código da entrada
 OK    A: EXECUÇÃO no laboratório — o oráculo do SERVIDOR registrou exatamente 1 consulta nova, com o código da entrada
 OK    A: o resultado lido pelo processo é o que o oráculo responde para o registro (situação SUSPENSO)
@@ -120,7 +120,7 @@ captura S014-B-02-gerador-avancado.png (760x591)
 OK    B: o gerador avançado (configuração manual, menu Avançado) continua funcionando
 OK    B: mesmos bytes do gerador antigo em todos os arquivos
   python g6_replica.py → código de saída 0
-  réplica: {"exit": 0, "resumo_engine": "{\"execution_id\": \"ex-175e3bce353d4d9d8ac9\", \"status\": \"COMPLETED\", \"stop_code\": null, \"stop_detail\": null, \"counts\": {\"SUCCEEDED\": 10}}", "oraculo": {"inicios": 1, "submissoes": 10, "rodadas_em_ordem": true, "todas_corretas": true}, "placar_lido_pelo_codigo_gerado": {"ed12c86a-ac06-431b-9e87-1e5216f01f11": "Your success rate is 100% ( 70 out of 70 fields) in 4158 milliseconds"}}
+  réplica: {"exit": 0, "resumo_engine": "{\"execution_id\": \"ex-90a156519097426795a5\", \"status\": \"COMPLETED\", \"stop_code\": null, \"stop_detail\": null, \"counts\": {\"SUCCEEDED\": 10}}", "oraculo": {"inicios": 1, "submissoes": 10, "rodadas_em_ordem": true, "todas_corretas": true}, "placar_lido_pelo_codigo_gerado": {"ed12c86a-ac06-431b-9e87-1e5216f01f11": "Your success rate is 100% ( 70 out of 70 fields) in 4095 milliseconds"}}
 OK    B: código tabular gerado roda na RÉPLICA local e o oráculo DELA confere (1 início, 10 submissões em ordem, valores corretos)
 OK    privacidade: log da homologação sem usuário, senha ou código
 RESULTADO: 41 verificações, 0 falha(s)

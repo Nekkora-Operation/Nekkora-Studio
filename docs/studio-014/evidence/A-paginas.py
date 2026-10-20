@@ -17,14 +17,14 @@ class TelaAcesso(BasePage):
 
     def acesso(self, segredos: SecretProvider) -> None:
         a = self.act
-        # etapa b086b59e-409a-4ac1-b697-9b4392cbe01d · FILL
-        a.fill(self.k("usuario"), segredos.get("credencial.usuario"), step_id="b086b59e-409a-4ac1-b697-9b4392cbe01d")
-        # etapa 1d6eaf90-6ee5-4fbf-b9fe-c00ed4e07956 · FILL
-        a.fill(self.k("senha"), segredos.get("credencial.senha"), step_id="1d6eaf90-6ee5-4fbf-b9fe-c00ed4e07956")
-        # etapa 3efde5a8-cc5c-4efc-8897-fb99da765696 · CLICK
+        # etapa 7e08f637-da9c-4ad7-ba18-2bc054c611af · FILL
+        a.fill(self.k("usuario"), segredos.get("credencial.usuario"), step_id="7e08f637-da9c-4ad7-ba18-2bc054c611af")
+        # etapa 7f304ac6-7dbe-4810-9d28-a3a6dc7952a7 · FILL
+        a.fill(self.k("senha"), segredos.get("credencial.senha"), step_id="7f304ac6-7dbe-4810-9d28-a3a6dc7952a7")
+        # etapa 4ad04f21-0773-4f19-b2aa-4631eb86ba3b · CLICK
         a.click(
             self.k("entrar"),
-            step_id="3efde5a8-cc5c-4efc-8897-fb99da765696",
+            step_id="4ad04f21-0773-4f19-b2aa-4631eb86ba3b",
             idempotent=True,
             postcondition=lambda: a.exists("processo.consulta.codigo_do_registro"),
         )
@@ -39,15 +39,15 @@ class TelaConsulta(BasePage):
     def consulta(self, codigo_do_registro: str) -> dict[str, str]:
         a = self.act
         saidas: dict[str, str] = {}
-        # etapa 8df4cf0d-75b9-4c79-9591-af66a92f19a8 · FILL
-        a.fill(self.k("codigo_do_registro"), codigo_do_registro, step_id="8df4cf0d-75b9-4c79-9591-af66a92f19a8")
-        # etapa 556ff4b9-511c-4690-81cf-a7ad45379931 · CLICK
-        a.click(self.k("consultar"), step_id="556ff4b9-511c-4690-81cf-a7ad45379931", idempotent=True)
-        # etapa 53a022d2-fa0e-4860-90e4-1ef14902111f · OBSERVE
+        # etapa 9d37db99-62ed-4bd3-a4fc-f1c4cde8ccc3 · FILL
+        a.fill(self.k("codigo_do_registro"), codigo_do_registro, step_id="9d37db99-62ed-4bd3-a4fc-f1c4cde8ccc3")
+        # etapa 11cad2bf-87c3-4364-bc50-118e5e796ffd · CLICK
+        a.click(self.k("consultar"), step_id="11cad2bf-87c3-4364-bc50-118e5e796ffd", idempotent=True)
+        # etapa 7b43c2bd-c9fb-43ce-81fe-5884ce838b16 · OBSERVE
         saidas["resultado_da_consulta"] = a.read_text(
             self.k("resultado_da_consulta"),
-            step_id="53a022d2-fa0e-4860-90e4-1ef14902111f",
+            step_id="7b43c2bd-c9fb-43ce-81fe-5884ce838b16",
         )
-        # etapa ed05c689-789a-4787-9e40-12e342df2a50 · CLICK
-        a.click(self.k("sair"), step_id="ed05c689-789a-4787-9e40-12e342df2a50", idempotent=True)
+        # etapa 781d26f9-f16d-4bca-aab6-d226fde6d8a5 · CLICK
+        a.click(self.k("sair"), step_id="781d26f9-f16d-4bca-aab6-d226fde6d8a5", idempotent=True)
         return saidas

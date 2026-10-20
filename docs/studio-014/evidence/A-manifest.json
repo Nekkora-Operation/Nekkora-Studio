@@ -4,21 +4,21 @@
   "generator": "nekkora-studio-codegen/1.1.0",
   "framework": "nekkora-rpa==0.2.0",
   "execution": "single",
-  "automationId": "e3670aac-2f3e-4ff5-ac26-269f12521fa9",
+  "automationId": "d7f5ae80-d705-404c-b2fb-2cef22cad38d",
   "modelVersion": "1.2.0",
   "automationRevision": 22,
-  "planRevision": "sha256:12d037eacfa0332b44c553965c797695bdbc87dcdee7b921386061979ab5bb6d",
-  "configRevision": "sha256:0b3a7de0099f0814bc949978b66e7ad8b4d3974e57e4926620ec5c9cbdb56f46",
+  "planRevision": "sha256:686736ddbbec44cf89fb7e69c1ea0824355cfef402d60190505a593ab6c7e4ab",
+  "configRevision": "sha256:407b924cde72a4be48f967f363f2cf988ca483601e238164f60260792a05dac2",
   "pdd": {
     "gate": "PDD_READY",
-    "processRevision": "sha256:2dff2140870843c320333e8f9de774551ef79493db483bf43cb27cd9f9a47a83",
-    "documentRevision": "sha256:23321fff6ed24871a377510378c0b744a29f93450bfad1695b952acd771ca19c",
-    "specRevision": "sha256:c28b6f6a912ee6c75db88b4fc69af8983f52c818ba22985d2fb60ad168620f32"
+    "processRevision": "sha256:40e27d486ccc0e266568685db0de1e063183bd584a437b2b7e6059422efb897f",
+    "documentRevision": "sha256:441576d7a09c90918b7a87bec663c87a491651ee7f6887b539f0258a30a2ce82",
+    "specRevision": "sha256:43f1f3a6ceb60cf8ce4058a56d47ccd5cc69c4f83a6979f619a3488543408c04"
   },
   "command": "python main.py --saida <pasta> --entrada <entrada.json>",
   "steps": [
     {
-      "stepId": "b086b59e-409a-4ac1-b697-9b4392cbe01d",
+      "stepId": "7e08f637-da9c-4ad7-ba18-2bc054c611af",
       "page": "TelaAcesso",
       "method": "acesso",
       "action": "FILL",
@@ -32,7 +32,7 @@
       "decisionActor": "TEST_AGENT"
     },
     {
-      "stepId": "1d6eaf90-6ee5-4fbf-b9fe-c00ed4e07956",
+      "stepId": "7f304ac6-7dbe-4810-9d28-a3a6dc7952a7",
       "page": "TelaAcesso",
       "method": "acesso",
       "action": "FILL",
@@ -46,7 +46,7 @@
       "decisionActor": "TEST_AGENT"
     },
     {
-      "stepId": "3efde5a8-cc5c-4efc-8897-fb99da765696",
+      "stepId": "4ad04f21-0773-4f19-b2aa-4631eb86ba3b",
       "page": "TelaAcesso",
       "method": "acesso",
       "action": "CLICK",
@@ -60,7 +60,7 @@
       "decisionActor": "TEST_AGENT"
     },
     {
-      "stepId": "8df4cf0d-75b9-4c79-9591-af66a92f19a8",
+      "stepId": "9d37db99-62ed-4bd3-a4fc-f1c4cde8ccc3",
       "page": "TelaConsulta",
       "method": "consulta",
       "action": "FILL",
@@ -74,7 +74,7 @@
       "decisionActor": "TEST_AGENT"
     },
     {
-      "stepId": "556ff4b9-511c-4690-81cf-a7ad45379931",
+      "stepId": "11cad2bf-87c3-4364-bc50-118e5e796ffd",
       "page": "TelaConsulta",
       "method": "consulta",
       "action": "CLICK",
@@ -88,7 +88,7 @@
       "decisionActor": "TEST_AGENT"
     },
     {
-      "stepId": "53a022d2-fa0e-4860-90e4-1ef14902111f",
+      "stepId": "7b43c2bd-c9fb-43ce-81fe-5884ce838b16",
       "page": "TelaConsulta",
       "method": "consulta",
       "action": "OBSERVE",
@@ -102,7 +102,7 @@
       "decisionActor": "TEST_AGENT"
     },
     {
-      "stepId": "ed05c689-789a-4787-9e40-12e342df2a50",
+      "stepId": "781d26f9-f16d-4bca-aab6-d226fde6d8a5",
       "page": "TelaConsulta",
       "method": "consulta",
       "action": "CLICK",
@@ -120,10 +120,10 @@
     "README.md": "sha256:2f8e6c34e74859b4926ffd72d7a0fb94c2c2c329dcf7d36c13303f46c9d24701",
     "config/execucao.toml": "sha256:5422f61ddd15d063c79c08ac9b1216f51b3aaa6f22a8a38359866065939723aa",
     "main.py": "sha256:d78f768e314d896c38eb8f40f79ba96699b59353f951cfeac6009f007df6991c",
-    "paginas.py": "sha256:c8195679783933afec09250d4f10b5bba64e36c5e0f5996855555f13d8d7cc96",
+    "paginas.py": "sha256:a9ecb9c2d85bb95b9ad278f4c78f78b432c43eadd91fe88dea06bb425e5b7706",
     "processo.py": "sha256:deec0ab72e86755b55440a9a20ac1eb9b4a77fd6ece5c82cf3dc0ff466a98443",
     "requirements.txt": "sha256:2f0378994627208c6fabb29a3497c54445b417d6cf7baae1fa786a18c2155ae6",
-    "selectors.json": "sha256:5bea29d52e5aa08ab638bc26d84f1c8422c238e0a52269989df50576e741df27"
+    "selectors.json": "sha256:901d6d6579b2b4baf7afe180edde90eb55e3942b0a68c8bb0f174c0c7c361437"
   },
   "exclusions": [
     "INPUT_VALUES",
