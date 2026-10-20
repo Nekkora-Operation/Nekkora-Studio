@@ -28,7 +28,7 @@ Branch: `feat/nekkora-studio-014`, no Studio e na extensão.
 | G3 plano, variáveis e geração | ✓ | variáveis derivadas numa operação desfazível; Pages por tela; `SingleGenerator`; regressão tabular com os mesmos bytes |
 | G4 validação por camadas | ✓ | V0–V6, correções seguras, revisar e aplicar, pedidos de ajuda, bloqueio de segurança |
 | G5 UI | ✓ | 4 temas, 1366×768 e 150%: botões visíveis; a aba Validação rola em vez de sobrepor |
-| G6 testes | ✓ | Windows 692/692; Linux 686 + 4 pulados (antes dos sites públicos); mutação 17/17 |
+| G6 testes | ✓ | Windows 692/692; Linux 688 + 4 pulados (HEAD 8f4e592); extensão: ITs 276 + 9 pulados, core 210, Node 217; framework 267/267; mutação 17/17 |
 | G7 homologação real | ✓ | 41/41 e, em 150%, 6/6 (logs em `docs/studio-014/evidence/`); sites públicos 21/21 (`evidence/sites/`) |
 | G8 qualidade e compatibilidade | ✓ | validação sem rede; cancelamento; trabalho em segundo plano fora da EDT; PDD antigos lidos como antes (testes da STUDIO-010/012/013 verdes) |
 | G9 PRs | abertos, sem merge | ver "PRs" abaixo |
