@@ -6,7 +6,7 @@
     "version": "0.2.0",
     "fingerprint": "sha256:7d79edc97544f056528d05a097a55a8045bb3f6b14f608bb740e07bf8e730013",
     "repository": "Nekkora-Operation/Nekkora-RPA-Framework",
-    "commit": "ac8133cec6a037c4aa632ea7e22b4ade9dcd4609"
+    "commit": "23cc6de32b9cf04643e2c7413e1d848cdd9a8ecc"
   },
   "extending": {
     "file": "docs/extending.md",
