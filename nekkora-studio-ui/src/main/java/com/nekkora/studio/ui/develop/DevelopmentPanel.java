@@ -67,6 +67,9 @@ public final class DevelopmentPanel extends NekkoraPanel {
 
         void analyzeWithAi();
 
+        /** NEKKORA-E2E-002: execução supervisionada do código gerado, sob confirmação explícita (não é produção). */
+        void trial();
+
         void chooseOutput();
 
         void choosePython();
@@ -142,6 +145,9 @@ public final class DevelopmentPanel extends NekkoraPanel {
     private final NekkoraButton report = NekkoraButton.secondary("Ver relatório");
     private final NekkoraButton validate = NekkoraButton.secondary("Validar novamente").withIcon(IconName.CHECK_CIRCLE);
     private final NekkoraButton help = NekkoraButton.secondary("Solicitar ajuda");
+    private final NekkoraButton trial = NekkoraButton.secondary("Executar teste autorizado").withIcon(IconName.PLAY);
+    private boolean trialAvailable;
+    private String trialWhy = "";
     private final NekkoraButton docs = NekkoraButton.secondary("Ver documentação").withSize(ControlSize.SMALL);
     private Model model = Model.empty("", false);
 
@@ -237,7 +243,10 @@ public final class DevelopmentPanel extends NekkoraPanel {
         validate.onClick(e -> actions.validate());
         help.onClick(e -> actions.analyzeWithAi());
         help.getAccessibleContext().setAccessibleDescription("Mostra a próxima pergunta pendente; com IA autorizada, oferece analisar as pendências.");
-        foot.addAll(develop, cancel, save, openCode, report, validate, help);
+        trial.setName("develop.trial");
+        trial.onClick(e -> actions.trial());
+        trial.getAccessibleContext().setAccessibleDescription("Roda o código gerado da revisão atual, com confirmação do site e do destino; não é produção.");
+        foot.addAll(develop, cancel, save, openCode, report, validate, help, trial);
         foot.addGlue();
         NekkoraButton close = NekkoraButton.ghost("Fechar");
         close.onClick(e -> actions.close());
@@ -297,6 +306,8 @@ public final class DevelopmentPanel extends NekkoraPanel {
         validate.setEnabled(!m.running() && m.projectSaved());
         help.setEnabled(!m.running());
         help.setText(m.aiAvailable() ? "Solicitar ajuda (IA opcional)" : "Solicitar ajuda");
+        trial.setEnabled(!m.running() && trialAvailable);
+        trial.setToolTipText(trialWhy.isEmpty() ? null : trialWhy);
         refreshPending();
         revalidate();
         repaint();
@@ -360,6 +371,18 @@ public final class DevelopmentPanel extends NekkoraPanel {
         }
         pendingButtons.revalidate();
         pendingButtons.repaint();
+    }
+
+    /** NEKKORA-E2E-002: o teste autorizado está disponível? ({@code why} explica quando não está.) */
+    public void trialState(boolean available, String why) {
+        this.trialAvailable = available;
+        this.trialWhy = why == null ? "" : why;
+        trial.setEnabled(!model.running() && available);
+        trial.setToolTipText(trialWhy.isEmpty() ? null : trialWhy);
+    }
+
+    public NekkoraButton trialButton() {
+        return trial;
     }
 
     /** Mostra a aba de pendências com a primeira pergunta selecionada ("Solicitar ajuda"). */

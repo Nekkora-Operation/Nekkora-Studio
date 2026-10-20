@@ -16,6 +16,11 @@ import java.util.TreeMap;
  * grupo de etapas consecutivas da tela; o processo chama os métodos na ordem do modelo dentro de UMA transação
  * ({@code SingleInputProvider}); entradas validadas antes de qualquer ação; segredos só pelo provedor; saídas lidas
  * (Observar) entregues ao destino de resultados. O {@code StepId} de cada etapa vai em cada chamada do framework.
+ *
+ * <p>NEKKORA-E2E-002 (configuração 1.2.0): leituras pelo {@code read_items}/{@code current_address} com a normalização
+ * genérica do framework ({@code nekkora_rpa.text}), Enter pelo {@code press}, lista de entrada pelo {@code tabular} e
+ * planilha pelo {@code XlsxResultSink} (tudo ou nada). A linha da planilha é montada pela regra declarada (coluna ←
+ * leitura, ou a fonte alternativa quando o alvo da principal falta); dado obrigatório vazio rejeita o item.
  */
 final class SingleEmitter {
 
@@ -51,11 +56,19 @@ final class SingleEmitter {
         }
         files.put("selectors.json", selectors(steps));
         files.put("config/execucao.toml", toml(cfg));
-        files.put("paginas.py", PyWrap.wrap(pages(groups)));
-        files.put("processo.py", PyWrap.wrap(process(cfg, groups, steps)));
-        files.put("main.py", PyWrap.wrap(main(cfg)));
-        files.put("requirements.txt", "# GERADO pelo Nekkora Studio (STUDIO-014). Instale o wheel do framework com as versões travadas:\n"
-                + "#   pip install <nekkora_rpa-0.2.0-py3-none-any.whl> -c <constraints/lab.txt>\n" + SingleGenerator.FRAMEWORK_REQUIREMENT + "\n");
+        if (cfg.modern()) {
+            files.put("paginas.py", PyWrap.wrap(Modern.pages(groups.stream().map(x -> new Modern.G(x.group(), x.steps())).toList())));
+            files.put("processo.py", PyWrap.wrap(Modern.process(cfg, groups.stream().map(x -> new Modern.G(x.group(), x.steps())).toList(), steps)));
+            files.put("main.py", PyWrap.wrap(Modern.main(cfg)));
+            files.put("requirements.txt", "# GERADO pelo Nekkora Studio (NEKKORA-E2E-002). Instale o wheel do framework com as versões travadas:\n"
+                    + "#   pip install \"<nekkora_rpa-0.3.0-py3-none-any.whl>[excel]\" -c <constraints/lab.txt>\n" + SingleGenerator.FRAMEWORK_REQUIREMENT_LIST + "\n");
+        } else {
+            files.put("paginas.py", PyWrap.wrap(pages(groups)));
+            files.put("processo.py", PyWrap.wrap(process(cfg, groups, steps)));
+            files.put("main.py", PyWrap.wrap(main(cfg)));
+            files.put("requirements.txt", "# GERADO pelo Nekkora Studio (STUDIO-014). Instale o wheel do framework com as versões travadas:\n"
+                    + "#   pip install <nekkora_rpa-0.2.0-py3-none-any.whl> -c <constraints/lab.txt>\n" + SingleGenerator.FRAMEWORK_REQUIREMENT + "\n");
+        }
         files.put("README.md", readme(cfg, steps));
         files.put("manifest.json", manifest(a, plan, cfg, steps, files));
         return files;
@@ -297,6 +310,7 @@ final class SingleEmitter {
     private static String readme(SingleConfig cfg, List<Step> steps) {
         Set<String> secrets = new java.util.TreeSet<>();
         for (Step s : steps) if (s.credential() != null) secrets.add(s.credential());
+        if (cfg.modern()) return Modern.readme(cfg, secrets);
         StringBuilder b = new StringBuilder();
         b.append("<!-- GERADO pelo Nekkora Studio (STUDIO-014). -->\n# Processo gerado: ").append(cfg.processName()).append("\n\n");
         b.append("Gerado por \"Desenvolver automação\" a partir do modelo validado e do PDD pronto (ver `manifest.json`: automação, revisões do PDD, ")
@@ -322,10 +336,10 @@ final class SingleEmitter {
     private static String manifest(Automation a, GuidedPlan plan, SingleConfig cfg, List<Step> steps, Map<String, String> files) {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("schema", "nekkora-studio/codegen-manifest");
-        m.put("version", "1.1.0");
-        m.put("generator", SingleGenerator.GENERATOR);
-        m.put("framework", SingleGenerator.FRAMEWORK_REQUIREMENT);
-        m.put("execution", "single");
+        m.put("version", cfg.modern() ? "1.2.0" : "1.1.0");
+        m.put("generator", cfg.modern() ? SingleGenerator.GENERATOR_LIST : SingleGenerator.GENERATOR);
+        m.put("framework", cfg.modern() ? SingleGenerator.FRAMEWORK_REQUIREMENT_LIST : SingleGenerator.FRAMEWORK_REQUIREMENT);
+        m.put("execution", cfg.execution());
         m.put("automationId", a.id().value().toString());
         m.put("modelVersion", a.modelVersion());
         m.put("automationRevision", a.revision());
@@ -337,7 +351,25 @@ final class SingleEmitter {
         pdd.put("documentRevision", cfg.pdd().documentRevision());
         pdd.put("specRevision", cfg.pdd().specRevision());
         m.put("pdd", pdd);
-        m.put("command", "python main.py --saida <pasta>" + (cfg.inputs().isEmpty() ? "" : " --entrada <entrada.json>"));
+        m.put("command", cfg.list() ? Modern.command() : "python main.py --saida <pasta>" + (cfg.inputs().isEmpty() ? "" : " --entrada <entrada.json>"));
+        if (cfg.modern() && cfg.spreadsheet()) {
+            List<Object> cols = new ArrayList<>();
+            for (SingleConfig.Column c : cfg.output().columns()) {
+                Map<String, Object> x = new LinkedHashMap<>();
+                x.put("header", c.header());
+                x.put("field", c.field());
+                x.put("kind", c.kind());
+                x.put("stepId", c.step());
+                x.put("fallbackStepId", c.fallbackStep());
+                cols.add(x);
+            }
+            Map<String, Object> out = new LinkedHashMap<>();
+            out.put("format", "xlsx");
+            out.put("sheet", cfg.output().sheet());
+            out.put("keyField", cfg.output().keyField());
+            out.put("columns", cols);
+            m.put("output", out);
+        }
         List<Object> list = new ArrayList<>();
         for (Step s : steps) {
             Map<String, Object> e = new LinkedHashMap<>();
@@ -351,7 +383,12 @@ final class SingleEmitter {
             e.put("output", s.output());
             e.put("effect", s.effect() == null ? null : s.effect().effect());
             e.put("postcondition", s.effect() == null ? null : s.effect().postcondition());
-            e.put("capability", capability(s.step().actionType()));
+            if (cfg.modern()) {
+                e.put("read", s.read() == null ? null : s.read().kind());
+                e.put("optional", s.read() != null && s.read().optional());
+                e.put("expected", s.read() == null ? null : s.read().expected());
+            }
+            e.put("capability", cfg.modern() ? Modern.capability(s) : capability(s.step().actionType()));
             e.put("decisionActor", s.step().targetDecision().map(d -> d.actor().name()).orElse(null));
             list.add(e);
         }

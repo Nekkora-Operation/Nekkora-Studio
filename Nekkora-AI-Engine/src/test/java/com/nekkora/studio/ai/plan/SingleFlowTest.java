@@ -107,7 +107,7 @@ class SingleFlowTest {
         Path out = keep == null || keep.isBlank() ? tmp.resolve("consulta-python") : Path.of(keep);
         OutputWriter.write(out, f.result().files());
         PythonChecks.Environment env = PythonChecks.resolve(Optional.of(py), out).orElseThrow();
-        assertEquals("0.2.0", env.framework());
+        assertEquals("0.3.0", env.framework()); // o código 1.1.0 continua válido no runtime 0.3.0 (aditivo)
         List<PythonChecks.Check> checks = PythonChecks.run(env, out, () -> false);
         for (PythonChecks.Check ch : checks) {
             assertEquals(PythonChecks.Status.PASS, ch.status(), ch.id() + " " + ch.codes() + " " + ch.reason() + "\n" + (ch.id().startsWith("RUFF") || ch.id().startsWith("MYPY")

@@ -42,7 +42,8 @@ public final class RecordedStepDrafts {
 
     public static StepDraft draft(RecordedStep s) {
         ElementReference element = element(s);
-        ActionType type = ActionType.valueOf(s.action());
+        // NEKKORA-E2E-002: o dado apontado no modo "Selecionar dado" é uma etapa Observar (o robô lê; nada é clicado)
+        ActionType type = "EXTRACT".equals(s.action()) ? ActionType.OBSERVE : ActionType.valueOf(s.action());
         StepDraft.Builder b = StepDraft.builder()
                 .name(name(s, element))
                 .description(description(s))
@@ -80,10 +81,25 @@ public final class RecordedStepDrafts {
             case "UNCHECK" -> n.isEmpty() ? "Desmarcar caixa de seleção" : "Desmarcar " + n;
             case "PRESS_KEY" -> "Pressionar " + ("Enter".equals(s.key()) ? "Enter" : "tecla") + (n.isEmpty() ? "" : " no campo " + n);
             case "UNKNOWN" -> "Interação não classificada" + (n.isEmpty() ? (e.tag().isBlank() ? "" : " em <" + e.tag() + ">") : " em " + n);
+            case "EXTRACT" -> read(e, n);
             default -> click(kind, n, e.tag());
         };
         name = name.replaceAll("\\s+", " ").strip();
         return name.length() > Texts.NAME_MAX ? name.substring(0, Texts.NAME_MAX - 1).strip() + "…" : name;
+    }
+
+    /** "Ler “Nascimento”" (rótulo da linha/termo), "Ler o título", "Ler o dado". Nunca o texto lido. */
+    private static String read(ElementReference e, String n) {
+        for (var c : e.context()) {
+            String label = c.name() == null ? "" : c.name().strip();
+            if (!label.isEmpty() && DisplaySafety.isSafeToDisplay(label) && ("IN_ROW".equals(c.relation()) || "TERM".equals(c.kind()))) {
+                return "Ler “" + label + "”";
+            }
+        }
+        if ("HEADING".equals(e.semanticKind())) {
+            return "Ler o título";
+        }
+        return n.isEmpty() ? "Ler o dado" : "Ler “" + n + "”";
     }
 
     private static String click(String kind, String n, String tag) {
@@ -99,6 +115,9 @@ public final class RecordedStepDrafts {
     }
 
     private static String description(RecordedStep s) {
+        if ("EXTRACT".equals(s.action())) {
+            return "Dado apontado no modo “Selecionar dado”: o robô LÊ este elemento na execução. Nada foi clicado e nenhum texto da página foi guardado.";
+        }
         return s.proposed()
                 ? "Proposta registrada no modo “Capturar”: a ação NÃO foi executada no navegador."
                 : "Interação observada no navegador e encaminhada à página. O resultado de negócio não foi validado.";
@@ -255,7 +274,9 @@ public final class RecordedStepDrafts {
     }
 
     private static RecordingObservation observation(RecordedStep s) {
-        RecordingObservation.CaptureMode mode = s.mode() == RecordingMode.CAPTURE_ONLY ? RecordingObservation.CaptureMode.CAPTURE_ONLY
+        // SELECT_DATA também seleciona sem executar: no modelo é uma proposta do modo "Capturar" (sem novo valor no formato)
+        RecordingObservation.CaptureMode mode = s.mode() == RecordingMode.CAPTURE_ONLY || s.mode() == RecordingMode.SELECT_DATA
+                ? RecordingObservation.CaptureMode.CAPTURE_ONLY
                 : RecordingObservation.CaptureMode.CAPTURE_AND_INTERACT;
         return new RecordingObservation(mode, s.proposed() ? RecordingObservation.Observation.PROPOSED : RecordingObservation.Observation.INTERACTION_OBSERVED,
                 RecordingObservation.BusinessOutcome.NOT_VALIDATED, s.evidence(), s.notes());

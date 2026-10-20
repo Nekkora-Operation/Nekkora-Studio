@@ -39,16 +39,26 @@ import java.util.Set;
  *   <li>a configuração carrega o gate {@code PDD_READY} e as revisões do PDD (o gerador recusa sem eles).</li>
  * </ul>
  * Saída determinística: mesma entrada → mesmos bytes.
+ *
+ * <p>NEKKORA-E2E-002 (configuração 1.2.0): Pressionar Enter (efeito declarado, confirmação pelo endereço quando a gravação
+ * viu a página mudar), Observar sem alvo (endereço da página), leitura tipada (texto/itens, data por extenso), leitura
+ * OPCIONAL só onde há fonte alternativa declarada, conferência com uma variável de entrada, lista de entrada e planilha de
+ * saída pelo writer do framework. Sem esses recursos, nada muda.
  */
 public final class SingleGenerator {
 
     public static final String GENERATOR = "nekkora-studio-codegen/1.1.0";
+    public static final String GENERATOR_LIST = "nekkora-studio-codegen/1.2.0";
     public static final String FRAMEWORK_REQUIREMENT = "nekkora-rpa==0.2.0";
+    /** 1.2.0: Enter, leitura tipada e planilha precisam do framework 0.3.0. */
+    public static final String FRAMEWORK_REQUIREMENT_LIST = "nekkora-rpa[excel]==0.3.0";
     static final Set<ActionType> SUPPORTED = Set.of(ActionType.NAVIGATE, ActionType.FILL, ActionType.CLICK, ActionType.WAIT_FOR, ActionType.OBSERVE);
+    static final Set<ActionType> SUPPORTED_MODERN = Set.of(ActionType.NAVIGATE, ActionType.FILL, ActionType.CLICK, ActionType.WAIT_FOR, ActionType.OBSERVE,
+            ActionType.PRESS_KEY);
 
     /** Etapa pronta para gerar. */
     record Step(AutomationStep step, SingleConfig.Group group, String key, Map<String, Object> target, String input, String credential, String output,
-                String navigateUrl, SingleConfig.Effect effect, String nextKey, String firstFillKey) {}
+                String navigateUrl, SingleConfig.Effect effect, String nextKey, String firstFillKey, SingleConfig.Read read, SingleConfig.KeyPress press) {}
 
     private SingleGenerator() {}
 
@@ -78,18 +88,25 @@ public final class SingleGenerator {
             if (d.isEmpty()) blockers.add(new Blocker("INPUT_VARIABLE_MISSING", null));
             else if (d.get().origin().kind() != VariableOrigin.Kind.INPUT) blockers.add(new Blocker("INPUT_VARIABLE_NOT_INPUT", null));
         }
+        Set<ActionType> supported = cfg.modern() ? SUPPORTED_MODERN : SUPPORTED;
         // chaves e alvos primeiro (o envio usa a chave da etapa seguinte / do 1º campo do grupo)
         Map<String, String> keyOf = new LinkedHashMap<>();
         Map<String, Map<String, Object>> targetOf = new LinkedHashMap<>();
         Set<String> used = new LinkedHashSet<>();
         for (AutomationStep s : modelOrder) {
             String id = s.id().value().toString();
-            if (!SUPPORTED.contains(s.actionType())) {
+            if (!supported.contains(s.actionType())) {
                 blockers.add(new Blocker("UNSUPPORTED_ACTION_" + s.actionType().name(), s.id()));
                 continue;
             }
             if (s.actionType() == ActionType.NAVIGATE) continue;
             Optional<ElementReference> el = s.element();
+            SingleConfig.Read declared = cfg.reads().get(id);
+            if (el.isEmpty() && s.actionType() == ActionType.OBSERVE && declared != null && "address".equals(declared.kind())) continue; // endereço da página
+            if (el.isPresent() && s.actionType() == ActionType.OBSERVE && declared != null && "address".equals(declared.kind())) {
+                blockers.add(new Blocker("ADDRESS_READ_WITH_TARGET", s.id()));
+                continue;
+            }
             if (el.isEmpty()) {
                 blockers.add(new Blocker(s.actionType() == ActionType.OBSERVE ? "OBSERVE_WITHOUT_TARGET" : s.actionType() == ActionType.WAIT_FOR
                         ? "WAIT_WITHOUT_TARGET" : "TARGET_MISSING", s.id()));
@@ -102,6 +119,11 @@ public final class SingleGenerator {
             }
             Map<String, Object> t = PythonGenerator.target(el.get(), s.id(), blockers);
             if (t == null) continue;
+            if (cfg.modern() && s.actionType() == ActionType.OBSERVE && el.get().preferredLocator().map(c -> c.strategy() == LocatorStrategy.TEXT).orElse(false)) {
+                // ler um dado localizando-o pelo PRÓPRIO texto é circular: na página seguinte o texto é outro
+                blockers.add(new Blocker("READ_LOCATED_BY_ITS_OWN_TEXT", s.id()));
+                continue;
+            }
             SingleConfig.Group g = groupOf.get(id);
             keyOf.put(id, key(g.prefix(), el.get(), s.actionType(), used));
             targetOf.put(id, t);
@@ -113,8 +135,10 @@ public final class SingleGenerator {
             AutomationStep s = modelOrder.get(i);
             String id = s.id().value().toString();
             SingleConfig.Group g = groupOf.get(id);
-            if (!SUPPORTED.contains(s.actionType())) continue;
+            if (!supported.contains(s.actionType())) continue;
             Optional<ValueSource> value = s.parameters().value();
+            SingleConfig.Read read = null;
+            SingleConfig.KeyPress press = null;
             String input = null;
             String credential = null;
             String output = null;
@@ -164,18 +188,46 @@ public final class SingleGenerator {
                         }
                         outputsUsed.add(id);
                     }
+                    if (cfg.modern()) {
+                        read = cfg.reads().get(id);
+                        if (read == null) blockers.add(new Blocker("READ_NOT_DECLARED", s.id()));
+                        else if (read.expected() != null) {
+                            if (!(value.orElse(null) instanceof ValueSource.VariableReference ref) || !ref.name().equals(read.expected())) {
+                                blockers.add(new Blocker("READ_EXPECTED_MISMATCH", s.id()));
+                            }
+                            inputsUsed.add(read.expected());
+                        }
+                    }
+                }
+                case PRESS_KEY -> {
+                    effect = cfg.effects().get(id);
+                    press = cfg.keys().get(id);
+                    if (press == null || !(value.orElse(null) instanceof ValueSource.LiteralValue lit && "Enter".equals(lit.text()))) {
+                        blockers.add(new Blocker("KEY_NOT_ENTER", s.id()));
+                    } else if (effect == null) {
+                        blockers.add(new Blocker("EFFECT_NOT_DECLARED", s.id()));
+                    } else {
+                        next = nextKey(modelOrder, i, keyOf);
+                        if ("NEXT_TARGET_VISIBLE".equals(effect.postcondition()) && next == null) blockers.add(new Blocker("POSTCONDITION_WITHOUT_NEXT_TARGET", s.id()));
+                        if ("FIRST_FIELD_REPLACED".equals(effect.postcondition())) {
+                            firstFill = firstFillKey(g, a, keyOf);
+                            if (firstFill == null) blockers.add(new Blocker("POSTCONDITION_WITHOUT_FIELD", s.id()));
+                        }
+                    }
                 }
                 default -> {
                 }
             }
-            steps.add(new Step(s, g, keyOf.get(id), targetOf.get(id), input, credential, output, url, effect, next, firstFill));
+            steps.add(new Step(s, g, keyOf.get(id), targetOf.get(id), input, credential, output, url, effect, next, firstFill, read, press));
         }
         for (String v : cfg.inputs()) if (!inputsUsed.contains(v)) blockers.add(new Blocker("INPUT_NOT_USED", null));
         for (String st : cfg.outputs().keySet()) if (!outputsUsed.contains(st)) blockers.add(new Blocker("OUTPUT_STEP_NOT_OBSERVE", null));
         for (String st : cfg.effects().keySet()) {
-            boolean click = modelOrder.stream().anyMatch(x -> x.id().value().toString().equals(st) && x.actionType() == ActionType.CLICK);
+            boolean click = modelOrder.stream().anyMatch(x -> x.id().value().toString().equals(st)
+                    && (x.actionType() == ActionType.CLICK || cfg.modern() && x.actionType() == ActionType.PRESS_KEY));
             if (!click) blockers.add(new Blocker("EFFECT_STEP_NOT_CLICK", null));
         }
+        for (String st : cfg.reads().keySet()) if (!outputsUsed.contains(st)) blockers.add(new Blocker("READ_STEP_NOT_OBSERVE", null));
         if (!blockers.isEmpty()) return new PythonGenerator.Result(List.copyOf(blockers), Map.of(), plan.planRevision());
         return new PythonGenerator.Result(List.of(), SingleEmitter.emit(a, plan, cfg, steps), plan.planRevision());
     }
@@ -209,7 +261,9 @@ public final class SingleGenerator {
                 break;
             }
         }
+        if (base == null) base = PythonGenerator.anchorText(el);
         if (base == null && el.accessibleName() != null && !el.accessibleName().isBlank()) base = el.accessibleName();
+        if (base == null && "HEADING".equals(el.semanticKind()) && action == ActionType.OBSERVE) base = "titulo";
         if (base == null) base = action.name().toLowerCase(Locale.ROOT);
         String slug = Normalizer.normalize(base, Normalizer.Form.NFD).replaceAll("\\p{M}", "").toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]+", "_")
                 .replaceAll("^_+|_+$", "");

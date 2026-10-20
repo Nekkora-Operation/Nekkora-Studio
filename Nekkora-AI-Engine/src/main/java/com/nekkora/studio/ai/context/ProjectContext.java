@@ -41,11 +41,15 @@ public record ProjectContext(String automationId, long automationRevision, Strin
      * @param targetName  rótulo seguro (política de texto do PDD) ou vazio
      * @param locatorUsable o localizador preferencial é validado e não posicional (exportável)
      * @param fingerprint resumo de ação + alvo (uma decisão da especificação vale enquanto ele não muda)
+     * @param anchor      NEKKORA-E2E-002: rótulo seguro da LINHA/TERMO que identifica o dado lido (ex.: "Nascimento"), ou vazio
+     * @param navigates   a gravação viu o documento mudar logo depois desta etapa (ex.: Enter numa busca)
      */
     public record Step(StepId stepId, int session, int number, ActionType action, boolean hasTarget, String targetKind, String targetName,
                        boolean sensitive, boolean inFrame, boolean inShadow, boolean confirmed, boolean locatorUsable, ValueKind value,
-                       String variableName, String screenKey, boolean screenChangeAfter, String blockId, String fingerprint) {
+                       String variableName, String screenKey, boolean screenChangeAfter, String blockId, String fingerprint, String anchor,
+                       boolean navigates) {
         public Step {
+            anchor = anchor == null ? "" : anchor;
             Objects.requireNonNull(stepId);
             targetKind = targetKind == null ? "" : targetKind;
             targetName = targetName == null ? "" : targetName;
@@ -123,10 +127,14 @@ public record ProjectContext(String automationId, long automationRevision, Strin
                 }
                 String kind = f == null ? "" : f.targetKind();
                 String name = f == null ? "" : f.targetName();
-                String fp = Hashes.sha256(st.actionType() + "|" + kind + "|" + name + "|" + (e != null && e.sensitive()) + "|" + frame);
+                String anchor = e == null ? "" : anchorOf(e);
+                // a âncora entra no resumo só quando existe: as decisões das versões anteriores continuam valendo
+                String fp = Hashes.sha256(st.actionType() + "|" + kind + "|" + name + "|" + (e != null && e.sensitive()) + "|" + frame
+                        + (anchor.isEmpty() ? "" : "|" + anchor));
+                boolean navigates = st.provenance().recordingObservation().map(r -> r.evidence().contains("NAVIGATION_FOLLOWED")).orElse(false);
                 out.add(new Step(st.id(), sn, n, st.actionType(), e != null, kind, name, e != null && e.sensitive(), frame, shadow,
                         st.targetDecision().map(d -> d.confirmed()).orElse(false), usable, vk, var, f == null ? "" : f.screenKey(),
-                        f != null && f.screenChangeAfter(), blockOf.get(st.id()), fp));
+                        f != null && f.screenChangeAfter(), blockOf.get(st.id()), fp, anchor, navigates));
             }
         }
         List<String> declared = a.variables().stream().map(x -> x.name()).toList();
@@ -171,6 +179,22 @@ public record ProjectContext(String automationId, long automationRevision, Strin
         } catch (IllegalArgumentException e) {
             return "";
         }
+    }
+
+    private static final java.util.regex.Pattern ANCHOR = java.util.regex.Pattern.compile(
+            "(?:th|dt\\[1\\])\\[normalize-space\\(\\.\\)=\"([^\"]{1,80})\"\\]");
+
+    /**
+     * NEKKORA-E2E-002: rótulo da LINHA (tr com th) ou do TERMO (dt) que ancora o alvo — tirado do localizador preferencial
+     * por linha (já aprovado pela política de privacidade nas barreiras da extensão e do Studio). Vazio se não houver.
+     */
+    public static String anchorOf(ElementReference e) {
+        Optional<LocatorCandidate> pref = e.preferredLocator();
+        if (pref.isEmpty() || pref.get().strategy() != LocatorStrategy.ROW_CONTEXT || pref.get().expression() == null) return "";
+        java.util.regex.Matcher m = ANCHOR.matcher(pref.get().expression());
+        if (!m.find()) return "";
+        String label = m.group(1).strip();
+        return com.nekkora.studio.domain.privacy.CapturePrivacy.interfaceText(label) == null ? "" : label;
     }
 
     /** Candidato de localizador do alvo por rótulo (texto de interface) — usado só para nomear chaves e variáveis. */

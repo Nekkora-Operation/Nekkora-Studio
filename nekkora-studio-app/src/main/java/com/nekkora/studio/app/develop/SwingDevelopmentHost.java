@@ -69,6 +69,16 @@ public final class SwingDevelopmentHost implements DevelopmentPresenter.Host {
     }
 
     @Override
+    public Optional<Path> chooseTrialInput(String title) {
+        return NekkoraFileDialogs.openFile(dialog, title, "Lista de entrada (CSV ou XLSX)", "csv", "xlsx");
+    }
+
+    @Override
+    public Optional<Path> chooseTrialOutput(String title, String suggestedName) {
+        return NekkoraFileDialogs.saveFile(dialog, title, suggestedName, "xlsx");
+    }
+
+    @Override
     public void showText(String title, String text) {
         NekkoraDialog d = new NekkoraDialog(dialog, title);
         d.setDialogSize(NekkoraDialog.Size.LARGE);

@@ -26,7 +26,7 @@ import java.util.Set;
 public final class FrameworkCapabilityCatalog {
 
     public static final String SCHEMA = "nekkora-ai-engine/framework-capabilities";
-    static final String RESOURCE = "/nekkora/ai/catalog/nekkora-rpa-0.2.0.json";
+    static final String RESOURCE = "/nekkora/ai/catalog/nekkora-rpa-0.3.0.json";
 
     /** Efeito declarado da capacidade (curadoria): o que ela pode causar fora do processo. */
     public enum Effect { NONE, READ, NAVIGATION, MAY_AFFECT_TARGET, LOCAL_FILES }
@@ -87,7 +87,8 @@ public final class FrameworkCapabilityCatalog {
             ActionType.FILL, List.of("actions.fill"),
             ActionType.CLICK, List.of("actions.click"),
             ActionType.WAIT_FOR, List.of("actions.wait_visible"),
-            ActionType.OBSERVE, List.of("actions.read_text"));
+            ActionType.OBSERVE, List.of("actions.read_text"),
+            ActionType.PRESS_KEY, List.of("actions.press")); // NEKKORA-E2E-002 (0.3.0)
 
     private final String version;
     private final String fingerprint;
@@ -103,7 +104,7 @@ public final class FrameworkCapabilityCatalog {
         this.byId = byId;
     }
 
-    /** O catálogo do jar (gerado do framework 0.2.0). */
+    /** O catálogo do jar (gerado do framework 0.3.0; o da 0.2.0 continua no jar para auditoria). */
     public static FrameworkCapabilityCatalog bundled() {
         try (InputStream in = FrameworkCapabilityCatalog.class.getResourceAsStream(RESOURCE)) {
             if (in == null) throw new IllegalStateException("CATALOG_MISSING");

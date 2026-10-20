@@ -37,7 +37,9 @@ import java.util.Optional;
  *   <li>V3 — plano determinístico (só com o PDD pronto);</li>
  *   <li>V4/V5 — resultados REAIS das ferramentas Python, quando o código existe e o ambiente está configurado; código de
  *       outra revisão vira "desatualizado" com a correção segura "gerar de novo";</li>
- *   <li>V6 — execução real: o Studio não executa automações; fica {@code NOT_CHECKED} sempre.</li>
+ *   <li>V6 — execução real: só o TESTE AUTORIZADO acionado pela pessoa (NEKKORA-E2E-002) conta, e só se for da revisão
+ *       atual do código, terminar {@code COMPLETED}, gravar a saída e a planilha reaberta conferir; senão {@code NOT_CHECKED}
+ *       (sem teste) ou ATENÇÃO (o teste desta revisão não terminou bem). Nada é presumido.</li>
  * </ul>
  */
 public final class AutomationQualityGate {
@@ -46,7 +48,13 @@ public final class AutomationQualityGate {
     /** Entradas da avaliação (tudo do estado atual; {@code checks} vazio = V4/V5 não rodaram nesta avaliação). */
     public record Inputs(Automation automation, ValidationReport staticReport, Optional<DocumentDraft> draft, FunctionalSpec spec, FrameworkCapabilityCatalog catalog,
                          Path outputDir, Optional<CodegenConfig> declaredTabular, Optional<PythonChecks.Environment> python, boolean pythonPending,
-                         List<PythonChecks.Check> checks, String prompt, Instant now, List<String> publicOrigins) {
+                         List<PythonChecks.Check> checks, String prompt, Instant now, List<String> publicOrigins, Optional<TrialRecord> trial) {
+        public Inputs(Automation automation, ValidationReport staticReport, Optional<DocumentDraft> draft, FunctionalSpec spec, FrameworkCapabilityCatalog catalog,
+                      Path outputDir, Optional<CodegenConfig> declaredTabular, Optional<PythonChecks.Environment> python, boolean pythonPending,
+                      List<PythonChecks.Check> checks, String prompt, Instant now, List<String> publicOrigins) {
+            this(automation, staticReport, draft, spec, catalog, outputDir, declaredTabular, python, pythonPending, checks, prompt, now, publicOrigins, Optional.empty());
+        }
+
         public Inputs(Automation automation, ValidationReport staticReport, Optional<DocumentDraft> draft, FunctionalSpec spec, FrameworkCapabilityCatalog catalog,
                       Path outputDir, Optional<CodegenConfig> declaredTabular, Optional<PythonChecks.Environment> python, boolean pythonPending,
                       List<PythonChecks.Check> checks, String prompt, Instant now) {
@@ -128,13 +136,31 @@ public final class AutomationQualityGate {
             layers.put(Layer.V4_CODE, checksLayer(Layer.V4_CODE, in.checks(), in.python().get(), issues));
             layers.put(Layer.V5_TESTS, checksLayer(Layer.V5_TESTS, in.checks(), in.python().get(), issues));
         }
-        // V6
-        layers.put(Layer.V6_EXECUTION, new QualityReport.LayerResult(Layer.V6_EXECUTION, QualityReport.State.NOT_CHECKED,
-                "não executada pelo Studio (nenhuma ação no sistema-alvo)"));
+        // V6 — só o teste autorizado da REVISÃO ATUAL do código comprova a execução
+        layers.put(Layer.V6_EXECUTION, execution(in.trial(), code, a));
         QualityReport r = new QualityReport(a.id().value().toString(), a.revision(), projection.revision(), gate.record().documentRevision(),
                 gate.record().specRevision(), code.manifestHash(), in.now(), layers, issues, code.current() ? in.checks() : List.of(), in.prompt(),
                 "nekkora-rpa " + in.catalog().version() + " " + in.catalog().fingerprint());
         return new Assessment(r, gate, plan, code);
+    }
+
+    static QualityReport.LayerResult execution(Optional<TrialRecord> trial, CodeState code, Automation a) {
+        if (trial.isEmpty()) {
+            return new QualityReport.LayerResult(Layer.V6_EXECUTION, QualityReport.State.NOT_CHECKED, "nenhum teste autorizado desta automação");
+        }
+        TrialRecord t = trial.get();
+        if (!code.current() || !t.codeRevision().equals(code.manifestHash()) || t.automationRevision() != a.revision()) {
+            return new QualityReport.LayerResult(Layer.V6_EXECUTION, QualityReport.State.NOT_CHECKED,
+                    "o último teste autorizado é de outra revisão do código — execute de novo");
+        }
+        if (t.proven()) {
+            return new QualityReport.LayerResult(Layer.V6_EXECUTION, QualityReport.State.PASS, "teste autorizado executado e conferido: " + t.outputRows()
+                    + " linha(s) na planilha reaberta (" + (t.spreadsheetSha256().length() > 19 ? t.spreadsheetSha256().substring(0, 19) + "…" : t.spreadsheetSha256())
+                    + ")");
+        }
+        return new QualityReport.LayerResult(Layer.V6_EXECUTION, QualityReport.State.ATTENTION, "o teste autorizado desta revisão terminou "
+                + t.status() + (t.outputStatus().isEmpty() ? "" : " · saída " + t.outputStatus() + (t.outputDetail().isEmpty() ? "" : " (" + t.outputDetail() + ")"))
+                + (t.verifyCode().isEmpty() ? "" : " · conferência " + t.verifyCode()));
     }
 
     static QualityReport.LayerResult checksLayer(Layer layer, List<PythonChecks.Check> checks, PythonChecks.Environment env, List<QualityIssue> issues) {

@@ -46,7 +46,7 @@ public final class BridgeProtocol {
 
     public static final List<String> RECORDING_STATES = List.of("RECORDING", "PAUSED", "DEGRADED", "COMPLETED", "CANCELLED", "EXPIRED", "FAILED");
 
-    public static final List<String> MODES = List.of("CAPTURE_ONLY", "CAPTURE_AND_INTERACT");
+    public static final List<String> MODES = List.of("CAPTURE_ONLY", "CAPTURE_AND_INTERACT", "SELECT_DATA");
 
     private BridgeProtocol() {
     }

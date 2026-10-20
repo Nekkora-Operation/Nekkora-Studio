@@ -17,7 +17,8 @@ public final class RecorderText {
     /** Gravação apenas técnica (extensão sem a gravação de ações): a página é acompanhada, nenhuma etapa é criada. */
     public static final String ACTION_CAPTURE_NOTICE = "Captura de ações indisponível nesta gravação: a extensão conectada não registra ações. A página é acompanhada, mas nenhuma etapa é criada.";
     /** O que cada modo faz (STUDIO-003). */
-    public static final String MODE_NOTICE = "Capturar: registra o elemento sem executar a ação. Capturar e interagir: registra e deixa a página funcionar normalmente.";
+    public static final String MODE_NOTICE = "Capturar: registra o elemento sem executar a ação. Capturar e interagir: registra e deixa a página funcionar normalmente. "
+            + "Selecionar dado: aponta um texto da página para o robô ler (nada é clicado).";
     /** Antes do início: o que a gravação faz. */
     public static final String SETUP_NOTICE = "Cada interação no Chrome vira uma etapa na sessão escolhida, depois que o Studio a registra. Valores digitados não são guardados.";
     public static final String WAITING_LINK = "Aguardando conexão com a extensão";

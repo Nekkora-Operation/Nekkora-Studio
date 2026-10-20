@@ -86,6 +86,7 @@ public final class FloatingRecorderPanel extends JPanel {
     private final NekkoraParagraph stepsNotice = note(RecorderText.ACTION_CAPTURE_NOTICE, TextTone.SECONDARY);
     private final NekkoraRadioButton captureOnly = new NekkoraRadioButton(RecordingMode.CAPTURE_ONLY.label());
     private final NekkoraRadioButton captureAndInteract = new NekkoraRadioButton(RecordingMode.CAPTURE_AND_INTERACT.label());
+    private final NekkoraRadioButton selectData = new NekkoraRadioButton(RecordingMode.SELECT_DATA.label());
     private final NekkoraParagraph modeNote = note(RecorderText.MODE_NOTICE, TextTone.MUTED);
     private final NekkoraButton pauseResume = NekkoraButton.secondary("Pausar").withIcon(IconName.PAUSE).withSize(ControlSize.SMALL);
     private final NekkoraButton finish = NekkoraButton.primary("Finalizar").withIcon(IconName.STOP).withSize(ControlSize.SMALL);
@@ -140,7 +141,13 @@ public final class FloatingRecorderPanel extends JPanel {
         sessionNote.setVisible(false);
         live.add(sessionNote); // troca de sessão pedida e ainda não confirmada pela extensão
 
-        NekkoraRadioButton.group(captureOnly, captureAndInteract);
+        NekkoraRadioButton.group(captureOnly, captureAndInteract, selectData);
+        selectData.addActionListener(e -> {
+            if (!adjusting) {
+                actions.changeMode(RecordingMode.SELECT_DATA);
+            }
+        });
+        selectData.setToolTipText(RecordingMode.SELECT_DATA.description());
         captureOnly.addActionListener(e -> {
             if (!adjusting) {
                 actions.changeMode(RecordingMode.CAPTURE_ONLY);
@@ -158,6 +165,7 @@ public final class FloatingRecorderPanel extends JPanel {
         radios.add(new NekkoraText("Modo:"));
         radios.add(captureOnly);
         radios.add(captureAndInteract);
+        radios.add(selectData);
         radios.addGlue();
         modes.add(radios);
         modes.add(modeNote);
@@ -281,9 +289,11 @@ public final class FloatingRecorderPanel extends JPanel {
             RecordingMode shown = s.pendingMode() != null ? s.pendingMode() : s.mode();
             captureOnly.setSelected(shown == RecordingMode.CAPTURE_ONLY);
             captureAndInteract.setSelected(shown == RecordingMode.CAPTURE_AND_INTERACT);
+            selectData.setSelected(shown == RecordingMode.SELECT_DATA);
             boolean modeEditable = stable && !s.linkLost() && s.pendingMode() == null;
             captureOnly.setEnabled(modeEditable);
             captureAndInteract.setEnabled(modeEditable);
+            selectData.setEnabled(modeEditable);
             modeNote.setText(s.pendingMode() != null ? "Aguardando a confirmação da extensão… " + RecorderText.MODE_NOTICE : RecorderText.MODE_NOTICE);
 
             boolean canPause = st == RecorderState.RECORDING;
@@ -373,7 +383,11 @@ public final class FloatingRecorderPanel extends JPanel {
     }
 
     public NekkoraRadioButton modeButton(RecordingMode m) {
-        return m == RecordingMode.CAPTURE_ONLY ? captureOnly : captureAndInteract;
+        return switch (m) {
+            case CAPTURE_ONLY -> captureOnly;
+            case CAPTURE_AND_INTERACT -> captureAndInteract;
+            case SELECT_DATA -> selectData;
+        };
     }
 
     public NekkoraStatusBadge badge() {
