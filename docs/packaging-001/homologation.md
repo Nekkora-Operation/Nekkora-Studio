@@ -69,4 +69,19 @@ Entre t3 e t4 a máquina desligou sem aviso; a suíte foi refeita depois do rein
 
 ## 6. Linux
 
-Pendente de registro nesta seção até a execução no contêiner sobre o commit deste PR.
+Dois contêineres, ambos sobre `git archive` do commit (nada não commitado entra):
+
+1. **Suíte de referência** (`tools/golden-linux.sh verify`, `eclipse-temurin:21.0.12.1_1-jdk-resolute` fixado por
+   digest, root): **713 testes, 0 falhas, 12 pulados** — 11 do AI-Engine que exigem Python (a imagem não tem
+   interpretador: `DependencyManagerTest` 3, `SupervisedRunTest` 3, `ListFlowTest` 2, `SingleFlowTest` 2,
+   `FrameworkCapabilityCatalogTest` 1) e 1 `AtomicSaveTest` (permissão de pasta não se aplica a root). Pulado não é PASS.
+2. **Dependency Manager com Python real** (`python:3.12-slim` 3.12.15 + o mesmo JDK, usuário comum, checkout em
+   pasta com espaço e acento, PyPI real): **`DependencyManagerTest` 7/7, 0 pulados** — cobre no Linux os 3 casos que a
+   imagem de referência pula (venvs separadas 0.2.0 × 0.3.0[excel], reuso, versão errada, venv danificada,
+   cancelamento, índice adversarial → HASH_MISMATCH, rede fora, disco).
+
+A primeira execução do item 2 revelou um defeito de portabilidade **do teste** `caminhoLongo`: `Path.of("C:\\…")` é
+relativo no Linux e `toAbsolutePath()` somava a pasta atual ao comprimento. O cálculo do limite do Windows passou a
+receber o texto do caminho absoluto (comportamento no Windows inalterado; 7/7 também no Windows).
+
+Desktop/Recorder: só Windows (nenhum requisito de interface desktop foi introduzido no Linux).

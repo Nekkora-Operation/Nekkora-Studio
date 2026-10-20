@@ -1,11 +1,11 @@
 # NEKKORA-PACKAGING-001 — distribuição do framework e ambiente Python por automação
 
-Missão em dois repositórios, PRs separados e **sem merge** (a titular decide):
+Missão em dois repositórios, PRs separados; merges só pela titular:
 
 | Repositório | Branch | PR |
 |---|---|---|
-| Nekkora-RPA-Framework | `feat/nekkora-packaging-001` | #5 — CI, verificação de distribuição, locks por hash, release bloqueado por guardas |
-| Nekkora-Studio | `feat/nekkora-packaging-001` | #22 — Dependency Manager, ambiente por automação, arquivos gerados sem wheel local |
+| Nekkora-RPA-Framework | `feat/nekkora-packaging-001` | #5 (mergeado 2026-10-20, `d9038a2`) — CI, verificação de distribuição, locks por hash, release bloqueado por guardas; acompanhamento: registro do CI verde |
+| Nekkora-Studio | `feat/nekkora-packaging-001` | #22 (mergeado 2026-10-20, `0dc59f6`) — Dependency Manager, ambiente por automação, arquivos gerados sem wheel local; acompanhamento: correções da homologação G5, documentação e evidências |
 
 A extensão Chrome não muda (nenhuma dependência objetiva).
 
