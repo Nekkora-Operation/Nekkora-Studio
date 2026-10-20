@@ -11,3 +11,6 @@ docs/e2e-001/evidence/** -text
 Nekkora-AI-Engine/NEKKORA-PROMPT-MESTRE-*.md -text
 Nekkora-AI-Engine/prompts.json -text
 Nekkora-AI-Engine/catalog/*.json -text
+
+# PACKAGING-001: artefatos homologados conferidos por SHA-256 — bytes exatos, sem conversão de fim de linha
+Nekkora-AI-Engine/framework/** -text

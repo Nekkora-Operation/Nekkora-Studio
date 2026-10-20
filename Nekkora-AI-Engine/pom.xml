@@ -53,6 +53,9 @@
     <resources>
       <resource>
         <directory>src/main/resources</directory>
+        <excludes>
+          <exclude>**/__pycache__/**</exclude>
+        </excludes>
       </resource>
       <!-- o Prompt-Mestre e o índice NÃO são copiados à mão: o jar leva exatamente os arquivos deste diretório -->
       <resource>
@@ -68,6 +71,17 @@
         <targetPath>nekkora/ai/catalog</targetPath>
         <includes>
           <include>*.json</include>
+        </includes>
+      </resource>
+      <!-- PACKAGING-001: artefatos homologados do nekkora-rpa (wheel + SHA-256 + locks por hash), gerados por
+           tools/empacotar_framework.py — o Dependency Manager instala a partir deles, sem clone e sem token -->
+      <resource>
+        <directory>${project.basedir}/framework</directory>
+        <targetPath>nekkora/ai/framework</targetPath>
+        <includes>
+          <include>artefatos.json</include>
+          <include>*.lock</include>
+          <include>*.whl</include>
         </includes>
       </resource>
     </resources>

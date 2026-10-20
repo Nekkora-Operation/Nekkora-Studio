@@ -415,8 +415,8 @@ final class Modern {
                     .append(String.join(", ", secrets.stream().map(x -> "`NK_SECRET_" + x.toUpperCase().replace('.', '_').replace('-', '_') + "`").toList()))
                     .append(". ");
         }
-        b.append("\n\n```sh\npython -m venv .venv\n.venv/Scripts/python -m pip install \"<nekkora_rpa-0.3.0-py3-none-any.whl>[excel]\" -c <constraints/lab.txt>\n")
-                .append(".venv/Scripts/").append(cfg.list() ? command() : "python main.py --saida <pasta-da-execucao>").append(" --console\n```\n\n");
+        b.append("\n\n").append(InstallHint.readmeBlock(SingleGenerator.FRAMEWORK_REQUIREMENT_LIST,
+                (cfg.list() ? command() : "python main.py --saida <pasta-da-execucao>") + " --console"));
         b.append("Eventos JSONL sem valores, checkpoint e resumo em `<pasta>/execucao/`.\n");
         b.append("Gerar código não é executar: rode somente em ambiente autorizado (").append(cfg.environment()).append(").\n");
         return b.toString();

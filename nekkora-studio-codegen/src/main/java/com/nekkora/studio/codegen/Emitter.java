@@ -27,8 +27,7 @@ final class Emitter {
         files.put("paginas.py", PyWrap.wrap(pages(cfg, bySession)));
         files.put("processo.py", PyWrap.wrap(process(cfg, bySession, steps)));
         files.put("main.py", PyWrap.wrap(main(cfg)));
-        files.put("requirements.txt", "# GERADO pelo Nekkora Studio (STUDIO-011). Instale o wheel do framework com as versões travadas:\n"
-                + "#   pip install <nekkora_rpa-0.2.0-py3-none-any.whl>[excel] -c <constraints/lab.txt>\n" + PythonGenerator.FRAMEWORK_REQUIREMENT + "\n");
+        files.put("requirements.txt", InstallHint.requirementsTxt("STUDIO-011", PythonGenerator.FRAMEWORK_REQUIREMENT));
         files.put("README.md", readme(cfg));
         files.put("manifest.json", manifest(a, plan, cfg, steps, files));
         return files;
@@ -251,8 +250,7 @@ final class Emitter {
         return "<!-- GERADO pelo Nekkora Studio (STUDIO-011). -->\n# Processo gerado: " + cfg.processName() + "\n\n"
                 + "Gerado a partir do modelo validado do Nekkora Studio (ver `manifest.json`: automação, revisão do plano, StepIds e hashes).\n"
                 + "Correções vão para o MODELO (debug guiado) e o código é gerado de novo; arquivo editado à mão não é sobrescrito.\n\n"
-                + "```sh\npython -m venv .venv\n.venv/Scripts/python -m pip install <nekkora_rpa-0.2.0-py3-none-any.whl>[excel] -c <constraints/lab.txt>\n"
-                + ".venv/Scripts/python main.py --saida <pasta-da-execucao> --console\n```\n\n"
+                + InstallHint.readmeBlock(PythonGenerator.FRAMEWORK_REQUIREMENT, "python main.py --saida <pasta-da-execucao> --console")
                 + "Saída: `resultados/` (um arquivo por linha), `execucao/` (eventos JSONL, checkpoint, resumo) e `observacoes.json`.\n";
     }
 

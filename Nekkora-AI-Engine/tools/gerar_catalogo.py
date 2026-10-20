@@ -86,7 +86,10 @@ def main() -> int:
             "source": fonte(obj),
             "docs": c["docs"],
         })
-    commit = subprocess.run(["git", "-C", str(a.framework_repo), "rev-parse", "HEAD"], capture_output=True, text=True, check=True).stdout.strip()
+    # PACKAGING-001: o commit do CÓDIGO da versão (último que mudou o pacote ou o pyproject), não o HEAD — commits só de
+    # documentação/CI/ferramentas não desatualizam o catálogo, e é deste commit que sai o wheel homologado
+    commit = subprocess.run(["git", "-C", str(a.framework_repo), "log", "-1", "--format=%H", "--", "src/nekkora_rpa", "pyproject.toml"],
+                            capture_output=True, text=True, check=True).stdout.strip()
     catalogo = {
         "schema": "nekkora-ai-engine/framework-capabilities",
         "version": "1.0.0",
