@@ -30,6 +30,10 @@ import java.util.concurrent.CompletableFuture;
  *
  * <p>STUDIO-012 PDD-01: o Studio pode pedir {@code nekkora-visual/2} (representação documental) ao armar — só para uma
  * extensão que a declare ({@link #supportsV2}); sem pedido, o contrato é exatamente o da v1.
+ *
+ * <p>NEKKORA-STUDIO-013: com a extensão 0.6.0 ({@link #supportsV3}) o Studio pede {@code nekkora-visual/3} e manda a
+ * ORIGEM que mostrou ao usuário. O resultado da v3 não traz imagem: só a descrição sintética (viewport em px CSS e
+ * regiões, com o texto de interface dos rótulos), que o Studio desenha e verifica.
  */
 public final class PddCaptureClient implements BrowserLink.Listener, AutoCloseable {
 
@@ -44,8 +48,15 @@ public final class PddCaptureClient implements BrowserLink.Listener, AutoCloseab
     /** Captura armada: a extensão espera o atalho ({@code shortcut} vazio = o usuário precisa definir um no Chrome). */
     public record Armed(String captureId, String shortcut, String policy) {}
 
-    /** Região da imagem sanitizada (px do dispositivo); {@code tone} só em SURFACE da v2. */
-    public record Region(String kind, int x, int y, int width, int height, String tone) {
+    /**
+     * Região da imagem sanitizada (px do dispositivo na v1/v2; px CSS na v3); {@code tone} só em SURFACE; {@code ink} em
+     * TEXT/LABEL; {@code text}/{@code size}/{@code weight}/{@code align} só em LABEL (v3).
+     */
+    public record Region(String kind, int x, int y, int width, int height, String tone, String text, int size, String weight, String ink, String align) {
+        public Region(String kind, int x, int y, int width, int height, String tone) {
+            this(kind, x, y, width, height, tone, null, 0, null, null, null);
+        }
+
         public Region(String kind, int x, int y, int width, int height) {
             this(kind, x, y, width, height, null);
         }
@@ -54,6 +65,20 @@ public final class PddCaptureClient implements BrowserLink.Listener, AutoCloseab
     /** Política visual pedida ao armar. */
     public static final String POLICY_V1 = "nekkora-visual/1";
     public static final String POLICY_V2 = "nekkora-visual/2";
+    public static final String POLICY_V3 = "nekkora-visual/3";
+    /** STUDIO-013 (revisão da usuária): print real com o texto de dados mascarado — o que o Studio pede à extensão 0.6.0. */
+    public static final String POLICY_V4 = "nekkora-visual/4";
+    /** Revisão da usuária: print integral (dados da tela; só senhas cobertas) — só em site com o nível FULL. */
+    public static final String POLICY_V5 = "nekkora-visual/5";
+
+    /** A extensão conectada entende a v3 e o consentimento PDD por origem? (0.6.0 em diante; versão desconhecida = não). */
+    public static boolean supportsV3(String extensionVersion) {
+        if (extensionVersion == null || !extensionVersion.matches("\\d+\\.\\d+\\.\\d+.*")) return false;
+        String[] v = extensionVersion.split("[.-]");
+        int major = Integer.parseInt(v[0]);
+        int minor = Integer.parseInt(v[1]);
+        return major > 0 || minor >= 6;
+    }
 
     /** A extensão conectada entende a v2? (0.5.0 em diante; versão desconhecida = não). */
     public static boolean supportsV2(String extensionVersion) {
@@ -104,11 +129,17 @@ public final class PddCaptureClient implements BrowserLink.Listener, AutoCloseab
 
     /** Arma pedindo a política ({@code null} = sem pedido: v1, compatível com extensões anteriores). */
     public CompletableFuture<Armed> arm(String tabRef, List<StepTarget> steps, Duration lease, String policy) {
+        return arm(tabRef, steps, lease, policy, null);
+    }
+
+    /** STUDIO-013: arma pedindo a política e a ORIGEM mostrada ao usuário (aba em outra origem = nada é armado). */
+    public CompletableFuture<Armed> arm(String tabRef, List<StepTarget> steps, Duration lease, String policy, String origin) {
         Map<String, Object> p = new LinkedHashMap<>();
         p.put("captureId", captureId);
         p.put("tabRef", tabRef);
         p.put("leaseMs", (int) lease.toMillis());
         if (policy != null) p.put("policy", policy);
+        if (origin != null) p.put("origin", origin);
         List<Object> list = new ArrayList<>();
         for (StepTarget s : steps) {
             Map<String, Object> m = new LinkedHashMap<>();
@@ -158,7 +189,8 @@ public final class PddCaptureClient implements BrowserLink.Listener, AutoCloseab
                 @SuppressWarnings("unchecked")
                 Map<String, Object> r = (Map<String, Object>) o;
                 regions.add(new Region(Json.string(r, "kind"), (int) Json.number(r, "x", -1), (int) Json.number(r, "y", -1), (int) Json.number(r, "width", 0),
-                        (int) Json.number(r, "height", 0), Json.string(r, "tone")));
+                        (int) Json.number(r, "height", 0), Json.string(r, "tone"), Json.string(r, "text"), (int) Json.number(r, "size", 0),
+                        Json.string(r, "weight"), Json.string(r, "ink"), Json.string(r, "align")));
             }
             List<Marker> markers = new ArrayList<>();
             for (Object o : Json.array(p, "annotations")) {
@@ -170,6 +202,14 @@ public final class PddCaptureClient implements BrowserLink.Listener, AutoCloseab
             List<String> limits = new ArrayList<>();
             for (Object o : Json.array(p, "limitations")) limits.add(String.valueOf(o));
             String at = Json.string(p, "observedAt");
+            if (POLICY_V3.equals(Json.string(p, "policy"))) {
+                // v3: sem imagem — a descrição (px CSS) vai para o Studio desenhar; png/sha ficam nulos
+                Map<String, Object> vp = Json.object(p, "viewport");
+                if (vp == null || p.containsKey("png")) throw new IllegalArgumentException("v3 sem viewport ou com imagem");
+                result.complete(new Result(captureId, true, null, null, null, (int) Json.number(vp, "width", 0), (int) Json.number(vp, "height", 0), dbl(vp, "dpr"),
+                        at == null ? Instant.now() : Instant.parse(at), regions, markers, limits, POLICY_V3));
+                return;
+            }
             result.complete(new Result(captureId, true, null, Base64.getDecoder().decode(Json.string(p, "png")), Json.string(p, "sha256"),
                     (int) Json.number(p, "width", 0), (int) Json.number(p, "height", 0), dbl(p, "devicePixelRatio"), at == null ? Instant.now() : Instant.parse(at),
                     regions, markers, limits, Json.string(p, "policy")));

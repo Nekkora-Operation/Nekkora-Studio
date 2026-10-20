@@ -22,6 +22,13 @@ import javax.imageio.ImageIO;
  * regiões declaradas (página clara, superfícies por tom, mídia, frames, controles e campos, nessa ordem) e exige que cada
  * pixel fora dos portadores seja exatamente a cor esperada naquele ponto. As cores e a ordem são as mesmas do service
  * worker e do Native Host.
+ *
+ * <p>NEKKORA-STUDIO-013 — {@code nekkora-visual/3} (inteiramente sintética): a imagem é desenhada pelo próprio Studio
+ * ({@link SyntheticRenderer}) a partir da descrição; esta barreira volta a valer no disco antes de cada exportação. Regra:
+ * regiões na ordem e nos tetos da v3, geometria em múltiplos da escala, barras quantizadas, rótulos com texto INTEIRO do
+ * vocabulário ({@link com.nekkora.studio.domain.privacy.CapturePrivacy#interfaceText}) e disjuntos; fora dos rótulos cada
+ * pixel é exatamente a cor sintética esperada; dentro de um rótulo, cada pixel é uma MISTURA entre o fundo esperado naquele
+ * ponto e a tinta do rótulo (o que o texto em tons de cinza produz) — nenhuma outra cor cabe ali.
  */
 public final class VisualVerifier {
     public static final String POLICY = "nekkora-visual/1";
@@ -61,6 +68,9 @@ public final class VisualVerifier {
     /** Verifica pela política da captura ({@code nekkora-visual/1} ou {@code /2}) e devolve a imagem decodificada. */
     public static BufferedImage verify(byte[] png, String declaredSha, int width, int height, double dpr, List<Region> regions, String policy)
             throws VisualPolicyException {
+        if (POLICY_V5.equals(policy)) return verifyV5(png, declaredSha, width, height, dpr, regions);
+        if (POLICY_V4.equals(policy)) return verifyV4(png, declaredSha, width, height, dpr, regions);
+        if (POLICY_V3.equals(policy)) return verifyV3(png, declaredSha, width, height, dpr, regions);
         if (POLICY_V2.equals(policy)) return verifyV2(png, declaredSha, width, height, dpr, regions);
         if (!POLICY.equals(policy)) throw new VisualPolicyException("POLICY_UNKNOWN");
         return verify(png, declaredSha, width, height, dpr, regions);
@@ -192,6 +202,259 @@ public final class VisualVerifier {
             case "FIELD" -> new int[] {FIELD_FILL, FIELD_BORDER};
             default -> throw new IllegalArgumentException("tipo");
         };
+    }
+
+    // ------------------------------------------------------------------------------------------- nekkora-visual/3
+
+    public static final String POLICY_V3 = "nekkora-visual/3";
+    public static final int V3_PAGE = 0xFFFFFF;
+    static final Map<String, Integer> V3_TONES = Map.of("LIGHT", 0xF4F6F8, "MID", 0xE6EAEE, "DARK", 0x3E4A5C);
+    static final int V3_SURFACE_BORDER = 0xD3DAE1;
+    static final int V3_MEDIA_FILL = 0xEDF0F3;
+    static final int V3_MEDIA_BORDER = 0xC9D1D9;
+    static final int V3_FRAME_FILL = 0xF4F6F8;
+    static final int V3_CONTROL_FILL = 0xE3E8EE;
+    static final int V3_LINE = 0x8A9099;
+    static final int V3_BAR_DARK = 0xC8CFD8; // barra no lugar de texto escuro (fundo claro)
+    static final int V3_BAR_LIGHT = 0x8792A2; // barra no lugar de texto claro (fundo escuro)
+    static final int V3_INK_DARK = 0x1F2933;
+    static final int V3_INK_LIGHT = 0xFFFFFF;
+    public static final Map<String, Integer> V3_MAX = Map.of("SURFACE", 48, "MEDIA", 24, "FRAME", 16, "CONTROL", 48, "FIELD", 96, "TEXT", 240, "LABEL", 96);
+    public static final int V3_TEXT_QUANTUM = 16;
+    public static final int V3_MAX_PNG_BYTES = 8_000_000;
+    /** Folga por canal na mistura fundo↔tinta (arredondamento do desenho em tons de cinza). */
+    static final int V3_BLEND_TOLERANCE = 3;
+
+    /** Espessura da borda das regiões sintéticas (px da imagem). */
+    public static int v3Border(int scale) {
+        return Math.max(1, scale);
+    }
+
+    /** {preenchimento, borda} de uma região sintética da v3 (TEXT e LABEL têm regra própria). */
+    public static int[] v3Paint(String kind, String tone) {
+        return switch (kind) {
+            case "SURFACE" -> new int[] {V3_TONES.get(tone), V3_SURFACE_BORDER};
+            case "MEDIA" -> new int[] {V3_MEDIA_FILL, V3_MEDIA_BORDER};
+            case "FRAME" -> new int[] {V3_FRAME_FILL, V3_LINE};
+            case "CONTROL" -> new int[] {V3_CONTROL_FILL, V3_LINE};
+            case "FIELD" -> new int[] {FIELD_FILL, V3_LINE};
+            default -> throw new IllegalArgumentException("tipo");
+        };
+    }
+
+    public static int v3Bar(String ink) {
+        return "LIGHT".equals(ink) ? V3_BAR_LIGHT : V3_BAR_DARK;
+    }
+
+    public static int v3Ink(String ink) {
+        return "LIGHT".equals(ink) ? V3_INK_LIGHT : V3_INK_DARK;
+    }
+
+    /** v3: imagem desenhada pelo Studio a partir da descrição (dpr = escala inteira px da imagem / px CSS). */
+    static BufferedImage verifyV3(byte[] png, String declaredSha, int width, int height, double dpr, List<Region> regions) throws VisualPolicyException {
+        if (png == null || png.length == 0 || png.length > V3_MAX_PNG_BYTES) throw new VisualPolicyException("SANITIZED_IMAGE_TOO_LARGE");
+        if (declaredSha != null && !declaredSha.equals(Canonical.sha256(png))) throw new VisualPolicyException("CHECKSUM_MISMATCH");
+        BufferedImage img;
+        try {
+            img = ImageIO.read(new ByteArrayInputStream(png));
+        } catch (IOException e) {
+            throw new VisualPolicyException("IMAGE_UNREADABLE");
+        }
+        if (img == null) throw new VisualPolicyException("IMAGE_UNREADABLE");
+        int scale = (int) dpr;
+        if (img.getWidth() != width || img.getHeight() != height || (scale != 1 && scale != 2) || scale != dpr || width % scale != 0 || height % scale != 0) {
+            throw new VisualPolicyException("GEOMETRY_MISMATCH");
+        }
+        Map<String, Integer> count = new HashMap<>();
+        int rank = 0;
+        List<Region> labels = new java.util.ArrayList<>();
+        for (Region r : regions) {
+            int k = Region.V3_KINDS.indexOf(r.kind());
+            if (k < 0) throw new VisualPolicyException("REGION_KIND_UNKNOWN");
+            if (k < rank) throw new VisualPolicyException("REGION_ORDER");
+            rank = k;
+            if (count.merge(r.kind(), 1, Integer::sum) > V3_MAX.get(r.kind())) throw new VisualPolicyException("TOO_MANY_REGIONS");
+            if ((long) r.x() + r.width() > width || (long) r.y() + r.height() > height) throw new VisualPolicyException("REGION_OUT_OF_IMAGE");
+            if (r.x() % scale != 0 || r.y() % scale != 0 || r.width() % scale != 0 || r.height() % scale != 0) throw new VisualPolicyException("GEOMETRY_MISMATCH");
+            if ("TEXT".equals(r.kind()) && r.width() % (V3_TEXT_QUANTUM * scale) != 0) throw new VisualPolicyException("TEXT_NOT_QUANTIZED");
+            if ("LABEL".equals(r.kind())) {
+                if (!r.text().equals(com.nekkora.studio.domain.privacy.CapturePrivacy.interfaceText(r.text()))) {
+                    throw new VisualPolicyException("LABEL_NOT_INTERFACE_TEXT");
+                }
+                if (r.size() < 8 || r.size() > 40) throw new VisualPolicyException("REGION_KIND_UNKNOWN");
+                for (Region o : labels) {
+                    if (r.x() < o.x() + o.width() && o.x() < r.x() + r.width() && r.y() < o.y() + o.height() && o.y() < r.y() + r.height()) {
+                        throw new VisualPolicyException("LABELS_OVERLAP");
+                    }
+                }
+                labels.add(r);
+            }
+        }
+        if (violationsV3(img, regions, scale) != 0) throw new VisualPolicyException("SANITIZATION_CHECK_FAILED");
+        return img;
+    }
+
+    /** Pixels fora da regra da v3 (repintura exata fora dos rótulos; mistura fundo↔tinta dentro deles). */
+    public static long violationsV3(BufferedImage img, List<Region> regions, int scale) {
+        int w = img.getWidth();
+        int h = img.getHeight();
+        int[] expected = new int[w * h];
+        Arrays.fill(expected, V3_PAGE);
+        int[] ink = new int[w * h]; // 0 = fora de rótulo; senão 0x1000000 | tinta
+        int bw = v3Border(scale);
+        for (Region r : regions) {
+            int x2 = r.x() + r.width();
+            int y2 = r.y() + r.height();
+            if ("LABEL".equals(r.kind())) {
+                int c = 0x1000000 | v3Ink(r.ink());
+                for (int y = r.y(); y < y2; y++) Arrays.fill(ink, y * w + r.x(), y * w + x2, c);
+                continue;
+            }
+            if ("TEXT".equals(r.kind())) {
+                int c = v3Bar(r.ink());
+                for (int y = r.y(); y < y2; y++) Arrays.fill(expected, y * w + r.x(), y * w + x2, c);
+                continue;
+            }
+            int[] fb = v3Paint(r.kind(), r.tone());
+            boolean inner = r.width() > 2 * bw && r.height() > 2 * bw;
+            for (int y = r.y(); y < y2; y++) {
+                for (int x = r.x(); x < x2; x++) {
+                    boolean edge = !inner || x < r.x() + bw || x >= x2 - bw || y < r.y() + bw || y >= y2 - bw;
+                    expected[y * w + x] = edge ? fb[1] : fb[0];
+                }
+            }
+        }
+        boolean alpha = img.getColorModel().hasAlpha();
+        long bad = 0;
+        int[] row = new int[w];
+        for (int y = 0; y < h; y++) {
+            img.getRGB(0, y, w, 1, row, 0, w);
+            for (int x = 0; x < w; x++) {
+                int argb = row[x];
+                int i = y * w + x;
+                if (alpha && (argb >>> 24) != 0xFF) {
+                    bad++;
+                } else if (ink[i] == 0) {
+                    if ((argb & 0xFFFFFF) != expected[i]) bad++;
+                } else if (!blend(argb & 0xFFFFFF, expected[i], ink[i] & 0xFFFFFF)) {
+                    bad++;
+                }
+            }
+        }
+        return bad;
+    }
+
+    /** {@code v} está no segmento fundo→tinta (mesma fração α em todos os canais, com folga de arredondamento)? */
+    static boolean blend(int v, int bg, int ink) {
+        int[] vc = {v >> 16 & 0xFF, v >> 8 & 0xFF, v & 0xFF};
+        int[] bc = {bg >> 16 & 0xFF, bg >> 8 & 0xFF, bg & 0xFF};
+        int[] ic = {ink >> 16 & 0xFF, ink >> 8 & 0xFF, ink & 0xFF};
+        int ref = 0;
+        for (int c = 1; c < 3; c++) if (Math.abs(ic[c] - bc[c]) > Math.abs(ic[ref] - bc[ref])) ref = c;
+        int span = ic[ref] - bc[ref];
+        if (span == 0) return v == bg;
+        double a = (vc[ref] - bc[ref]) / (double) span;
+        if (a < -0.02 || a > 1.02) return false;
+        a = Math.max(0, Math.min(1, a));
+        for (int c = 0; c < 3; c++) {
+            if (Math.abs(bc[c] + a * (ic[c] - bc[c]) - vc[c]) > V3_BLEND_TOLERANCE) return false;
+        }
+        return true;
+    }
+
+    // ------------------------------------------------------------------------------------------- nekkora-visual/4
+
+    /**
+     * STUDIO-013 (revisão da usuária) — {@code nekkora-visual/4}: print real com o texto de dados mascarado. Mesma regra do
+     * service worker e do Native Host: máscaras BLOCK/FIELD/TEXT na ordem, nos tetos e dentro da imagem, e cada pixel
+     * DENTRO delas exatamente a cor repintada. Fora das máscaras os pixels são da tela (limite declarado da política).
+     */
+    public static final String POLICY_V4 = "nekkora-visual/4";
+    public static final int V4_BLOCK_FILL = 0xEDF0F3;
+    public static final int V4_BLOCK_BORDER = 0xC9D1D9;
+    static final Map<String, Integer> V4_BARS = Map.of("DARK", 0xC8CFD8, "LIGHT", 0x8792A2);
+    static final Map<String, Integer> V4_MAX = Map.of("BLOCK", 96, "FIELD", 128, "TEXT", 600);
+    public static final int V4_MAX_PNG_BYTES = 8_000_000;
+
+    static BufferedImage verifyV4(byte[] png, String declaredSha, int width, int height, double dpr, List<Region> regions) throws VisualPolicyException {
+        if (png == null || png.length == 0 || png.length > V4_MAX_PNG_BYTES) throw new VisualPolicyException("SANITIZED_IMAGE_TOO_LARGE");
+        if (declaredSha != null && !declaredSha.equals(Canonical.sha256(png))) throw new VisualPolicyException("CHECKSUM_MISMATCH");
+        BufferedImage img;
+        try {
+            img = ImageIO.read(new ByteArrayInputStream(png));
+        } catch (IOException e) {
+            throw new VisualPolicyException("IMAGE_UNREADABLE");
+        }
+        if (img == null) throw new VisualPolicyException("IMAGE_UNREADABLE");
+        if (img.getWidth() != width || img.getHeight() != height || !(dpr > 0 && dpr <= 4)) throw new VisualPolicyException("GEOMETRY_MISMATCH");
+        Map<String, Integer> count = new HashMap<>();
+        int rank = 0;
+        for (Region r : regions) {
+            int k = Region.V4_KINDS.indexOf(r.kind());
+            if (k < 0) throw new VisualPolicyException("REGION_KIND_UNKNOWN");
+            if (k < rank) throw new VisualPolicyException("REGION_ORDER");
+            rank = k;
+            if (count.merge(r.kind(), 1, Integer::sum) > V4_MAX.get(r.kind())) throw new VisualPolicyException("TOO_MANY_REGIONS");
+            if ((long) r.x() + r.width() > width || (long) r.y() + r.height() > height) throw new VisualPolicyException("REGION_OUT_OF_IMAGE");
+            if ("TEXT".equals(r.kind()) != (r.ink() != null)) throw new VisualPolicyException("REGION_KIND_UNKNOWN");
+        }
+        if (violationsV4(img, regions) != 0) throw new VisualPolicyException("SANITIZATION_CHECK_FAILED");
+        return img;
+    }
+
+    // ------------------------------------------------------------------------------------------- nekkora-visual/5
+
+    /**
+     * Revisão da usuária (19/10/2026) — {@code nekkora-visual/5}: PRINT INTEGRAL. A tela como está, dados inclusive; só
+     * as máscaras de senha (FIELD) e, quando não se confirmou que nenhum frame mostra senha, de frame (BLOCK). Mesmas
+     * conferências da v4; TEXT não existe nesta política.
+     */
+    public static final String POLICY_V5 = "nekkora-visual/5";
+
+    static BufferedImage verifyV5(byte[] png, String declaredSha, int width, int height, double dpr, List<Region> regions) throws VisualPolicyException {
+        for (Region r : regions) {
+            if (!"BLOCK".equals(r.kind()) && !"FIELD".equals(r.kind())) throw new VisualPolicyException("REGION_KIND_UNKNOWN");
+        }
+        return verifyV4(png, declaredSha, width, height, dpr, regions);
+    }
+
+    /** {preenchimento, borda} de uma máscara da v4. */
+    public static int[] v4Paint(String kind, String ink) {
+        return switch (kind) {
+            case "BLOCK" -> new int[] {V4_BLOCK_FILL, V4_BLOCK_BORDER};
+            case "FIELD" -> new int[] {FIELD_FILL, FIELD_BORDER};
+            case "TEXT" -> new int[] {V4_BARS.get(ink), V4_BARS.get(ink)};
+            default -> throw new IllegalArgumentException("tipo");
+        };
+    }
+
+    /** Pixels DENTRO das máscaras diferentes da cor repintada (na ordem declarada). */
+    public static long violationsV4(BufferedImage img, List<Region> regions) {
+        int w = img.getWidth();
+        int h = img.getHeight();
+        int[] expected = new int[w * h];
+        Arrays.fill(expected, -1);
+        for (Region r : regions) {
+            int[] fb = v4Paint(r.kind(), r.ink());
+            int x2 = r.x() + r.width();
+            int y2 = r.y() + r.height();
+            for (int y = r.y(); y < y2; y++) {
+                for (int x = r.x(); x < x2; x++) expected[y * w + x] = y == r.y() || y == y2 - 1 || x == r.x() || x == x2 - 1 ? fb[1] : fb[0];
+            }
+        }
+        boolean alpha = img.getColorModel().hasAlpha();
+        long bad = 0;
+        int[] row = new int[w];
+        for (int y = 0; y < h; y++) {
+            img.getRGB(0, y, w, 1, row, 0, w);
+            for (int x = 0; x < w; x++) {
+                int e = expected[y * w + x];
+                if (e < 0) continue;
+                int argb = row[x];
+                if ((alpha && (argb >>> 24) != 0xFF) || (argb & 0xFFFFFF) != e) bad++;
+            }
+        }
+        return bad;
     }
 
     /** Pixels fora dos portadores que não são uma das três cores sintéticas opacas. */

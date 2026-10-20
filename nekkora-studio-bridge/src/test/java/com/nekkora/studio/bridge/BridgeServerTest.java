@@ -156,6 +156,27 @@ class BridgeServerTest {
         }
     }
 
+    /** STUDIO-013: acima do teto de controle, só o evento do print nekkora-visual/4; qualquer outro quadro grande derruba a conexão. */
+    @Test
+    void quadroGrandeSoParaOPrintV4() throws Exception {
+        BridgeServer s = start(BridgeServer.Transport.AUTO, 5000);
+        String big = "A".repeat(600_000);
+        try (TestHostClient c = new TestHostClient(tmp.resolve("bridge"), TestHostClient.Mode.NORMAL)) {
+            waitFor(() -> s.status().connected(), 5000, "CONNECTED");
+            c.sendLarge(Json.obj().put("protocol", "nekkora-bridge/1").put("kind", "event").put("type", "studio.pdd.captured")
+                    .put("payload", Json.obj().put("captureId", "c4").put("status", "CAPTURED").put("policy", "nekkora-visual/4").put("png", big).build()).build());
+            waitFor(() -> events.stream().anyMatch(e -> "studio.pdd.captured".equals(e.type())), 5000, "print v4 grande entregue");
+            assertEquals(LinkStatus.State.CONNECTED, s.status().state());
+        }
+        waitFor(() -> !s.status().connected(), 5000, "desconectado");
+        try (TestHostClient c = new TestHostClient(tmp.resolve("bridge"), TestHostClient.Mode.NORMAL)) {
+            waitFor(() -> s.status().connected(), 5000, "CONNECTED de novo");
+            c.sendLarge(Json.obj().put("protocol", "nekkora-bridge/1").put("kind", "event").put("type", "studio.pdd.captured")
+                    .put("payload", Json.obj().put("captureId", "c2").put("status", "CAPTURED").put("policy", "nekkora-visual/2").put("png", big).build()).build());
+            waitFor(() -> !s.status().connected(), 5000, "quadro grande fora da v4 derruba a conexão");
+        }
+    }
+
     @Test
     void recusaCredencialInvalidaProtocoloIncompativelERepeticao() throws Exception {
         BridgeServer s = start(BridgeServer.Transport.AUTO, 5000);

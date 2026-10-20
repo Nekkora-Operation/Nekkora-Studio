@@ -213,7 +213,8 @@ class PddUiTest {
         String login = model().items().get(1).key();
         Edt.run(() -> pdd().select(login));
         Edt.flush();
-        assertEquals(1, model().tabs().size(), "só a aba de laboratório");
+        // STUDIO-013: a escolha mostra também o site autorizado pelo Chrome (com o motivo); capturar, só o laboratório
+        assertEquals(List.of("t-LabTab000001"), model().tabs().stream().filter(PddPanel.Tab::ready).map(PddPanel.Tab::tabRef).toList(), "só a aba de laboratório captura");
         Edt.run(() -> pdd().capture(login, "t-LabTab000001"));
         Edt.flush();
         assertTrue(model().banner().contains("Alt+Shift+K"), model().banner());

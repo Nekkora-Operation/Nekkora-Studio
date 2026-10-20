@@ -62,6 +62,19 @@ public final class RecorderPresenter {
     private RecorderSnapshot current;
     private boolean disposed;
 
+    /** Captura da tela para o PDD pedida pelo Recorder depois de finalizar (o Studio liga ao PDD visual). */
+    public interface PddCapture {
+        /** {@code status}: texto para o Recorder e se a captura ainda está em curso. */
+        void capture(RecorderController.LastRecording recording, java.util.function.BiConsumer<String, Boolean> status);
+    }
+
+    private PddCapture pddCapture;
+
+    /** Liga o botão "Capturar tela" do resumo da gravação ao PDD visual. */
+    public void usePddCapture(PddCapture capture) {
+        this.pddCapture = capture;
+    }
+
     public RecorderPresenter(WorkspaceService service, StudioController controller, RecorderController recorder, StudioView view,
             RecorderPrompts prompts, Function<FloatingRecorderPanel, RecorderWindowHost> hostFactory) {
         this.service = service;
@@ -329,8 +342,19 @@ public final class RecorderPresenter {
 
         @Override
         public void done() {
+            panel.setPddStatus("", false);
             recorder.acknowledge();
             host.hide();
+        }
+
+        @Override
+        public void capturePdd() {
+            RecorderController.LastRecording r = recorder.lastRecording().orElse(null);
+            if (r == null || pddCapture == null) {
+                panel.setPddStatus("Não há gravação concluída para capturar.", false);
+                return;
+            }
+            pddCapture.capture(r, (text, busy) -> panel.setPddStatus(text, busy));
         }
     }
 

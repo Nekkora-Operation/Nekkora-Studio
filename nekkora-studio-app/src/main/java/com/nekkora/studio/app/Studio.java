@@ -67,6 +67,8 @@ public final class Studio {
         view.actions().onGuidedDebug(() -> guidedDebug().open());
         // STUDIO-010: PDD visual (rascunho e imagens sanitizadas no diretório de dados; nunca no .nekkora)
         view.actions().onVisualPdd(() -> visualPdd().open());
+        // pedido da usuária: "Capturar tela" no resumo do Recorder → imagem do bloco das etapas recém-gravadas
+        recorderPresenter.usePddCapture((r, status) -> visualPdd().captureAfterRecording(r, status));
         // STUDIO-011: geração do código Python (janela dona configurada pela aplicação)
         view.actions().onPythonCodegen(() -> new com.nekkora.studio.app.codegen.CodegenPresenter(service, codegenOwner).open());
     }

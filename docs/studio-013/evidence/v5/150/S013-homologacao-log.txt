@@ -1,0 +1,23 @@
+Tela: java.awt.Rectangle[x=0,y=0,width=1280,height=688] · java 21.0.12 · interface em 150%
+Operador: Claude como AGENTE DE TESTE (autorizações e confirmações do print integral como TEST_AGENT, por clique real) · ator do Studio: TEST_AGENT
+Native Host instalado pelo script oficial (install-host.ps1)
+Chrome for Testing: 155.0.8059.39
+OK    Conexão autenticada Studio ⇄ host ⇄ extensão
+OK    B0: extensão 0.6.0 conectada (print mascarado e print integral)
+OK    B1: gravação no site = preencher, preencher, clicar; nenhum valor digitado no modelo
+OK    B2: ao autorizar, a escolha da imagem do site aparece com o PRINT INTEGRAL como padrão
+OK    B2: o texto da autorização avisa que, por padrão, os dados vão para o PDF
+OK    B2: escolha, "Autorizar" e "Lembrar" inteiros dentro da janela
+captura S013-B2-autorizar-print-integral-padrao.png (1254x666)
+OK    B2: nenhuma confirmação pedida ao autorizar (sem segundo clique)
+  http://site-a.nekkora.test:18765 — até fechar o navegador. Print integral: as imagens mostram os dados da tela; só senhas cobertas. Cada captura pode sair mascarada. Revogue quando quiser em "Sites autorizados para o PDD". · sites: [http://site-a.nekkora.test:18765 · até fechar o navegador · print integral · agente de teste]
+OK    B2: site no print integral, só nesta sessão, registrado como agente de teste
+OK    B2: a aba diz "print integral" e oferece "Mascarar esta captura"
+OK    B2: "Capturar", "Mascarar esta captura" e "Voltar ao print mascarado" inteiros dentro da janela
+captura S013-B2-site-print-integral.png (1254x666)
+  No Chrome, deixe a aba escolhida no estado desta etapa e pressione Alt+Shift+K. Nada é clicado ou enviado; print integral: a imagem mostra os dados da tela; só senhas cobertas.
+  Imagem associada · rascunho 1.2.0: O rascunho do documento passou a usar o formato 1.2.0 (print integral: a imagem mostra os dados da tela; só senhas cobertas). A automação não muda.
+OK    E2: captura v5 em 150%
+OK    E2: selo "Print integral" visível em 150%
+captura S013-E2-150-print-integral.png (1254x666)
+RESULTADO: 12 verificações, 0 falha(s)

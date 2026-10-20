@@ -60,6 +60,12 @@ public final class FloatingRecorderPanel extends JPanel {
 
         /** Desfecho visto: voltar ao Studio. */
         void done();
+
+        /**
+         * Pedido da usuária (19/10/2026): depois de finalizar, capturar a tela para o PDD — a imagem vai para o bloco das
+         * etapas que acabaram de ser gravadas (gesto Alt+Shift+K no Chrome, como na janela do PDD).
+         */
+        default void capturePdd() {}
     }
 
     private static final String LIVE = "live";
@@ -90,6 +96,8 @@ public final class FloatingRecorderPanel extends JPanel {
     private final NekkoraButton collapse = NekkoraButton.ghost("Recolher").withIcon(IconName.MINUS).withSize(ControlSize.SMALL);
     private final NekkoraStack summaryLines = NekkoraStack.vertical(Spacing.SPACE_2);
     private final NekkoraText summaryTitle = new NekkoraText("");
+    private final NekkoraButton capturePdd = NekkoraButton.secondary("Capturar tela").withIcon(IconName.PLAY).withSize(ControlSize.SMALL);
+    private final NekkoraParagraph pddStatus = note("", TextTone.SECONDARY);
     private final CardLayout cards = new CardLayout();
     private RecorderSnapshot last;
     private boolean adjusting;
@@ -186,7 +194,13 @@ public final class FloatingRecorderPanel extends JPanel {
         NekkoraStack sum = NekkoraStack.vertical(Spacing.SPACE_4);
         sum.add(summaryTitle);
         sum.add(summaryLines);
+        capturePdd.onClick(e -> actions.capturePdd());
+        capturePdd.getAccessibleContext().setAccessibleDescription(
+                "Captura a tela para o PDD: a imagem vai para o bloco das etapas desta gravação. Pressione Alt+Shift+K no Chrome depois.");
+        pddStatus.setVisible(false);
+        sum.add(pddStatus);
         NekkoraStack sumFoot = NekkoraStack.horizontal(Spacing.SPACE_3);
+        sumFoot.add(capturePdd);
         sumFoot.addGlue();
         sumFoot.add(NekkoraButton.primary("Voltar ao Studio").withSize(ControlSize.SMALL).onClick(e -> actions.done()));
         sum.add(sumFoot);
@@ -298,6 +312,8 @@ public final class FloatingRecorderPanel extends JPanel {
                 } else if (s.problem() != null) {
                     summaryLines.add(note(s.problem().message(), TextTone.SECONDARY));
                 }
+                // só depois de uma gravação concluída com etapas registradas
+                capturePdd.setVisible(st == RecorderState.COMPLETED && s.steps() != null && s.steps().accepted() > 0);
                 cards.show(this, SUMMARY);
             } else {
                 cards.show(this, LIVE);
@@ -307,6 +323,23 @@ public final class FloatingRecorderPanel extends JPanel {
         }
         revalidate();
         repaint();
+    }
+
+    /** Situação da captura para o PDD pedida daqui (vazio = esconde). */
+    public void setPddStatus(String text, boolean busy) {
+        pddStatus.setText(text == null ? "" : text);
+        pddStatus.setVisible(text != null && !text.isEmpty());
+        capturePdd.setEnabled(!busy);
+        revalidate();
+        repaint();
+    }
+
+    public NekkoraButton capturePddButton() {
+        return capturePdd;
+    }
+
+    public NekkoraParagraph pddStatusText() {
+        return pddStatus;
     }
 
     public void setAlwaysOnTopChecked(boolean value) {

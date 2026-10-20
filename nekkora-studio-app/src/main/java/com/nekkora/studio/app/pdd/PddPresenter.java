@@ -25,9 +25,12 @@ import com.nekkora.studio.pdd.PddStore;
 import com.nekkora.studio.pdd.PddText;
 import com.nekkora.studio.pdd.PdfRenderer;
 import com.nekkora.studio.pdd.ProcessProjection;
+import com.nekkora.studio.pdd.SyntheticRenderer;
 import com.nekkora.studio.pdd.VisualVerifier;
 import com.nekkora.studio.recorder.BrowserTab;
 import com.nekkora.studio.recorder.PddCaptureClient;
+import com.nekkora.studio.recorder.PddConsentClient;
+import com.nekkora.studio.recorder.TabAccess;
 import com.nekkora.studio.recorder.RecorderController;
 import com.nekkora.studio.ui.pdd.PddImageEditor;
 import com.nekkora.studio.ui.pdd.PddPanel;
@@ -46,6 +49,7 @@ import java.time.ZoneOffset;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -64,6 +68,14 @@ import org.apache.pdfbox.rendering.PDFRenderer;
  * "Capturar novamente" num bloco COM imagem traz uma CANDIDATA (só em memória, já verificada) que só substitui a anterior
  * em "Aplicar" — cancelar, falhar, trocar de aba ou mudar o processo nunca troca a imagem do bloco; recorte e marcadores
  * manuais são edições do rascunho (com desfazer/refazer); a retenção de imagens respeita o histórico da sessão.
+ *
+ * <p>Revisão da usuária (19/10/2026) — duas opções por site: print integral (nekkora-visual/5: a tela como está, só senhas
+ * cobertas; o PADRÃO, depois do teste da usuária) e print mascarado (nekkora-visual/4, por escolha). Autorizar um site no
+ * integral não pede confirmação (o texto da autorização avisa); exportar um PDF com alguma imagem integral pede. Cada
+ * captura pode sair mascarada. O laboratório local também captura no integral por padrão.
+ *
+ * <p>Do Recorder: "Capturar tela", depois de finalizar a gravação, captura para o bloco das etapas recém-gravadas
+ * ({@link #captureAfterRecording}).
  */
 public final class PddPresenter implements PddPanel.Actions {
 
@@ -76,7 +88,17 @@ public final class PddPresenter implements PddPanel.Actions {
         /** Pasta escolhida para exportar (vazia = cancelado). */
         Optional<Path> chooseFolder();
 
+        /** Confirmação explícita da pessoa (print integral). Sem janela que pergunte, nada é confirmado. */
+        default boolean confirm(String title, String message, String action) {
+            return false;
+        }
+
         static Host headless(Path folder) {
+            return headless(folder, true);
+        }
+
+        /** Janela sem tela para os testes; {@code confirms} = o que a pessoa responderia às confirmações. */
+        static Host headless(Path folder, boolean confirms) {
             return new Host() {
                 public void show() {}
 
@@ -84,6 +106,10 @@ public final class PddPresenter implements PddPanel.Actions {
 
                 public Optional<Path> chooseFolder() {
                     return Optional.ofNullable(folder);
+                }
+
+                public boolean confirm(String title, String message, String action) {
+                    return confirms;
                 }
             };
         }
@@ -106,6 +132,11 @@ public final class PddPresenter implements PddPanel.Actions {
     private final Deque<DocumentDraft> redo = new ArrayDeque<>();
     private String selected = "";
     private List<PddPanel.Tab> tabs = List.of();
+    /** STUDIO-013: por que nenhuma aba captura (só contagens, nunca endereço ou título) e os sites autorizados para o PDD. */
+    private String tabsHint = "";
+    private List<PddPanel.Site> sites = List.of();
+    /** Consentimento por origem (nível e escopo), da última leitura da lista de sites. */
+    private Map<String, PddConsentClient.Consent> consents = Map.of();
     private PddCaptureClient capturing;
     private String bannerTitle = "";
     private String banner = "";
@@ -186,6 +217,14 @@ public final class PddPresenter implements PddPanel.Actions {
                     "Abra uma automação com etapas para gerar a documentação."));
             return;
         }
+        prepare(a);
+        listTabs();
+        render();
+        host.show();
+    }
+
+    /** Rascunho da automação carregado (ou derivado) e janela criada, sem mostrar. */
+    private void prepare(Automation a) {
         if (host == null) host = hosts.apply(panel);
         if (!a.id().equals(automationId)) {
             endHistory(); // o desfazer da automação anterior acaba aqui: as imagens que só ele alcançava saem do disco
@@ -207,27 +246,247 @@ public final class PddPresenter implements PddPanel.Actions {
             selected = draft.sections().isEmpty() ? "" : "secao-1";
             if (saved != null) retain(); // histórico novo: sobras de uma sessão anterior saem; rascunho ilegível = nada é apagado
         }
-        listTabs();
-        render();
-        host.show();
     }
 
-    private void listTabs() {
+    /** Relê abas e sites; o futuro completa (na EDT) quando as duas listas chegaram. */
+    private java.util.concurrent.CompletableFuture<Void> listTabs() {
         if (link.status().state() != LinkStatus.State.CONNECTED) {
             tabs = List.of();
-            return;
+            sites = List.of();
+            tabsHint = "O Studio não está conectado ao Chrome: ligue \"Conectar ao Nekkora Studio\" no painel da Nekkora Extension.";
+            return java.util.concurrent.CompletableFuture.completedFuture(null);
         }
+        boolean consentAware = consentAware();
+        java.util.concurrent.CompletableFuture<Void> tabsDone = new java.util.concurrent.CompletableFuture<>();
+        java.util.concurrent.CompletableFuture<Void> sitesDone = new java.util.concurrent.CompletableFuture<>();
         recorder.listTabs().whenComplete((list, err) -> edt(() -> {
             List<PddPanel.Tab> out = new ArrayList<>();
+            int recording = 0;
+            int withoutAccess = 0;
+            int blocked = 0;
+            int withoutConsent = 0;
             if (list != null) {
-                // LAB, ou origem de benchmark autorizada (perfil da extensão, NEKKORA-E2E-001); o resto nem é oferecido
                 for (BrowserTab t : list) {
-                    if (t.visualCapture() != null && !t.recording()) {
-                        out.add(new PddPanel.Tab(t.tabRef(), t.label() + ("BENCHMARK".equals(t.visualCapture()) ? " · benchmark autorizado" : " · laboratório")));
+                    PddPanel.Tab tab = tab(t, consentAware);
+                    if (tab == null) {
+                        if (t.access() == TabAccess.BROWSER_RESTRICTED || t.access() == TabAccess.BROWSER_INTERNAL) blocked++;
+                        continue;
                     }
+                    switch (tab.state()) {
+                        case "RECORDING" -> recording++;
+                        case "CHROME_ACCESS_REQUIRED" -> withoutAccess++;
+                        case "CONSENT_REQUIRED", "UPDATE_EXTENSION" -> withoutConsent++;
+                        default -> { }
+                    }
+                    out.add(tab);
                 }
             }
+            // as que podem capturar primeiro; depois as que só precisam de autorização
+            out.sort(java.util.Comparator.comparingInt(x -> List.of("READY", "CONSENT_REQUIRED", "UPDATE_EXTENSION", "RECORDING", "CHROME_ACCESS_REQUIRED")
+                    .indexOf(x.state())));
             tabs = out;
+            tabsHint = out.stream().anyMatch(PddPanel.Tab::ready) ? "" : tabsHint(list == null, recording, withoutAccess, withoutConsent, blocked);
+            render();
+            tabsDone.complete(null);
+        }));
+        if (consentAware) {
+            new PddConsentClient(link, Duration.ofSeconds(10)).list().whenComplete((list, err) -> edt(() -> {
+                List<PddPanel.Site> out = new ArrayList<>();
+                Map<String, PddConsentClient.Consent> by = new HashMap<>();
+                if (list != null) {
+                    for (PddConsentClient.Consent c : list) {
+                        by.put(c.origin(), c);
+                        out.add(new PddPanel.Site(c.origin(), c.origin() + " · " + ("REMEMBERED".equals(c.scope()) ? "lembrado" : "até fechar o navegador")
+                                + " · " + (c.full() ? "print integral" : "print mascarado") + " · " + ("TEST_AGENT".equals(c.actor()) ? "agente de teste" : "desenvolvedor")
+                                + (c.chromeAccess() ? "" : " · sem acesso do Chrome"), c.full()));
+                    }
+                }
+                sites = out;
+                consents = by;
+                render();
+                sitesDone.complete(null);
+            }));
+        } else {
+            sites = List.of();
+            sitesDone.complete(null);
+        }
+        return java.util.concurrent.CompletableFuture.allOf(tabsDone, sitesDone);
+    }
+
+    // ------------------------------------------------------------------------------------------- captura pedida pelo Recorder
+
+    /** Para onde vão as mensagens da captura pedida pelo Recorder (null = nenhuma em curso). */
+    private java.util.function.BiConsumer<String, Boolean> recorderStatus;
+
+    /**
+     * Pedido da usuária (19/10/2026): "Capturar tela" no resumo do Recorder, logo depois de finalizar. A imagem vai para o
+     * bloco da ÚLTIMA etapa desta gravação (etapas com o {@code RECORDING_ID} dela), na aba em que se gravou, com a mesma
+     * captura da janela do PDD (gesto no Chrome, 4ª barreira). O rascunho é atualizado com as etapas novas antes. Se o site
+     * ainda não está autorizado para o PDD, a janela do PDD abre nesse bloco para autorizar.
+     */
+    public void captureAfterRecording(com.nekkora.studio.recorder.RecorderController.LastRecording r, java.util.function.BiConsumer<String, Boolean> status) {
+        Automation a = service.state().activeAutomation().filter(x -> x.id().equals(r.automation())).orElse(null);
+        if (a == null) {
+            status.accept("Abra no Studio a automação gravada para capturar a tela.", false);
+            return;
+        }
+        StepId last = lastRecorded(a, r.recordingId());
+        if (last == null) {
+            status.accept("Nenhuma etapa desta gravação foi registrada: não há bloco para a imagem.", false);
+            return;
+        }
+        if (capturing != null) {
+            status.accept("Já há uma captura armada para o PDD. Conclua ou cancele na janela do PDD.", false);
+            return;
+        }
+        prepare(a);
+        if (!draft.processRevision().equals(currentProjection().revision())) refresh(); // traz as etapas recém-gravadas
+        Block b = draft.blocks().stream().filter(x -> x.stepIds().contains(last)).findFirst().orElse(null);
+        if (b == null) {
+            status.accept("O bloco das etapas desta gravação não foi encontrado no documento.", false);
+            return;
+        }
+        selected = b.blockId();
+        status.accept("Preparando a captura…", true);
+        listTabs().whenComplete((v, err) -> edt(() -> {
+            PddPanel.Tab t = shownTabs().stream().filter(x -> x.tabRef().equals(r.tabRef())).findFirst().orElse(null);
+            if (t == null || !t.ready()) {
+                status.accept(t == null ? "A aba da gravação não está mais aberta no Chrome. Capture pela janela do PDD."
+                        : "Autorize a captura do PDD neste site na janela do PDD, que foi aberta no bloco das etapas desta gravação.", false);
+                listTabs();
+                render();
+                host.show();
+                return;
+            }
+            recorderStatus = status;
+            capture(b.blockId(), r.tabRef(), false);
+            if (capturing == null) recorderStatus = null; // não armou (a mensagem já foi)
+        }));
+    }
+
+    /** Última etapa da gravação (pela correlação RECORDING_ID), na ordem das sessões. */
+    private static StepId lastRecorded(Automation a, String recordingId) {
+        StepId last = null;
+        for (var session : a.sessions()) {
+            for (AutomationStep st : session.steps()) {
+                boolean mine = st.provenance().correlation().get(com.nekkora.studio.domain.element.CorrelationKeys.Key.RECORDING_ID)
+                        .map(recordingId::equals).orElse(false);
+                if (mine) last = st.id();
+            }
+        }
+        return last;
+    }
+
+    /** Abas como a janela mostra (com o nível do site: print integral liberado ou não; laboratório no integral). */
+    private List<PddPanel.Tab> shownTabs() {
+        return tabs.stream().map(t -> t.withFull(fullAt(t.origin()))).toList();
+    }
+
+    /** O print integral vale nesta origem? Site com o nível FULL ou o laboratório local (sem consentimento). */
+    private boolean fullAt(String origin) {
+        if (origin == null) return false;
+        if (origin.startsWith("http://127.0.0.1") || origin.startsWith("http://localhost")) return true;
+        return consents.containsKey(origin) && consents.get(origin).full();
+    }
+
+    /** A extensão conectada entende o consentimento PDD por origem e a nekkora-visual/3 (0.6.0+)? */
+    private boolean consentAware() {
+        LinkStatus.ExtensionInfo ext = link.status().extension();
+        return ext != null && PddCaptureClient.supportsV3(ext.version());
+    }
+
+    /**
+     * Aba para a escolha da captura, com o estado: pode capturar, falta autorizar o PDD no site, falta acesso do Chrome,
+     * está gravando, ou a extensão é anterior à 0.6.0. Páginas do navegador e endereços sem suporte não são oferecidos.
+     */
+    public static PddPanel.Tab tab(BrowserTab t, boolean consentAware) {
+        String origin = t.origin();
+        String profile = t.visualCapture();
+        String label = t.label();
+        if (t.recording() && (profile != null || t.access().allowed())) return new PddPanel.Tab(t.tabRef(), label + " · em gravação", origin, "RECORDING");
+        if ("LAB".equals(profile)) return new PddPanel.Tab(t.tabRef(), label + " · laboratório", origin, "READY");
+        if ("AUTHORIZED_SITE".equals(profile)) return new PddPanel.Tab(t.tabRef(), label + " · site autorizado para o PDD", origin, "READY");
+        if ("BENCHMARK".equals(profile)) {
+            // extensão anterior à 0.6.0 (lista compilada): este Studio pede a v3 e só arma com extensão nova
+            return new PddPanel.Tab(t.tabRef(), label + " · benchmark (extensão antiga)", origin, "UPDATE_EXTENSION");
+        }
+        if (t.access() == TabAccess.AUTHORIZED) {
+            if (!consentAware) return new PddPanel.Tab(t.tabRef(), label + " · captura indisponível", origin, "UPDATE_EXTENSION");
+            if (t.pddConsentMissing()) return new PddPanel.Tab(t.tabRef(), label + " · captura PDD não autorizada", origin, "CONSENT_REQUIRED");
+            return null;
+        }
+        if (t.access() == TabAccess.PERMISSION_REQUIRED) return new PddPanel.Tab(t.tabRef(), label + " · sem acesso do Chrome", null, "CHROME_ACCESS_REQUIRED");
+        return null;
+    }
+
+    /** Motivo, em linguagem de uso, de nenhuma aba poder ser capturada — só contagens, nunca endereço ou título. */
+    public static String tabsHint(boolean failed, int recording, int withoutAccess, int withoutConsent, int blocked) {
+        if (failed) return "A extensão não informou as abas abertas. Abra a escolha de aba de novo para tentar outra vez.";
+        StringBuilder b = new StringBuilder("Nenhuma aba pode ser capturada agora.");
+        if (withoutConsent > 0) b.append(' ').append(withoutConsent).append(" aba(s) com acesso do Chrome, mas sem autorização de captura do PDD: escolha a aba e")
+                .append(" use \"Autorizar captura PDD neste site\".");
+        if (withoutAccess > 0) b.append(' ').append(withoutAccess).append(" aba(s) sem acesso do Chrome (ícone da extensão → Acesso ao site → Neste site).");
+        if (recording > 0) b.append(' ').append(recording).append(" aba(s) sendo gravada(s): finalize a gravação para capturar.");
+        if (blocked > 0) b.append(' ').append(blocked).append(" aba(s) bloqueada(s) pelo navegador (páginas internas ou da loja do Chrome).");
+        if (withoutConsent + withoutAccess + recording + blocked == 0) b.append(" Abra o laboratório local ou um site http/https no Chrome.");
+        return b.toString();
+    }
+
+    @Override
+    public void refreshTabs() {
+        listTabs();
+        render();
+    }
+
+    /** STUDIO-013: autoriza a captura do PDD na origem mostrada (registro com quem decidiu: desenvolvedor ou agente de teste). */
+    @Override
+    public void authorizeSite(String tabRef, String origin, boolean remember) {
+        authorizeSite(tabRef, origin, remember, true);
+    }
+
+    /** Autorizar sem escolher o nível (Studios e chamadas anteriores): print integral, o padrão. */
+    @Override
+    public void authorizeSite(String tabRef, String origin, boolean remember, boolean full) {
+        if (!consentAware() || !PddConsentClient.validOrigin(origin)) return;
+        // pedido da usuária: o integral é o padrão e não pede segundo clique — o texto da autorização avisa (dados no PDF)
+        grantLevel(tabRef, origin, remember ? "REMEMBERED" : "SESSION", full, "Captura PDD autorizada");
+    }
+
+    /** Revisão da usuária: troca a imagem de um site já autorizado (print integral ou mascarado), sem confirmação. */
+    @Override
+    public void setSiteLevel(String tabRef, String origin, boolean full) {
+        if (!consentAware() || !PddConsentClient.validOrigin(origin)) return;
+        PddConsentClient.Consent c = consents.get(origin);
+        grantLevel(tabRef, origin, c != null && "REMEMBERED".equals(c.scope()) ? "REMEMBERED" : "SESSION", full,
+                full ? "Print integral liberado" : "Print mascarado neste site");
+    }
+
+    private void grantLevel(String tabRef, String origin, String scope, boolean full, String title) {
+        new PddConsentClient(link, Duration.ofSeconds(10)).grant(tabRef, origin, scope, actor.name(), full ? "FULL" : "MASKED").whenComplete((c, err) -> edt(() -> {
+            if (err != null) {
+                say(Severity.WARNING, "Autorização não concedida", failure(err));
+            } else {
+                say(Severity.SUCCESS, title, c.origin() + ("REMEMBERED".equals(c.scope()) ? " — site lembrado." : " — até fechar o navegador.")
+                        + (c.full() ? " Print integral: as imagens mostram os dados da tela; só senhas cobertas. Cada captura pode sair mascarada."
+                                : " Print mascarado: campos, textos de dados, tabelas e frames saem cobertos.")
+                        + " Revogue quando quiser em \"Sites autorizados para o PDD\".");
+            }
+            listTabs();
+            render();
+        }));
+    }
+
+    private Host host() {
+        return host != null ? host : Host.headless(null, false);
+    }
+
+    @Override
+    public void revokeSite(String origin) {
+        if (!consentAware() || !PddConsentClient.validOrigin(origin)) return;
+        new PddConsentClient(link, Duration.ofSeconds(10)).revoke(origin).whenComplete((r, err) -> edt(() -> {
+            if (err != null) say(Severity.WARNING, "Revogação não confirmada", failure(err));
+            else say(Severity.INFO, "Captura PDD revogada", origin + ": capturas armadas ou em curso nesse site foram canceladas.");
+            listTabs();
             render();
         }));
     }
@@ -351,6 +610,11 @@ public final class PddPresenter implements PddPanel.Actions {
      */
     @Override
     public void capture(String blockId, String tabRef) {
+        capture(blockId, tabRef, false);
+    }
+
+    @Override
+    public void capture(String blockId, String tabRef, boolean masked) {
         Block b = draft.block(blockId).orElse(null);
         if (b == null || capturing != null) return;
         if (!draft.processRevision().equals(currentProjection().revision())) {
@@ -372,24 +636,35 @@ public final class PddPresenter implements PddPanel.Actions {
         boolean replace = b.capture().isPresent(); // bloco COM imagem: a nova vira candidata (revisar → Aplicar/Cancelar)
         String armedRevision = draft.processRevision();
         LinkStatus.ExtensionInfo ext = link.status().extension();
-        String policy = ext != null && PddCaptureClient.supportsV2(ext.version()) ? PddCaptureClient.POLICY_V2 : null;
+        // STUDIO-013: extensão 0.6.0+ → sempre a v3 (sintética) e a origem mostrada; 0.5.x → v2 (só laboratório); antes → v1
+        boolean v3 = ext != null && PddCaptureClient.supportsV3(ext.version());
+        // revisão da usuária: o Studio pede o print real com o texto de dados mascarado (v4); a v3 sintética segue no contrato
+        String origin = v3 ? tabs.stream().filter(t -> t.tabRef().equals(tabRef)).map(PddPanel.Tab::origin).findFirst().orElse(null) : null;
+        // revisão da usuária: site com print integral → v5, salvo se esta captura foi marcada para sair mascarada
+        boolean full = v3 && !masked && fullAt(origin);
+        String policy = full ? PddCaptureClient.POLICY_V5 : v3 ? PddCaptureClient.POLICY_V4
+                : ext != null && PddCaptureClient.supportsV2(ext.version()) ? PddCaptureClient.POLICY_V2 : null;
         PddCaptureClient c = new PddCaptureClient(link, Duration.ofSeconds(20));
         capturing = c;
         say(Severity.INFO, "Preparando a captura…", "");
         render();
-        c.arm(tabRef, targets, Duration.ofSeconds(60), policy).whenComplete((armed, err) -> edt(() -> {
+        c.arm(tabRef, targets, Duration.ofSeconds(60), policy, origin).whenComplete((armed, err) -> edt(() -> {
             if (capturing != c) return;
             if (err != null) {
                 finishCapture(c);
                 say(Severity.WARNING, "Captura não armada", failure(err));
+                recorderStatus = null;
                 render();
                 return;
             }
             String sc = armed.shortcut();
             say(Severity.INFO, "Captura armada", sc.isEmpty()
-                    ? "Defina um atalho para \"Capturar a tela para o PDD\" em chrome://extensions/shortcuts e pressione-o no Chrome, na aba do laboratório."
-                    : "No Chrome, deixe a aba do laboratório no estado desta etapa e pressione " + sc + ". Nada é clicado ou enviado; só rótulos de interface "
-                            + "aparecem na imagem.");
+                    ? "Defina um atalho para \"Capturar a tela para o PDD\" em chrome://extensions/shortcuts e pressione-o no Chrome, na aba escolhida."
+                    : "No Chrome, deixe a aba escolhida no estado desta etapa e pressione " + sc + ". Nada é clicado ou enviado; "
+                            + (PddCaptureClient.POLICY_V5.equals(armed.policy()) ? "print integral: a imagem mostra os dados da tela; só senhas cobertas."
+                                    : PddCaptureClient.POLICY_V4.equals(armed.policy()) ? "a imagem é a tela real com os dados cobertos por faixas."
+                                    : PddCaptureClient.POLICY_V3.equals(armed.policy()) ? "a imagem é desenhada pelo Studio, sem nenhum pixel da página."
+                                    : "só rótulos de interface aparecem na imagem."));
             render();
         }));
         c.result().whenComplete((r, err) -> edt(() -> {
@@ -402,6 +677,9 @@ public final class PddPresenter implements PddPanel.Actions {
             } else {
                 accept(blockId, r, replace, armedRevision);
             }
+            boolean fromRecorder = recorderStatus != null;
+            recorderStatus = null;
+            if (fromRecorder && candidate != null) host.show(); // o bloco já tinha imagem: a nova é revisada (Aplicar/Cancelar) no PDD
             render();
         }));
     }
@@ -413,6 +691,7 @@ public final class PddPresenter implements PddPanel.Actions {
         c.cancel();
         finishCapture(c);
         say(Severity.INFO, "Captura cancelada", "Nada foi capturado.");
+        recorderStatus = null;
         render();
     }
 
@@ -431,7 +710,20 @@ public final class PddPresenter implements PddPanel.Actions {
         List<Region> regions = new ArrayList<>();
         BufferedImage image;
         try {
-            for (PddCaptureClient.Region x : r.regions()) regions.add(new Region(x.kind(), x.x(), x.y(), x.width(), x.height(), x.tone()));
+            if (VisualVerifier.POLICY_V3.equals(policy)) {
+                // STUDIO-013: a extensão mandou só a descrição; o Studio desenha (nenhum pixel da página) e verifica o próprio desenho
+                List<Region> css = new ArrayList<>();
+                for (PddCaptureClient.Region x : r.regions()) {
+                    css.add(new Region(x.kind(), x.x(), x.y(), x.width(), x.height(), x.tone(), x.text(), x.size(), x.weight(), x.ink(), x.align()));
+                }
+                SyntheticRenderer.Rendered drawn = SyntheticRenderer.render(new SyntheticRenderer.Description(r.width(), r.height(), r.devicePixelRatio(), css));
+                r = scaledResult(r, drawn);
+                regions.addAll(drawn.regions());
+            } else if (VisualVerifier.POLICY_V4.equals(policy) || VisualVerifier.POLICY_V5.equals(policy)) {
+                for (PddCaptureClient.Region x : r.regions()) regions.add(new Region(x.kind(), x.x(), x.y(), x.width(), x.height(), null, null, 0, null, x.ink(), null));
+            } else {
+                for (PddCaptureClient.Region x : r.regions()) regions.add(new Region(x.kind(), x.x(), x.y(), x.width(), x.height(), x.tone()));
+            }
             image = VisualVerifier.verify(r.png(), r.sha256(), r.width(), r.height(), r.devicePixelRatio(), regions, policy); // 4ª barreira
         } catch (VisualVerifier.VisualPolicyException e) {
             say(Severity.WARNING, "Imagem recusada pelo Studio", "A imagem não passou na verificação da política visual (" + e.code() + "). Nada foi guardado."
@@ -450,8 +742,10 @@ public final class PddPresenter implements PddPanel.Actions {
             discardCandidate();
             candidate = new Candidate(blockId, c, r.png(), image, armedRevision);
             selected = blockId;
-            long labels = regions.stream().filter(x -> "CARRIER".equals(x.kind())).count();
-            say(Severity.INFO, "Nova captura pronta para revisão", labels + " rótulo(s) de interface visíveis. A prévia já mostra a nova imagem; use \"Selecionar área\" "
+            long labels = regions.stream().filter(x -> "CARRIER".equals(x.kind()) || "LABEL".equals(x.kind())).count();
+            String kind = VisualVerifier.POLICY_V5.equals(policy) ? "Print integral (dados da tela; só senhas cobertas). "
+                    : VisualVerifier.POLICY_V4.equals(policy) ? "Print mascarado (dados cobertos por faixas). " : labels + " rótulo(s) de interface visíveis. ";
+            say(Severity.INFO, "Nova captura pronta para revisão", kind + "A prévia já mostra a nova imagem; use \"Selecionar área\" "
                     + "se quiser recortar e então \"Aplicar\". \"Cancelar\" mantém a imagem anterior.");
             return;
         }
@@ -478,16 +772,36 @@ public final class PddPresenter implements PddPanel.Actions {
         SafeCapture attached = c;
         int finalPlaced = placed;
         boolean upgrade = !draft.needsV11();
+        boolean upgrade12 = !draft.needsV12();
         apply(d -> DraftEdits.dropUnreferencedCaptures(DraftEdits.attachCapture(d, blockId, attached)));
         retain();
+        if (upgrade12 && draft.needsV12()) {
+            say(Severity.SUCCESS, "Imagem associada · rascunho 1.2.0", "O rascunho do documento passou a usar o formato 1.2.0 ("
+                    + (VisualVerifier.POLICY_V5.equals(policy) ? "print integral: a imagem mostra os dados da tela; só senhas cobertas"
+                            : VisualVerifier.POLICY_V4.equals(policy) ? "print mascarado: dados cobertos por faixas" : "representação sintética")
+                    + "). A automação não muda.");
+            return;
+        }
         if (upgrade && draft.needsV11()) {
             say(Severity.SUCCESS, "Imagem associada · rascunho 1.1.0", "O rascunho do documento passou a usar o formato 1.1.0 (representação documental). "
                     + "A automação não muda.");
             return;
         }
-        long labels = regions.stream().filter(x -> "CARRIER".equals(x.kind())).count();
+        long labels = regions.stream().filter(x -> "CARRIER".equals(x.kind()) || "LABEL".equals(x.kind())).count();
         say(Severity.SUCCESS, "Imagem sanitizada associada", labels + " rótulo(s) de interface visíveis; " + finalPlaced + " de " + b.stepIds().size()
-                + " marcador(es) posicionados. Campos e o restante da tela ficam ocultos.");
+                + " marcador(es) posicionados. " + (VisualVerifier.POLICY_V5.equals(policy)
+                        ? "Print integral: a imagem mostra os dados da tela; só os campos de senha estão cobertos. Revise antes de compartilhar."
+                        : VisualVerifier.POLICY_V4.equals(policy)
+                        ? "Print real da tela: campos, textos de dados, tabelas e frames cobertos por faixas; revise antes de compartilhar."
+                        : VisualVerifier.POLICY_V3.equals(policy)
+                        ? "Representação sintética: textos que não são rótulos de interface viraram barras e os campos ficam vazios."
+                        : "Campos e o restante da tela ficam ocultos."));
+    }
+
+    /** v3: o resultado passa a apontar para o desenho do Studio (PNG, sha, dimensões e escala); marcadores normalizados não mudam. */
+    private static PddCaptureClient.Result scaledResult(PddCaptureClient.Result r, SyntheticRenderer.Rendered d) {
+        return new PddCaptureClient.Result(r.captureId(), true, null, d.png(), d.sha256(), d.width(), d.height(), d.scale(), r.observedAt(), r.regions(),
+                r.markers(), r.limitations(), r.policy());
     }
 
     /** Metadados da captura: marcadores só das etapas do bloco; v2 com referência própria. */
@@ -620,6 +934,14 @@ public final class PddPresenter implements PddPanel.Actions {
             render();
             return;
         }
+        long full = draft.blocks().stream().map(b -> b.capture().map(draft.captures()::get).orElse(null))
+                .filter(c -> c != null && c.fullPrint()).count();
+        if (full > 0 && !host().confirm("Exportar com print integral?", full + " imagem(ns) deste documento são print integral: mostram os dados da tela "
+                + "(só senhas cobertas) e vão assim para o PDF. Revise o PDF antes de compartilhar.", "Exportar mesmo assim")) {
+            say(Severity.INFO, "Exportação cancelada", "Nenhum PDF foi gerado. Recapture em print mascarado as imagens que não devem levar dados.");
+            render();
+            return;
+        }
         Path dir = host.chooseFolder().orElse(null);
         if (dir == null) return;
         try {
@@ -731,9 +1053,10 @@ public final class PddPresenter implements PddPanel.Actions {
         long nBlocking = pending.stream().filter(Pending::blocking).count();
         // com uma nova captura em revisão a exportação fica bloqueada: o selo diz isso (antes dizia "Pronto para exportar")
         String status = blocking ? nBlocking + " pendência(s) para revisar" : candidate != null ? "Nova captura em revisão" : "Pronto para exportar";
-        panel.show(new PddPanel.Model(items, selected, title, titleState, attention, block, rows, itemPending, hasImage, canJoin, tabs, capturing != null,
+        List<PddPanel.Tab> shown = shownTabs();
+        panel.show(new PddPanel.Model(items, selected, title, titleState, attention, block, rows, itemPending, hasImage, canJoin, shown, capturing != null,
                 bTitle, bText, bSev, status, blocking || candidate != null ? Status.WARNING : Status.SUCCESS,
-                preview, !undo.isEmpty(), !redo.isEmpty(), !blocking && capturing == null && candidate == null, image, slots));
+                preview, !undo.isEmpty(), !redo.isEmpty(), !blocking && capturing == null && candidate == null, image, slots, tabsHint, sites));
     }
 
     /** Prévia: o próprio PDF (modo prévia) rasterizado — com a candidata no lugar da imagem do bloco, se houver. */
@@ -810,6 +1133,7 @@ public final class PddPresenter implements PddPanel.Actions {
         bannerSeverity = s;
         bannerTitle = title;
         banner = text;
+        if (recorderStatus != null) recorderStatus.accept(title + (text == null || text.isEmpty() ? "" : ": " + text), capturing != null);
     }
 
     private Automation automation() {
@@ -878,7 +1202,12 @@ public final class PddPresenter implements PddPanel.Actions {
 
     static String captureFailure(String code) {
         return switch (code == null ? "" : code) {
-            case "VISUAL_CAPTURE_NOT_ALLOWED" -> "Esta origem não está autorizada para a captura do PDD (só o laboratório local ou uma origem autorizada).";
+            case "VISUAL_CAPTURE_NOT_ALLOWED" -> "Esta origem não está autorizada para a captura do PDD (laboratório local, ou site com acesso do Chrome e autorização de"
+                    + " captura PDD).";
+            case "PDD_CONSENT_REVOKED" -> "A autorização de captura do PDD neste site foi revogada: nada foi capturado.";
+            case "PERMISSION_REVOKED" -> "O acesso do Chrome a este site foi revogado: nada foi capturado.";
+            case "ORIGIN_CHANGED" -> "A aba mudou de site (login, redirecionamento ou navegação) durante a captura: nada foi capturado.";
+            case "LABEL_NOT_INTERFACE_TEXT", "REGION_FIELD_UNKNOWN", "TEXT_NOT_QUANTIZED" -> "A descrição da tela não passou na política visual: nada foi guardado.";
             case "CARRIER_OVERLAPS_CONTENT" -> "Um rótulo encosta em imagem ou quadro incorporado: a captura foi recusada por segurança.";
             case "PAGE_CHANGED_DURING_CAPTURE" -> "A página mudou durante a captura: deixe-a parada e tente de novo.";
             case "PAGE_CHANGED", "TAB_CLOSED" -> "A aba navegou ou foi fechada antes do atalho.";
@@ -895,7 +1224,22 @@ public final class PddPresenter implements PddPanel.Actions {
 
     private static String failure(Throwable err) {
         Throwable t = err instanceof java.util.concurrent.CompletionException && err.getCause() != null ? err.getCause() : err;
-        if (t instanceof com.nekkora.studio.bridge.BridgeCommandException b) return captureFailure(b.code().name());
+        if (t instanceof com.nekkora.studio.bridge.BridgeCommandException b) {
+            String why = b.reason() == null ? "" : switch (b.reason()) {
+                // STUDIO-013: motivos distintos para "não pode capturar aqui"
+                case "PDD_CONSENT_REQUIRED" -> "Esta página permite gravação, mas a captura de PDD ainda não está autorizada: use \"Autorizar captura PDD neste site\".";
+                case "PERMISSION_REQUIRED" -> "Sem acesso do Chrome a este site: conceda pelo ícone da Nekkora Extension (Acesso ao site → Neste site).";
+                case "BROWSER_INTERNAL", "BROWSER_RESTRICTED" -> "Página bloqueada pelo navegador: o Chrome não permite extensões nela.";
+                case "UNSUPPORTED_SCHEME", "INVALID_URL", "URL_UNAVAILABLE" -> "Só páginas http:// e https:// podem ser capturadas.";
+                case "ORIGIN_CHANGED" -> "A aba mudou de site desde a escolha: confira a aba e tente de novo.";
+                case "POLICY_REQUIRES_V3" -> "Neste site a captura exige a política sintética (nekkora-visual/3): atualize a Nekkora Extension e o Studio.";
+                case "RECORDING_ACTIVE" -> "Há uma gravação nesta aba: finalize a gravação para capturar.";
+                case "CAPTURE_BUSY" -> "Já há uma captura armada ou em andamento.";
+                case "NOT_REQUIRED" -> "O laboratório local não precisa de autorização.";
+                default -> "";
+            };
+            return why.isEmpty() ? captureFailure(b.code().name()) : why;
+        }
         return "O navegador não respondeu.";
     }
 

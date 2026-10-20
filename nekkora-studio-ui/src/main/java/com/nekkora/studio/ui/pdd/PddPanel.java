@@ -12,6 +12,7 @@ import com.nekkora.ui.data.NekkoraList;
 import com.nekkora.ui.data.NekkoraStatusBadge;
 import com.nekkora.ui.feedback.NekkoraInlineAlert;
 import com.nekkora.ui.icon.IconName;
+import com.nekkora.ui.input.NekkoraCheckBox;
 import com.nekkora.ui.input.NekkoraComboBox;
 import com.nekkora.ui.input.NekkoraTextField;
 import com.nekkora.ui.navigation.NekkoraToolbar;
@@ -72,6 +73,34 @@ public class PddPanel extends JPanel {
 
         void removeCapture(String blockId);
 
+        /** Relê as abas do Chrome (a lista ao abrir a escolha de aba fica sempre atual). */
+        default void refreshTabs() {}
+
+        /**
+         * STUDIO-013: autoriza a captura do PDD na ORIGEM mostrada da aba (só esta origem exata). {@code remember}: lembrar o
+         * site; sem marcar, vale até o navegador fechar.
+         */
+        default void authorizeSite(String tabRef, String origin, boolean remember) {}
+
+        /** STUDIO-013: revoga a captura do PDD na origem (a armação ou captura em curso nela é cancelada pela extensão). */
+        default void revokeSite(String origin) {}
+
+        /**
+         * Revisão da usuária (19/10/2026): autoriza já escolhendo a imagem do site — {@code full} = print integral (o padrão:
+         * os dados da tela vão para o PDD; só senhas cobertas) ou o print mascarado.
+         */
+        default void authorizeSite(String tabRef, String origin, boolean remember, boolean full) {
+            if (!full) authorizeSite(tabRef, origin, remember);
+        }
+
+        /** Troca a imagem de um site já autorizado: print integral ({@code full}) ou mascarado. */
+        default void setSiteLevel(String tabRef, String origin, boolean full) {}
+
+        /** Captura; {@code masked} = mascarar esta captura mesmo num site com print integral. */
+        default void capture(String blockId, String tabRef, boolean masked) {
+            capture(blockId, tabRef);
+        }
+
         /** Aplica a captura candidata ao bloco (substitui a anterior). */
         void applyCandidate();
 
@@ -106,15 +135,51 @@ public class PddPanel extends JPanel {
     /** Instrução no editor: número, texto, situação ("Derivada", "Revisar", "Revisada", "Fora da política"). */
     public record InstructionRow(int ordinal, String text, String state, boolean needsAttention) {}
 
-    /** Aba do Chrome para a captura. */
-    public record Tab(String tabRef, String label) {}
+    /**
+     * Aba do Chrome para a captura. {@code state}: {@code READY} (pode capturar), {@code CONSENT_REQUIRED} (o Chrome permite
+     * gravar, falta autorizar o PDD nesta origem), {@code CHROME_ACCESS_REQUIRED}, {@code RECORDING} ou {@code UPDATE_EXTENSION}.
+     */
+    public record Tab(String tabRef, String label, String origin, String state, boolean full) {
+        public Tab(String tabRef, String label) {
+            this(tabRef, label, null, "READY", false);
+        }
+
+        public Tab(String tabRef, String label, String origin, String state) {
+            this(tabRef, label, origin, state, false);
+        }
+
+        public boolean ready() {
+            return "READY".equals(state);
+        }
+
+        /** Mesma aba com o nível do site (print integral liberado ou não). */
+        public Tab withFull(boolean f) {
+            return f == full ? this : new Tab(tabRef, label, origin, state, f);
+        }
+    }
+
+    /** Site autorizado para o PDD (origem exata), como aparece na lista e se libera o print integral. */
+    public record Site(String origin, String label, boolean full) {
+        public Site(String origin, String label) {
+            this(origin, label, false);
+        }
+    }
+
+    /** Escolha da imagem do PDD ao autorizar um site (revisão da usuária). */
+    static final String LEVEL_FULL = "Print integral (padrão): a tela como está, só senhas cobertas";
+    static final String LEVEL_MASKED = "Print mascarado: dados cobertos por faixas";
+    /** Selo da imagem em print integral. */
+    public static final String FULL_BADGE = "Print integral: dados reais da tela";
 
     /** Tudo o que a tela mostra. */
     public record Model(List<Item> items, String selected, String title, String titleState, boolean titleNeedsAttention, boolean block,
                         List<InstructionRow> instructions, List<String> pending, boolean hasImage, boolean canJoinNext, List<Tab> tabs,
                         boolean capturing, String bannerTitle, String banner, Severity bannerSeverity, String status, Status statusKind,
-                        List<BufferedImage> preview, boolean canUndo, boolean canRedo, boolean canExport, ImageView image, List<MarkerSlot> markers) {
+                        List<BufferedImage> preview, boolean canUndo, boolean canRedo, boolean canExport, ImageView image, List<MarkerSlot> markers,
+                        String captureHint, List<Site> sites) {
         public Model {
+            captureHint = captureHint == null ? "" : captureHint;
+            sites = sites == null ? List.of() : List.copyOf(sites);
             items = List.copyOf(items);
             instructions = List.copyOf(instructions);
             pending = List.copyOf(pending);
@@ -129,7 +194,16 @@ public class PddPanel extends JPanel {
                 String bannerTitle, String banner, Severity bannerSeverity, String status, Status statusKind, List<BufferedImage> preview, boolean canUndo,
                 boolean canRedo, boolean canExport) {
             this(items, selected, title, titleState, titleNeedsAttention, block, instructions, pending, hasImage, canJoinNext, tabs, capturing, bannerTitle,
-                    banner, bannerSeverity, status, statusKind, preview, canUndo, canRedo, canExport, null, List.of());
+                    banner, bannerSeverity, status, statusKind, preview, canUndo, canRedo, canExport, null, List.of(), "", List.of());
+        }
+
+        /** A forma da STUDIO-012 PDD-01 (sem dica de captura nem sites autorizados). */
+        public Model(List<Item> items, String selected, String title, String titleState, boolean titleNeedsAttention, boolean block,
+                List<InstructionRow> instructions, List<String> pending, boolean hasImage, boolean canJoinNext, List<Tab> tabs, boolean capturing,
+                String bannerTitle, String banner, Severity bannerSeverity, String status, Status statusKind, List<BufferedImage> preview, boolean canUndo,
+                boolean canRedo, boolean canExport, ImageView image, List<MarkerSlot> markers) {
+            this(items, selected, title, titleState, titleNeedsAttention, block, instructions, pending, hasImage, canJoinNext, tabs, capturing, bannerTitle,
+                    banner, bannerSeverity, status, statusKind, preview, canUndo, canRedo, canExport, image, markers, "", List.of());
         }
 
         /** Há uma captura candidata do bloco selecionado aguardando Aplicar/Cancelar. */
@@ -156,10 +230,26 @@ public class PddPanel extends JPanel {
     private final NekkoraComboBox<Integer> splitAt = new NekkoraComboBox<>();
     private final NekkoraButton split = NekkoraButton.ghost("Dividir antes da instrução").withSize(ControlSize.SMALL);
     private final NekkoraButton joinNext = NekkoraButton.ghost("Juntar com o próximo bloco").withSize(ControlSize.SMALL);
-    private final NekkoraComboBox<Tab> tabs = new NekkoraComboBox<>();
+    /** Largura máxima das escolhas (aba, site): rótulos longos não empurram os botões para fora da coluna (homologação STUDIO-013). */
+    static final int CHOICE_MAX_WIDTH = 340;
+    private final NekkoraComboBox<Tab> tabs = capped();
     private final NekkoraButton capture = NekkoraButton.secondary("Capturar tela…").withIcon(IconName.PLAY).withSize(ControlSize.SMALL);
     private final NekkoraButton cancelCapture = NekkoraButton.ghost("Cancelar captura").withSize(ControlSize.SMALL);
     private final NekkoraButton removeCapture = NekkoraButton.ghost("Remover imagem").withSize(ControlSize.SMALL);
+    /** Por que "Capturar tela…" está indisponível (sem conexão, nenhuma aba autorizada, aba gravando, PDD não autorizado). */
+    private final NekkoraText captureHint = new NekkoraText("", TextTone.WARNING);
+    // STUDIO-013: autorização da captura do PDD por site (origem exata), separada do acesso do Chrome
+    private final NekkoraStack consentBox = NekkoraStack.vertical(Spacing.SPACE_1);
+    private final NekkoraParagraph consentText = new NekkoraParagraph("");
+    private final NekkoraCheckBox remember = new NekkoraCheckBox("Lembrar este site (sem marcar: só até fechar o navegador)");
+    private final NekkoraButton authorize = NekkoraButton.secondary("Autorizar captura PDD neste site").withSize(ControlSize.SMALL);
+    private final NekkoraComboBox<String> level = capped();
+    private final NekkoraButton siteLevel = NekkoraButton.ghost("Liberar print integral neste site").withSize(ControlSize.SMALL);
+    private final NekkoraCheckBox maskThis = new NekkoraCheckBox("Mascarar esta captura");
+    private final NekkoraText fullBadge = new NekkoraText(FULL_BADGE, TextTone.WARNING);
+    private final NekkoraComboBox<Site> sites = capped();
+    private final NekkoraButton revokeSite = NekkoraButton.ghost("Revogar captura PDD").withSize(ControlSize.SMALL);
+    private final NekkoraStack sitesRow = NekkoraStack.vertical(Spacing.SPACE_1);
     private final NekkoraStack blockTools = NekkoraStack.vertical(Spacing.SPACE_2);
     private final NekkoraStack imageBox = NekkoraStack.vertical(Spacing.SPACE_2);
     private final NekkoraText imageHeading = new NekkoraText("", TextTone.SECONDARY);
@@ -218,16 +308,45 @@ public class PddPanel extends JPanel {
         splitRow.add(splitAt);
         splitRow.add(joinNext);
         blockTools.add(splitRow);
-        NekkoraStack captureRow = NekkoraStack.horizontal(Spacing.SPACE_2);
+        NekkoraStack captureRow = NekkoraStack.vertical(Spacing.SPACE_1);
+        NekkoraStack captureButtons = NekkoraStack.horizontal(Spacing.SPACE_2);
         tabs.setLabelProvider(t -> t == null ? "" : t.label());
         tabs.getAccessibleContext().setAccessibleName("Aba do Chrome (laboratório) para a captura");
         captureRow.add(tabs);
-        captureRow.add(capture);
-        captureRow.add(cancelCapture);
-        captureRow.add(removeCapture);
+        captureButtons.add(capture);
+        captureButtons.add(cancelCapture);
+        captureButtons.add(removeCapture);
+        captureRow.add(captureButtons);
+        maskThis.getAccessibleContext().setAccessibleDescription("O site está no print integral: marque para esta captura sair com os dados cobertos.");
+        captureRow.add(maskThis);
         blockTools.add(captureRow);
+        captureHint.getAccessibleContext().setAccessibleName("Por que a captura está indisponível");
+        blockTools.add(captureHint);
+        consentText.getAccessibleContext().setAccessibleName("Autorização da captura do PDD neste site");
+        consentBox.add(consentText);
+        level.addItem(LEVEL_FULL); // pedido da usuária: o print original é a opção primária
+        level.addItem(LEVEL_MASKED);
+        level.setLabelProvider(x -> x == null ? "" : x);
+        level.getAccessibleContext().setAccessibleName("Imagem do PDD neste site");
+        consentBox.add(level);
+        // "Lembrar este site" em linha própria: ao lado do botão ele não cabia inteiro na coluna (homologação do print integral)
+        consentBox.add(authorize);
+        consentBox.add(remember);
+        siteLevel.getAccessibleContext().setAccessibleDescription("Troca a imagem do PDD deste site entre o print mascarado e o print integral.");
+        consentBox.add(siteLevel);
+        blockTools.add(consentBox);
+        sites.setLabelProvider(s -> s == null ? "" : s.label());
+        sites.getAccessibleContext().setAccessibleName("Sites autorizados para o PDD");
+        sitesRow.add(new NekkoraText("Sites autorizados para o PDD:", TextTone.MUTED));
+        sitesRow.add(sites);
+        sitesRow.add(revokeSite);
+        blockTools.add(sitesRow);
+        tabs.addActionListener(e -> tabs.setToolTipText(tabs.getSelectedValue() == null ? null : tabs.getSelectedValue().label()));
+        sites.addActionListener(e -> sites.setToolTipText(sites.getSelectedValue() == null ? null : sites.getSelectedValue().label()));
         // STUDIO-012 PDD-01: imagem do bloco (recorte, marcadores, revisão da candidata)
         imageBox.add(imageHeading);
+        fullBadge.getAccessibleContext().setAccessibleName("Selo da imagem: print integral");
+        imageBox.add(fullBadge);
         imageBox.add(imageNote);
         imageBox.add(this.editor);
         NekkoraStack cropRow = NekkoraStack.horizontal(Spacing.SPACE_2);
@@ -273,9 +392,36 @@ public class PddPanel extends JPanel {
         joinNext.addActionListener(e -> actions.joinNext(model.selected()));
         capture.addActionListener(e -> {
             Tab t = tabs.getSelectedValue();
-            if (t != null) actions.capture(model.selected(), t.tabRef());
+            if (t != null) actions.capture(model.selected(), t.tabRef(), t.full() && maskThis.isSelected());
         });
         cancelCapture.addActionListener(e -> actions.cancelCapture());
+        tabs.addPopupMenuListener(new javax.swing.event.PopupMenuListener() {
+            @Override
+            public void popupMenuWillBecomeVisible(javax.swing.event.PopupMenuEvent e) {
+                actions.refreshTabs();
+            }
+
+            @Override
+            public void popupMenuWillBecomeInvisible(javax.swing.event.PopupMenuEvent e) {}
+
+            @Override
+            public void popupMenuCanceled(javax.swing.event.PopupMenuEvent e) {}
+        });
+        tabs.addActionListener(e -> {
+            if (!updating && model != null) consent(model);
+        });
+        authorize.addActionListener(e -> {
+            Tab t = tabs.getSelectedValue();
+            if (t != null && t.origin() != null) actions.authorizeSite(t.tabRef(), t.origin(), remember.isSelected(), LEVEL_FULL.equals(level.getSelectedValue()));
+        });
+        siteLevel.addActionListener(e -> {
+            Tab t = tabs.getSelectedValue();
+            if (t != null && t.origin() != null) actions.setSiteLevel(t.tabRef(), t.origin(), !t.full());
+        });
+        revokeSite.addActionListener(e -> {
+            Site s = sites.getSelectedValue();
+            if (s != null) actions.revokeSite(s.origin());
+        });
         removeCapture.addActionListener(e -> actions.removeCapture(model.selected()));
         markerSlot.addActionListener(e -> {
             MarkerSlot m = markerSlot.getSelectedValue();
@@ -370,14 +516,30 @@ public class PddPanel extends JPanel {
             m.tabs().forEach(tabs::addItem);
         }
         capture.setText(m.hasImage() ? "Capturar novamente…" : "Capturar tela…");
-        capture.setEnabled(m.block() && !m.tabs().isEmpty() && !m.capturing() && !m.reviewing());
         cancelCapture.setVisible(m.capturing());
+        captureHint.setText(m.captureHint());
+        captureHint.setVisible(m.block() && !m.captureHint().isEmpty());
+        consent(m);
+        List<Site> currentSites = new ArrayList<>();
+        for (int i = 0; i < sites.getItemCount(); i++) currentSites.add(sites.getItemAt(i));
+        if (!currentSites.equals(m.sites())) {
+            sites.removeAllItems();
+            m.sites().forEach(sites::addItem);
+        }
+        sitesRow.setVisible(m.block() && !m.sites().isEmpty());
+        revokeSite.setEnabled(!m.sites().isEmpty());
         removeCapture.setEnabled(m.block() && m.hasImage() && !m.capturing() && !m.reviewing());
         ImageView iv = m.block() ? m.image() : null;
         imageBox.setVisible(iv != null);
         if (iv != null) {
             imageHeading.setText(iv.candidate() ? "Nova captura — revise e aplique" : "Imagem do bloco");
-            imageNote.setText(("nekkora-visual/2".equals(iv.policy()) ? "Representação documental: estrutura redesenhada, só rótulos de interface reais."
+            fullBadge.setVisible("nekkora-visual/5".equals(iv.policy()));
+            imageNote.setText(("nekkora-visual/5".equals(iv.policy())
+                    ? "Dados da tela visíveis; só senhas cobertas."
+                    : "nekkora-visual/4".equals(iv.policy()) ? "Print real da tela: campos, textos de dados, tabelas e frames cobertos por faixas."
+                    : "nekkora-visual/3".equals(iv.policy())
+                    ? "Representação sintética desenhada pelo Studio: nenhum pixel da página; só rótulos de interface como texto, o resto em barras."
+                    : "nekkora-visual/2".equals(iv.policy()) ? "Representação documental: estrutura redesenhada, só rótulos de interface reais."
                     : "Captura da política anterior: fundo oculto em cinza.") + (iv.crop() == null ? " Recorte automático." : " Recorte escolhido."));
             if (editor.mode() != PddImageEditor.Mode.VIEW) editor.setMode(PddImageEditor.Mode.VIEW, null, null);
             editor.setContent(iv.image(), iv.crop(), iv.marks());
@@ -406,6 +568,57 @@ public class PddPanel extends JPanel {
         repaint();
     }
 
+    /** Escolha com largura máxima (o rótulo inteiro fica na dica). */
+    private static <T> NekkoraComboBox<T> capped() {
+        return new NekkoraComboBox<T>() {
+            @Override
+            public Dimension getPreferredSize() {
+                Dimension d = super.getPreferredSize();
+                return new Dimension(Math.min(d.width, CHOICE_MAX_WIDTH), d.height);
+            }
+
+            @Override
+            public Dimension getMaximumSize() {
+                return getPreferredSize();
+            }
+        };
+    }
+
+    /** STUDIO-013: o que a aba escolhida permite — capturar, autorizar o PDD neste site ou o motivo do bloqueio. */
+    private void consent(Model m) {
+        Tab t = tabs.getSelectedValue();
+        boolean busy = m.capturing() || m.reviewing();
+        capture.setEnabled(m.block() && t != null && t.ready() && !busy);
+        String state = t == null ? "" : t.state();
+        String origin = t == null || t.origin() == null ? "" : t.origin();
+        String text = switch (state) {
+            case "CONSENT_REQUIRED" -> "Esta página permite gravação, mas a captura de PDD ainda não está autorizada. Site: " + origin + ". A autorização vale só"
+                    + " para esta origem exata. Por padrão a imagem é o print integral: a tela como está, com os dados (só os campos de senha saem"
+                    + " cobertos), e ela vai assim para o PDF. No print mascarado, campos, textos de dados, tabelas e frames saem cobertos por faixas.";
+            case "CHROME_ACCESS_REQUIRED" -> "Sem acesso do Chrome a este site: conceda pelo ícone da Nekkora Extension (Acesso ao site → Neste site). Depois, autorize"
+                    + " a captura do PDD.";
+            case "RECORDING" -> "Esta aba está sendo gravada: finalize a gravação para capturar.";
+            case "UPDATE_EXTENSION" -> "A captura de PDD em sites exige a Nekkora Extension 0.6.0 ou mais nova; hoje só o laboratório local captura.";
+            case "READY" -> origin.isEmpty() || origin.startsWith("http://127.0.0.1") || origin.startsWith("http://localhost") ? ""
+                    : "Captura do PDD autorizada em " + origin + (t.full() ? " · print integral: os dados da tela vão para o PDD; só senhas cobertas."
+                            : " · print mascarado.");
+            default -> "";
+        };
+        consentText.setText(text);
+        boolean ask = "CONSENT_REQUIRED".equals(state) && !origin.isEmpty();
+        authorize.setVisible(ask);
+        remember.setVisible(ask);
+        level.setVisible(ask);
+        authorize.setEnabled(ask && !busy);
+        boolean site = "READY".equals(state) && !origin.isEmpty() && !origin.startsWith("http://127.0.0.1") && !origin.startsWith("http://localhost");
+        siteLevel.setVisible(site);
+        siteLevel.setEnabled(site && !busy);
+        siteLevel.setText(t != null && t.full() ? "Voltar ao print mascarado neste site" : "Liberar print integral neste site");
+        maskThis.setVisible(m.block() && t != null && t.ready() && t.full());
+        if (t == null || !t.full()) maskThis.setSelected(false);
+        consentBox.setVisible(m.block() && !text.isEmpty());
+    }
+
     public Model model() {
         return model;
     }
@@ -417,6 +630,46 @@ public class PddPanel extends JPanel {
 
     public NekkoraButton captureButton() {
         return capture;
+    }
+
+    public NekkoraText captureHintText() {
+        return captureHint;
+    }
+
+    public NekkoraButton authorizeButton() {
+        return authorize;
+    }
+
+    public NekkoraCheckBox rememberBox() {
+        return remember;
+    }
+
+    public NekkoraComboBox<String> levelCombo() {
+        return level;
+    }
+
+    public NekkoraButton siteLevelButton() {
+        return siteLevel;
+    }
+
+    public NekkoraCheckBox maskThisBox() {
+        return maskThis;
+    }
+
+    public NekkoraText fullBadge() {
+        return fullBadge;
+    }
+
+    public NekkoraParagraph consentText() {
+        return consentText;
+    }
+
+    public NekkoraComboBox<Site> sitesCombo() {
+        return sites;
+    }
+
+    public NekkoraButton revokeSiteButton() {
+        return revokeSite;
     }
 
     public NekkoraButton undoButton() {
