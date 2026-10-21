@@ -84,9 +84,10 @@ class SupervisedRunTest {
             Map<String, Object> doc = Json.parseObject(prov);
             List<Object> txs = (List<Object>) doc.get("transactions");
             assertEquals(3, txs.size());
-            String all = prov;
+            // o id da transação é hex aleatório (sal por execução) e pode conter "1867" por acaso: fora da busca por valores
+            String all = prov.replaceAll("\"tx-[0-9a-f]{20}\"", "\"tx-ID\"");
             assertTrue(all.contains("\"ALTERNATIVA\"") && all.contains("\"PRINCIPAL\""), prov);
-            assertFalse(all.contains("Georgina") || all.contains("1867") || all.contains("ficha-"), "a proveniência não leva valores (nem a chave)");
+            assertFalse(all.contains("Georgina") || all.contains("1867") || all.contains("ficha-"), "a proveniência não leva valores (nem a chave):\n" + prov);
             // linhas da planilha na ordem da lista: 2 = Ana, 3 = Fábio, 4 = Gina (linha 1 = cabeçalho)
             // Fábio não tem "Nome completo": a coluna veio do título (alternativa); Gina não tem "Ocupação": veio de "Campo(s)"
             assertEquals("ALTERNATIVA", source(txs, 3, "Nome completo"));

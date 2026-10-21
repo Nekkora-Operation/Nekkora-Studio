@@ -61,3 +61,10 @@ Tentativas anteriores (registradas, não escondidas):
 3. the-internet 7/1 — mesma ausência da venv; mesmo passo "Preparar ambiente…" no `Studio014Sites`.
 
 Arquivos para a revisão humana: `human-review/rodada-1/` (originais do Studio com SHA-256).
+
+### Regressão depois do G8 (commit seguinte a `4d27da2`)
+
+Windows: **737 testes, 0 falhas, 0 pulados**. Na primeira passada, `SupervisedRunTest.executaEConfere` falhou UMA vez
+(passou isolado e na passada seguinte): a asserção "sem valores" procurava `1867` no JSON inteiro, inclusive nos ids de
+transação (`tx-` + 20 hex com sal aleatório), que podem conter esses dígitos por acaso. Causa mais provável, não
+comprovada (a falha não imprimia o conteúdo). O teste agora ignora os ids nessa busca e imprime a proveniência se falhar.
