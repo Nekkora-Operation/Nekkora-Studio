@@ -1,0 +1,96 @@
+{
+  "schema": "nekkora-rpa/run-summary",
+  "version": "1.2.0",
+  "execution_id": "ex-da7fda24402746f29594",
+  "framework_version": "0.3.0",
+  "status": "COMPLETED",
+  "stop_code": null,
+  "stop_detail": null,
+  "cleanup_ok": true,
+  "counts": {
+    "SUCCEEDED": 10
+  },
+  "transactions": [
+    {
+      "transaction_id": "tx-6f79427dca40db5fc679",
+      "status": "SUCCEEDED",
+      "error_code": null,
+      "detail": null,
+      "attempts": 1,
+      "delivery": "COMMITTED"
+    },
+    {
+      "transaction_id": "tx-b4e15b8fac65705b5532",
+      "status": "SUCCEEDED",
+      "error_code": null,
+      "detail": null,
+      "attempts": 1,
+      "delivery": "COMMITTED"
+    },
+    {
+      "transaction_id": "tx-c4657cb291e02bf9fcd2",
+      "status": "SUCCEEDED",
+      "error_code": null,
+      "detail": null,
+      "attempts": 1,
+      "delivery": "COMMITTED"
+    },
+    {
+      "transaction_id": "tx-42872210c84bef03cae9",
+      "status": "SUCCEEDED",
+      "error_code": null,
+      "detail": null,
+      "attempts": 1,
+      "delivery": "COMMITTED"
+    },
+    {
+      "transaction_id": "tx-6149a6d53cb83b4395be",
+      "status": "SUCCEEDED",
+      "error_code": null,
+      "detail": null,
+      "attempts": 1,
+      "delivery": "COMMITTED"
+    },
+    {
+      "transaction_id": "tx-5ac50fa7a40728d3cb9a",
+      "status": "SUCCEEDED",
+      "error_code": null,
+      "detail": null,
+      "attempts": 1,
+      "delivery": "COMMITTED"
+    },
+    {
+      "transaction_id": "tx-04e506a39dcc115aa94f",
+      "status": "SUCCEEDED",
+      "error_code": null,
+      "detail": null,
+      "attempts": 1,
+      "delivery": "COMMITTED"
+    },
+    {
+      "transaction_id": "tx-d635f09522c49234e5cd",
+      "status": "SUCCEEDED",
+      "error_code": null,
+      "detail": null,
+      "attempts": 1,
+      "delivery": "COMMITTED"
+    },
+    {
+      "transaction_id": "tx-aaf239f4f6d050640d78",
+      "status": "SUCCEEDED",
+      "error_code": null,
+      "detail": null,
+      "attempts": 1,
+      "delivery": "COMMITTED"
+    },
+    {
+      "transaction_id": "tx-a6335b9d6c0eb7fa40cd",
+      "status": "SUCCEEDED",
+      "error_code": null,
+      "detail": null,
+      "attempts": 1,
+      "delivery": "COMMITTED"
+    }
+  ],
+  "output": null
+}

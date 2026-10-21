@@ -1,0 +1,81 @@
+Tela: java.awt.Rectangle[x=0,y=0,width=1920,height=1032] · java 21.0.12
+Operador: Claude como AGENTE DE TESTE (TEST_AGENT; nenhuma confirmação humana)
+modelo: rpa-challenge.nekkora (gravado no site real pela E2E-001) · configuração declarada: rpa-challenge.codegen.json
+  sessões: [Preparação:[CLICK, CLICK], Preenchimento por registro:[FILL, FILL, FILL, FILL, FILL, FILL, FILL, CLICK], Conclusão:[OBSERVE]]
+OK    G1: projeto aberto pela interface com as 3 sessões e as 11 etapas gravadas na E2E-001
+OK    G1: etapas de página com decisão CONFIRMED (debug guiado da E2E-001)
+captura CQ4-G1-projeto-aberto.png (1164x991)
+captura CQ4-G-dialogo-1.png (760x591)
+captura CQ4-G-gerar-1.png (760x591)
+  resultado da geração:
+    Revisão do plano: sha256:57fa8b8f285b676a4fcf72767e7972ad2f6bb07a3b87369d71309ee6bb1d64c6
+    Configuração: sha256:33b982fda01c377eb202955756e81d181022a1820803d0fa9b7a103169ad36a7
+    GERADO em %USERPROFILE%\AppData\Local\Temp\claude\<projeto>\71612f78-e4a2-4ca9-82db-ec933a4a9267\scratchpad\tab-t4\codigo-gerado:
+      WRITTEN  README.md
+      WRITTEN  automation/__init__.py
+      WRITTEN  automation/pages.py
+      WRITTEN  automation/process.py
+      WRITTEN  automation/selectors.py
+      WRITTEN  config/execution.toml
+      WRITTEN  main.py
+      WRITTEN  requirements.txt
+      WRITTEN  selectors.json
+      WRITTEN  manifest.json
+
+OK    G2: projeto gerado pelo Studio (menu Automação → Avançado → Gerador avançado (configuração manual)…)
+OK    G2: layout da rodada 3 também no tabular (pacote automation/, selectors.py + selectors.json, config/execution.toml)
+OK    G2: manifesto 1.4.0, código em inglês, execução tabular, gerador nekkora-studio-codegen/1.3.0
+OK    G2: nenhum StepId (UUID) no código — step_id legível, o mapa fica no manifesto
+OK    G2: telas pelo nome da sessão em inglês (PreparationPage, RecordFillingPage, ConclusionPage)
+OK    G2: alvos só como SelectorKey.<MEMBRO>.value (nenhuma chave como texto nas telas)
+OK    G2: InputRow com os cabeçalhos da planilha como contrato ("First Name" … "Phone Number")
+OK    G2: linha de comando em inglês com o nome anterior aceito (--output/--saida)
+OK    G2: nenhum identificador do gerador anterior (Sessao/executar/segredos/marca/# etapa…)
+OK    G2: código sem localizador posicional
+captura CQ4-G-dialogo-2.png (760x591)
+captura CQ4-G-gerar-2.png (760x591)
+OK    G3: gerar de novo → nada muda (determinístico)
+captura CQ4-G-dialogo-3.png (760x591)
+captura CQ4-G-gerar-3.png (760x591)
+OK    G3: arquivo gerado editado à mão é PROTEGIDO (.novo + .diff), não sobrescrito
+captura CQ4-G-dialogo-4.png (760x591)
+captura CQ4-G-gerar-4.png (760x591)
+OK    G3: depois de desfazer a edição, a geração volta a ficar limpa
+  projeto anterior (gerador 1.0.0): [README.md, config/execucao.toml, main.py, manifest.json, paginas.py, processo.py, requirements.txt, selectors.json]
+captura CQ4-G-dialogo-5.png (760x591)
+captura CQ4-G-gerar-5.png (760x591)
+  regeneração sobre o anterior:
+    Revisão do plano: sha256:57fa8b8f285b676a4fcf72767e7972ad2f6bb07a3b87369d71309ee6bb1d64c6
+    Configuração: sha256:33b982fda01c377eb202955756e81d181022a1820803d0fa9b7a103169ad36a7
+    GERADO em %USERPROFILE%\AppData\Local\Temp\claude\<projeto>\71612f78-e4a2-4ca9-82db-ec933a4a9267\scratchpad\tab-t4\codigo-anterior-regerado:
+      WRITTEN  README.md
+      WRITTEN  automation/__init__.py
+      WRITTEN  automation/pages.py
+      WRITTEN  automation/process.py
+      WRITTEN  automation/selectors.py
+      WRITTEN  config/execution.toml
+      WRITTEN  main.py
+      WRITTEN  requirements.txt
+      WRITTEN  selectors.json
+      RETIRED  config/execucao.toml
+      RETIRED  paginas.py
+      RETIRED  processo.py
+      WRITTEN  manifest.json
+
+  previous-generation/: [manifest-1.0.0-rev60/config/execucao.toml, manifest-1.0.0-rev60/manifest.json, manifest-1.0.0-rev60/paginas.py, manifest-1.0.0-rev60/processo.py]
+OK    G4: paginas.py/processo.py/config/execucao.toml do gerador anterior APOSENTADOS (RETIRED), nunca apagados
+OK    G4: a geração anterior continua inteira em previous-generation/ (com o manifesto dela)
+OK    G4: o projeto regerado é igual ao gerado do zero (mesmos bytes nos arquivos gerados)
+  ambiente de verificação: nekkora_rpa 0.3.0 · ruff 0.17.1 · mypy 2.4.0 · Python 3.12.10
+  PY_COMPILE · V4_CODE · PASS
+  PY_IMPORT · V4_CODE · PASS
+  RUFF_CHECK · V4_CODE · PASS
+  RUFF_FORMAT · V4_CODE · PASS
+  MYPY_STRICT · V4_CODE · PASS
+  CONTRACT_TESTS · V5_TESTS · PASS
+  CODE_QUALITY · VQ_GENERATION · PASS
+OK    G5: V4 (compilação, importação, ruff, formatação, mypy estrito), V5 (contrato) e VQ (AST) — todas PASS
+  VQ (manifesto + AST): Result[layer=LayerResult[layer=VQ_GENERATION, state=PASS, summary=11 step_id(s) mapeado(s) para etapas · AST sem achados · legibilidade: só a revisão da titular aprova], issues=[]]
+OK    G5: VQ sem bloqueio nem palavra sem tradução
+  revisão humana: cópia original em %USERPROFILE%\nekkora\Nekkora-Studio\docs\codegen-quality-001\human-review\rodada-4\rpa-challenge (10 arquivos com SHA-256)
+RESULTADO: 20 verificações, 0 falha(s)
