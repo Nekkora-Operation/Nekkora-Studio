@@ -14,3 +14,4 @@ Nekkora-AI-Engine/catalog/*.json -text
 
 # PACKAGING-001: artefatos homologados conferidos por SHA-256 — bytes exatos, sem conversão de fim de linha
 Nekkora-AI-Engine/framework/** -text
+docs/codegen-quality-001/human-review/** -text
