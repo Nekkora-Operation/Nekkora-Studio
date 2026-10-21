@@ -29,11 +29,13 @@
    governadas (versão 1.1.0: + nomes de sessão do tabular e a tabela de contexto de DATA, D-CQ-37) e regras fixas de
    ordem; não há análise linguística. Palavra fora dele fica como está no nome (ASCII) e é apontada
    (`IDENTIFICADOR_SEM_TRADUCAO`); a correção é usar no PDD/variável uma palavra do glossário ou incluí-la no glossário
-   (nova versão). `article_address` continua (o parecer condiciona `article_url` à aprovação da titular).
+   (nova versão). Rodada 5 (1.2.0): `endereco do artigo` → `article_url` (D-CQ-48); a coluna externa não muda.
 9. **Emissor tabular convertido na rodada 4** (Q12, D-CQ-39): projetos tabulares gerados antes (português,
    `paginas.py`/`processo.py`, manifesto 1.0.0) continuam válidos como estão; gerar de novo na mesma pasta guarda a geração
    anterior em `previous-generation/`. Pastas de execução, `observacoes.json` e `{"enviado": true}` não mudaram (D-CQ-41).
    O `step_id` já registrado de uma etapa não muda com o glossário (D-CQ-38).
+   Chave de alvo renomeada (rodada 5, D-CQ-46/47): o manifesto novo declara a anterior em `previousTargetKeys`; o projeto
+   antigo não muda até ser gerado de novo.
 10. **Framework sem mudança.** O runtime 0.2.0/0.3.0 continua lendo só o `selectors.json`; `automation/selectors.py` é o
     registro revisável e a equivalência é conferida pelo Studio. Uma versão futura do framework poderá importar o módulo
     Python diretamente — em missão própria, com versão, catálogo, lock e hashes novos.
@@ -60,3 +62,6 @@
   dados fictícios); o laboratório do framework não foi alterado. O RPA Challenge real foi executado só pelo código gerado,
   no site autorizado na E2E-001, com evidências sem valores da planilha (varredura pelos valores baixados na própria
   execução, que não são copiados).
+- Rodada 5: dataclasses geradas com valores (entrada e leitura) não têm repr automático (`repr=False`, conferido pela VQ
+  `DATACLASS_REPR_COM_VALORES` e por teste com valores-sentinela no Python real); o resumo do site real registra só
+  contagens, hash e placar, com o significado de cada contagem escrito no próprio arquivo.

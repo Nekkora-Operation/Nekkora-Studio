@@ -56,6 +56,7 @@ public final class OutputWriter {
         boolean blocked = out.containsValue(Status.PROTECTED);
         if (!blocked && previousManifest != null) retire(dir, files, previous, previousManifest, out);
         String manifest = files.get("manifest.json");
+        if (manifest != null && previousManifest != null) manifest = linkPreviousKeys(manifest, previousManifest);
         if (manifest != null) {
             Path m = dir.resolve("manifest.json");
             if (blocked) {
@@ -119,6 +120,81 @@ public final class OutputWriter {
             Files.move(target, moved, StandardCopyOption.REPLACE_EXISTING);
             out.put(rel, Status.RETIRED);
         }
+    }
+
+    /**
+     * Rodada 5 (CQ-R5-02): chave de alvo renomeada nunca é trocada em silêncio. Se o manifesto ANTERIOR da pasta deu outra
+     * chave à mesma etapa do Studio (no {@code trace} 1.3.0+ ou nos {@code steps} de qualquer versão), o mapeamento novo
+     * declara as chaves anteriores em {@code previousTargetKeys} (as que o manifesto anterior já declarava vêm junto).
+     * Gerar do zero não tem anterior e não ganha o campo. Manifesto que não volta igual pela releitura fica como veio.
+     */
+    @SuppressWarnings("unchecked")
+    static String linkPreviousKeys(String manifest, String previousManifest) {
+        Map<String, List<String>> before = new LinkedHashMap<>();
+        try {
+            Map<String, Object> old = Json.parseObject(previousManifest);
+            if (Json.object(old, "trace") != null && Json.object(old, "trace").get("mappings") instanceof List<?> l) {
+                for (Object o : l) {
+                    if (!(o instanceof Map<?, ?> x) || !(x.get("studioStepId") instanceof String id)) continue;
+                    List<String> keys = before.computeIfAbsent(id, k -> new ArrayList<>());
+                    if (x.get("previousTargetKeys") instanceof List<?> p) for (Object k : p) if (k instanceof String s && !keys.contains(s)) keys.add(s);
+                    if (x.get("targetKey") instanceof String k && !keys.contains(k)) keys.add(k);
+                }
+            }
+            if (old.get("steps") instanceof List<?> l) {
+                for (Object o : l) {
+                    if (!(o instanceof Map<?, ?> x) || !(x.get("key") instanceof String k)) continue;
+                    Object id = x.get("stepId") instanceof String s ? s : x.get("studioStepId") instanceof String s ? s : x.get("id");
+                    if (!(id instanceof String sid)) continue;
+                    List<String> keys = before.computeIfAbsent(sid, z -> new ArrayList<>());
+                    if (!keys.contains(k)) keys.add(k);
+                }
+            }
+        } catch (RuntimeException e) {
+            return manifest; // manifesto anterior ilegível: nada é presumido
+        }
+        if (before.isEmpty()) return manifest;
+        Map<String, Object> m;
+        try {
+            m = (Map<String, Object>) plain(Json.parseObject(manifest));
+        } catch (RuntimeException e) {
+            return manifest;
+        }
+        if (!(Pretty.json(m) + "\n").equals(manifest)) return manifest; // releitura não é fiel: não mexe
+        Map<String, Object> trace = (Map<String, Object>) (m.get("trace") instanceof Map<?, ?> t ? t : null);
+        if (trace == null || !(trace.get("mappings") instanceof List<?> mappings)) return manifest;
+        boolean changed = false;
+        for (Object o : mappings) {
+            Map<String, Object> x = (Map<String, Object>) o;
+            if (!(x.get("studioStepId") instanceof String id) || !(x.get("targetKey") instanceof String key) || !before.containsKey(id)) continue;
+            List<String> prev = before.get(id).stream().filter(k -> !k.equals(key)).toList();
+            if (prev.isEmpty()) continue;
+            Map<String, Object> next = new LinkedHashMap<>();
+            for (Map.Entry<String, Object> e : x.entrySet()) {
+                next.put(e.getKey(), e.getValue());
+                if (e.getKey().equals("targetKey")) next.put("previousTargetKeys", prev);
+            }
+            x.clear();
+            x.putAll(next);
+            changed = true;
+        }
+        return changed ? Pretty.json(m) + "\n" : manifest;
+    }
+
+    /** Valor lido pelo {@link Json} no formato do {@link Pretty} ({@code Json.NULL} → {@code null}). */
+    private static Object plain(Object v) {
+        if (v == Json.NULL) return null;
+        if (v instanceof Map<?, ?> m) {
+            Map<String, Object> out = new LinkedHashMap<>();
+            m.forEach((k, x) -> out.put(String.valueOf(k), plain(x)));
+            return out;
+        }
+        if (v instanceof List<?> l) {
+            List<Object> out = new ArrayList<>();
+            for (Object x : l) out.add(plain(x));
+            return out;
+        }
+        return v;
     }
 
     /** Nome da pasta da versão anterior: manifesto e revisão da automação ({@code manifest-1.3.0-rev52}). */

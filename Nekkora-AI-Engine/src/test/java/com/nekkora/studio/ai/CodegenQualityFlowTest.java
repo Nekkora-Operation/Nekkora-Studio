@@ -263,6 +263,42 @@ class CodegenQualityFlowTest {
         return Json.parseObject(lastLine(runPython(py, List.of(resource("equivalencia.py"), project.toString(), sc.toString()))));
     }
 
+    /**
+     * Rodada 5 (CQ-R5-01): cada dataclass de {@code automation/pages.py} e {@code automation/process.py} é criada com
+     * valores-sentinela; {@code repr}, {@code str} e f-string não podem mostrar nenhum deles (o valor continua no campo).
+     * Responde {@code [[classe, vazou, campo_guardado], ...]}.
+     */
+    static final String REPR_PROBE = """
+            import dataclasses, importlib, json, sys
+            sys.path.insert(0, sys.argv[1])
+            out = []
+            for name in ('automation.pages', 'automation.process'):
+                module = importlib.import_module(name)
+                for cls in vars(module).values():
+                    if isinstance(cls, type) and dataclasses.is_dataclass(cls) and cls.__module__ == name:
+                        fields = dataclasses.fields(cls)
+                        value = cls(**{f.name: 'SENTINEL-CQ-R5-01-' + f.name for f in fields})
+                        shown = repr(value) + str(value) + f'{value}' + f'{value!r}' + repr([value])
+                        out.append([cls.__name__, 'SENTINEL-CQ-R5-01' in shown, getattr(value, fields[0].name).startswith('SENTINEL-CQ-R5-01')])
+            print(json.dumps(sorted(out)))
+            """;
+
+    @Test
+    @DisplayName("[Python real] CQ-R5-01: dataclasses geradas (entrada e leitura) não mostram os valores no repr/str")
+    void reprSemValores() throws Exception {
+        Path py = PythonForTests.framework();
+        Assumptions.assumeTrue(py != null, "sem o interpretador do framework neste ambiente");
+        Path novo = tmp.resolve("repr");
+        OutputWriter.write(novo, ListFlowTest.develop(FichaCase.confirmed()).result().files());
+        String got = lastLine(runPython(py, List.of("-c", REPR_PROBE, novo.toString())));
+        List<?> classes = (List<?>) Json.parse(got);
+        assertEquals(Set.of("InputRow", "ProfileData"), classes.stream().map(x -> ((List<?>) x).get(0)).collect(java.util.stream.Collectors.toSet()), got);
+        for (Object x : classes) {
+            assertEquals(Boolean.FALSE, ((List<?>) x).get(1), "valor no repr: " + x);
+            assertEquals(Boolean.TRUE, ((List<?>) x).get(2), "o campo guarda o valor: " + x);
+        }
+    }
+
     @Test
     @DisplayName("[Python real] camada VQ: código novo sem achados; o anterior e mutantes (UUID, comentário por etapa, nome opaco, or \"\", seletor) são pegos")
     void qualidadeAst() throws Exception {
@@ -304,6 +340,16 @@ class CodegenQualityFlowTest {
             assertEquals(PythonChecks.Status.FAIL, q.status(), e.getKey());
             assertTrue(q.codes().keySet().stream().anyMatch(k -> k.startsWith(e.getKey() + " ")), e.getKey() + " → " + q.codes());
         }
+        // rodada 5 (CQ-R5-01): dataclass de entrada com o repr automático de volta é pega
+        Path dir = tmp.resolve("mutante-repr");
+        OutputWriter.write(dir, ListFlowTest.develop(FichaCase.confirmed()).result().files());
+        Path p = dir.resolve("automation").resolve("process.py");
+        String src = Files.readString(p, StandardCharsets.UTF_8);
+        assertTrue(src.contains("@dataclass(frozen=True, repr=False)"), "mutação aplicável: repr");
+        Files.writeString(p, src.replace("@dataclass(frozen=True, repr=False)", "@dataclass(frozen=True)"), StandardCharsets.UTF_8);
+        PythonChecks.Check q = quality(env, dir);
+        assertEquals(PythonChecks.Status.FAIL, q.status());
+        assertTrue(q.codes().keySet().stream().anyMatch(k -> k.startsWith("DATACLASS_REPR_COM_VALORES ")), q.codes().toString());
     }
 
     @Test

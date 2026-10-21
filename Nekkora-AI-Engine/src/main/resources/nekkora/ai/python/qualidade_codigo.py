@@ -6,7 +6,7 @@ processo: UUID ou comentário por etapa no código, nome opaco/genérico, variá
 classe/método público, ``step_id`` sem mapeamento no manifesto, seletor escrito no código e falha silenciada
 (``or ""``, ``except: pass``). No código em inglês (pacote ``automation/``, rodada 3) também: identificador com palavra
 portuguesa (classe, função, parâmetro, variável, atributo, membro do ``SelectorKey``) e chave de alvo escrita como texto
-nas telas. Passar aqui NÃO é aceite de legibilidade: esse é da titular.
+nas telas; na rodada 5, ``@dataclass`` sem ``repr=False`` (o repr automático mostraria os valores). Passar aqui NÃO é aceite de legibilidade: esse é da titular.
 """
 
 from __future__ import annotations
@@ -54,6 +54,16 @@ def portuguese(name: str) -> bool:
     return any(w.lower() in PORTUGUESE for w in WORD.findall(name))
 
 
+def exposes_values(decorator: ast.expr) -> bool:
+    """``@dataclass`` sem ``repr=False``: o repr automático mostra os valores (entrada ou leitura, às vezes pessoais)."""
+    call = decorator if isinstance(decorator, ast.Call) else None
+    func = call.func if call else decorator
+    name = func.id if isinstance(func, ast.Name) else func.attr if isinstance(func, ast.Attribute) else ""
+    if name != "dataclass":
+        return False
+    return not (call and any(k.arg == "repr" and isinstance(k.value, ast.Constant) and k.value.value is False for k in call.keywords))
+
+
 class Analyzer(ast.NodeVisitor):
     def __init__(
         self, file: str, out: list[dict[str, Any]], traces: set[str], synthetic: set[str], english: bool, system: str
@@ -81,6 +91,8 @@ class Analyzer(ast.NodeVisitor):
             self.add("NOME_GENERICO", node)
         if ast.get_docstring(node) is None:
             self.add("DOCSTRING_AUSENTE", node)
+        if self.english and any(exposes_values(d) for d in node.decorator_list):
+            self.add("DATACLASS_REPR_COM_VALORES", node)
         self.generic_visit(node)
         self.stack.pop()
 

@@ -332,6 +332,14 @@ public final class SingleGenerator {
 
     /** Rodada 4 (R4-02): com {@code date}, o elemento guarda uma data e o nome diz isso ("Nascimento" → {@code birth_date}). */
     static String key(String prefix, ElementReference el, AutomationStep s, Set<String> used, boolean date) {
+        return key(prefix, el, s, used, date, null);
+    }
+
+    /**
+     * Rodada 5 (CQ-R5-02): com {@code effect}, o nome é o do efeito confirmado da etapa (o clique que baixa a planilha →
+     * {@code download_spreadsheet}), não o texto do botão. O texto da página continua nos localizadores, sem mudança.
+     */
+    static String key(String prefix, ElementReference el, AutomationStep s, Set<String> used, boolean date, String effect) {
         String base = null;
         for (LocatorCandidate c : el.locators()) {
             if (c.strategy() == LocatorStrategy.LABEL && PythonGenerator.labelText(c.expression()) != null) {
@@ -341,6 +349,7 @@ public final class SingleGenerator {
         }
         if (base == null) base = PythonGenerator.anchorText(el);
         if (base == null && el.accessibleName() != null && !el.accessibleName().isBlank()) base = el.accessibleName();
+        if (base != null) base = withoutIconTokens(base);
         if (base == null && s.actionType() == ActionType.FILL && s.parameters().value().orElse(null) instanceof ValueSource.VariableReference ref) {
             base = "campo " + ref.name();
         }
@@ -349,7 +358,7 @@ public final class SingleGenerator {
         }
         if (base == null && "HEADING".equals(el.semanticKind()) && s.actionType() == ActionType.OBSERVE) base = "titulo";
         if (base == null) base = "alvo";
-        String slug = EnglishNames.noun(base, date).snake();
+        String slug = effect != null ? effect : EnglishNames.noun(base, date).snake();
         if (slug.length() > 40) slug = slug.substring(0, 40).replaceAll("_+$", "");
         if (slug.isEmpty() || !Character.isLetter(slug.charAt(0))) slug = "target";
         // o nome do elemento repete o da tela (botão "Consultar" na tela de consulta): o tipo do elemento desfaz a ambiguidade
@@ -363,5 +372,23 @@ public final class SingleGenerator {
         int n = 2;
         while (!used.add(key)) key = CodePlan.SYSTEM + "." + prefix + "." + slug + "_" + n++;
         return key;
+    }
+
+    /** Nome de ícone de fonte (ligadura em snake_case minúsculo: {@code cloud_download}, {@code arrow_forward}). */
+    private static final java.util.regex.Pattern ICON_TOKEN = java.util.regex.Pattern.compile("[a-z][a-z0-9]*(?:_[a-z0-9]+)+");
+
+    /**
+     * Rodada 5 (CQ-R5-02): o texto acessível de botões e links com ícone de fonte traz o NOME do ícone junto do rótulo
+     * ("Download Excel cloud_download"). Para o NOME no código, esses tokens são artefato visual e saem — só quando sobra
+     * outra palavra (um rótulo feito só do nome do ícone fica como está). O texto da página nos localizadores não muda.
+     */
+    static String withoutIconTokens(String label) {
+        List<String> kept = new ArrayList<>();
+        boolean dropped = false;
+        for (String w : label.trim().split("\\s+")) {
+            if (ICON_TOKEN.matcher(w).matches()) dropped = true;
+            else kept.add(w);
+        }
+        return dropped && !kept.isEmpty() ? String.join(" ", kept) : label;
     }
 }

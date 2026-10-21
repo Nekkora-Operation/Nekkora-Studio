@@ -33,7 +33,7 @@ import java.util.Set;
 public final class EnglishNames {
 
     /** Identificador do glossário (vai ao manifesto; toda mudança de tradução sobe a versão). */
-    public static final String GLOSSARY = "nekkora-studio/naming-pt-en/1.1.0";
+    public static final String GLOSSARY = "nekkora-studio/naming-pt-en/1.2.0";
 
     private EnglishNames() {}
 

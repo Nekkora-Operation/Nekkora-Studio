@@ -34,6 +34,8 @@ import java.util.TreeSet;
 final class TabularEmitter {
 
     static final String CONFIG_FILE = SingleEmitter.CONFIG_FILE;
+    /** Efeito do clique que baixa a planilha de entrada: nome do método, do {@code step_id} e da chave do alvo. */
+    static final String DOWNLOAD_OPERATION = "download_spreadsheet";
 
     private TabularEmitter() {}
 
@@ -120,7 +122,7 @@ final class TabularEmitter {
             case NAVIGATE -> "open_page";
             case FILL -> "fill_" + (s.column() != null ? py.get(s.column())
                     : EnglishNames.identifier(s.credential().substring(s.credential().lastIndexOf('.') + 1)).snake());
-            case CLICK -> s.download() ? "download_spreadsheet" : "click_" + target;
+            case CLICK -> s.download() ? DOWNLOAD_OPERATION : "click_" + target;
             case WAIT_FOR -> "wait_for_" + target;
             case OBSERVE -> s.textPattern() != null ? patternRead(s) : "read_" + target;
             default -> "step";
@@ -439,8 +441,9 @@ final class TabularEmitter {
         b.append("from automation.pages import ").append(String.join(", ", pages.stream().map(p -> p.name().className()).sorted().toList())).append("\n\n");
         b.append("START_URL = ").append(Py.str(cfg.startUrl())).append("\n\n\n");
         // linha da planilha
-        b.append("@dataclass(frozen=True)\nclass InputRow:\n");
-        b.append("    \"\"\"One spreadsheet row: the columns the form uses (the spreadsheet headers are read in ``from_item``).\"\"\"\n\n");
+        // rodada 5 (CQ-R5-01): sem repr automático — a linha traz dados pessoais
+        b.append("@dataclass(frozen=True, repr=False)\nclass InputRow:\n");
+        b.append("    \"\"\"One spreadsheet row: the columns the form uses (headers read in ``from_item``; the values are never logged).\"\"\"\n\n");
         for (CodegenConfig.Column c : cfg.input().columns()) b.append("    ").append(py.get(c.header())).append(": str\n");
         b.append("\n    @classmethod\n    def from_item(cls, item: TransactionItem) -> InputRow:\n");
         SemanticEmitter.doc(b, "        ", "Reads the row of ``item``; a row with problems found by the spreadsheet reader is rejected before any action.");

@@ -64,6 +64,8 @@ public final class CodegenQuality001Tabular {
     private StudioApplication.Window window;
     private BridgeServer bridge;
     private int generations;
+    /** Amostra rpa-challenge da rodada 4 (opcional): regerar sobre ela comprova o vínculo da chave renomeada. */
+    private Path round4;
 
     private CodegenQuality001Tabular(File out) throws AWTException {
         this.out = out;
@@ -77,6 +79,7 @@ public final class CodegenQuality001Tabular {
         CodegenQuality001Tabular h = new CodegenQuality001Tabular(out);
         int code = 1;
         try {
+            h.round4 = args.length > 5 ? Path.of(args[5]).toAbsolutePath() : null;
             h.run(Path.of(args[1]).toAbsolutePath(), Path.of(args[2]).toAbsolutePath(), Path.of(args[3]).toAbsolutePath(), Path.of(args[4]));
             code = h.failures == 0 ? 0 : 2;
         } catch (Throwable t) {
@@ -154,6 +157,12 @@ public final class CodegenQuality001Tabular {
             if (code.contains(pt)) check("G2: identificador do gerador anterior ausente (" + pt + ")", false);
         }
         check("G2: nenhum identificador do gerador anterior (Sessao/executar/segredos/marca/# etapa…)", true);
+        String selectorsPy = Files.readString(gen.resolve("automation/selectors.py"), StandardCharsets.UTF_8);
+        check("G2 (CQ-R5-02): chave do download pelo efeito (PREPARATION_DOWNLOAD_SPREADSHEET), sem o token do ícone",
+                selectorsPy.contains("PREPARATION_DOWNLOAD_SPREADSHEET = \"process.preparation.download_spreadsheet\"") && !selectorsPy.contains("CLOUD_DOWNLOAD ="));
+        check("G2 (CQ-R5-02): o texto real da página continua no localizador (\"Download Excel cloud_download\")",
+                selectorsPy.contains("\"name\": \"Download Excel cloud_download\"") && Files.readString(gen.resolve("selectors.json")).contains("Download Excel cloud_download"));
+        check("G2 (CQ-R5-01): InputRow sem repr automático (dados pessoais não aparecem no repr)", code.contains("@dataclass(frozen=True, repr=False)\nclass InputRow:"));
         check("G2: código sem localizador posicional", !Files.readString(gen.resolve("selectors.json")).contains("nth-of-type")
                 && !Files.readString(gen.resolve("selectors.json")).contains("nth-child"));
 
@@ -194,7 +203,28 @@ public final class CodegenQuality001Tabular {
         check("G4: a geração anterior continua inteira em previous-generation/ (com o manifesto dela)",
                 kept.stream().anyMatch(x -> x.endsWith("/paginas.py")) && kept.stream().anyMatch(x -> x.endsWith("/processo.py"))
                         && kept.stream().anyMatch(x -> x.endsWith("/manifest.json")));
-        check("G4: o projeto regerado é igual ao gerado do zero (mesmos bytes nos arquivos gerados)", sameFiles(gen, upgrade, expected));
+        List<String> code5 = expected.stream().filter(f -> !f.equals("manifest.json")).toList();
+        check("G4: o projeto regerado é igual ao gerado do zero (mesmos bytes nos arquivos gerados; o manifesto só ganha o vínculo das chaves)",
+                sameFiles(gen, upgrade, code5) && withoutKeyLinks(upgrade).equals(withoutKeyLinks(gen)));
+        Map<String, List<Object>> legacyLinks = keyLinks(upgrade);
+        log("  chaves anteriores declaradas (gerador 1.0.0): " + legacyLinks.size() + " etapa(s) · ex.: " + legacyLinks.values().stream().findFirst().orElse(List.of()));
+        check("G4 (CQ-R5-02): toda chave renomeada declara a chave do gerador anterior em previousTargetKeys (nada trocado em silêncio)",
+                !legacyLinks.isEmpty() && legacyLinks.values().stream().allMatch(l -> l.size() == 1 && String.valueOf(l.get(0)).startsWith("processo.")));
+
+        // ================================================================ G4b — regenerar sobre a amostra da RODADA 4 (chave renomeada)
+        if (round4 != null) {
+            Path regen4 = out.toPath().resolve("codigo-rodada-4-regerado");
+            copyTree(round4, regen4);
+            Files.deleteIfExists(regen4.resolve("SHA256SUMS.txt"));
+            String r6 = generateByMenu(config, regen4);
+            log("  regeneração sobre a rodada 4:\n" + r6.indent(4));
+            check("G4b: regerar sobre a rodada 4 sem proteção (os arquivos eram os do gerador)", r6.contains("GERADO em") && !r6.contains("PROTECTED"));
+            check("G4b: código regerado igual ao gerado do zero", sameFiles(gen, regen4, code5) && withoutKeyLinks(regen4).equals(withoutKeyLinks(gen)));
+            Map<String, List<Object>> links = keyLinks(regen4);
+            log("  vínculos: " + links);
+            check("G4b: só a chave renomeada ganha o vínculo: download_spreadsheet ← download_excel_cloud_download",
+                    links.size() == 1 && links.values().iterator().next().equals(List.of("process.preparation.download_excel_cloud_download")));
+        }
 
         // ================================================================ G5 — verificações do Studio (V4/V5/VQ)
         PythonChecks.Environment env = PythonChecks.resolve(Optional.of(python), gen).orElseThrow(() -> new IllegalStateException("Python de verificação"));
@@ -258,6 +288,23 @@ public final class CodegenQuality001Tabular {
         clickButtonWithText(d, "Fechar");
         waitClosed(d);
         return text;
+    }
+
+    /** {@code previousTargetKeys} de cada etapa no manifesto da pasta (CQ-R5-02). */
+    @SuppressWarnings("unchecked")
+    private static Map<String, List<Object>> keyLinks(Path dir) throws IOException {
+        Map<String, List<Object>> out = new java.util.LinkedHashMap<>();
+        Map<String, Object> m = Json.parseObject(Files.readString(dir.resolve("manifest.json"), StandardCharsets.UTF_8));
+        for (Object o : Json.array(Json.object(m, "trace"), "mappings")) {
+            Map<String, Object> x = (Map<String, Object>) o;
+            if (x.get("previousTargetKeys") instanceof List<?> l) out.put(String.valueOf(x.get("targetKey")), (List<Object>) l);
+        }
+        return out;
+    }
+
+    /** Manifesto sem as linhas {@code previousTargetKeys} (para comparar com o gerado do zero). */
+    private static String withoutKeyLinks(Path dir) throws IOException {
+        return Files.readString(dir.resolve("manifest.json"), StandardCharsets.UTF_8).replaceAll("(?m)^\\s*\"previousTargetKeys\": \\[[^\\]]*\\],\\n", "");
     }
 
     private static boolean sameFiles(Path a, Path b, List<String> files) throws IOException {

@@ -1,4 +1,4 @@
-# Nekkora Studio — glossário PT→EN dos IDENTIFICADORES do código gerado (nekkora-studio/naming-pt-en 1.1.0).
+# Nekkora Studio — glossário PT→EN dos IDENTIFICADORES do código gerado (nekkora-studio/naming-pt-en 1.2.0).
 # Governado e versionado: mudar uma tradução muda nomes de código gerado, então toda mudança sobe a versão do glossário
 # (registrada em manifest.json → naming.glossary). Nunca traduz VALORES (rótulos da página, cabeçalhos da planilha,
 # colunas da lista, segredos, mensagens): só nomes de classes, métodos, variáveis, chaves e step_id.
@@ -42,6 +42,10 @@ sucesso	success	n
 resultado	result	n
 navegador	browser	n
 endereco	address	n
+# 1.2.0 (decisão da titular, rodada 5): o endereço de um artigo é o URL dele. A coluna externa "endereco_do_artigo"
+# continua igual (contrato do cliente); só o identificador muda. Endereço da página atual segue o vocabulário do
+# framework (current_address/same_address) e fica page_address.
+endereco do artigo	article url	n
 url	url	n
 termo	term	n
 chave	key	n

@@ -18,7 +18,8 @@ class EnglishNamesTest {
         assertEquals("full_name", EnglishNames.noun("Nome completo").snake());
         assertEquals("secure_area", EnglishNames.noun("Área segura").snake());
         assertEquals("profile_data", EnglishNames.noun("dados da ficha").snake());
-        assertEquals("article_address", EnglishNames.identifier("endereco_do_artigo").snake());
+        assertEquals("article_url", EnglishNames.identifier("endereco_do_artigo").snake());
+        assertEquals("article_url", EnglishNames.noun("Endereço do artigo").snake());
         assertEquals("page_address", EnglishNames.identifier("endereco_da_pagina").snake());
         assertEquals("expected_address", EnglishNames.identifier("endereco_esperado").snake());
         assertEquals("logout_link_text", EnglishNames.identifier("texto_do_link_logout").snake());
@@ -72,7 +73,7 @@ class EnglishNamesTest {
     @Test
     @DisplayName("R4-02 (glossário 1.1.0): valor de DATA ganha o nome de data; fora de data, nada muda; nome que já diz data não repete")
     void dateContext() {
-        assertEquals("nekkora-studio/naming-pt-en/1.1.0", EnglishNames.GLOSSARY);
+        assertEquals("nekkora-studio/naming-pt-en/1.2.0", EnglishNames.GLOSSARY);
         assertEquals("birth_date", EnglishNames.noun("Nascimento", true).snake());
         assertEquals("death_date", EnglishNames.noun("Morte", true).snake());
         assertEquals("birth_date", EnglishNames.identifier("nascimento", true).snake());

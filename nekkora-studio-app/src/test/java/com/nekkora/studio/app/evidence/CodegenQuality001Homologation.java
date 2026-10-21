@@ -2370,7 +2370,13 @@ public final class CodegenQuality001Homologation {
         check("CQ-01/Q11: a tela da ficha pelo DONO dos dados no PDD em inglês: ProfilePage, read_profile_data, ProfileData",
                 pages.contains("def read_profile_data(self) -> ProfileData:") && pages.contains("class ProfileData:") && process.contains("profile_data"));
         check("Q11: método da busca pelo passo do PDD em inglês (search_article(search_term))", pages.contains("def search_article(self, search_term: str) -> None:"));
-        check("CQ: leituras da ficha num método que devolve dados tipados (dataclass)", pages.contains("@dataclass(frozen=True)"));
+        check("CQ: leituras da ficha num método que devolve dados tipados (dataclass)", pages.contains("@dataclass(frozen=True"));
+        check("CQ-R5-01: dataclasses de dados (ProfileData, InputRow) sem repr automático — os valores não aparecem no repr",
+                pages.contains("@dataclass(frozen=True, repr=False)\nclass ProfileData:") && process.contains("@dataclass(frozen=True, repr=False)\nclass InputRow:")
+                        && !(pages + process).contains("@dataclass(frozen=True)\n"));
+        check("Rodada 5 (glossário 1.2.0): article_url no código; a coluna da lista continua \"endereco_do_artigo\"",
+                process.contains("article_url=_required_input(data, \"endereco_do_artigo\"),") && process.contains("profile.check_page_address(row.article_url)")
+                        && !(pages + process).contains("article_address"));
         check("Q10: toda chave de alvo é SelectorKey.<NOME>.value (nenhuma chave como texto nas telas); act só na PageBase",
                 pages.contains("class PageBase(BasePage):") && pages.contains("from automation.selectors import SelectorKey") && !pages.contains("\"process.")
                         && pages.split("self\\.act\\b", -1).length == 2 && !pages.contains("self.k(") && pages.contains("SelectorKey.PROFILE_FULL_NAME.value"));

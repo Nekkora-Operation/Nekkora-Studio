@@ -168,7 +168,7 @@ public final class GeneratedCodeQuality {
             String where = sp < 0 ? "" : key.substring(sp + 1);
             boolean objective = switch (code) {
                 case "UUID_EXPOSTO_NO_CODIGO", "COMENTARIO_POR_ETAPA", "TRACE_SEM_MAPEAMENTO", "TRACE_ALIAS_CONFLITO", "SELETOR_NO_CODIGO", "SILENCIA_FALHA",
-                     "IDENTIFICADOR_EM_PORTUGUES", "CHAVE_DE_ALVO_LITERAL" -> true;
+                     "IDENTIFICADOR_EM_PORTUGUES", "CHAVE_DE_ALVO_LITERAL", "DATACLASS_REPR_COM_VALORES" -> true;
                 default -> false;
             };
             issues.add(QualityIssue.of(code, Layer.VQ_GENERATION, objective ? QualityIssue.Kind.BLOCKER : QualityIssue.Kind.WARNING, null, where,
@@ -190,6 +190,7 @@ public final class GeneratedCodeQuality {
             case "SILENCIA_FALHA" -> "Falha transformada em vazio (or \"\" / except: pass).";
             case "IDENTIFICADOR_EM_PORTUGUES" -> "Identificador em português no código gerado em inglês (classe, método, variável ou chave).";
             case "CHAVE_DE_ALVO_LITERAL" -> "Chave de alvo escrita como texto na tela (deve ser SelectorKey.<NOME>.value).";
+            case "DATACLASS_REPR_COM_VALORES" -> "Dataclass sem repr=False: o repr automático mostraria os valores lidos ou de entrada.";
             default -> code;
         };
     }

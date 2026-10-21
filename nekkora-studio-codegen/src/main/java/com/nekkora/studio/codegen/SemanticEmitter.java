@@ -169,8 +169,9 @@ final class SemanticEmitter {
 
     private static void model(StringBuilder b, CodePlan.Model model) {
         boolean anyOptional = model.fields().stream().anyMatch(CodePlan.Field::optional);
-        b.append("\n\n@dataclass(frozen=True)\nclass ").append(model.name()).append(":\n");
-        b.append("    \"\"\"Data read by ``").append(model.page()).append('.').append(model.method()).append("()``.");
+        // rodada 5 (CQ-R5-01): sem repr automático — o dado lido pode ser pessoal e não pode aparecer em log ou erro
+        b.append("\n\n@dataclass(frozen=True, repr=False)\nclass ").append(model.name()).append(":\n");
+        b.append("    \"\"\"Data read by ``").append(model.page()).append('.').append(model.method()).append("()`` (``repr`` does not show the values).");
         if (anyOptional) b.append("\n\n    ``None``: the value does not exist on this page (absence foreseen in the PDD, with an alternative source).\n    \"\"\"\n\n");
         else b.append("\"\"\"\n\n");
         for (CodePlan.Field f : model.fields()) b.append("    ").append(f.name()).append(": ").append(f.optional() ? "str | None" : "str").append('\n');

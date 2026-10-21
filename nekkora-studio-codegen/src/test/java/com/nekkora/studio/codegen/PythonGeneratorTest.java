@@ -107,6 +107,62 @@ class PythonGeneratorTest {
     }
 
     @Test
+    void r5ChaveDoDownloadPeloEfeitoETokenDeIconeForaDoNome() {
+        // CQ-R5-02: o clique que baixa a planilha tem a chave do efeito (como o método e o step_id); o texto da página
+        // continua igual nos localizadores
+        PythonGenerator.Result r = gen(FormCase.confirmed());
+        String selectorsPy = r.files().get("automation/selectors.py");
+        assertTrue(selectorsPy.contains("PREPARATION_DOWNLOAD_SPREADSHEET = \"process.preparation.download_spreadsheet\""), selectorsPy);
+        assertTrue(selectorsPy.contains("\"name\": \"Baixar planilha\""), "rótulo da página sem tradução no localizador");
+        assertTrue(r.files().get("automation/pages.py").contains("def download_spreadsheet("));
+        // token de ícone de fonte no texto acessível: fora do NOME, nunca do texto
+        assertEquals("Download Excel", SingleGenerator.withoutIconTokens("Download Excel cloud_download"));
+        assertEquals("Next", SingleGenerator.withoutIconTokens("arrow_forward Next"));
+        assertEquals("cloud_download", SingleGenerator.withoutIconTokens("cloud_download"), "só o ícone: fica como está");
+        assertEquals("Nome completo", SingleGenerator.withoutIconTokens("Nome completo"));
+        assertEquals("E-mail Address", SingleGenerator.withoutIconTokens("E-mail Address"));
+    }
+
+    @Test
+    void r5ChaveRenomeadaRegistraAChaveAnterior(@TempDir Path dir) throws Exception {
+        // CQ-R5-02: regerar sobre um projeto cuja chave era outra não troca em silêncio — o manifesto declara a anterior
+        FormCase c = FormCase.confirmed();
+        PythonGenerator.Result r = gen(c);
+        String id = c.download.value().toString();
+        String manifest = r.files().get("manifest.json");
+        assertFalse(manifest.contains("previousTargetKeys"), "do zero: sem anterior");
+        String old = manifest.replace("\"targetKey\": \"process.preparation.download_spreadsheet\"", "\"targetKey\": \"process.preparation.download_excel_cloud_download\"");
+        assertNotEquals(manifest, old);
+        String linked = OutputWriter.linkPreviousKeys(manifest, old);
+        Map<String, Object> mapping = mappingOf(linked, id);
+        assertEquals("process.preparation.download_spreadsheet", mapping.get("targetKey"));
+        assertEquals(List.of("process.preparation.download_excel_cloud_download"), mapping.get("previousTargetKeys"));
+        assertEquals(1, linked.split("previousTargetKeys", -1).length - 1, "só a etapa renomeada ganha o vínculo");
+        // a anterior da anterior vem junto; manifesto legado (steps[].key) também conta
+        String older = OutputWriter.linkPreviousKeys(manifest, linked.replace("\"targetKey\": \"process.preparation.download_spreadsheet\"",
+                "\"targetKey\": \"process.preparation.download_excel\""));
+        assertEquals(List.of("process.preparation.download_excel_cloud_download", "process.preparation.download_excel"), mappingOf(older, id).get("previousTargetKeys"));
+        String legacy = Pretty.json(Map.of("version", "1.0.0", "steps", List.of(Map.of("stepId", id, "key", "processo.s1.download_excel_cloud_download")))) + "\n";
+        assertEquals(List.of("processo.s1.download_excel_cloud_download"), mappingOf(OutputWriter.linkPreviousKeys(manifest, legacy), id).get("previousTargetKeys"));
+        assertEquals(manifest, OutputWriter.linkPreviousKeys(manifest, manifest), "mesma chave: nada muda");
+        assertEquals(manifest, OutputWriter.linkPreviousKeys(manifest, "{ ilegível"), "anterior ilegível: nada é presumido");
+        // pela gravação real: a pasta com o manifesto anterior
+        OutputWriter.write(dir, Map.of("manifest.json", old));
+        OutputWriter.write(dir, r.files());
+        assertEquals(List.of("process.preparation.download_excel_cloud_download"),
+                mappingOf(Files.readString(dir.resolve("manifest.json")), id).get("previousTargetKeys"));
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Map<String, Object> mappingOf(String manifest, String stepId) {
+        for (Object o : Json.array(Json.object(Json.parseObject(manifest), "trace"), "mappings")) {
+            Map<String, Object> x = (Map<String, Object>) o;
+            if (stepId.equals(x.get("studioStepId"))) return x;
+        }
+        throw new AssertionError("etapa sem mapeamento: " + stepId);
+    }
+
+    @Test
     void q12SessaoSemNomeTraduzivelUsaOPapel() {
         FormCase c = FormCase.confirmed();
         c.a.renameSession(c.a.sessions().get(0).id(), "123");

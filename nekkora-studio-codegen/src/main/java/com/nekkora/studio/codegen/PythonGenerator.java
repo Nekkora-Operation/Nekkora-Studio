@@ -197,7 +197,8 @@ public final class PythonGenerator {
                 }
                 Map<String, Object> target = target(el.get(), id, blockers);
                 if (target == null) continue;
-                String key = SingleGenerator.key(prefix, el.get(), s, keys);
+                // o clique que baixa a planilha de entrada leva o nome do efeito (CQ-R5-02), como o método e o step_id
+                String key = SingleGenerator.key(prefix, el.get(), s, keys, false, download ? TabularEmitter.DOWNLOAD_OPERATION : null);
                 steps.add(new Step(s, n, role, prefix, key, target, column, credential, null, download));
             }
         }
