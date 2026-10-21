@@ -420,6 +420,7 @@ public final class Studio014Sites {
             developSite(a, project, key, start, postconditions, unused, null);
             return;
         }
+        if (m.pending().stream().anyMatch(i -> i.code().equals("ENVIRONMENT_NOT_READY"))) m = prepareAutomationEnvironment(dp, key);
         captureWindow(devDialog(), key + "-resultado");
         log("  " + key + " · pendências: " + m.pending().stream().map(i -> i.kind() + ":" + i.code()).toList());
         log("  " + key + " · resultado:\n" + String.join("\n", m.results()).indent(4));
@@ -676,6 +677,26 @@ public final class Studio014Sites {
     }
 
     /** Seleciona a pendência pelo código (clique REAL na linha da lista). */
+    /**
+     * PACKAGING-001: diretórios isolados começam sem a venv da automação — pendência "Ambiente Python da automação" →
+     * "Preparar ambiente…" → confirmação do plano → instalação → Desenvolver de novo (V4/V5 com o ambiente novo).
+     */
+    private DevelopmentPanel.Model prepareAutomationEnvironment(DevelopmentPanel dp, String key) throws Exception {
+        selectPending(dp, "ENVIRONMENT_NOT_READY");
+        AbstractButton b = edt(() -> find(dp.pendingButtons(), AbstractButton.class, x -> x.getText() != null && x.getText().startsWith("Preparar ambiente")));
+        if (b == null) throw new IllegalStateException("botão Preparar ambiente não encontrado na pendência");
+        click(b);
+        NekkoraDialog d = waitDialog("Preparar o ambiente Python da automação?");
+        captureWindow(d, key + "-preparar-ambiente");
+        clickButtonWithText(d, "Preparar ambiente");
+        waitClosed(d);
+        waitFor("ambiente pronto e código verificado", 1200, () -> edt(() -> !window.studio().development().running()
+                && (dp.model().results().contains("✓ CODE_VALIDATED") || dp.model().severity() == com.nekkora.ui.core.Severity.ERROR)));
+        DevelopmentPanel.Model m = waitDevIdle("resultado " + key + " com o ambiente preparado");
+        log("  " + key + " · ambiente: " + m.python());
+        return m;
+    }
+
     private void selectPending(DevelopmentPanel dp, String code) throws Exception {
         selectTabOf(dp, 1);
         int index = (int) waitValue("pendência " + code, 15, () -> edt(() -> {

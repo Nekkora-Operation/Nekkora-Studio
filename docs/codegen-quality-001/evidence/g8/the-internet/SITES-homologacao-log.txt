@@ -1,0 +1,62 @@
+Tela: java.awt.Rectangle[x=0,y=0,width=1920,height=1032] · java 21.0.12
+Operador: Claude como AGENTE DE TESTE (TEST_AGENT) · ator do Studio: TEST_AGENT
+Sites públicos de TREINAMENTO (credenciais de demonstração publicadas pelos próprios sites; nada de dado pessoal)
+Native Host instalado pelo script oficial (install-host.ps1)
+Chrome for Testing: 155.0.8059.39
+Acesso ao site https://the-internet.herokuapp.com/* → concedido pelo controle do Chrome
+Acesso ao site https://quotes.toscrape.com/* → concedido pelo controle do Chrome
+Acesso ao site https://www.saucedemo.com/* → concedido pelo controle do Chrome
+  abas vistas pela extensão: [{"u":null,"p":null,"s":"complete"},{"u":"https://the-internet.herokuapp.com/login","p":null,"s":"complete"},{"u":"chrome-extension://dceigcmhbihcigneokmpmbocdclkhcaj/src/ui/harness.html","p":null,"s":"complete"}]
+OK    Conexão autenticada Studio ⇄ host ⇄ extensão
+  Área segura (the-internet): [Acesso [FILL, FILL, CLICK], Área segura [OBSERVE, CLICK]]
+OK    Área segura (the-internet): nenhuma senha no modelo
+  abas do debug: [the-internet.herokuapp.com · Autorizada]
+  debug login etapa 1 (FILL): Proposto · verificado tecnicamente · RESOLVED
+  debug login etapa 2 (FILL): Proposto · verificado tecnicamente · RESOLVED
+  debug login etapa 3 (CLICK): Proposto · verificado tecnicamente · RESOLVED
+  abas do debug: [the-internet.herokuapp.com · Autorizada]
+  debug área segura etapa 4 (OBSERVE): Proposto · verificado tecnicamente · RESOLVED
+  debug área segura etapa 5 (CLICK): Proposto · verificado tecnicamente · RESOLVED
+  salvar: o Studio pede para atualizar o formato do projeto (decisões de alvo) — Atualizar e salvar
+  PDD revisado (TEST_AGENT): pendências [Sem imagem: o PDF dirá "Imagem indisponível".] · pode exportar true
+OK    PDD: textos revisados; sem pendência que bloqueie ([Acesso, Área segura])
+  the-internet · pergunta: SECURITY_BLOCKED ORIGIN_NOT_AUTHORIZED_FOR_EXECUTION — Este é um site público de TREINAMENTO que você autoriza para execução?
+captura SITES-the-internet-pergunta-0.png (1164x791)
+captura SITES-the-internet-autorizar-site.png (420x254)
+captura SITES-the-internet-preparar-ambiente.png (760x461)
+  the-internet · ambiente: %USERPROFILE%\.nekkora-cq-sites-r1\hs\ambientes\c55deda2e06c\0.2.0\venv\Scripts\python.exe · nekkora-rpa 0.2.0 (venv da automação)
+captura SITES-the-internet-resultado.png (1164x791)
+  the-internet · pendências: []
+  the-internet · resultado:
+    ✓ PROJECT_ANALYZED
+    ✓ PDD_READY
+    ✓ PLAN_VALIDATED
+    ✓ CODE_GENERATED
+    ✓ CODE_VALIDATED
+    Pasta: %USERPROFILE%\.nekkora-cq-sites-r1\teste-rpa\the-internet\the-internet-python
+      igual  README.md
+      igual  config/execucao.toml
+      igual  main.py
+      igual  paginas.py
+      igual  processo.py
+      igual  requirements.txt
+      igual  selectors.json
+      igual  manifest.json
+    ✓ Compilação: sem problema (79 ms)
+    ✓ Importação: sem problema (285 ms)
+    ✓ ruff check: sem problema (467 ms)
+    ✓ ruff format: sem problema (102 ms)
+    ✓ mypy estrito: sem problema (1531 ms)
+    ✓ Testes de contrato: sem problema (287 ms)
+    ✓ CODE_QUALITY: sem problema (92 ms)
+    Ambiente: Python 3.12.10, nekkora_rpa 0.2.0, ruff 0.17.1, mypy 2.4.0
+    — Execução real: não executada (o Studio não age no sistema-alvo; rode só em ambiente autorizado).
+
+OK    the-internet: código gerado PELO STUDIO e verificado (CODE_VALIDATED) em the-internet-python
+OK    the-internet: sem senhas no código; ambiente benchmark com a origem autorizada
+  python main.py → código de saída 0
+  the-internet · execução: {"execution_id": "ex-e106b953b6594598b420", "status": "COMPLETED", "stop_code": null, "stop_detail": null, "counts": {"SUCCEEDED": 1}}
+OK    the-internet: a EXECUÇÃO do código gerado terminou COMPLETED com 1 transação bem-sucedida
+OK    the-internet: eventos sem senha
+  the-internet · leitura do processo: resultado_logout = Logout
+RESULTADO: 7 verificações, 0 falha(s)

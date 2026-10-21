@@ -188,6 +188,8 @@ public final class AutomationQualityGate {
         } else if (in.declaredTabular().isPresent()) {
             layers.put(Layer.VQ_GENERATION, new QualityReport.LayerResult(Layer.VQ_GENERATION, QualityReport.State.NOT_CHECKED,
                     "lote tabular declarado (gerador 1.0.0): fora desta camada"));
+        } else if (in.pythonPending()) {
+            layers.put(Layer.VQ_GENERATION, new QualityReport.LayerResult(Layer.VQ_GENERATION, QualityReport.State.RUNNING, "aguardando a verificação do código"));
         } else {
             GeneratedCodeQuality.Result q = GeneratedCodeQuality.assess(in.outputDir(), in.checks(), in.python().isPresent());
             issues.addAll(q.issues());

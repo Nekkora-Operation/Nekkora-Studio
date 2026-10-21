@@ -27,6 +27,37 @@ do PDD (fontes alternativas; data por extenso completa) e compara com a planilha
 | `FrameworkCatalogGateTest.versaoDesconhecida` | D13: com `FRAMEWORK_CATALOG_MISSING`, VQ fica `NOT_CHECKED` (não vira PASS) |
 | `ListFlowTest.execucaoReal`, `SingleFlowTest.pythonReal` | o código NOVO executa no laboratório (3 fichas, planilha conferida) e passa compilação, importação, ruff, ruff format, mypy estrito, contrato e VQ |
 
+### Regressão completa (commit `edee926`)
+
+| Ambiente | Testes | Falhas | Pulados |
+|---|---|---|---|
+| Windows 11, JDK 21, Python do framework (0.3.0) | 737 | 0 | 0 |
+| Linux de referência (`tools/golden-linux.sh verify`) | 737 | 0 | 15 |
+
+Os 15 pulados no Linux **não contam como aprovados**: 1 é o `AtomicSaveTest` (a imagem roda como root, permissão
+de arquivo não se aplica) e 14 exigem o interpretador do framework, que a imagem não tem
+(`FrameworkCapabilityCatalogTest` 1, `SupervisedRunTest` 3, `DependencyManagerTest` 3, `ListFlowTest` 2,
+`SingleFlowTest` 2 e os 3 novos do `CodegenQualityFlowTest` — equivalência, AST e âncora ambígua). Os 14 rodaram e
+passaram no Windows, com Python real.
+
 ## G8 — interface real do Studio
 
-Pendente nesta versão do documento (ver relatório final).
+Robot (mouse/teclado) + Chrome for Testing + extensão, máquina livre, diretórios ISOLADOS (`~/.nekkora-cq-*`, nada no
+teste-rpa da usuária), operador `TEST_AGENT`, sem IA (não é necessária para nomear). Evidências em `evidence/g8/`.
+
+| Roteiro | Resultado | Evidência |
+|---|---|---|
+| E2E-002 Wikipédia (`CodegenQuality001Homologation`): gravação → PDD → Desenvolver → Preparar ambiente → teste autorizado (4 artigos) → Validação | **76 verificações, 0 falhas**; V4 5/5, V5 7 testes de contrato, VQ "AST sem achados", V6 4 linhas | `evidence/g8/wikipedia/` |
+| Oráculo independente (`oraculo.py`, sem `nekkora_rpa`) sobre a planilha reaberta | **24/24 células OK**, cabeçalhos OK, 0 fórmulas | `oraculo-veredito.json` (só vereditos, sem valores) |
+| the-internet (`Studio014Sites`, execução única com login) | **7 verificações, 0 falhas**; execução `COMPLETED`, 1 transação, eventos sem senha | `evidence/g8/the-internet/` |
+
+Tentativas anteriores (registradas, não escondidas):
+1. Wikipédia 66/4 — os diretórios isolados não tinham a venv da automação (3 falhas encadeadas) e a checagem de
+   nome opaco era um falso positivo (`endereco_da_pagina = self.act` contém `a = self.act`). Correção: o harness segue
+   o caminho da pessoa (pendência → "Preparar ambiente…" → confirmação) e a checagem usa limite de palavra.
+2. Wikipédia 76/1 — o harness leu a Validação no estágio rápido ("procurando o Python…"). Correção no harness (espera
+   o estágio completo) e no PRODUTO: com o Python pendente, VQ agora diz "aguardando a verificação do código"
+   (`RUNNING`), em vez de "AST não executada".
+3. the-internet 7/1 — mesma ausência da venv; mesmo passo "Preparar ambiente…" no `Studio014Sites`.
+
+Arquivos para a revisão humana: `human-review/rodada-1/` (originais do Studio com SHA-256).

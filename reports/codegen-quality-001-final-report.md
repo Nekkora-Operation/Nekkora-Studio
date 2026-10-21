@@ -16,9 +16,9 @@ em 2026-10-20 23:30Z; nenhum push/PR de código proprietário; branch só local 
 | G4 Q02 arquitetura/estilo | feito | Pages por evidência, dataclass, helpers, docstrings, equivalência |
 | G5 Q03 localizadores | feito | `LocatorPolicy`, `ancoraAmbigua` (TARGET_AMBIGUOUS, nunca o primeiro) |
 | G6 Quality Gate + UI | feito | camada VQ, "Revisar código", prévia da arquitetura |
-| G7 regressões | Windows: ver suíte; Linux: pendente | `homologacao.md` |
-| G8 interface real | PENDENTE (precisa da máquina livre) | — |
-| G9 revisão humana | PENDENTE | `human-review/` |
+| G7 regressões | Windows 737/0/0; Linux 737/0 com 15 pulados (14 sem Python na imagem, 1 root) | `homologacao.md` |
+| G8 interface real | feito: Wikipédia 76/0 + oráculo 24/24; the-internet 7/0 (COMPLETED) | `homologacao.md`, `evidence/g8/` |
+| G9 revisão humana | AWAITING_HUMAN_READABILITY (rodada 1 entregue) | `human-review/rodada-1/` |
 | G10 PRs | BLOQUEADO por G-1 | patches locais |
 
 ## Impacto em contratos
