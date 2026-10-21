@@ -1,0 +1,289 @@
+# Nekkora Studio — glossário PT→EN dos IDENTIFICADORES do código gerado (nekkora-studio/naming-pt-en 1.0.0).
+# Governado e versionado: mudar uma tradução muda nomes de código gerado, então toda mudança sobe a versão do glossário
+# (registrada em manifest.json → naming.glossary). Nunca traduz VALORES (rótulos da página, cabeçalhos da planilha,
+# colunas da lista, segredos, mensagens): só nomes de classes, métodos, variáveis, chaves e step_id.
+#
+# Formato: <palavra(s) em português, minúsculas sem acento><TAB><inglês><TAB><classe>
+#   classe: n = substantivo (núcleo da frase), a = adjetivo (vem depois do substantivo em português),
+#           p = adjetivo que vem ANTES do substantivo (primeiro, novo, último), v = verbo no infinitivo.
+# Plural e feminino regulares não precisam de linha (campos → campo + s; segura → seguro). Irregulares precisam.
+#
+# --- telas, navegação e interface
+pagina	page	n
+tela	screen	n
+inicio	start	n
+pesquisa	search	n
+busca	search	n
+consulta	query	n
+acesso	access	n
+login	login	n
+logout	logout	n
+area	area	n
+menu	menu	n
+formulario	form	n
+campo	field	n
+botao	button	n
+link	link	n
+texto	text	n
+rotulo	label	n
+cabecalho	header	n
+titulo	title	n
+opcao	option	n
+filtro	filter	n
+aba	tab	n
+janela	window	n
+mensagem	message	n
+erro	error	n
+aviso	warning	n
+alerta	alert	n
+sucesso	success	n
+resultado	result	n
+navegador	browser	n
+endereco	address	n
+url	url	n
+termo	term	n
+chave	key	n
+elemento	element	n
+alvo	target	n
+icone	icon	n
+imagem	image	n
+foto	photo	n
+painel	panel	n
+grade	grid	n
+tabela	table	n
+linha	row	n
+coluna	column	n
+lista	list	n
+item	item	n
+itens	items	n
+detalhe	detail	n
+resumo	summary	n
+# --- processo
+processo	process	n
+etapa	step	n
+passo	step	n
+sessao	session	n
+bloco	block	n
+inicializacao	initialization	n
+encerramento	closing	n
+extracao	extraction	n
+transferencia	transfer	n
+entrada	input	n
+saida	output	n
+leitura	reading	n
+conferencia	check	n
+validacao	validation	n
+execucao	run	n
+transacao	transaction	n
+fila	queue	n
+tarefa	task	n
+# --- dados e documentos
+dados	data	n
+dado	data	n
+informacao	information	n
+informacoes	information	n
+ficha	profile	n
+registro	record	n
+cadastro	registration	n
+documento	document	n
+arquivo	file	n
+pasta	folder	n
+planilha	spreadsheet	n
+relatorio	report	n
+artigo	article	n
+biografia	biography	n
+acervo	collection	n
+codigo	code	n
+numero	number	n
+valor	value	n
+quantidade	quantity	n
+total	total	n
+preco	price	n
+tipo	type	n
+categoria	category	n
+descricao	description	n
+observacao	note	n
+nota	note	n
+nota fiscal	invoice	n
+fatura	invoice	n
+boleto	bill	n
+pagamento	payment	n
+pedido	order	n
+produto	product	n
+servico	service	n
+contrato	contract	n
+proposta	proposal	n
+situacao	status	n
+status	status	n
+versao	version	n
+assinatura	signature	n
+# --- pessoas e contato
+pessoa	person	n
+pessoas	people	n
+nome	name	n
+sobrenome	surname	n
+razao social	company name	n
+usuario	user	n
+senha	password	n
+credencial	credential	n
+conta	account	n
+cliente	customer	n
+fornecedor	supplier	n
+empresa	company	n
+funcionario	employee	n
+paciente	patient	n
+aluno	student	n
+email	email	n
+telefone	phone	n
+celular	mobile	n
+cpf	cpf	n
+cnpj	cnpj	n
+rg	rg	n
+cep	postal code	n
+cidade	city	n
+estado	state	n
+pais	country	n
+rua	street	n
+bairro	district	n
+nacionalidade	nationality	n
+naturalidade	birthplace	n
+ocupacao	occupation	n
+profissao	profession	n
+cargo	position	n
+nascimento	birth	n
+morte	death	n
+falecimento	death	n
+obito	death	n
+idade	age	n
+genero	gender	n
+sexo	sex	n
+# --- tempo
+data	date	n
+dia	day	n
+mes	month	n
+ano	year	n
+hora	hour	n
+horario	time	n
+periodo	period	n
+prazo	deadline	n
+vencimento	due date	n
+emissao	issue	n
+validade	expiry	n
+admissao	hiring	n
+demissao	dismissal	n
+fundacao	founding	n
+# --- adjetivos (depois do substantivo em português)
+seguro	secure	a
+completo	full	a
+inicial	start	a
+final	final	a
+principal	main	a
+esperado	expected	a
+atual	current	a
+anterior	previous	a
+seguinte	next	a
+proximo	next	p
+sintetico	synthetic	a
+registrado	registered	a
+cadastrado	registered	a
+indicado	indicated	a
+selecionado	selected	a
+obrigatorio	required	a
+opcional	optional	a
+pessoal	personal	a
+social	social	a
+fiscal	fiscal	a
+externo	external	a
+interno	internal	a
+publico	public	a
+privado	private	a
+ativo	active	a
+inativo	inactive	a
+aberto	open	a
+fechado	closed	a
+pendente	pending	a
+lido	read	a
+gravado	recorded	a
+# --- adjetivos que vêm antes do substantivo
+primeiro	first	p
+segundo	second	p
+terceiro	third	p
+ultimo	last	p
+novo	new	p
+# --- verbos (infinitivo)
+pesquisar	search	v
+buscar	search	v
+procurar	search	v
+consultar	query	v
+ler	read	v
+conferir	check	v
+verificar	verify	v
+validar	validate	v
+comparar	compare	v
+preencher	fill	v
+informar	enter	v
+digitar	type	v
+clicar	click	v
+pressionar	press	v
+selecionar	select	v
+escolher	choose	v
+marcar	mark	v
+desmarcar	unmark	v
+entrar	sign in	v
+logar	log in	v
+sair	sign out	v
+deslogar	log out	v
+acessar	access	v
+abrir	open	v
+fechar	close	v
+navegar	navigate	v
+voltar	go back	v
+avancar	go forward	v
+continuar	continue	v
+enviar	submit	v
+salvar	save	v
+gravar	save	v
+baixar	download	v
+carregar	load	v
+anexar	attach	v
+extrair	extract	v
+copiar	copy	v
+colar	paste	v
+obter	get	v
+capturar	capture	v
+registrar	record	v
+cadastrar	register	v
+criar	create	v
+incluir	add	v
+adicionar	add	v
+editar	edit	v
+alterar	change	v
+atualizar	update	v
+excluir	delete	v
+apagar	delete	v
+remover	remove	v
+confirmar	confirm	v
+cancelar	cancel	v
+aguardar	wait for	v
+esperar	wait for	v
+processar	process	v
+executar	run	v
+iniciar	start	v
+finalizar	finish	v
+encerrar	end	v
+concluir	complete	v
+calcular	calculate	v
+filtrar	filter	v
+ordenar	sort	v
+exportar	export	v
+importar	import	v
+listar	list	v
+mostrar	show	v
+exibir	display	v
+gerar	generate	v
+emitir	issue	v
+imprimir	print	v
+transferir	transfer	v
+aprovar	approve	v
+rejeitar	reject	v
+recusar	reject	v

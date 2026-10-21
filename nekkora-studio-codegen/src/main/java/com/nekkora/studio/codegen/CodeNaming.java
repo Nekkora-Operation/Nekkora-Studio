@@ -31,11 +31,12 @@ public final class CodeNaming {
             "try", "while", "with", "yield", "match", "case", "type", "self", "cls", "print", "input", "id", "list", "dict", "str", "set", "object");
 
     /**
-     * Membros de {@code BasePage}/{@code RpaProcess} — e de {@code PaginaBase}, a base gerada que dá nomes legíveis à API do
-     * framework ({@code acoes}, {@code elemento}) — que um método gerado nunca pode sobrescrever.
+     * Membros de {@code BasePage}/{@code RpaProcess} — e de {@code PageBase}, a base gerada que dá nomes legíveis à API do
+     * framework ({@code actions}, {@code identity_key}; antes {@code acoes}/{@code elemento}) — que um método gerado nunca
+     * pode sobrescrever.
      */
-    static final Set<String> RESERVED_MEMBERS = Set.of("act", "k", "acoes", "elemento", "prefix", "identity", "is_current", "wait_loaded", "name", "process",
-            "init", "end", "recover", "reconcile", "requires_browser", "required_secrets");
+    static final Set<String> RESERVED_MEMBERS = Set.of("act", "k", "acoes", "elemento", "actions", "identity_key", "prefix", "identity", "is_current",
+            "wait_loaded", "name", "process", "init", "end", "recover", "reconcile", "requires_browser", "required_secrets");
 
     /** Palavras que anunciam "os dados DE algo" num título do PDD ("Ler os dados da ficha"). */
     static final Set<String> DATA_WORDS = Set.of("dados", "dado", "informacoes", "informacao", "campos", "detalhes");

@@ -11,8 +11,9 @@ import java.util.Map;
 /**
  * NEKKORA-CODEGEN-QUALITY-001 — texto de "Revisar código gerado": como o projeto está organizado (Pages, métodos, dados
  * lidos, processo), de onde vem cada nome (título do PDD ou ações), o mapa {@code step_id} ↔ etapa do Studio, como cada
- * elemento é localizado, os hashes e o código de {@code paginas.py} e {@code processo.py} exatamente como estão na pasta.
- * Só leitura; nada é reformatado nem reescrito.
+ * elemento é localizado, os hashes e o código das telas e do processo exatamente como está na pasta. Rodada 3: no código em
+ * inglês (pacote {@code automation/}), também o mapa de nomes (origem em português → identificador) e as chaves tipadas
+ * ({@code SelectorKey}). Só leitura; nada é reformatado nem reescrito.
  */
 final class CodeReviewText {
     private CodeReviewText() {}
@@ -25,7 +26,14 @@ final class CodeReviewText {
         StringBuilder b = new StringBuilder();
         b.append("Pasta: ").append(dir).append('\n');
         b.append("Manifesto ").append(m.get("version")).append(" · ").append(m.get("generator")).append(" · requisito ").append(m.get("framework")).append("\n\n");
-        b.append("Como ler: as telas estão em paginas.py (uma classe por tela), a ordem do processo em processo.py e a linha de comando em main.py.\n");
+        boolean pkg = m.get("layout") instanceof Map<?, ?>;
+        if (pkg) {
+            b.append("Como ler: o código está em inglês no pacote automation/ — as telas em automation/pages.py (uma classe por tela), a ordem do\n");
+            b.append("processo em automation/process.py, os elementos em automation/selectors.py (SelectorKey) e a linha de comando em main.py.\n");
+            b.append("Rótulos da página, colunas da lista, cabeçalhos da planilha e segredos ficam como estão (são dados, não nomes de código).\n");
+        } else {
+            b.append("Como ler: as telas estão em paginas.py (uma classe por tela), a ordem do processo em processo.py e a linha de comando em main.py.\n");
+        }
         b.append("Os nomes vêm do PDD revisado e das variáveis do modelo. Para mudar um nome: edite o título no PDD (Abrir PDD) ou a variável e use\n");
         b.append("Desenvolver de novo — nunca o arquivo gerado (edição à mão é preservada, mas o novo código vai para .novo/.diff).\n\n");
         if (!(m.get("architecture") instanceof Map<?, ?> arch)) {
@@ -60,6 +68,44 @@ final class CodeReviewText {
             }
             b.append('\n');
         }
+        if (m.get("naming") instanceof Map<?, ?> n) {
+            b.append("NOMES NO CÓDIGO (origem em português → inglês, glossário ").append(n.get("glossary")).append(")\n");
+            if (n.get("process") instanceof Map<?, ?> pr) b.append("  processo: ").append(pr.get("from")).append(" → ").append(pr.get("python")).append('\n');
+            if (n.get("pages") instanceof List<?> pages) {
+                for (Object o : pages) {
+                    Map<String, Object> x = (Map<String, Object>) o;
+                    b.append("  tela: ").append(String.valueOf(x.get("from")).isEmpty() ? "—" : "“" + x.get("from") + "”").append(" → ").append(x.get("python")).append('\n');
+                }
+            }
+            if (n.get("identifiers") instanceof List<?> ids) {
+                for (Object o : ids) {
+                    Map<String, Object> x = (Map<String, Object>) o;
+                    b.append("  ").append("input".equals(x.get("role")) ? "entrada" : "saída").append(": ").append(x.get("model")).append(" → ").append(x.get("python")).append('\n');
+                }
+            }
+            if (n.get("columns") instanceof List<?> cols) {
+                for (Object o : cols) {
+                    Map<String, Object> x = (Map<String, Object>) o;
+                    b.append("  coluna da planilha: “").append(x.get("header")).append("” (cabeçalho, fica como está) → campo ").append(x.get("field")).append('\n');
+                }
+            }
+            if (n.get("untranslated") instanceof List<?> u && !u.isEmpty()) {
+                for (Object o : u) {
+                    Map<String, Object> x = (Map<String, Object>) o;
+                    b.append("  SEM TRADUÇÃO no glossário: \"").append(x.get("word")).append("\" em ").append(x.get("python")).append(" (ficou como está)\n");
+                }
+            }
+            b.append('\n');
+        }
+        if (m.get("selectors") instanceof Map<?, ?> s && s.get("keys") instanceof List<?> keys) {
+            b.append("CHAVES TIPADAS (").append(s.get("module")).append(" ↔ ").append(s.get("registry")).append(", equivalência ").append(s.get("equivalence")).append(")\n");
+            for (Object o : keys) {
+                Map<String, Object> x = (Map<String, Object>) o;
+                b.append("  SelectorKey.").append(x.get("member")).append(" = ").append(x.get("key")).append(" ← ").append(String.join(", ", (List<String>) x.get("traceIds")))
+                        .append('\n');
+            }
+            b.append('\n');
+        }
         if (m.get("locators") instanceof List<?> locators) {
             b.append("COMO CADA ELEMENTO É LOCALIZADO (selectors.json)\n");
             for (Object o : locators) {
@@ -73,7 +119,7 @@ final class CodeReviewText {
             files.forEach((f, h) -> b.append("  ").append(f).append("  ").append(h).append('\n'));
             b.append('\n');
         }
-        for (String f : List.of("paginas.py", "processo.py")) {
+        for (String f : pkg ? List.of("automation/selectors.py", "automation/pages.py", "automation/process.py", "main.py") : List.of("paginas.py", "processo.py")) {
             Path p = dir.resolve(f);
             if (!Files.isRegularFile(p)) continue;
             b.append("===================================== ").append(f).append(" =====================================\n");
@@ -84,6 +130,7 @@ final class CodeReviewText {
 
     static String source(String s) {
         return switch (s) {
+            case "PDD_DATA_OWNER" -> "dono dos dados no PDD";
             case "PDD_SECTION_TITLE" -> "título da seção do PDD";
             case "PDD_BLOCK_TITLE" -> "título do passo no PDD";
             case "SESSION_NAME" -> "nome da sessão";

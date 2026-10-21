@@ -578,7 +578,8 @@ public final class DevelopmentPresenter implements DevelopmentPanel.Actions {
             out.add(new DevelopmentPanel.Answer("O que será criado?", "Processo em lote (uma transação por linha da planilha) e uma Page por sessão — gerador "
                     + "tabular da E2E-001, com a configuração declarada no projeto."));
         } else {
-            out.add(new DevelopmentPanel.Answer("O que será criado?", "processo.py (RpaProcess) e " + plan.pages().size() + " Page(s): "
+            out.add(new DevelopmentPanel.Answer("O que será criado?", "Pacote automation/ em inglês: process.py (RpaProcess), selectors.py (SelectorKey) e "
+                    + plan.pages().size() + " Page(s) em pages.py: "
                     + String.join(", ", plan.pages().stream().map(DevelopmentPlan.PlannedPage::className).toList())
                     + " — uma por tela observada. Nenhum Module: nada se repete o bastante para justificar um (o LoginModule usaria StepIds próprios)."));
             // CODEGEN-QUALITY-001: prévia da arquitetura — telas, métodos e de onde vem cada nome (antes de gerar)
@@ -667,6 +668,8 @@ public final class DevelopmentPresenter implements DevelopmentPanel.Actions {
             case WRITTEN -> "gravado";
             case UNCHANGED -> "igual";
             case PROTECTED -> "PROTEGIDO (.novo/.diff)";
+            case RETIRED -> "guardado em " + OutputWriter.PREVIOUS + "/ (geração anterior)";
+            case KEPT -> "MANTIDO (editado à mão; não faz mais parte do projeto)";
         };
     }
 

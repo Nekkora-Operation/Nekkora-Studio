@@ -294,12 +294,12 @@ public final class SingleGenerator {
     }
 
     /**
-     * CODEGEN-QUALITY-001: como a etapa é CHAMADA nas docstrings — o texto de interface que a identifica (rótulo, âncora
-     * da linha, nome acessível), "título" para um cabeçalho lido, "endereço da página" para a leitura sem alvo, ou o nome
-     * da variável. Nunca valores.
+     * CODEGEN-QUALITY-001: como a etapa é CHAMADA nas docstrings — o texto de INTERFACE que identifica o alvo (rótulo,
+     * âncora da linha, nome acessível), exatamente como está na página (não é traduzido). Vazio sem esse texto: a
+     * docstring diz o papel em inglês ("the page address", "the title", "the field"). Nunca valores.
      */
     static String label(AutomationStep s, String input, String credential, String output, SingleConfig.Read read) {
-        if (read != null && "address".equals(read.kind())) return "endereço da página";
+        if (read != null && "address".equals(read.kind())) return "";
         ElementReference el = s.element().orElse(null);
         if (el != null) {
             for (LocatorCandidate c : el.locators()) {
@@ -308,11 +308,7 @@ public final class SingleGenerator {
             String anchor = PythonGenerator.anchorText(el);
             if (anchor != null) return anchor;
             if (el.accessibleName() != null && !el.accessibleName().isBlank()) return el.accessibleName().strip();
-            if ("HEADING".equals(el.semanticKind()) && s.actionType() == ActionType.OBSERVE) return "título";
         }
-        if (input != null) return CodeNaming.human(input);
-        if (credential != null) return CodeNaming.human(credential.substring(credential.lastIndexOf('.') + 1));
-        if (output != null) return CodeNaming.human(output);
         return "";
     }
 
@@ -324,10 +320,11 @@ public final class SingleGenerator {
     }
 
     /**
-     * Chave estável e legível do alvo: {@code processo.<prefixo da Page>.<nome>} — o nome vem, nesta ordem, do rótulo
+     * Chave estável e legível do alvo: {@code process.<prefixo da Page>.<nome>} — o nome vem, nesta ordem, do rótulo
      * associado, da âncora da linha (th/dt), do nome acessível, da variável de entrada do preenchimento
-     * ({@code campo_<variável>}), do cabeçalho lido ({@code titulo}) ou, sem evidência, de {@code alvo} (provisório,
-     * apontado pelo Quality Gate). Texto de interface, nunca valores.
+     * ("campo &lt;variável&gt;"), do cabeçalho lido ("título") ou, sem evidência, de "alvo" (provisório, apontado pelo
+     * Quality Gate) — e vira inglês pelo glossário governado ({@link EnglishNames}: "Nome completo" → {@code full_name},
+     * "campo termo_de_busca" → {@code search_term_field}). Texto de interface, nunca valores.
      */
     static String key(String prefix, ElementReference el, AutomationStep s, Set<String> used) {
         String base = null;
@@ -347,11 +344,19 @@ public final class SingleGenerator {
         }
         if (base == null && "HEADING".equals(el.semanticKind()) && s.actionType() == ActionType.OBSERVE) base = "titulo";
         if (base == null) base = "alvo";
-        String slug = CodeNaming.snake(base, 40);
-        if (slug.isEmpty()) slug = "alvo";
-        String key = PythonGenerator.SYSTEM + "." + prefix + "." + slug;
+        String slug = EnglishNames.noun(base).snake();
+        if (slug.length() > 40) slug = slug.substring(0, 40).replaceAll("_+$", "");
+        if (slug.isEmpty() || !Character.isLetter(slug.charAt(0))) slug = "target";
+        // o nome do elemento repete o da tela (botão "Consultar" na tela de consulta): o tipo do elemento desfaz a ambiguidade
+        if (slug.equals(prefix)) slug = slug + "_" + switch (el.semanticKind() == null ? "" : el.semanticKind()) {
+            case "BUTTON" -> "button";
+            case "LINK" -> "link";
+            case "HEADING" -> "heading";
+            default -> "element";
+        };
+        String key = CodePlan.SYSTEM + "." + prefix + "." + slug;
         int n = 2;
-        while (!used.add(key)) key = PythonGenerator.SYSTEM + "." + prefix + "." + slug + "_" + n++;
+        while (!used.add(key)) key = CodePlan.SYSTEM + "." + prefix + "." + slug + "_" + n++;
         return key;
     }
 }

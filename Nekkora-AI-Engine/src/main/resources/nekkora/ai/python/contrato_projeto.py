@@ -6,6 +6,13 @@ Uso pelo Studio: ``python -I -B contrato_projeto.py <pasta-do-projeto>``. Respon
 Verifica: hashes do manifesto; registro de alvos válido para o nekkora_rpa instalado; toda chave usada nas Pages existe
 no registro; todo StepId do código está no manifesto (e vice-versa para etapas com alvo); preenchimentos só recebem
 parâmetro/variável ou segredo do provedor (nunca literal); o processo é um RpaProcess e declara os segredos que usa.
+
+Dois layouts (CODEGEN-QUALITY-001 rodada 3): o pacote ``automation/`` (código em inglês, chaves tipadas
+``SelectorKey.<NOME>.value``) e ``paginas.py``/``processo.py`` na raiz (projetos anteriores, que continuam valendo). No
+pacote, também: nenhuma chave de alvo escrita como texto nas telas; ``automation/selectors.py`` igual ao
+``selectors.json`` (mesmos alvos, mesmas chaves, mesma equivalência declarada no manifesto); cada ``SelectorKey`` mapeado
+no manifesto para suas etapas; e nenhum módulo do projeto encobre a biblioteca padrão (``selectors``, ``subprocess``,
+``asyncio`` continuam vindo dela com o projeto no ``sys.path``).
 """
 
 from __future__ import annotations
@@ -13,6 +20,7 @@ from __future__ import annotations
 import ast
 import hashlib
 import importlib
+import importlib.util
 import json
 import sys
 from pathlib import Path
@@ -31,17 +39,64 @@ def literal(node: ast.AST) -> str | None:
     return node.value if isinstance(node, ast.Constant) and isinstance(node.value, str) else None
 
 
+def canonical(value: Any) -> str:
+    return json.dumps(value, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
+
+
+def selector_members(tree: ast.Module) -> dict[str, str]:
+    """Membros de ``class SelectorKey(StrEnum)`` → chave (só literais; nada é executado)."""
+    out: dict[str, str] = {}
+    for node in tree.body:
+        if isinstance(node, ast.ClassDef) and node.name == "SelectorKey":
+            for st in node.body:
+                if isinstance(st, ast.Assign) and len(st.targets) == 1 and isinstance(st.targets[0], ast.Name):
+                    value = literal(st.value)
+                    if value is not None:
+                        out[st.targets[0].id] = value
+    return out
+
+
+def key_member(node: ast.AST) -> str | None:
+    """``SelectorKey.X.value`` (ou ``SelectorKey.X``) → ``X``."""
+    if isinstance(node, ast.Attribute) and node.attr == "value":
+        node = node.value
+    if isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name) and node.value.id == "SelectorKey":
+        return node.attr
+    return None
+
+
+def stdlib_not_shadowed(root: Path) -> bool:
+    """Com o projeto no ``sys.path``, os módulos da biblioteca padrão continuam vindo dela (nada do projeto os encobre)."""
+    names = set(getattr(sys, "stdlib_module_names", ()))
+    top = {p.stem for p in root.glob("*.py")} | {p.name for p in root.iterdir() if p.is_dir() and (p / "__init__.py").is_file()}
+    if top & names:
+        return False
+    sys.path.insert(0, str(root))
+    try:
+        for name in ("selectors", "subprocess", "asyncio"):
+            spec = importlib.util.find_spec(name)
+            origin = Path(spec.origin).resolve() if spec is not None and spec.origin else None
+            if origin is None or root.resolve() in origin.parents:
+                return False
+    finally:
+        sys.path.remove(str(root))
+    return True
+
+
 def run(root: Path) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
     manifest = json.loads((root / "manifest.json").read_text(encoding="utf-8"))
     files: dict[str, str] = manifest.get("files", {})
     bad = [f for f, h in files.items() if "sha256:" + hashlib.sha256((root / f).read_bytes()).hexdigest() != h]
     check(out, "MANIFEST_HASHES", not bad and bool(files), "MANIFEST_HASH_MISMATCH")
+    package = (root / "automation" / "__init__.py").is_file()
+    pages_file = root / "automation" / "pages.py" if package else root / "paginas.py"
+    config_file = root / "config" / ("execution.toml" if (root / "config" / "execution.toml").is_file() else "execucao.toml")
 
     from nekkora_rpa.selectors.registry import SelectorRegistry
 
     env = "lab"
-    toml = (root / "config" / "execucao.toml").read_text(encoding="utf-8")
+    toml = config_file.read_text(encoding="utf-8")
     if 'environment = "benchmark"' in toml:
         env = "benchmark"
     try:
@@ -52,10 +107,15 @@ def run(root: Path) -> list[dict[str, Any]]:
         keys = set()
         check(out, "SELECTORS_VALID", False, "SELECTORS_REJECTED_BY_FRAMEWORK")
 
-    pages = ast.parse((root / "paginas.py").read_text(encoding="utf-8"))
+    members: dict[str, str] = {}
+    if package:
+        members = selector_members(ast.parse((root / "automation" / "selectors.py").read_text(encoding="utf-8")))
+    pages = ast.parse(pages_file.read_text(encoding="utf-8"))
     used: set[str] = set()
     step_ids: set[str] = set()
     fills_ok = True
+    typed_ok = True
+    system = str(json.loads((root / "selectors.json").read_text(encoding="utf-8")).get("system", ""))
     for cls in [n for n in pages.body if isinstance(n, ast.ClassDef)]:
         prefix = None
         for st in cls.body:
@@ -66,15 +126,25 @@ def run(root: Path) -> list[dict[str, Any]]:
             if isinstance(st, ast.Assign) and any(isinstance(t, ast.Name) and t.id == "identity" for t in st.targets):
                 if prefix and literal(st.value):
                     used.add(f"{prefix}.{literal(st.value)}")
+            if isinstance(st, ast.Assign) and any(isinstance(t, ast.Name) and t.id == "identity_key" for t in st.targets):
+                member = key_member(st.value)
+                used.add(members.get(member, f"<membro desconhecido {member}>") if member else "<identidade sem SelectorKey>")
+        for node in ast.walk(cls):
+            member = key_member(node) if isinstance(node, ast.Attribute) else None
+            if member is not None and package:
+                used.add(members.get(member, f"<membro desconhecido {member}>"))
+            # no pacote, nenhuma chave de alvo escrita como texto (nem em pós-condição): só SelectorKey.<NOME>.value
+            text = literal(node) if isinstance(node, ast.Constant) else None
+            if package and text is not None and system and text.startswith(system + "."):
+                typed_ok = False
         for c in calls(cls):
             f = c.func
             name = f.attr if isinstance(f, ast.Attribute) else f.id if isinstance(f, ast.Name) else ""
-            # chave relativa: self.k("x"), self.elemento("x") (PaginaBase, rodada 2) ou um leitor da Page (1.3.0:
-            # self._texto("x", ...), self._data("x", ...))
+            # chave relativa (layout anterior): self.k("x"), self.elemento("x") ou um leitor da Page (self._texto("x", ...))
             relative = name in ("k", "elemento") or (name.startswith("_") and name.lstrip("_").split("_")[0] in ("texto", "data"))
-            if relative and c.args and literal(c.args[0]) is not None and prefix:
+            if not package and relative and c.args and literal(c.args[0]) is not None and prefix:
                 used.add(f"{prefix}.{literal(c.args[0])}")
-            if name in ("exists", "mark", "is_visible") and c.args and literal(c.args[0]) is not None:
+            if not package and name in ("exists", "mark", "is_visible") and c.args and literal(c.args[0]) is not None:
                 used.add(str(literal(c.args[0])))
             for kw in c.keywords:
                 if kw.arg == "step_id" and literal(kw.value) is not None:
@@ -82,7 +152,7 @@ def run(root: Path) -> list[dict[str, Any]]:
             if name == "fill" and len(c.args) >= 2 and isinstance(c.args[1], (ast.Constant, ast.JoinedStr)):
                 fills_ok = False  # valor escrito no código (o valor vem de parâmetro, da planilha ou do provedor de segredos)
     check(out, "KEYS_IN_REGISTRY", bool(used) and used <= keys, "KEY_NOT_IN_REGISTRY")
-    # 1.3.0: o código usa traceIds legíveis; o manifesto mapeia cada um a UM StepId (bijetivo). Antes: o próprio StepId.
+    # 1.3.0+: o código usa traceIds legíveis; o manifesto mapeia cada um a UM StepId (bijetivo). Antes: o próprio StepId.
     trace = manifest.get("trace") or {}
     mappings = trace.get("mappings", []) if isinstance(trace, dict) else []
     to_step = {m["traceId"]: m["studioStepId"] for m in mappings}
@@ -100,15 +170,20 @@ def run(root: Path) -> list[dict[str, Any]]:
     )
     check(out, "FILL_VALUES_NOT_LITERAL", fills_ok, "FILL_LITERAL_VALUE")
 
+    if package:
+        check(out, "SELECTOR_KEYS_TYPED", typed_ok, "LITERAL_TARGET_KEY_IN_PAGES")
+        check(out, "STDLIB_NOT_SHADOWED", stdlib_not_shadowed(root), "PROJECT_SHADOWS_STDLIB")
+
     sys.path.insert(0, str(root))
     try:
-        processo = importlib.import_module("processo")
+        module = "automation.process" if package else "processo"
+        processo = importlib.import_module(module)
         from nekkora_rpa import RpaProcess
 
-        # a classe do processo tem o nome de negócio (1.3.0) ou "Processo" (antes): a ÚNICA subclasse de RpaProcess
+        # a classe do processo tem o nome de negócio: a ÚNICA subclasse de RpaProcess do módulo do processo
         candidates = [
             c for c in vars(processo).values()
-            if isinstance(c, type) and issubclass(c, RpaProcess) and c is not RpaProcess and c.__module__ == "processo"
+            if isinstance(c, type) and issubclass(c, RpaProcess) and c is not RpaProcess and c.__module__ == module
         ]
         proc_cls = candidates[0] if len(candidates) == 1 else None
         is_process = proc_cls is not None
@@ -118,8 +193,33 @@ def run(root: Path) -> list[dict[str, Any]]:
         check(out, "SECRETS_DECLARED", (expected == 0) == (not declared), "SECRETS_NOT_DECLARED")
     except Exception:  # noqa: BLE001 - importação recusada é falha do contrato
         check(out, "PROCESS_IS_RPA_PROCESS", False, "PROCESS_IMPORT_FAILED")
-    finally:
-        sys.path.remove(str(root))
+    if package:
+        try:
+            selectors_py = importlib.import_module("automation.selectors")
+            json_targets = json.loads((root / "selectors.json").read_text(encoding="utf-8"))["targets"]
+            clean = {k: {f: v for f, v in t.items() if f != "provenance"} for k, t in json_targets.items()}
+            py_targets = dict(selectors_py.TARGETS)
+            enum_keys = {m.name: m.value for m in selectors_py.SelectorKey}
+            declared_eq = (manifest.get("selectors") or {}).get("equivalence")
+            same = (
+                canonical(py_targets) == canonical(clean)
+                and set(enum_keys.values()) == set(json_targets)
+                and enum_keys == members
+                and declared_eq == "sha256:" + hashlib.sha256(canonical(clean).encode("utf-8")).hexdigest()
+            )
+            check(out, "SELECTORS_PY_JSON_EQUAL", same, "SELECTORS_PY_JSON_DIFFER")
+            listed = {k.get("member"): k for k in (manifest.get("selectors") or {}).get("keys", [])}
+            mapped = set(listed) == set(enum_keys) and all(
+                listed[m].get("key") == enum_keys[m]
+                and listed[m].get("traceIds")
+                and all(t in to_step and to_step[t] in listed[m].get("studioStepIds", []) for t in listed[m]["traceIds"])
+                and (json_targets[enum_keys[m]].get("provenance", {}).get("studioStepId") in (None, *listed[m].get("studioStepIds", [])))
+                for m in enum_keys
+            )
+            check(out, "SELECTOR_KEYS_MAPPED", mapped, "SELECTOR_KEY_NOT_MAPPED")
+        except Exception:  # noqa: BLE001 - módulo de alvos recusado é falha do contrato
+            check(out, "SELECTORS_PY_JSON_EQUAL", False, "SELECTORS_MODULE_INVALID")
+    sys.path.remove(str(root))
     return out
 
 

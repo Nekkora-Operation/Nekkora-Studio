@@ -1,8 +1,9 @@
 """Equivalência de comportamento entre dois projetos gerados (NEKKORA-CODEGEN-QUALITY-001, teste).
 
 Uso: python -I -B equivalencia.py <pasta-do-projeto> <cenário.json>
-Importa paginas.py/processo.py do projeto com um ``Actions`` FALSO (nada de navegador, nada de rede) e roda UMA
-transação. Cada chamada ao framework vira ``[ação, índice da etapa no modelo]`` — o índice sai do PRÓPRIO manifesto
+Importa o processo do projeto (``automation/process.py`` no código em inglês da rodada 3; ``processo.py`` antes) com um
+``Actions`` FALSO (nada de navegador, nada de rede) e roda UMA transação. A linha devolvida é comparada pelo CABEÇALHO
+da planilha (o contrato; o nome interno do campo mudou para inglês), via ``output.columns`` do manifesto. Cada chamada ao framework vira ``[ação, índice da etapa no modelo]`` — o índice sai do PRÓPRIO manifesto
 (``step_id`` = StepId no gerador antigo; traceId → StepId pelo ``trace`` no novo), então dois geradores diferentes
 podem ser comparados chamada a chamada. O cenário diz o que cada leitura devolve (pelo índice da etapa) e quais alvos
 não existem. Saída: JSON com as chamadas e o desfecho (linha devolvida ou recusa).
@@ -87,24 +88,28 @@ def main() -> int:
             return "; ".join(values.get(key_index(key), []))
 
         def navigate(self, url: str, *, step_id: str | None = None, **_: Any) -> None:
-            # abertura sintética do endereço inicial: "INICIO" (antes) e "processo.abrir_pagina_inicial" (rodada 2) são a mesma
-            start = step_id in ("INICIO", "processo.abrir_pagina_inicial")
+            # abertura sintética do endereço inicial: "INICIO" (rodada 1), "processo.abrir_pagina_inicial" (rodada 2) e
+            # "process.open_start_page" (rodada 3) são a mesma
+            start = step_id in ("INICIO", "processo.abrir_pagina_inicial", "process.open_start_page")
             calls.append(["navigate", "INICIO" if start else idx(step_id)])
 
     sys.path.insert(0, str(root))
-    processo = importlib.import_module("processo")
+    module = "automation.process" if (root / "automation" / "__init__.py").is_file() else "processo"
+    processo = importlib.import_module(module)
     from nekkora_rpa import RpaProcess, TransactionItem
     from nekkora_rpa.errors import BusinessRuleRejected
 
     cls = next(c for c in vars(processo).values() if isinstance(c, type) and issubclass(c, RpaProcess) and c is not RpaProcess
-               and c.__module__ == "processo")
+               and c.__module__ == module)
+    header_of = {c["field"]: c["header"] for c in (manifest.get("output") or {}).get("columns", [])}
     rt = types.SimpleNamespace(act=Fake(), secrets=None)
     outcome: dict[str, Any]
     try:
         result = cls().process(rt, TransactionItem("x", scenario["input"]))  # type: ignore[arg-type]
-        outcome = {"status": "SUCCEEDED", "row": dict(result.output)}
+        outcome = {"status": "SUCCEEDED", "row": {header_of.get(k, k): v for k, v in dict(result.output).items()}}
     except BusinessRuleRejected as err:
-        outcome = {"status": "BUSINESS_REJECTED", "reason": err.reason}
+        field = err.reason.split(":", 1)[1] if err.reason.startswith("DADO_OBRIGATORIO_VAZIO:") else None
+        outcome = {"status": "BUSINESS_REJECTED", "reason": err.reason, "column": header_of.get(field) if field else None}
     except RuntimeError as err:
         outcome = {"status": "TECHNICAL", "detail": str(err)}
     print(json.dumps({"calls": calls, "outcome": outcome}, ensure_ascii=False))

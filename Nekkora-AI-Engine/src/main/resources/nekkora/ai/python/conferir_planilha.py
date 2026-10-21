@@ -1,7 +1,7 @@
 """Conferência da planilha gravada pelo TESTE AUTORIZADO (NEKKORA-E2E-002) — sem navegador, sem rede.
 
 Uso pelo Studio: ``python -E -s -B conferir_planilha.py <pasta-do-projeto-gerado> <planilha.xlsx>``. Reabre o arquivo com
-o ``read_back`` do nekkora_rpa e o esquema DECLARADO no próprio projeto gerado (``main.PLANILHA``): uma aba, cabeçalho
+o ``read_back`` do nekkora_rpa e o esquema DECLARADO no próprio projeto gerado (``main.SPREADSHEET``; antes ``main.PLANILHA``): uma aba, cabeçalho
 idêntico, nenhuma fórmula, nenhuma célula fora das colunas, chave sem repetição, nenhuma célula obrigatória vazia.
 Responde UM objeto JSON com ``ok``, ``code``, ``rows``, ``headers`` (rótulos de interface) e ``sha256`` — nunca o
 conteúdo de uma célula.
@@ -24,7 +24,8 @@ def conferir(projeto: Path, planilha: Path) -> dict[str, object]:
         sys.path.remove(str(projeto))
     from nekkora_rpa.xlsx import XlsxOutputError, XlsxSchema, read_back
 
-    schema = getattr(principal, "PLANILHA", None)
+    # o esquema declarado no main.py: SPREADSHEET (código em inglês, rodada 3) ou PLANILHA (projetos anteriores)
+    schema = getattr(principal, "SPREADSHEET", None) or getattr(principal, "PLANILHA", None)
     if not isinstance(schema, XlsxSchema):
         return {"ok": False, "code": "SCHEMA_NOT_DECLARED", "rows": 0, "headers": [], "sha256": ""}
     sha = "sha256:" + hashlib.sha256(planilha.read_bytes()).hexdigest()

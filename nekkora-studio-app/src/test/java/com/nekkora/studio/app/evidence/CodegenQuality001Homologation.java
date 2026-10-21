@@ -2349,8 +2349,11 @@ public final class CodegenQuality001Homologation {
     /** Q01/Q02/Q03 no código que o Studio acabou de gerar pela interface; "Revisar código"; cópia para a titular. */
     @SuppressWarnings("unchecked")
     private void codegenQualityChecks(DevelopmentPanel dp, Path gen) throws Exception {
-        String pages = Files.readString(gen.resolve("paginas.py"), StandardCharsets.UTF_8);
-        String process = Files.readString(gen.resolve("processo.py"), StandardCharsets.UTF_8);
+        // rodada 3 (Q10/Q11): código em inglês no pacote automation/, chaves tipadas, selectors.json derivado
+        String pages = Files.readString(gen.resolve("automation/pages.py"), StandardCharsets.UTF_8);
+        String process = Files.readString(gen.resolve("automation/process.py"), StandardCharsets.UTF_8);
+        String selectorsPy = Files.readString(gen.resolve("automation/selectors.py"), StandardCharsets.UTF_8);
+        String main = Files.readString(gen.resolve("main.py"), StandardCharsets.UTF_8);
         Map<String, Object> manifest = Json.parseObject(Files.readString(gen.resolve("manifest.json"), StandardCharsets.UTF_8));
         java.util.regex.Matcher classes = java.util.regex.Pattern.compile("class (\\w+)\\(").matcher(pages);
         List<String> found = new ArrayList<>();
@@ -2358,21 +2361,41 @@ public final class CodegenQuality001Homologation {
         java.util.regex.Matcher defs = java.util.regex.Pattern.compile("    def (\\w+)\\(").matcher(pages);
         List<String> methods = new ArrayList<>();
         while (defs.find()) methods.add(defs.group(1));
-        log("  classes em paginas.py: " + found + " · métodos: " + methods);
-        check("CQ: duas Pages por evidência (busca e ficha separadas pela troca de documento)", pages.contains("class PaginaPesquisa(PaginaBase)")
-                && pages.contains("class PaginaFicha(PaginaBase)"));
-        check("CQ-01: a tela da ficha pelo DONO dos dados no PDD (\"os dados da ficha\"): PaginaFicha, ler_dados_da_ficha, DadosDaFicha",
-                pages.contains("def ler_dados_da_ficha(self) -> DadosDaFicha:") && pages.contains("class DadosDaFicha:") && process.contains("dados_da_ficha"));
-        check("CQ: método da busca nomeado pelo passo do PDD (pesquisar_artigo)", pages.contains("def pesquisar_artigo(self, termo_de_busca: str) -> None:"));
+        log("  classes em automation/pages.py: " + found + " · métodos: " + methods);
+        check("R3/Q10: layout em pacote — automation/{__init__,selectors,pages,process}.py, nenhum selectors.py nem paginas.py na raiz",
+                Files.isRegularFile(gen.resolve("automation/__init__.py")) && !Files.exists(gen.resolve("selectors.py")) && !Files.exists(gen.resolve("paginas.py"))
+                        && Files.isRegularFile(gen.resolve("selectors.json")) && Files.isRegularFile(gen.resolve("config/execution.toml")));
+        check("CQ: duas Pages por evidência (busca e ficha separadas pela troca de documento)", pages.contains("class SearchPage(PageBase)")
+                && pages.contains("class ProfilePage(PageBase)"));
+        check("CQ-01/Q11: a tela da ficha pelo DONO dos dados no PDD em inglês: ProfilePage, read_profile_data, ProfileData",
+                pages.contains("def read_profile_data(self) -> ProfileData:") && pages.contains("class ProfileData:") && process.contains("profile_data"));
+        check("Q11: método da busca pelo passo do PDD em inglês (search_article(search_term))", pages.contains("def search_article(self, search_term: str) -> None:"));
         check("CQ: leituras da ficha num método que devolve dados tipados (dataclass)", pages.contains("@dataclass(frozen=True)"));
-        check("CQ-02: API do framework com nomes legíveis (self.acoes / self.elemento); act e k só na PaginaBase",
-                pages.contains("class PaginaBase(BasePage):") && pages.split("self\\.act\\b", -1).length == 2 && pages.split("self\\.k\\(", -1).length == 2);
-        check("CQ-03: docstring da tela diz onde está no PDD e o papel; sem comentário solto da espera",
-                pages.contains("\"\"\"Tela da seção “Pesquisa do artigo” do PDD: pesquisa o artigo pelo nome.\"\"\"") && !pages.contains("# a página está pronta"));
-        check("CQ-07: coluna vazia recusa com o NOME do campo (nunca o conteúdo)", process.contains("raise BusinessRuleRejected(f\"DADO_OBRIGATORIO_VAZIO:{campo}\")"));
-        check("CQ-08: abertura inicial na convenção (processo.abrir_pagina_inicial) e o id anterior declarado no manifesto",
-                process.contains("step_id=\"processo.abrir_pagina_inicial\"") && !process.contains("\"INICIO\"")
-                && Json.write(manifest.get("trace")).contains("\"previousTraceIds\""));
+        check("Q10: toda chave de alvo é SelectorKey.<NOME>.value (nenhuma chave como texto nas telas); act só na PageBase",
+                pages.contains("class PageBase(BasePage):") && pages.contains("from automation.selectors import SelectorKey") && !pages.contains("\"process.")
+                        && pages.split("self\\.act\\b", -1).length == 2 && !pages.contains("self.k(") && pages.contains("SelectorKey.PROFILE_FULL_NAME.value"));
+        check("Q10: automation/selectors.py tem SelectorKey (StrEnum) e TARGETS, sem UUID; rótulos da página não traduzidos",
+                selectorsPy.contains("class SelectorKey(StrEnum):") && selectorsPy.contains("TARGETS: dict[str, dict[str, object]] = {") && !UUID_RE.matcher(selectorsPy).find()
+                        && selectorsPy.contains("Nome completo"));
+        check("CQ-03: docstring da tela diz onde está no PDD; sem comentário solto da espera",
+                pages.contains("\"\"\"Screen of the PDD section “Pesquisa do artigo”.\"\"\"") && !pages.contains("# a página está pronta"));
+        check("CQ-07 + ajuste da rodada 3: coluna vazia ou só com espaços recusa com o NOME do campo (nunca o conteúdo)",
+                process.contains("raise BusinessRuleRejected(f\"DADO_OBRIGATORIO_VAZIO:{field}\")") && process.contains("def _filled(value: str | None) -> str | None:")
+                        && process.contains("\"full_name\": _filled(profile_data.full_name) or _filled(profile_data.title)"));
+        check("CQ-08: abertura inicial na convenção (process.open_start_page) e os ids anteriores declarados no manifesto",
+                process.contains("step_id=\"process.open_start_page\"") && !process.contains("\"INICIO\"")
+                && Json.write(manifest.get("trace")).contains("\"previousTraceIds\":[\"processo.abrir_pagina_inicial\",\"INICIO\"]"));
+        check("Q11: colunas da lista e cabeçalhos da planilha continuam o contrato (não traduzidos); mapeamento explícito no código",
+                process.contains("search_term=_required_input(data, \"termo_de_busca\"),") && main.contains("OutputColumn(\"Nome completo\", \"full_name\"")
+                        && main.contains("\"--input\", \"--entrada\""));
+        String ident = Json.write(manifest.get("naming"));
+        check("Q11: manifesto 1.4.0 em inglês com o mapa de nomes (origem → código) e sem palavra sem tradução",
+                "1.4.0".equals(manifest.get("version")) && "en".equals(manifest.get("language")) && ident.contains("\"model\":\"termo_de_busca\",\"python\":\"search_term\"")
+                        && ident.contains("\"untranslated\":[]"));
+        String sel = Json.write(manifest.get("selectors"));
+        check("Q10: manifesto liga SelectorKey ↔ chave ↔ traceId/studioStepId e declara a equivalência .py ↔ JSON",
+                sel.contains("\"member\":\"PROFILE_FULL_NAME\",\"key\":\"process.profile.full_name\",\"traceIds\":[\"profile.read_full_name\"]")
+                        && sel.matches("(?s).*\"equivalence\":\"sha256:[0-9a-f]{64}\".*"));
         check("CQ: nenhum UUID nem comentário por etapa no corpo das Pages e do processo", !UUID_RE.matcher(pages + process).find()
                 && !(pages + process).contains("# etapa"));
         check("CQ: sem nomes opacos (a = self.act, etapas_sessao_N, fill, press_key, campo_s, TelaPesquisa)", !java.util.regex.Pattern.compile("\\ba = self\\.act\\b").matcher(pages + process).find()
@@ -2390,13 +2413,15 @@ public final class CodegenQuality001Homologation {
         java.util.regex.Matcher sid = java.util.regex.Pattern.compile("step_id=\"([^\"]+)\"").matcher(pages + process);
         boolean allMapped = true;
         while (sid.find()) allMapped &= ids.contains(sid.group(1)) || sid.group(1).equals(com.nekkora.studio.codegen.CodePlan.START_TRACE);
-        check("CQ: step_id legível e mapeado 1:1 para a etapa do Studio (manifesto 1.3.0)", "1.3.0".equals(manifest.get("version")) && allMapped
+        check("CQ: step_id legível em inglês e mapeado 1:1 para a etapa do Studio (manifesto 1.4.0)", "1.4.0".equals(manifest.get("version")) && allMapped
+                && ids.contains("profile.read_full_name") && ids.contains("search.fill_search_term")
                 && ids.size() == mappings.size() && stepsMapped.size() == mappings.size() && mappings.size() == ((List<Object>) manifest.get("steps")).size());
-        check("CQ: processo com o nome de negócio (BiografiasDaWikipedia)", process.contains("class BiografiasDaWikipedia(RpaProcess)"));
+        check("Q11: processo com o nome de negócio em inglês (WikipediaBiographiesProcess); o nome do processo nas execuções não muda",
+                process.contains("class WikipediaBiographiesProcess(RpaProcess)") && process.contains("name = \"biografias_da_wikipedia\""));
         check("CQ: requisito do framework preservado (nekkora-rpa[excel]==0.3.0) e planilha pelo XlsxResultSink",
                 "nekkora-rpa[excel]==0.3.0".equals(manifest.get("framework")) && Files.readString(gen.resolve("main.py"), StandardCharsets.UTF_8).contains("XlsxResultSink("));
         boolean preview = edt(() -> dp.model().answers().stream().anyMatch(a -> a.question().startsWith("Como o código fica organizado")
-                && a.answer().contains("PaginaPesquisa")));
+                && a.answer().contains("SearchPage")));
         check("CQ: prévia da arquitetura na aba Plano (Pages, métodos e de onde vêm os nomes)", preview);
         AbstractButton review = edt(() -> find(devDialog(), AbstractButton.class, x -> "develop.review".equals(x.getName())));
         click(review);
@@ -2404,7 +2429,8 @@ public final class CodegenQuality001Homologation {
         String shown = edt(() -> texts(d));
         captureWindow(d, "CQ-01-revisar-codigo");
         check("CQ: Revisar código mostra arquitetura, mapa step_id → etapa e localizadores", shown.contains("ARQUITETURA") && shown.contains("STEP_ID NO CÓDIGO")
-                && shown.contains("COMO CADA ELEMENTO É LOCALIZADO") && shown.contains("class PaginaFicha"));
+                && shown.contains("COMO CADA ELEMENTO É LOCALIZADO") && shown.contains("class ProfilePage") && shown.contains("CHAVES TIPADAS")
+                && shown.contains("NOMES NO CÓDIGO"));
         clickButtonWithText(d, "Fechar");
         waitClosed(d);
         copyForHumanReview(gen, "desenvolver");

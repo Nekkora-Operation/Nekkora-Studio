@@ -22,8 +22,12 @@ import java.util.UUID;
  *   <li>o MANIFESTO do gerador (sempre): versão com mapa de rastreio, mapa traceId ↔ StepId bijetivo e completo, nomes
  *       com fonte de evidência (Page/método provisório → {@code NOME_SEM_EVIDENCIA}), localizador posicional;</li>
  *   <li>a AST do Python gerado ({@code qualidade_codigo.py}, quando o ambiente de verificação existe): UUID ou comentário
- *       por etapa no código, nomes opacos, docstrings, {@code step_id} sem mapa, seletor no código, falha silenciada.</li>
+ *       por etapa no código, nomes opacos, docstrings, {@code step_id} sem mapa, seletor no código, falha silenciada e —
+ *       no código em inglês (manifesto 1.4.0, rodada 3) — identificador em português e chave de alvo escrita como texto.</li>
  * </ol>
+ * Rodada 3: palavra sem tradução no glossário ({@code naming.untranslated} do manifesto) é AVISO
+ * ({@code IDENTIFICADOR_SEM_TRADUCAO}); código em português de antes é oferecido para gerar de novo (nunca regenerado
+ * sozinho).
  * Cada apontamento diz arquivo, símbolo, o que é e o que fazer. Os objetivos que o gerador garante viram BLOQUEIO quando
  * faltam (o código foi editado ou é de outro gerador); nomes provisórios são AVISO. PASS aqui NÃO é o aceite de
  * legibilidade: esse é da titular, lendo os arquivos.
@@ -55,6 +59,7 @@ public final class GeneratedCodeQuality {
         }
         int mapped = traces(trace, m, issues);
         names(m, issues);
+        naming(m, issues);
         locators(m, issues);
         Optional<PythonChecks.Check> ast = checks.stream().filter(c -> c.id().equals("CODE_QUALITY")).findFirst();
         ast.ifPresent(c -> astIssues(c, issues));
@@ -90,20 +95,49 @@ public final class GeneratedCodeQuality {
         return mappings.size();
     }
 
+    /** Arquivo das telas conforme o layout do projeto (pacote {@code automation/} na rodada 3; antes, {@code paginas.py}). */
+    static String pagesFile(Map<String, Object> m) {
+        return m.get("layout") instanceof Map<?, ?> ? "automation/pages.py" : "paginas.py";
+    }
+
+    /**
+     * Rodada 3 (Q11): palavras de nomes que ficaram sem tradução no glossário (AVISO, com a origem) e código ainda em
+     * português (oferta de gerar de novo em inglês, versionada — o Studio não regenera nem migra sozinho).
+     */
+    private static void naming(Map<String, Object> m, List<QualityIssue> issues) {
+        if (!"en".equals(m.get("language"))) {
+            issues.add(new QualityIssue("CODIGO_EM_PORTUGUES", Layer.VQ_GENERATION, QualityIssue.Kind.AUTO_FIX_SAFE, null, null, "Código Python",
+                    "Este código veio do gerador anterior (manifesto " + m.get("version") + "): nomes em português e paginas.py/processo.py na raiz. Ele "
+                            + "continua válido e executável como está.",
+                    "Para o código em inglês (pacote automation/, chaves tipadas SelectorKey), gere de novo pelo Studio: os arquivos anteriores são "
+                            + "guardados numa pasta de versão, e os step_id antigos ficam declarados no manifesto.",
+                    null, new QualityIssue.Fix("REGENERATE", "Gerar o código de novo (em inglês)", "manifesto " + m.get("version"), "manifesto 1.4.0"), null));
+            return;
+        }
+        if (!(m.get("naming") instanceof Map<?, ?> n) || !(n.get("untranslated") instanceof List<?> list)) return;
+        for (Object o : list) {
+            if (!(o instanceof Map<?, ?> x)) continue;
+            issues.add(QualityIssue.of("IDENTIFICADOR_SEM_TRADUCAO", Layer.VQ_GENERATION, QualityIssue.Kind.WARNING, null, String.valueOf(x.get("python")),
+                    "A palavra \"" + x.get("word") + "\" não está no glossário PT→EN do Studio: ficou como está no nome (" + x.get("kind") + ").",
+                    "Use no PDD ou no nome da variável uma palavra do glossário, ou peça a inclusão no glossário; o Studio não inventa tradução."));
+        }
+    }
+
     private static void names(Map<String, Object> m, List<QualityIssue> issues) {
         if (!(m.get("architecture") instanceof Map<?, ?> arch) || !(arch.get("pages") instanceof List<?> pages)) return;
+        String file = pagesFile(m);
         for (Object o : pages) {
             if (!(o instanceof Map<?, ?> p)) continue;
             String cls = String.valueOf(p.get("class"));
             if ("PROVISIONAL".equals(p.get("nameSource")) || CodeNaming.opaque(cls)) {
-                issues.add(QualityIssue.of("NOME_SEM_EVIDENCIA", Layer.VQ_GENERATION, QualityIssue.Kind.WARNING, null, "paginas.py · " + cls,
+                issues.add(QualityIssue.of("NOME_SEM_EVIDENCIA", Layer.VQ_GENERATION, QualityIssue.Kind.WARNING, null, file + " · " + cls,
                         "O nome desta tela é provisório: a seção do PDD onde ela começa não tem um título que diga o que a tela é.",
                         "Abra o PDD, dê um título à seção (ex.: \"Pesquisa do artigo\") e desenvolva de novo."));
             }
             if (p.get("methods") instanceof List<?> methods) {
                 for (Object x : methods) {
                     if (x instanceof Map<?, ?> mm && CodeNaming.opaque(String.valueOf(mm.get("name")))) {
-                        issues.add(QualityIssue.of("NOME_GENERICO", Layer.VQ_GENERATION, QualityIssue.Kind.WARNING, null, "paginas.py · " + cls + "." + mm.get("name"),
+                        issues.add(QualityIssue.of("NOME_GENERICO", Layer.VQ_GENERATION, QualityIssue.Kind.WARNING, null, file + " · " + cls + "." + mm.get("name"),
                                 "Nome de método sem significado.", "Escreva no PDD um título de passo (ex.: \"Pesquisar o artigo pelo nome\") e desenvolva de novo."));
                     }
                 }
@@ -133,7 +167,8 @@ public final class GeneratedCodeQuality {
             String code = sp < 0 ? key : key.substring(0, sp);
             String where = sp < 0 ? "" : key.substring(sp + 1);
             boolean objective = switch (code) {
-                case "UUID_EXPOSTO_NO_CODIGO", "COMENTARIO_POR_ETAPA", "TRACE_SEM_MAPEAMENTO", "TRACE_ALIAS_CONFLITO", "SELETOR_NO_CODIGO", "SILENCIA_FALHA" -> true;
+                case "UUID_EXPOSTO_NO_CODIGO", "COMENTARIO_POR_ETAPA", "TRACE_SEM_MAPEAMENTO", "TRACE_ALIAS_CONFLITO", "SELETOR_NO_CODIGO", "SILENCIA_FALHA",
+                     "IDENTIFICADOR_EM_PORTUGUES", "CHAVE_DE_ALVO_LITERAL" -> true;
                 default -> false;
             };
             issues.add(QualityIssue.of(code, Layer.VQ_GENERATION, objective ? QualityIssue.Kind.BLOCKER : QualityIssue.Kind.WARNING, null, where,
@@ -153,6 +188,8 @@ public final class GeneratedCodeQuality {
             case "TRACE_ALIAS_CONFLITO" -> "O mesmo step_id para etapas diferentes.";
             case "SELETOR_NO_CODIGO" -> "Seletor escrito na Page (deve ficar no selectors.json).";
             case "SILENCIA_FALHA" -> "Falha transformada em vazio (or \"\" / except: pass).";
+            case "IDENTIFICADOR_EM_PORTUGUES" -> "Identificador em português no código gerado em inglês (classe, método, variável ou chave).";
+            case "CHAVE_DE_ALVO_LITERAL" -> "Chave de alvo escrita como texto na tela (deve ser SelectorKey.<NOME>.value).";
             default -> code;
         };
     }

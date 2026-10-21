@@ -84,10 +84,14 @@ public final class PythonChecks {
         Path tmp = Files.createTempDirectory("nekkora-pycheck-");
         try {
             Path contract = extract(tmp, "contrato_projeto.py");
+            // dois layouts: o pacote automation/ (código em inglês, rodada 3) e paginas.py/processo.py na raiz (projetos anteriores)
             out.add(simple("PY_COMPILE", Layer.V4_CODE, env, projectDir, List.of("-I", "-B", "-c",
-                    "import ast, pathlib, sys\nfor p in sorted(pathlib.Path('.').glob('*.py')):\n    ast.parse(p.read_text(encoding='utf-8'), p.name)"), cancelled));
+                    "import ast, pathlib, sys\nfor p in sorted([*pathlib.Path('.').glob('*.py'), *pathlib.Path('automation').glob('*.py')]):\n"
+                            + "    ast.parse(p.read_text(encoding='utf-8'), str(p))"), cancelled));
             out.add(simple("PY_IMPORT", Layer.V4_CODE, env, projectDir, List.of("-I", "-B", "-c",
-                    "import sys\nsys.path.insert(0, '.')\nimport paginas, processo, main"), cancelled));
+                    "import importlib, pathlib, sys\nsys.path.insert(0, '.')\n"
+                            + "mods = ['automation.selectors', 'automation.pages', 'automation.process', 'main'] if pathlib.Path('automation/__init__.py').is_file() "
+                            + "else ['paginas', 'processo', 'main']\nfor m in mods:\n    importlib.import_module(m)"), cancelled));
             out.add(ruffCheck(env, projectDir, cancelled));
             out.add(ruffFormat(env, projectDir, cancelled));
             out.add(mypy(env, projectDir, tmp, cancelled));
@@ -144,6 +148,11 @@ public final class PythonChecks {
         List<String> files = new ArrayList<>();
         try (var s = Files.list(dir)) {
             s.filter(p -> p.getFileName().toString().endsWith(".py")).map(p -> p.getFileName().toString()).sorted().forEach(files::add);
+        }
+        if (Files.isRegularFile(dir.resolve("automation").resolve("__init__.py"))) {
+            try (var s = Files.list(dir.resolve("automation"))) {
+                s.filter(p -> p.getFileName().toString().endsWith(".py")).map(p -> "automation/" + p.getFileName()).sorted().forEach(files::add);
+            }
         }
         List<String> args = new ArrayList<>(List.of("-I", "-B", "-m", "mypy", "--strict", "--no-incremental", "--cache-dir", tmp.resolve("mypy").toString(),
                 "--python-version", "3.12", "--show-error-codes", "--no-error-summary", "--no-pretty"));

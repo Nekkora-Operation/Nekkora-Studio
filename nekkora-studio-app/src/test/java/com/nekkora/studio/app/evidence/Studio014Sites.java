@@ -432,14 +432,20 @@ public final class Studio014Sites {
                 && code.contains("environment = \"benchmark\""));
         if (key.equals("the-internet")) {
             // CODEGEN-QUALITY-001 rodada 2: login e logout nunca repetidos (CQ-04); a leitura do Logout diz que é o texto do link (CQ-05)
-            String pages = Files.readString(gen.resolve("paginas.py"), StandardCharsets.UTF_8);
-            java.util.regex.Matcher clicks = java.util.regex.Pattern.compile("self\\.acoes\\.click\\((?:[^()]|\\([^()]*\\))*\\)").matcher(pages);
+            String pages = Files.readString(gen.resolve("automation/pages.py"), StandardCharsets.UTF_8);
+            java.util.regex.Matcher clicks = java.util.regex.Pattern.compile("self\\.actions\\.click\\((?:[^()]|\\([^()]*(?:\\([^()]*\\))?[^()]*\\))*\\)").matcher(pages);
             List<String> calls = new ArrayList<>();
             while (clicks.find()) calls.add(clicks.group());
             log("  " + key + " · cliques: " + calls.stream().map(c -> c.replaceAll("\\s+", " ")).toList());
             check(key + ": CQ-04 login e logout sem idempotent=True (uma vez só)", calls.size() == 2 && calls.stream().noneMatch(c -> c.contains("idempotent=True")));
-            check(key + ": CQ-05 a leitura do Logout é nomeada como texto do controle", pages.contains("def ler_texto_do_") && !pages.contains("resultado_logout"));
-            check(key + ": CQ-01 tela pela frase nominal da seção (PaginaAreaSegura)", pages.contains("class PaginaAreaSegura(PaginaBase)"));
+            check(key + ": CQ-05 a leitura do Logout é nomeada como texto do controle", pages.contains("def read_logout_link_text(") && !pages.contains("result_logout"));
+            check(key + ": CQ-01/Q11 tela pela frase nominal da seção, em inglês (SecureAreaPage)", pages.contains("class SecureAreaPage(PageBase)"));
+            // rodada 3: a pós-condição do login usa a chave tipada da tela seguinte (antes, a chave escrita como texto)
+            check(key + ": Q10 pós-condição do login com SelectorKey (nenhuma chave como texto)",
+                    pages.contains("postcondition=lambda: self.actions.exists(SelectorKey.SECURE_AREA_LOGOUT.value)") && !pages.contains("\"process."));
+            String selectorsPy = Files.readString(gen.resolve("automation/selectors.py"), StandardCharsets.UTF_8);
+            check(key + ": Q10 SelectorKey do campo de senha anotado para o S105 (é a chave, não a senha)",
+                    selectorsPy.contains("ACCESS_PASSWORD = \"process.access.password\"  # noqa: S105 - element key, not a secret"));
         }
         closeDevelopment();
         save();
@@ -454,7 +460,7 @@ public final class Studio014Sites {
                 env.put(var, alias.endsWith("senha") ? secretFor(key, true) : secretFor(key, false));
             }
         }
-        String exec = runPython(List.of(gen.resolve("main.py").toString(), "--saida", runDir.resolve("saida").toString(), "--channel", "chromium", "--headless"),
+        String exec = runPython(List.of(gen.resolve("main.py").toString(), "--output", runDir.resolve("saida").toString(), "--channel", "chromium", "--headless"),
                 gen, env);
         String last = exec.strip().lines().reduce((x, y) -> y).orElse("");
         log("  " + key + " · execução: " + last);

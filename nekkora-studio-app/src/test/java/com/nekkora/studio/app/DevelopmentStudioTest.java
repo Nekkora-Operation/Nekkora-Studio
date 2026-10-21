@@ -258,7 +258,7 @@ class DevelopmentStudioTest {
         assertTrue(m.variables().stream().anyMatch(v -> v.name().equals("credencial.senha") && v.origin().startsWith("credencial")));
         String manifest = Files.readString(out.resolve("manifest.json"));
         assertTrue(manifest.contains("\"execution\": \"single\"") && manifest.contains("\"gate\": \"PDD_READY\""));
-        assertTrue(Files.readString(out.resolve("processo.py")).contains("URL_INICIAL = \"" + START + "\""));
+        assertTrue(Files.readString(out.resolve("automation/process.py")).contains("START_URL = \"" + START + "\""));
         assertTrue(Files.isRegularFile(dir.resolve("dados/desenvolvimento").resolve(c.a().id().value().toString()).resolve("codegen.json")),
                 "configuração derivada guardada para auditoria, fora do projeto");
         assertFalse(Files.exists(dir.resolve("consulta.codegen.json")), "nenhum *.codegen.json pedido ou criado ao lado do projeto");
@@ -270,7 +270,7 @@ class DevelopmentStudioTest {
         assertTrue(c.a().step(c.steps().get("senha")).orElseThrow().parameters().value().isEmpty(), "desfazer volta a etapa sem origem de valor");
         // de novo: idempotente; o código no disco é o mesmo (UNCHANGED)
         develop();
-        assertTrue(model().results().stream().anyMatch(r -> r.contains("igual  paginas.py")), model().results().toString());
+        assertTrue(model().results().stream().anyMatch(r -> r.contains("igual  automation/pages.py")), model().results().toString());
     }
 
     @Test
@@ -290,8 +290,8 @@ class DevelopmentStudioTest {
         AssistanceRequest.Option next = post.assistance().orElseThrow().options().stream().filter(o -> "NEXT_TARGET_VISIBLE".equals(o.value())).findFirst().orElseThrow();
         Edt.run(() -> studio.development().resolve(post, next));
         idle();
-        assertTrue(Files.isRegularFile(dir.resolve("consulta-python/paginas.py")), model().pending().toString());
-        String pages = Files.readString(dir.resolve("consulta-python/paginas.py"));
+        assertTrue(Files.isRegularFile(dir.resolve("consulta-python/automation/pages.py")), model().pending().toString());
+        String pages = Files.readString(dir.resolve("consulta-python/automation/pages.py"));
         // CODEGEN-QUALITY-001: o código usa o traceId legível; o manifesto liga traceId ↔ etapa e dá a chave de cada alvo
         Map<String, Object> manifest = com.nekkora.studio.bridge.json.Json.parseObject(Files.readString(dir.resolve("consulta-python/manifest.json")));
         String sendTrace = null;
@@ -301,7 +301,12 @@ class DevelopmentStudioTest {
             if (c.steps().get("consultar").value().toString().equals(x.get("studioStepId"))) sendTrace = String.valueOf(x.get("traceId"));
             if (c.steps().get("resultado").value().toString().equals(x.get("studioStepId"))) resultKey = String.valueOf(x.get("targetKey"));
         }
-        assertTrue(pages.contains("postcondition=lambda: self.acoes.exists(\"" + resultKey + "\")"), "envio confirmado pela etapa seguinte: " + pages);
+        String resultMember = null;
+        for (Object o : (List<?>) ((Map<?, ?>) manifest.get("selectors")).get("keys")) {
+            Map<?, ?> k = (Map<?, ?>) o;
+            if (String.valueOf(k.get("key")).equals(resultKey)) resultMember = String.valueOf(k.get("member"));
+        }
+        assertTrue(pages.contains("postcondition=lambda: self.actions.exists(SelectorKey." + resultMember + ".value)"), "envio confirmado pela etapa seguinte: " + pages);
         String send = pages.substring(pages.indexOf("step_id=\"" + sendTrace + "\""));
         send = send.substring(0, send.indexOf("step_id=", 1) > 0 ? send.indexOf("step_id=", 1) : send.length());
         assertFalse(send.contains("idempotent=True"), "envio com efeito externo sai UMA vez (não idempotente): " + send);

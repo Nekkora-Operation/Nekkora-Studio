@@ -124,8 +124,8 @@ public final class GenerationOrchestrator {
             configJson = null; // configuração tabular é a DECLARADA no projeto (não é gravada de novo)
         } else {
             configJson = plan.singleConfig().orElseThrow().toJson();
-            TraceRegistry traces = registry.active().isEmpty() && outputDir != null
-                    ? new TraceRegistry(a.id(), TraceRegistry.fromManifest(outputDir.resolve("manifest.json"), a.id()), registry.retired()) : registry;
+            TraceRegistry traces = registry.active().isEmpty() && registry.previous().isEmpty() && outputDir != null
+                    ? TraceRegistry.seed(outputDir.resolve("manifest.json"), a.id(), registry.retired()) : registry;
             result = SingleGenerator.generate(a, report, plan.singleConfig().get(), traces.applyTo(plan.names()));
         }
         if (!result.ok()) {
