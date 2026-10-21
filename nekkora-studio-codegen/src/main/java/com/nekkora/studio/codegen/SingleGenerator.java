@@ -139,7 +139,7 @@ public final class SingleGenerator {
             String same = g.prefix() + "|" + identityOf(t);
             String k = keyOfTarget.get(same);
             if (k == null) {
-                k = key(g.prefix(), el.get(), s, used);
+                k = key(g.prefix(), el.get(), s, used, cfg.reads().get(id) != null && "date".equals(cfg.reads().get(id).kind()));
                 keyOfTarget.put(same, k);
                 targetOf.put(id, t);
             }
@@ -327,6 +327,11 @@ public final class SingleGenerator {
      * "campo termo_de_busca" → {@code search_term_field}). Texto de interface, nunca valores.
      */
     static String key(String prefix, ElementReference el, AutomationStep s, Set<String> used) {
+        return key(prefix, el, s, used, false);
+    }
+
+    /** Rodada 4 (R4-02): com {@code date}, o elemento guarda uma data e o nome diz isso ("Nascimento" → {@code birth_date}). */
+    static String key(String prefix, ElementReference el, AutomationStep s, Set<String> used, boolean date) {
         String base = null;
         for (LocatorCandidate c : el.locators()) {
             if (c.strategy() == LocatorStrategy.LABEL && PythonGenerator.labelText(c.expression()) != null) {
@@ -344,7 +349,7 @@ public final class SingleGenerator {
         }
         if (base == null && "HEADING".equals(el.semanticKind()) && s.actionType() == ActionType.OBSERVE) base = "titulo";
         if (base == null) base = "alvo";
-        String slug = EnglishNames.noun(base).snake();
+        String slug = EnglishNames.noun(base, date).snake();
         if (slug.length() > 40) slug = slug.substring(0, 40).replaceAll("_+$", "");
         if (slug.isEmpty() || !Character.isLetter(slug.charAt(0))) slug = "target";
         // o nome do elemento repete o da tela (botão "Consultar" na tela de consulta): o tipo do elemento desfaz a ambiguidade

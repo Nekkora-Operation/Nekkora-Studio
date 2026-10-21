@@ -70,6 +70,22 @@ class EnglishNamesTest {
     }
 
     @Test
+    @DisplayName("R4-02 (glossário 1.1.0): valor de DATA ganha o nome de data; fora de data, nada muda; nome que já diz data não repete")
+    void dateContext() {
+        assertEquals("nekkora-studio/naming-pt-en/1.1.0", EnglishNames.GLOSSARY);
+        assertEquals("birth_date", EnglishNames.noun("Nascimento", true).snake());
+        assertEquals("death_date", EnglishNames.noun("Morte", true).snake());
+        assertEquals("birth_date", EnglishNames.identifier("nascimento", true).snake());
+        assertEquals("birth", EnglishNames.noun("Nascimento").snake(), "fora de data continua como na 1.0.0");
+        assertEquals("birth_date", EnglishNames.noun("Data de nascimento", true).snake(), "já diz data: sem date_date");
+        assertEquals("full_name", EnglishNames.noun("Nome completo", true).snake(), "palavra sem contexto de data não muda");
+        assertTrue(EnglishNames.noun("Nascimento", true).untranslated().isEmpty());
+        assertEquals("record_filling", EnglishNames.noun("Preenchimento por registro").snake());
+        assertEquals("preparation", EnglishNames.noun("Preparação").snake());
+        assertEquals("conclusion", EnglishNames.noun("Conclusão").snake());
+    }
+
+    @Test
     @DisplayName("determinístico: a mesma entrada dá sempre o mesmo nome")
     void deterministic() {
         for (int i = 0; i < 3; i++) assertEquals("search_term_field", EnglishNames.noun("campo termo_de_busca").snake());

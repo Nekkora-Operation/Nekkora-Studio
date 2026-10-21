@@ -33,7 +33,7 @@ import java.util.Set;
 public final class EnglishNames {
 
     /** Identificador do glossário (vai ao manifesto; toda mudança de tradução sobe a versão). */
-    public static final String GLOSSARY = "nekkora-studio/naming-pt-en/1.0.0";
+    public static final String GLOSSARY = "nekkora-studio/naming-pt-en/1.1.0";
 
     private EnglishNames() {}
 
@@ -43,6 +43,8 @@ public final class EnglishNames {
     record Entry(String english, Pos pos) {}
 
     private static final Map<String, Entry> GLOSSARY_ENTRIES = new LinkedHashMap<>();
+    /** 1.1.0 (R4-02): o substantivo quando o valor é uma DATA ("nascimento" → {@code birth date}); classe {@code d}. */
+    private static final Map<String, String> DATE_ENTRIES = new LinkedHashMap<>();
     private static final Set<String> ENGLISH = new HashSet<>();
     private static int longestPhrase = 1;
 
@@ -50,6 +52,11 @@ public final class EnglishNames {
         load("naming/glossary-pt-en.tsv", line -> {
             String[] f = line.split("\t");
             if (f.length != 3) throw new IllegalStateException("glossário: linha inválida");
+            if (f[2].equals("d")) {
+                if (DATE_ENTRIES.put(f[0], f[1]) != null) throw new IllegalStateException("glossário: entrada de data repetida");
+                for (String w : f[1].split(" ")) ENGLISH.add(w);
+                return;
+            }
             Pos pos = switch (f[2]) {
                 case "n" -> Pos.NOUN;
                 case "a" -> Pos.ADJECTIVE;
@@ -143,6 +150,21 @@ public final class EnglishNames {
 
     /** Frase nominal em inglês ("Nome completo" → {@code full name}; "termo_de_busca" → {@code search term}). */
     public static Phrase noun(String text) {
+        return noun(text, false);
+    }
+
+    /**
+     * Rodada 4 (R4-02): o mesmo, sabendo se o VALOR nomeado é uma data. Com {@code date}, o substantivo da tabela de
+     * contexto de data (classe {@code d} do glossário) substitui o comum ("Nascimento" lido como data →
+     * {@code birth date}); nome que já diz data ("Data de nascimento" → {@code birth date}) fica como está.
+     */
+    public static Phrase noun(String text, boolean date) {
+        Phrase plain = nounIn(text, false);
+        if (!date || plain.words().contains("date") || plain.words().contains("day")) return plain;
+        return nounIn(text, true);
+    }
+
+    private static Phrase nounIn(String text, boolean date) {
         List<String> w = CodeNaming.words(text == null ? "" : text.replace('_', ' '));
         List<List<String>> parts = new ArrayList<>();
         List<String> cur = new ArrayList<>();
@@ -158,7 +180,7 @@ public final class EnglishNames {
         Phrase out = new Phrase(List.of(), List.of());
         for (int i = 0; i < parts.size(); i++) {
             if (i > 0) out = out.then(Phrase.of("and"));
-            out = out.then(conjunct(parts.get(i)));
+            out = out.then(conjunct(parts.get(i), date));
         }
         return out;
     }
@@ -168,8 +190,13 @@ public final class EnglishNames {
         return noun(name);
     }
 
-    private static Phrase conjunct(List<String> w) {
-        List<Token> tokens = tokens(w);
+    /** Identificador de um valor que pode ser data (R4-02): {@code nascimento} lido como data → {@code birth_date}. */
+    public static Phrase identifier(String name, boolean date) {
+        return noun(name, date);
+    }
+
+    private static Phrase conjunct(List<String> w, boolean date) {
+        List<Token> tokens = tokens(w, date);
         List<List<Token>> groups = new ArrayList<>();
         List<Token> group = new ArrayList<>();
         for (Token t : tokens) {
@@ -210,7 +237,7 @@ public final class EnglishNames {
     }
 
     /** Palavras → tokens: expressões do glossário (a mais longa primeiro), depois palavra a palavra. */
-    private static List<Token> tokens(List<String> w) {
+    private static List<Token> tokens(List<String> w, boolean date) {
         List<Token> out = new ArrayList<>();
         int i = 0;
         while (i < w.size()) {
@@ -226,7 +253,8 @@ public final class EnglishNames {
                 }
             }
             if (matched) continue;
-            out.add(word(w.get(i)));
+            String dated = date ? DATE_ENTRIES.get(w.get(i)) : null;
+            out.add(dated != null ? new Token(List.of(dated.split(" ")), Pos.NOUN, true, w.get(i)) : word(w.get(i)));
             i++;
         }
         return out;

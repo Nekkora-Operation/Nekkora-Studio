@@ -75,7 +75,7 @@ class CodegenQualityFlowTest {
                 + "searches the person.") && pages.contains("class ProfilePage(PageBase):"), pages);
         assertTrue(pages.contains("def search_person(self, search_term: str) -> None:") && pages.contains("def open_search(self) -> None:"), pages);
         assertTrue(pages.contains("def read_profile_data(") && pages.contains("class ProfileData:") && pages.contains("    full_name: str | None\n")
-                && pages.contains("    birth: str\n"), pages);
+                && pages.contains("    birth_date: str\n") && pages.contains("    death_date: str\n"), pages); // R4-02: valor de data → nome de data
         assertTrue(process.contains("class SyntheticCollectionProfilesProcess(RpaProcess):") && process.contains("def build_spreadsheet_row("), process);
         // ajuste herdado (rodada 3): ausente, vazio ou SÓ espaços não satisfaz a coluna; a fonte alternativa do PDD vale
         assertTrue(process.contains("\"full_name\": _filled(profile_data.full_name) or _filled(profile_data.title)")

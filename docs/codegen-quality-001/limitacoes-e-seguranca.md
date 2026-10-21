@@ -25,12 +25,15 @@
    **NEKKORA-SPEC-OPTIONAL-COLUMNS-001**. Nada foi inventado: sem a decisão, ausência continua recusando o item.
 7. **Execução real** (V6) só pelo teste autorizado pela interface, na origem autorizada; nada é dado por executado por
    inspeção estática.
-8. **Glossário PT→EN (rodada 3) cobre o vocabulário dos processos conhecidos, não o idioma inteiro.** São 271 entradas
-   governadas (telas, dados, pessoas, documentos, verbos de ação) e regras fixas de ordem; não há análise linguística.
-   Palavra fora dele fica como está no nome (ASCII) e é apontada (`IDENTIFICADOR_SEM_TRADUCAO`); a correção é usar no
-   PDD/variável uma palavra do glossário ou incluí-la no glossário (nova versão do gerador). Traduções literais
-   (`birth`, `death` para "Nascimento", "Morte") são escolhas do glossário, revisáveis pela titular.
-9. **Emissor tabular 1.0.0 continua em português** (D-CQ-33): lote declarado da E2E-001, fora do escopo desde a rodada 1.
+8. **Glossário PT→EN cobre o vocabulário dos processos conhecidos, não o idioma inteiro.** Rodada 4: 286 entradas
+   governadas (versão 1.1.0: + nomes de sessão do tabular e a tabela de contexto de DATA, D-CQ-37) e regras fixas de
+   ordem; não há análise linguística. Palavra fora dele fica como está no nome (ASCII) e é apontada
+   (`IDENTIFICADOR_SEM_TRADUCAO`); a correção é usar no PDD/variável uma palavra do glossário ou incluí-la no glossário
+   (nova versão). `article_address` continua (o parecer condiciona `article_url` à aprovação da titular).
+9. **Emissor tabular convertido na rodada 4** (Q12, D-CQ-39): projetos tabulares gerados antes (português,
+   `paginas.py`/`processo.py`, manifesto 1.0.0) continuam válidos como estão; gerar de novo na mesma pasta guarda a geração
+   anterior em `previous-generation/`. Pastas de execução, `observacoes.json` e `{"enviado": true}` não mudaram (D-CQ-41).
+   O `step_id` já registrado de uma etapa não muda com o glossário (D-CQ-38).
 10. **Framework sem mudança.** O runtime 0.2.0/0.3.0 continua lendo só o `selectors.json`; `automation/selectors.py` é o
     registro revisável e a equivalência é conferida pelo Studio. Uma versão futura do framework poderá importar o módulo
     Python diretamente — em missão própria, com versão, catálogo, lock e hashes novos.
@@ -53,3 +56,7 @@
 - Rodada 3: `automation/selectors.py` só tem dados (literais), nunca é executado pelo runtime e não leva UUID; o contrato
   V5 o lê pela AST e pelo import isolado. Nenhum módulo do projeto encobre a biblioteca padrão (checado). O glossário é
   um recurso do gerador: nada é enviado a serviço externo para nomear código.
+- Rodada 4: os testes negativos do Enter servem uma CÓPIA temporária da réplica de leitura em 127.0.0.1 (sem rede externa,
+  dados fictícios); o laboratório do framework não foi alterado. O RPA Challenge real foi executado só pelo código gerado,
+  no site autorizado na E2E-001, com evidências sem valores da planilha (varredura pelos valores baixados na própria
+  execução, que não são copiados).

@@ -209,11 +209,13 @@ public final class DevelopmentPlanner {
                     String header = r.value().substring(com.nekkora.studio.ai.spec.FunctionalSpec.COLUMN.length());
                     // CODEGEN-QUALITY-001 rodada 3: o CABEÇALHO é o contrato da planilha (fica como está); o campo é o nome interno
                     // da linha, em inglês pelo glossário ("Nome completo" → full_name)
-                    String english = com.nekkora.studio.codegen.EnglishNames.noun(header).snake();
+                    // rodada 4 (R4-02): coluna de DATA → o campo diz que é data ("Nascimento" → birth_date; o cabeçalho não muda)
+                    SingleConfig.Read read = reads.get(id);
+                    boolean date = read != null && "date".equals(read.kind());
+                    String english = com.nekkora.studio.codegen.EnglishNames.noun(header, date).snake();
                     String fieldBase = english.isEmpty() || !Character.isLetter(english.charAt(0)) || english.length() > 50 ? VariableDeriver.slug(header) : english;
                     String field = fieldBase;
                     for (int n = 2; !fields.add(field); n++) field = fieldBase + "_" + n;
-                    SingleConfig.Read read = reads.get(id);
                     String kind = read == null ? "text" : switch (read.kind()) {
                         case "address" -> "url";
                         case "date" -> "iso_date";

@@ -40,7 +40,14 @@ final class SemanticEmitter {
      * do mesmo plano. A procedência (UUID da etapa do Studio) fica no JSON e no manifesto, não no Python.
      */
     static String selectors(CodePlan plan, Map<String, Map<String, Object>> targets) {
-        StringBuilder b = new StringBuilder(HEADER);
+        List<String[]> keys = new ArrayList<>();
+        for (CodePlan.Selector s : plan.selectors()) keys.add(new String[] {s.member(), s.key()});
+        return selectors(HEADER, keys, targets);
+    }
+
+    /** O mesmo módulo para qualquer gerador (rodada 4: também o tabular): {@code keys} = pares (membro, chave) na ordem do modelo. */
+    static String selectors(String header, List<String[]> keys, Map<String, Map<String, Object>> targets) {
+        StringBuilder b = new StringBuilder(header);
         b.append("\"\"\"Target registry of the automation: one key per screen element and how each element is located.\n\n");
         b.append("``SelectorKey`` names every element the screens use (``SelectorKey.<NAME>.value`` is the key the framework looks up).\n");
         b.append("``TARGETS`` holds, per key, the preferred locator, the alternatives and the identity the element must have. The\n");
@@ -50,17 +57,17 @@ final class SemanticEmitter {
         b.append("from enum import StrEnum\n\n\n");
         b.append("class SelectorKey(StrEnum):\n");
         b.append("    \"\"\"Key of each element in the target registry, named after its screen and its label.\"\"\"\n\n");
-        for (CodePlan.Selector s : plan.selectors()) {
-            b.append("    ").append(s.member()).append(" = ").append(Py.str(s.key()));
+        for (String[] k : keys) {
+            b.append("    ").append(k[0]).append(" = ").append(Py.str(k[1]));
             // o nome do membro diz o campo (ex.: senha); o valor é a CHAVE do elemento — o bandit (S105) não distingue
-            if (s.member().matches("(?i).*(pass|pwd|token|secret).*")) b.append("  # noqa: S105 - element key, not a secret");
+            if (k[0].matches("(?i).*(pass|pwd|token|secret).*")) b.append("  # noqa: S105 - element key, not a secret");
             b.append('\n');
         }
         b.append("\n\nTARGETS: dict[str, dict[str, object]] = {\n");
-        for (CodePlan.Selector s : plan.selectors()) {
-            Map<String, Object> t = new java.util.LinkedHashMap<>(targets.get(s.key()));
+        for (String[] k : keys) {
+            Map<String, Object> t = new java.util.LinkedHashMap<>(targets.get(k[1]));
             t.remove("provenance");
-            b.append("    SelectorKey.").append(s.member()).append(".value: ").append(Py.literal(t, 1)).append(",\n");
+            b.append("    SelectorKey.").append(k[0]).append(".value: ").append(Py.literal(t, 1)).append(",\n");
         }
         b.append("}\n");
         return b.toString();
@@ -119,7 +126,7 @@ final class SemanticEmitter {
      * {@code BasePage.act}; {@code identity_key} (chave tipada) dá {@code BasePage.prefix}/{@code identity} — e os leitores
      * de texto/data usados pelas telas, num lugar só. O framework não muda (requisito 0.2.0/0.3.0 igual).
      */
-    private static void base(StringBuilder b, Set<Helper> helpers, boolean someWithoutIdentity) {
+    static void base(StringBuilder b, Set<Helper> helpers, boolean someWithoutIdentity) {
         b.append("\n\nclass PageBase(BasePage):\n");
         b.append("    \"\"\"Base of the screens: readable names for the nekkora_rpa Pages API (the behavior is the framework's).\"\"\"\n\n");
         b.append("    identity_key: ClassVar[SelectorKey]\n");
@@ -176,7 +183,7 @@ final class SemanticEmitter {
         if (p.identity() != null) {
             b.append("    identity_key = SelectorKey.").append(p.identity()).append('\n');
         } else {
-            b.append("    prefix = ").append(Py.str(p.prefix())).append('\n');
+            noIdentity(b, p.prefix().substring(p.prefix().lastIndexOf('.') + 1));
         }
         for (Method m : p.methods()) method(b, plan, p, m);
     }
@@ -232,6 +239,16 @@ final class SemanticEmitter {
         } else {
             b.append("        self.actions.wait_visible(").append(key(op.waitMember())).append(", step_id=").append(Py.str(op.waitTrace())).append(")\n");
         }
+    }
+
+    /**
+     * Tela que não usa nenhum elemento do registro (ex.: só lê o texto da página): o {@code BasePage} do framework exige um
+     * prefixo de chave válido, e o nome da tela basta — escrito como chave inteira ({@code process.x}) ele seria uma chave de
+     * alvo em texto nas telas (recusada pelo contrato da rodada 3).
+     */
+    static void noIdentity(StringBuilder b, String screen) {
+        b.append("    prefix = ").append(Py.str(screen)).append('\n');
+        b.append("    \"\"\"This screen uses no element of the target registry; the prefix only names it.\"\"\"\n");
     }
 
     /** Docstring: resumo e, se houver, um parágrafo de detalhe (PEP 257). */
@@ -425,7 +442,7 @@ final class SemanticEmitter {
         if (!secrets.isEmpty()) {
             b.append("\n\ndef _secrets(rt: Runtime) -> SecretProvider:\n");
             b.append("    \"\"\"Secret provider of the runtime (the values come from environment variables, never from the project).\"\"\"\n");
-            b.append("    if rt.secrets is None:\n        raise InvalidConfiguration(detail=\"sem_provedor_de_segredos\")\n    return rt.secrets\n");
+            b.append("    if rt.secrets is None:\n        raise InvalidConfiguration(detail=\"secret_provider_missing\")\n    return rt.secrets\n");
         }
         b.append("\n\nclass ").append(pr.className()).append("(RpaProcess):\n");
         doc(b, "    ", pr.summary());

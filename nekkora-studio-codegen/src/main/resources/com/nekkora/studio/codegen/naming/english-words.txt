@@ -23,6 +23,7 @@ check
 checkout
 city
 close
+cloud
 code
 company
 confirm
@@ -46,6 +47,7 @@ email
 end
 enter
 error
+excel
 export
 field
 file
@@ -108,6 +110,7 @@ remember
 reset
 result
 results
+role
 save
 search
 secure

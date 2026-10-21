@@ -13,11 +13,11 @@ import java.util.regex.Pattern;
 public final class LocatorPolicy {
     private LocatorPolicy() {}
 
-    /** Tipo do localizador, do mais forte ao mais fraco (o fraco não sai do gerador). */
+    /** Tipo do localizador, do mais forte ao mais fraco (o fraco não sai do gerador). Rótulo em inglês: vai para o README gerado. */
     public enum Kind {
-        ROLE_NAME("papel + nome acessível"), LABEL("rótulo associado"), STABLE_ID("id ou atributo de teste estável"),
-        ROW_ANCHOR("âncora de linha (cabeçalho → célula ou termo → definição)"), SCOPED("região/elemento estável + atributo"),
-        RELATIONAL_XPATH("XPath relacional"), ATTRIBUTE("atributo"), POSITIONAL("posição (recusado)");
+        ROLE_NAME("role + accessible name"), LABEL("associated label"), STABLE_ID("stable ID or test attribute"),
+        ROW_ANCHOR("row anchored by its heading (heading → cell, or term → definition)"), SCOPED("stable container + attribute"),
+        RELATIONAL_XPATH("relational XPath"), ATTRIBUTE("attribute"), POSITIONAL("position (refused)");
 
         private final String label;
 
@@ -66,13 +66,16 @@ public final class LocatorPolicy {
         return Kind.ATTRIBUTE;
     }
 
-    /** Descrição curta para o README e a revisão (o seletor completo fica no selectors.json). */
+    /**
+     * Descrição curta para o README e o manifesto gerados (o seletor completo fica no selectors.json). Rodada 4 (R4-01): em
+     * INGLÊS, como o resto do projeto gerado; o rótulo da página e a expressão aparecem como estão (são dados).
+     */
     @SuppressWarnings("unchecked")
     public static String describe(Map<String, Object> target) {
         Map<String, Object> p = (Map<String, Object>) target.get("preferred");
         String strategy = String.valueOf(p.get("strategy"));
-        if ("role".equals(strategy)) return "papel `" + p.get("role") + "` com nome `" + p.get("name") + "`";
-        if ("label".equals(strategy)) return "campo do rótulo `" + p.get("text") + "`";
+        if ("role".equals(strategy)) return "role `" + p.get("role") + "` named `" + p.get("name") + "`";
+        if ("label".equals(strategy)) return "field labelled `" + p.get("text") + "`";
         String expr = String.valueOf(p.get("expression"));
         return strategy.toUpperCase(java.util.Locale.ROOT) + " `" + expr.replace("|", "\\|").replace("`", "'") + "`";
     }

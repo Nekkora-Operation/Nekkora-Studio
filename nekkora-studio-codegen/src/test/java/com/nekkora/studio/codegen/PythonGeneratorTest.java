@@ -38,31 +38,115 @@ class PythonGeneratorTest {
         FormCase c = FormCase.confirmed();
         PythonGenerator.Result r = gen(c);
         assertTrue(r.ok(), r.blockers().toString());
-        assertEquals(Set.of("README.md", "config/execucao.toml", "main.py", "manifest.json", "paginas.py", "processo.py", "requirements.txt", "selectors.json"),
-                r.files().keySet());
+        assertEquals(Set.of("README.md", "automation/__init__.py", "automation/pages.py", "automation/process.py", "automation/selectors.py",
+                "config/execution.toml", "main.py", "manifest.json", "requirements.txt", "selectors.json"), r.files().keySet());
         assertEquals(r.files(), gen(c).files(), "mesma entrada → mesmos bytes");
         Map<String, Object> sel = Json.parseObject(r.files().get("selectors.json"));
         assertEquals("1.1.0", sel.get("version"));
+        assertEquals("process", sel.get("system"));
         String selectors = r.files().get("selectors.json");
         assertTrue(selectors.contains("\"strategy\": \"label\"") && selectors.contains("\"text\": \"First Name\""), selectors);
         assertFalse(selectors.contains("nth-of-type"), "nunca gera localizador posicional");
         assertTrue(selectors.contains("\"label\": \"Email\""), "rótulo é a identidade quando o nome acessível é vazio");
-        String pages = r.files().get("paginas.py");
-        assertTrue(pages.contains("a.download("), pages);
-        assertTrue(pages.contains("postcondition=lambda: a.replaced(marca)"), "envio só conclui com prova de avanço");
-        for (var id : c.ids) assertTrue(pages.contains(id.value().toString()) || id.equals(c.download), "StepId rastreável " + id);
+        String pages = r.files().get("automation/pages.py");
+        assertTrue(pages.contains("self.actions.download("), pages);
+        assertTrue(pages.contains("postcondition=lambda: self.actions.replaced(field_before)"), "envio só conclui com prova de avanço");
         Map<String, Object> m = Json.parseObject(r.files().get("manifest.json"));
+        String code = r.files().get("automation/pages.py") + r.files().get("automation/process.py") + r.files().get("main.py");
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> mappings = (List<Map<String, Object>>) Json.object(m, "trace").get("mappings");
+        for (var id : c.ids) {
+            assertFalse(code.contains(id.value().toString()), "o StepId fica no manifesto, não no código: " + id);
+            Map<String, Object> mp = mappings.stream().filter(x -> id.value().toString().equals(x.get("studioStepId"))).findFirst().orElseThrow();
+            assertTrue(code.contains("step_id=\"" + mp.get("traceId") + "\""), "step_id legível rastreável " + mp.get("traceId"));
+        }
         assertEquals(r.planRevision(), m.get("planRevision"));
+        assertEquals("1.4.0", m.get("version"));
+        assertEquals("en", m.get("language"));
+        assertEquals("tabular", m.get("execution"));
         assertEquals(c.ids.size(), Json.array(m, "steps").size());
-        assertEquals(7, Json.object(m, "files").size());
+        assertEquals(9, Json.object(m, "files").size());
         assertTrue(r.files().get("main.py").contains("Column(\"First Name\")"));
+    }
+
+    @Test
+    void q12CodigoTabularEmInglesComChavesTipadas() {
+        // CODEGEN-QUALITY-001 rodada 4 (Q12): a modalidade tabular segue Q01–Q11 — telas pelo nome da sessão em inglês,
+        // SelectorKey.<MEMBRO>.value (nunca a chave como texto), InputRow com os cabeçalhos como contrato, CLI em inglês
+        PythonGenerator.Result r = gen(FormCase.confirmed());
+        String pages = r.files().get("automation/pages.py");
+        String process = r.files().get("automation/process.py");
+        String selectorsPy = r.files().get("automation/selectors.py");
+        String main = r.files().get("main.py");
+        assertTrue(pages.contains("class PreparationPage(PageBase):") && pages.contains("class RecordFillingPage(PageBase):")
+                && pages.contains("class ConclusionPage(PageBase):"), pages);
+        assertTrue(pages.contains("def submit_record(") && pages.contains("first_name: str,") && pages.contains("email: str,"), pages);
+        assertTrue(selectorsPy.contains("RECORD_FILLING_FIRST_NAME = \"process.record_filling.first_name\""), selectorsPy);
+        assertFalse(pages.contains("\"process."), "nenhuma chave de alvo escrita como texto nas telas");
+        assertTrue(pages.contains("SelectorKey.RECORD_FILLING_SUBMIT.value"), pages);
+        assertTrue(process.contains("class InputRow:") && process.contains("first_name=_cell(item.data, \"First Name\")"), "cabeçalho fica como está");
+        assertTrue(process.contains("class RecordFormProcess(RpaProcess):"), process);
+        assertTrue(process.contains("step_id=\"process.open_start_page\""), process);
+        assertTrue(main.contains("\"--output\", \"--saida\"") && main.contains("INPUT_SCHEMA = TabularSchema("), main);
+        assertTrue(r.files().get("config/execution.toml").contains("selectors = \"../selectors.json\""));
+        for (String f : List.of("automation/pages.py", "automation/process.py", "automation/selectors.py", "main.py")) {
+            String s = r.files().get(f);
+            for (String pt : List.of("Sessao", "executar", "segredos", "dados", "baixado", "marca", "obs[", "_valor", "Processo(", "URL_INICIAL", "# etapa")) {
+                assertFalse(s.contains(pt), f + ": identificador do gerador anterior (" + pt + ")");
+            }
+        }
+        Map<String, Object> m = Json.parseObject(r.files().get("manifest.json"));
+        @SuppressWarnings("unchecked")
+        Map<String, Object> selectors = Json.object(m, "selectors");
+        assertEquals(SingleEmitter.equivalence(targetsOf(r.files().get("selectors.json"))), selectors.get("equivalence"), "selectors.py ↔ JSON declarados iguais");
+        assertEquals(Json.object(Json.parseObject(r.files().get("selectors.json")), "targets").size(), Json.array(selectors, "keys").size());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> cli = Json.object(m, "cli");
+        assertEquals(Map.of("--saida", "--output"), cli.get("legacyAliases"));
+        assertEquals(EnglishNames.GLOSSARY, Json.object(m, "naming").get("glossary"));
+    }
+
+    @Test
+    void q12SessaoSemNomeTraduzivelUsaOPapel() {
+        FormCase c = FormCase.confirmed();
+        c.a.renameSession(c.a.sessions().get(0).id(), "123");
+        PythonGenerator.Result r = gen(c);
+        assertTrue(r.ok(), r.blockers().toString());
+        assertTrue(r.files().get("automation/pages.py").contains("class SetupPage(PageBase):"), r.files().get("automation/pages.py"));
+        assertTrue(r.files().get("manifest.json").contains("\"source\": \"SESSION_ROLE\""));
+    }
+
+    @Test
+    void q12RegerarSobreProjetoAnteriorGuardaAGeracaoAntiga(@TempDir Path dir) throws Exception {
+        // projeto tabular gerado antes (paginas.py/processo.py na raiz): nada é apagado — vai, intacto, para previous-generation/
+        Map<String, String> old = new java.util.TreeMap<>(Map.of("paginas.py", "# antes\n", "processo.py", "# processo antes\n",
+                "config/execucao.toml", "[runtime]\n", "main.py", "# main antes\n"));
+        Map<String, Object> hashes = new java.util.LinkedHashMap<>();
+        old.forEach((k, v) -> hashes.put(k, "sha256:" + CodegenConfig.sha256(v)));
+        old.put("manifest.json", Pretty.json(Map.of("schema", "nekkora-studio/codegen-manifest", "version", "1.0.0", "automationRevision", 7, "files", hashes)) + "\n");
+        OutputWriter.write(dir, old);
+        OutputWriter.Report rep = OutputWriter.write(dir, gen(FormCase.confirmed()).files());
+        assertEquals(OutputWriter.Status.RETIRED, rep.files().get("paginas.py"), rep.toString());
+        assertEquals(OutputWriter.Status.RETIRED, rep.files().get("config/execucao.toml"), rep.toString());
+        assertFalse(Files.exists(dir.resolve("paginas.py")));
+        try (var s = Files.walk(dir.resolve(OutputWriter.PREVIOUS))) {
+            assertTrue(s.anyMatch(p -> p.getFileName().toString().equals("processo.py")), "a geração anterior continua inteira");
+        }
+        assertTrue(Files.exists(dir.resolve("automation/pages.py")));
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Map<String, Map<String, Object>> targetsOf(String selectorsJson) {
+        Map<String, Map<String, Object>> out = new java.util.LinkedHashMap<>();
+        Json.object(Json.parseObject(selectorsJson), "targets").forEach((k, v) -> out.put(k, (Map<String, Object>) v));
+        return out;
     }
 
     @Test
     void linhasDentroDoLimiteDoPerfilDoFramework() {
         // E2E-001: ruff E501 (perfil do framework, 120) no projeto gerado — chamadas com StepId passavam de 200 colunas
         PythonGenerator.Result r = gen(FormCase.confirmed());
-        for (String f : List.of("main.py", "processo.py", "paginas.py")) {
+        for (String f : List.of("main.py", "automation/process.py", "automation/pages.py", "automation/selectors.py")) {
             for (String l : r.files().get(f).split("\n")) assertTrue(l.length() <= PyWrap.MAX, f + ": " + l);
         }
         String longa = "        x = a.f(self.k(\"y\"), \"texto, com (vírgula) e # cerquilha\", step_id=\"" + "0".repeat(80) + "\")  # nota";
@@ -77,9 +161,9 @@ class PythonGeneratorTest {
         PythonGenerator.Result r = gen(FormCase.confirmed());
         String main = r.files().get("main.py");
         assertTrue(main.contains("DeferredTabularInputProvider") && !main.contains(" TabularInputProvider"), "só o provedor usado");
-        for (String f : List.of("main.py", "processo.py")) {
+        for (String f : List.of("main.py", "automation/process.py", "automation/pages.py")) {
             String s = r.files().get(f);
-            int local = Math.max(s.indexOf("\nfrom processo import"), s.indexOf("\nfrom paginas import"));
+            int local = s.indexOf("\nfrom automation.");
             assertTrue(local > s.lastIndexOf("\nfrom nekkora_rpa"), f + ": terceiros antes dos módulos do projeto");
         }
     }
@@ -184,7 +268,7 @@ class PythonGeneratorTest {
         c.a.updateStepBasics(c.submit, "Enviar", "", ActionType.CLICK);
         PythonGenerator.Result again = gen(c);
         OutputWriter.Report second = OutputWriter.write(dir, again.files());
-        assertEquals(OutputWriter.Status.UNCHANGED, second.files().get("paginas.py"), second.toString());
+        assertEquals(OutputWriter.Status.UNCHANGED, second.files().get("automation/pages.py"), second.toString());
         assertNotEquals(OutputWriter.Status.PROTECTED, second.files().get("manifest.json"));
         assertFalse(Files.exists(dir.resolve("selectors.json.novo")), "pendência resolvida");
     }
@@ -210,8 +294,10 @@ class PythonGeneratorTest {
         String com = sem.substring(0, sem.lastIndexOf('}')) + ", \"textObservations\": [{\"stepId\": \"" + obs.id().value() + "\", \"pattern\": \"^Resultado: \\\\d+%$\"}]}";
         PythonGenerator.Result r = PythonGenerator.generate(c.a, new AutomationValidator().validate(c.a), CodegenConfig.parse(com));
         assertTrue(r.ok(), r.blockers().toString());
-        String pg = r.files().get("paginas.py");
-        assertTrue(pg.contains("a.read_text_matching(") && pg.contains("\"^Resultado: \\\\d+%$\","), pg); // linha longa: um argumento por linha
+        String pg = r.files().get("automation/pages.py");
+        assertTrue(pg.contains("self.actions.read_text_matching(\"^Resultado: \\\\d+%$\", step_id=\"conclusion.read_result\")"), pg);
+        assertTrue(r.files().get("automation/process.py").contains("self.observations[\"conclusion.read_result\"] = conclusion.read_result()"),
+                "a leitura vai para observacoes.json pelo step_id legível");
         assertEquals("CONFIG_TEXT_PATTERN", assertThrows(CodegenConfig.Invalid.class,
                 () -> CodegenConfig.parse(com.replace("^Resultado", "Resultado"))).code());
     }

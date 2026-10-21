@@ -187,8 +187,11 @@ public record CodePlan(boolean modern, boolean list, List<Page> pages, List<Mode
         Set<String> taken = new HashSet<>(Set.of("row", "inputs", "secrets", "rt", "item", "self", "data", "name", "value"));
         List<String> names = new ArrayList<>(cfg.inputs());
         for (Step s : steps) if (s.output() != null && !names.contains(s.output())) names.add(s.output());
+        Set<String> dates = new HashSet<>();
+        for (Step s : steps) if (s.output() != null && s.read() != null && "date".equals(s.read().kind())) dates.add(s.output());
         for (String n : names) {
-            String base = CodeNaming.safe(EnglishNames.identifier(n).snake());
+            // R4-02: valor lido como data → o nome diz que é data (glossário 1.1.0, contexto de tipo)
+            String base = CodeNaming.safe(EnglishNames.identifier(n, dates.contains(n)).snake());
             if (base.isEmpty() || !Character.isLetter(base.charAt(0))) base = "value";
             out.put(n, CodeNaming.unique(base, taken, "_"));
         }
