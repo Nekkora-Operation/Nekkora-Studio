@@ -83,6 +83,8 @@ class EnglishNamesTest {
         assertEquals("record_filling", EnglishNames.noun("Preenchimento por registro").snake());
         assertEquals("preparation", EnglishNames.noun("Preparação").snake());
         assertEquals("conclusion", EnglishNames.noun("Conclusão").snake());
+        // homologação Q12: nome de processo já em inglês não é pendência de tradução
+        assertTrue(EnglishNames.identifier("rpa_challenge_input_forms").untranslated().isEmpty(), EnglishNames.identifier("rpa_challenge_input_forms").untranslated().toString());
     }
 
     @Test

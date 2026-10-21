@@ -19,6 +19,7 @@ by
 cancel
 card
 cart
+challenge
 check
 checkout
 city
@@ -111,6 +112,7 @@ reset
 result
 results
 role
+rpa
 save
 search
 secure

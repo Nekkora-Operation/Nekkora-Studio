@@ -45,7 +45,7 @@ import javax.swing.text.JTextComponent;
  * <p>O modelo é o {@code rpa-challenge.nekkora} gravado no site real pela homologação da E2E-001 (Recorder → PDD → debug
  * guiado, decisões CONFIRMED) com a configuração de geração declarada ao lado ({@code rpa-challenge.codegen.json}); nada do
  * modelo é editado aqui. O projeto é ABERTO pela interface (Ctrl+O) e o código é gerado pelo menu "Automação → Gerar
- * código Python…" do Studio — o mesmo caminho da E2E-001. Cobre: geração (pacote automation/ em inglês, chaves tipadas),
+ * código Python…" do Studio (hoje em "Automação → Avançado → Gerador avançado (configuração manual)…") — o mesmo gerador da E2E-001. Cobre: geração (pacote automation/ em inglês, chaves tipadas),
  * determinismo, proteção de edição manual, regeneração sobre o projeto ANTERIOR (paginas.py/processo.py guardados em
  * previous-generation/), e as verificações V4/V5/VQ do próprio Studio ({@link PythonChecks}). A execução no site real e na
  * réplica é feita depois, pelas ferramentas de execução, sobre a pasta gerada aqui.
@@ -132,7 +132,7 @@ public final class CodegenQuality001Tabular {
         Path gen = out.toPath().resolve("codigo-gerado");
         String r1 = generateByMenu(config, gen);
         log("  resultado da geração:\n" + r1.indent(4));
-        check("G2: projeto gerado pelo Studio (menu Automação → Gerar código Python…)", r1.contains("GERADO em"));
+        check("G2: projeto gerado pelo Studio (menu Automação → Avançado → Gerador avançado (configuração manual)…)", r1.contains("GERADO em"));
         List<String> expected = List.of("README.md", "automation/__init__.py", "automation/pages.py", "automation/process.py", "automation/selectors.py",
                 "config/execution.toml", "main.py", "manifest.json", "requirements.txt", "selectors.json");
         check("G2: layout da rodada 3 também no tabular (pacote automation/, selectors.py + selectors.json, config/execution.toml)",
@@ -243,7 +243,7 @@ public final class CodegenQuality001Tabular {
     // ============================================================================== apoio
 
     private String generateByMenu(Path config, Path outDir) throws Exception {
-        menu("Automação", "Gerar código Python…");
+        menuPath("Automação", "Avançado", "Gerador avançado (configuração manual)…"); // o mesmo gerador do menu da E2E-001
         NekkoraDialog d = waitDialog("Gerar código Python");
         JTextComponent cfg = edt(() -> find(d, JTextComponent.class, f -> "codegen.config".equals(f.getName())));
         JTextComponent dir = edt(() -> find(d, JTextComponent.class, f -> "codegen.out".equals(f.getName())));
@@ -307,6 +307,30 @@ public final class CodegenQuality001Tabular {
             }
             return null;
         });
+    }
+
+    /** Menu da barra com submenu: "Automação" → "Avançado" → "Gerador avançado (configuração manual)…". */
+    private void menuPath(String top, String sub, String item) throws Exception {
+        focusStudio();
+        javax.swing.JMenu m = edt(() -> {
+            var bar = window.frame().getJMenuBar();
+            for (int i = 0; i < bar.getMenuCount(); i++) if (top.equals(bar.getMenu(i).getText())) return bar.getMenu(i);
+            return null;
+        });
+        click(m);
+        waitFor("menu " + top, 5, () -> edt(m::isPopupMenuVisible));
+        javax.swing.JMenu sm = (javax.swing.JMenu) waitValue("submenu " + sub, 5, () -> edt(() -> {
+            for (Component c : m.getPopupMenu().getComponents()) if (c instanceof javax.swing.JMenu x && sub.equals(x.getText()) && x.isShowing()) return x;
+            return null;
+        }));
+        click(sm);
+        waitFor("submenu aberto", 5, () -> edt(sm::isPopupMenuVisible));
+        javax.swing.JMenuItem it = (javax.swing.JMenuItem) waitValue("item " + item, 5, () -> edt(() -> {
+            for (Component c : sm.getPopupMenu().getComponents()) if (c instanceof javax.swing.JMenuItem x && item.equals(x.getText()) && x.isShowing()) return x;
+            return null;
+        }));
+        click(it);
+        sleep(500);
     }
 
     private void menu(String top, String item) throws Exception {
