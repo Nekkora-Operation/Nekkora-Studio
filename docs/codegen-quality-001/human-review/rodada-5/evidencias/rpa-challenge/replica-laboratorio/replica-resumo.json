@@ -1,0 +1,13 @@
+{
+  "exit": 0,
+  "resumo_engine": "{\"execution_id\": \"ex-241dcdd2378f44d797d2\", \"status\": \"COMPLETED\", \"stop_code\": null, \"stop_detail\": null, \"counts\": {\"SUCCEEDED\": 10}}",
+  "oraculo": {
+    "inicios": 1,
+    "submissoes": 10,
+    "rodadas_em_ordem": true,
+    "todas_corretas": true
+  },
+  "placar_lido_pelo_codigo_gerado": {
+    "conclusion.read_result": "Your success rate is 100% ( 70 out of 70 fields) in 4199 milliseconds"
+  }
+}

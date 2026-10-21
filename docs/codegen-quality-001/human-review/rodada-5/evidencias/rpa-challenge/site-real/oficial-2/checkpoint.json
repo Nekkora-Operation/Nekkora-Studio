@@ -1,0 +1,91 @@
+{
+ "body": {
+  "process_name": "rpa_challenge_input_forms",
+  "salt": "ea233f3291b7cc8c85836d01a34b7667",
+  "schema": "nekkora-rpa/checkpoint",
+  "transactions": {
+   "tx-04b7909289d7cb536ec1": {
+    "attempts": 1,
+    "delivery": "COMMITTED",
+    "execution_id": "ex-3d3ffda21f1d4afbb740",
+    "side_effects": 1,
+    "status": "SUCCEEDED",
+    "updated_utc": "2026-10-21T23:06:07.352Z"
+   },
+   "tx-4b30e88fbfa23a48e009": {
+    "attempts": 1,
+    "delivery": "COMMITTED",
+    "execution_id": "ex-3d3ffda21f1d4afbb740",
+    "side_effects": 1,
+    "status": "SUCCEEDED",
+    "updated_utc": "2026-10-21T23:06:05.810Z"
+   },
+   "tx-545eec563d2d62126014": {
+    "attempts": 1,
+    "delivery": "COMMITTED",
+    "execution_id": "ex-3d3ffda21f1d4afbb740",
+    "side_effects": 1,
+    "status": "SUCCEEDED",
+    "updated_utc": "2026-10-21T23:06:06.034Z"
+   },
+   "tx-742addb4f4360721c92b": {
+    "attempts": 1,
+    "delivery": "COMMITTED",
+    "execution_id": "ex-3d3ffda21f1d4afbb740",
+    "side_effects": 1,
+    "status": "SUCCEEDED",
+    "updated_utc": "2026-10-21T23:06:06.467Z"
+   },
+   "tx-8a7f8571eb73e1d5b3dd": {
+    "attempts": 1,
+    "delivery": "COMMITTED",
+    "execution_id": "ex-3d3ffda21f1d4afbb740",
+    "side_effects": 1,
+    "status": "SUCCEEDED",
+    "updated_utc": "2026-10-21T23:06:06.252Z"
+   },
+   "tx-98e0808b49fe0a3e4825": {
+    "attempts": 1,
+    "delivery": "COMMITTED",
+    "execution_id": "ex-3d3ffda21f1d4afbb740",
+    "side_effects": 1,
+    "status": "SUCCEEDED",
+    "updated_utc": "2026-10-21T23:06:07.129Z"
+   },
+   "tx-a399ad48e3d010f039a7": {
+    "attempts": 1,
+    "delivery": "COMMITTED",
+    "execution_id": "ex-3d3ffda21f1d4afbb740",
+    "side_effects": 1,
+    "status": "SUCCEEDED",
+    "updated_utc": "2026-10-21T23:06:06.910Z"
+   },
+   "tx-d5b15c09764fb6798672": {
+    "attempts": 1,
+    "delivery": "COMMITTED",
+    "execution_id": "ex-3d3ffda21f1d4afbb740",
+    "side_effects": 1,
+    "status": "SUCCEEDED",
+    "updated_utc": "2026-10-21T23:06:07.565Z"
+   },
+   "tx-dcbb9d1cc99439a03307": {
+    "attempts": 1,
+    "delivery": "COMMITTED",
+    "execution_id": "ex-3d3ffda21f1d4afbb740",
+    "side_effects": 1,
+    "status": "SUCCEEDED",
+    "updated_utc": "2026-10-21T23:06:05.572Z"
+   },
+   "tx-e3d31bb3845124cd5552": {
+    "attempts": 1,
+    "delivery": "COMMITTED",
+    "execution_id": "ex-3d3ffda21f1d4afbb740",
+    "side_effects": 1,
+    "status": "SUCCEEDED",
+    "updated_utc": "2026-10-21T23:06:06.692Z"
+   }
+  },
+  "version": "1.1.0"
+ },
+ "integrity": "sha256:f5ba5de773763a43fbc7cd2d0fbb313636935a7df2da3315789e304df3e9eb4c"
+}
