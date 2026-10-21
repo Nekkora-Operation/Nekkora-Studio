@@ -1,0 +1,486 @@
+{
+  "schema": "nekkora-studio/codegen-manifest",
+  "version": "1.3.0",
+  "generator": "nekkora-studio-codegen/1.2.0",
+  "framework": "nekkora-rpa[excel]==0.3.0",
+  "execution": "list",
+  "automationId": "cd042a37-a293-4441-945e-8e31eae94c2c",
+  "modelVersion": "1.2.0",
+  "automationRevision": 54,
+  "planRevision": "sha256:069e974e402cabef5c92aea7ecca33b24445b2a16f011d2b500808e522bd4469",
+  "configRevision": "sha256:99e232f8ad973836c84fa86e37b803ba8b7c6f897406d2cbdfd820fbff43401a",
+  "pdd": {
+    "gate": "PDD_READY",
+    "processRevision": "sha256:b5475bdb704c7cb4b56c17708fc69148e5fa21971bccc7bf1e17cbc5e1448a92",
+    "documentRevision": "sha256:71358f3163206fb096c9d2ae0415ab032dc5a49755c4c6860df9747cd52b2c9a",
+    "specRevision": "sha256:024526fb0bef921eab68f358f5e5f92f3080db95bce1a7007468257d45f58c15"
+  },
+  "command": "python main.py --entrada <lista.csv|lista.xlsx> --planilha <saida.xlsx> --saida <pasta>",
+  "output": {
+    "format": "xlsx",
+    "sheet": "Dados",
+    "keyField": "url",
+    "columns": [
+      {
+        "header": "URL",
+        "field": "url",
+        "kind": "url",
+        "stepId": "2137f95a-886d-4103-a08b-002e6c3f64ac",
+        "fallbackStepId": null
+      },
+      {
+        "header": "Nome completo",
+        "field": "nome_completo",
+        "kind": "text",
+        "stepId": "ad24b10e-39a1-4caa-b25d-e9ea85ba290b",
+        "fallbackStepId": "83131366-8785-4ab0-9f13-f58dd4fff64a"
+      },
+      {
+        "header": "Nascimento",
+        "field": "nascimento",
+        "kind": "iso_date",
+        "stepId": "f373ab06-be8a-470f-9db1-c0434f17a231",
+        "fallbackStepId": null
+      },
+      {
+        "header": "Morte",
+        "field": "morte",
+        "kind": "iso_date",
+        "stepId": "165fc39e-1483-40e1-b2b3-dfa2b15a2681",
+        "fallbackStepId": null
+      },
+      {
+        "header": "Nacionalidade",
+        "field": "nacionalidade",
+        "kind": "text",
+        "stepId": "150791c2-19c7-4f7e-8205-036d1f33c35e",
+        "fallbackStepId": null
+      },
+      {
+        "header": "Ocupação",
+        "field": "ocupacao",
+        "kind": "text",
+        "stepId": "cbaa46b1-4b91-4640-ac5a-23f63634ff5f",
+        "fallbackStepId": "6f9dea2d-4551-4dd6-9a76-ab99122f5529"
+      }
+    ]
+  },
+  "steps": [
+    {
+      "stepId": "a5d42e74-d20a-410a-ac9e-e0a1836cf596",
+      "traceId": "pesquisa.preencher_termo_de_busca",
+      "page": "PaginaPesquisa",
+      "method": "pesquisar_artigo",
+      "action": "FILL",
+      "key": "processo.pesquisa.campo_termo_de_busca",
+      "input": "termo_de_busca",
+      "credential": false,
+      "output": null,
+      "effect": null,
+      "postcondition": null,
+      "retry": null,
+      "read": null,
+      "optional": false,
+      "expected": null,
+      "capability": "actions.fill",
+      "decisionActor": "TEST_AGENT"
+    },
+    {
+      "stepId": "f9842f97-29dd-4de7-8039-1a2619dc983a",
+      "traceId": "pesquisa.pressionar_enter",
+      "page": "PaginaPesquisa",
+      "method": "pesquisar_artigo",
+      "action": "PRESS_KEY",
+      "key": "processo.pesquisa.campo_termo_de_busca",
+      "input": null,
+      "credential": false,
+      "output": null,
+      "effect": "NONE",
+      "postcondition": null,
+      "retry": "SAFE",
+      "read": null,
+      "optional": false,
+      "expected": null,
+      "capability": "actions.press",
+      "decisionActor": "TEST_AGENT"
+    },
+    {
+      "stepId": "2137f95a-886d-4103-a08b-002e6c3f64ac",
+      "traceId": "ficha.ler_endereco_da_pagina",
+      "page": "PaginaFicha",
+      "method": "conferir_endereco_da_pagina",
+      "action": "OBSERVE",
+      "key": null,
+      "input": null,
+      "credential": false,
+      "output": "endereco_da_pagina",
+      "effect": null,
+      "postcondition": null,
+      "retry": null,
+      "read": "address",
+      "optional": false,
+      "expected": "endereco_do_artigo",
+      "capability": "actions.current_address",
+      "decisionActor": null
+    },
+    {
+      "stepId": "83131366-8785-4ab0-9f13-f58dd4fff64a",
+      "traceId": "ficha.ler_titulo",
+      "page": "PaginaFicha",
+      "method": "ler_dados_da_ficha",
+      "action": "OBSERVE",
+      "key": "processo.ficha.titulo",
+      "input": null,
+      "credential": false,
+      "output": "titulo",
+      "effect": null,
+      "postcondition": null,
+      "retry": null,
+      "read": "text",
+      "optional": true,
+      "expected": null,
+      "capability": "actions.read_items",
+      "decisionActor": "TEST_AGENT"
+    },
+    {
+      "stepId": "ad24b10e-39a1-4caa-b25d-e9ea85ba290b",
+      "traceId": "ficha.ler_nome_completo",
+      "page": "PaginaFicha",
+      "method": "ler_dados_da_ficha",
+      "action": "OBSERVE",
+      "key": "processo.ficha.nome_completo",
+      "input": null,
+      "credential": false,
+      "output": "nome_completo",
+      "effect": null,
+      "postcondition": null,
+      "retry": null,
+      "read": "text",
+      "optional": true,
+      "expected": null,
+      "capability": "actions.read_items",
+      "decisionActor": "TEST_AGENT"
+    },
+    {
+      "stepId": "f373ab06-be8a-470f-9db1-c0434f17a231",
+      "traceId": "ficha.ler_nascimento",
+      "page": "PaginaFicha",
+      "method": "ler_dados_da_ficha",
+      "action": "OBSERVE",
+      "key": "processo.ficha.nascimento",
+      "input": null,
+      "credential": false,
+      "output": "nascimento",
+      "effect": null,
+      "postcondition": null,
+      "retry": null,
+      "read": "date",
+      "optional": false,
+      "expected": null,
+      "capability": "actions.read_items",
+      "decisionActor": "TEST_AGENT"
+    },
+    {
+      "stepId": "165fc39e-1483-40e1-b2b3-dfa2b15a2681",
+      "traceId": "ficha.ler_morte",
+      "page": "PaginaFicha",
+      "method": "ler_dados_da_ficha",
+      "action": "OBSERVE",
+      "key": "processo.ficha.morte",
+      "input": null,
+      "credential": false,
+      "output": "morte",
+      "effect": null,
+      "postcondition": null,
+      "retry": null,
+      "read": "date",
+      "optional": false,
+      "expected": null,
+      "capability": "actions.read_items",
+      "decisionActor": "TEST_AGENT"
+    },
+    {
+      "stepId": "150791c2-19c7-4f7e-8205-036d1f33c35e",
+      "traceId": "ficha.ler_nacionalidade",
+      "page": "PaginaFicha",
+      "method": "ler_dados_da_ficha",
+      "action": "OBSERVE",
+      "key": "processo.ficha.nacionalidade",
+      "input": null,
+      "credential": false,
+      "output": "nacionalidade",
+      "effect": null,
+      "postcondition": null,
+      "retry": null,
+      "read": "text",
+      "optional": false,
+      "expected": null,
+      "capability": "actions.read_items",
+      "decisionActor": "TEST_AGENT"
+    },
+    {
+      "stepId": "cbaa46b1-4b91-4640-ac5a-23f63634ff5f",
+      "traceId": "ficha.ler_ocupacao",
+      "page": "PaginaFicha",
+      "method": "ler_dados_da_ficha",
+      "action": "OBSERVE",
+      "key": "processo.ficha.ocupacao",
+      "input": null,
+      "credential": false,
+      "output": "ocupacao",
+      "effect": null,
+      "postcondition": null,
+      "retry": null,
+      "read": "text",
+      "optional": true,
+      "expected": null,
+      "capability": "actions.read_items",
+      "decisionActor": "TEST_AGENT"
+    },
+    {
+      "stepId": "6f9dea2d-4551-4dd6-9a76-ab99122f5529",
+      "traceId": "ficha.ler_campos",
+      "page": "PaginaFicha",
+      "method": "ler_dados_da_ficha",
+      "action": "OBSERVE",
+      "key": "processo.ficha.campos",
+      "input": null,
+      "credential": false,
+      "output": "campos",
+      "effect": null,
+      "postcondition": null,
+      "retry": null,
+      "read": "text",
+      "optional": true,
+      "expected": null,
+      "capability": "actions.read_items",
+      "decisionActor": "TEST_AGENT"
+    }
+  ],
+  "trace": {
+    "schema": "nekkora-studio/trace-map",
+    "version": "1.0.0",
+    "mappings": [
+      {
+        "traceId": "pesquisa.preencher_termo_de_busca",
+        "studioStepId": "a5d42e74-d20a-410a-ac9e-e0a1836cf596",
+        "action": "FILL",
+        "targetKey": "processo.pesquisa.campo_termo_de_busca",
+        "pythonSymbol": "paginas.py:PaginaPesquisa.pesquisar_artigo"
+      },
+      {
+        "traceId": "pesquisa.pressionar_enter",
+        "studioStepId": "f9842f97-29dd-4de7-8039-1a2619dc983a",
+        "action": "PRESS_KEY",
+        "targetKey": "processo.pesquisa.campo_termo_de_busca",
+        "pythonSymbol": "paginas.py:PaginaPesquisa.pesquisar_artigo"
+      },
+      {
+        "traceId": "ficha.ler_endereco_da_pagina",
+        "studioStepId": "2137f95a-886d-4103-a08b-002e6c3f64ac",
+        "action": "OBSERVE",
+        "targetKey": null,
+        "pythonSymbol": "paginas.py:PaginaFicha.conferir_endereco_da_pagina"
+      },
+      {
+        "traceId": "ficha.ler_titulo",
+        "studioStepId": "83131366-8785-4ab0-9f13-f58dd4fff64a",
+        "action": "OBSERVE",
+        "targetKey": "processo.ficha.titulo",
+        "pythonSymbol": "paginas.py:PaginaFicha.ler_dados_da_ficha"
+      },
+      {
+        "traceId": "ficha.ler_nome_completo",
+        "studioStepId": "ad24b10e-39a1-4caa-b25d-e9ea85ba290b",
+        "action": "OBSERVE",
+        "targetKey": "processo.ficha.nome_completo",
+        "pythonSymbol": "paginas.py:PaginaFicha.ler_dados_da_ficha"
+      },
+      {
+        "traceId": "ficha.ler_nascimento",
+        "studioStepId": "f373ab06-be8a-470f-9db1-c0434f17a231",
+        "action": "OBSERVE",
+        "targetKey": "processo.ficha.nascimento",
+        "pythonSymbol": "paginas.py:PaginaFicha.ler_dados_da_ficha"
+      },
+      {
+        "traceId": "ficha.ler_morte",
+        "studioStepId": "165fc39e-1483-40e1-b2b3-dfa2b15a2681",
+        "action": "OBSERVE",
+        "targetKey": "processo.ficha.morte",
+        "pythonSymbol": "paginas.py:PaginaFicha.ler_dados_da_ficha"
+      },
+      {
+        "traceId": "ficha.ler_nacionalidade",
+        "studioStepId": "150791c2-19c7-4f7e-8205-036d1f33c35e",
+        "action": "OBSERVE",
+        "targetKey": "processo.ficha.nacionalidade",
+        "pythonSymbol": "paginas.py:PaginaFicha.ler_dados_da_ficha"
+      },
+      {
+        "traceId": "ficha.ler_ocupacao",
+        "studioStepId": "cbaa46b1-4b91-4640-ac5a-23f63634ff5f",
+        "action": "OBSERVE",
+        "targetKey": "processo.ficha.ocupacao",
+        "pythonSymbol": "paginas.py:PaginaFicha.ler_dados_da_ficha"
+      },
+      {
+        "traceId": "ficha.ler_campos",
+        "studioStepId": "6f9dea2d-4551-4dd6-9a76-ab99122f5529",
+        "action": "OBSERVE",
+        "targetKey": "processo.ficha.campos",
+        "pythonSymbol": "paginas.py:PaginaFicha.ler_dados_da_ficha"
+      }
+    ],
+    "synthetic": [
+      {
+        "traceId": "processo.abrir_pagina_inicial",
+        "meaning": "abrir o endereço inicial (sem etapa do Studio)",
+        "previousTraceIds": [
+          "INICIO"
+        ]
+      }
+    ]
+  },
+  "architecture": {
+    "pages": [
+      {
+        "class": "PaginaPesquisa",
+        "prefix": "processo.pesquisa",
+        "identity": "campo_termo_de_busca",
+        "nameSource": "PDD_SECTION_TITLE",
+        "summary": "Tela da seção “Pesquisa do artigo” do PDD: pesquisa o artigo pelo nome.",
+        "boundary": "tela observada na gravação (endereço/título diferentes da anterior)",
+        "methods": [
+          {
+            "name": "pesquisar_artigo",
+            "nameSource": "PDD_BLOCK_TITLE",
+            "summary": "Preenche “termo de busca” com ``termo_de_busca`` e envia com Enter.",
+            "parameters": [
+              "termo_de_busca"
+            ],
+            "returns": "None",
+            "traceIds": [
+              "pesquisa.preencher_termo_de_busca",
+              "pesquisa.pressionar_enter"
+            ]
+          }
+        ]
+      },
+      {
+        "class": "PaginaFicha",
+        "prefix": "processo.ficha",
+        "identity": "nascimento",
+        "nameSource": "PDD_DATA_OWNER",
+        "summary": "Tela da seção “Extração dos dados” do PDD: lê o endereço e os dados da ficha.",
+        "boundary": "tela nova: a etapa anterior registrou troca de documento (o endereço tem o mesmo modelo)",
+        "methods": [
+          {
+            "name": "conferir_endereco_da_pagina",
+            "nameSource": "ACTIONS",
+            "summary": "Lê o endereço da página e o compara com ``endereco_do_artigo``.",
+            "parameters": [
+              "endereco_do_artigo"
+            ],
+            "returns": "str",
+            "traceIds": [
+              "ficha.ler_endereco_da_pagina"
+            ]
+          },
+          {
+            "name": "ler_dados_da_ficha",
+            "nameSource": "ACTIONS",
+            "summary": "Lê o título, “Nome completo”, “Nascimento”, “Morte”, “Nacionalidade”, “Ocupação” e “Campo(s)”.",
+            "parameters": [],
+            "returns": "DadosDaFicha",
+            "traceIds": [
+              "ficha.ler_titulo",
+              "ficha.ler_nome_completo",
+              "ficha.ler_nascimento",
+              "ficha.ler_morte",
+              "ficha.ler_nacionalidade",
+              "ficha.ler_ocupacao",
+              "ficha.ler_campos"
+            ]
+          }
+        ]
+      }
+    ],
+    "models": [
+      {
+        "name": "DadosDaFicha",
+        "readBy": "PaginaFicha.ler_dados_da_ficha",
+        "fields": [
+          "titulo?",
+          "nome_completo?",
+          "nascimento",
+          "morte",
+          "nacionalidade",
+          "ocupacao?",
+          "campos?"
+        ]
+      }
+    ],
+    "process": "BiografiasDaWikipedia"
+  },
+  "locators": [
+    {
+      "key": "processo.pesquisa.campo_termo_de_busca",
+      "kind": "SCOPED",
+      "description": "CSS `header input[name=\"search\"]`"
+    },
+    {
+      "key": "processo.ficha.titulo",
+      "kind": "STABLE_ID",
+      "description": "CSS `h1#firstHeading`"
+    },
+    {
+      "key": "processo.ficha.nome_completo",
+      "kind": "ROW_ANCHOR",
+      "description": "XPATH `//tr[th[normalize-space(.)=\"Nome completo\"]]//td`"
+    },
+    {
+      "key": "processo.ficha.nascimento",
+      "kind": "ROW_ANCHOR",
+      "description": "XPATH `//tr[th[normalize-space(.)=\"Nascimento\"]]//td`"
+    },
+    {
+      "key": "processo.ficha.morte",
+      "kind": "ROW_ANCHOR",
+      "description": "XPATH `//tr[th[normalize-space(.)=\"Morte\"]]//td`"
+    },
+    {
+      "key": "processo.ficha.nacionalidade",
+      "kind": "ROW_ANCHOR",
+      "description": "XPATH `//tr[th[normalize-space(.)=\"Nacionalidade\"]]//td`"
+    },
+    {
+      "key": "processo.ficha.ocupacao",
+      "kind": "ROW_ANCHOR",
+      "description": "XPATH `//tr[th[normalize-space(.)=\"Ocupação\"]]//td`"
+    },
+    {
+      "key": "processo.ficha.campos",
+      "kind": "ROW_ANCHOR",
+      "description": "XPATH `//tr[th[normalize-space(.)=\"Campo(s)\"]]//td`"
+    }
+  ],
+  "files": {
+    "README.md": "sha256:4c2de2633d073dca7892021389877076ee94c62a259e4c600a3bf5d4652bc9cd",
+    "config/execucao.toml": "sha256:326f964fa727db3256d25708a90d1c1eaa94482a90e7cf17f4573f1b319ff47d",
+    "main.py": "sha256:ff08fbc87e9e381d0611e8ccd00f618ac67eb70777b6c899227f13821ea0dc63",
+    "paginas.py": "sha256:5754d10a1e3675eb3c91912d6b9c6345bd872546a522b4ae53afd68edbfeb56d",
+    "processo.py": "sha256:76af431423e6f7b75a5b6a871769942de439569bc7602df5534acf4422eaa674",
+    "requirements.txt": "sha256:1b02b07ba4cec64bf5d0709d5ec1da550f7b492314a4b7b0426319a92aaceac9",
+    "selectors.json": "sha256:ef36062329c2af14a4063ef6a0c0826e2ef02ddbe8696048229a2d4a66860854"
+  },
+  "exclusions": [
+    "INPUT_VALUES",
+    "CREDENTIAL_VALUES",
+    "LITERAL_VALUES",
+    "HAND_WRITTEN_SELECTORS",
+    "POSITIONAL_LOCATORS",
+    "URL_QUERIES",
+    "STUDIO_STEP_IDS_IN_CODE"
+  ]
+}
