@@ -176,7 +176,10 @@ public final class DevelopmentPlanner {
             }
             for (ProjectContext.Step s : ctx.steps()) {
                 String id = s.stepId().value().toString();
-                if (s.action() == ActionType.PRESS_KEY) keys.put(id, new SingleConfig.KeyPress("Enter", s.navigates()));
+                // o Enter "navega" quando a extensão viu a navegação OU quando a gravação registrou troca de documento depois dele
+                // (o mesmo sinal que separa as telas): sem isso, a leitura seguinte (ex.: o endereço) corre contra a navegação
+                // (CODEGEN-QUALITY-001 rodada 3, achado na execução real da Wikipédia)
+                if (s.action() == ActionType.PRESS_KEY) keys.put(id, new SingleConfig.KeyPress("Enter", s.navigates() || s.screenChangeAfter()));
                 if (s.action() != ActionType.OBSERVE || !outputs.containsKey(id)) continue;
                 AutomationStep st = a.step(s.stepId()).orElseThrow();
                 VariableDefinition out = a.variableNamed(outputs.get(id)).orElseThrow();

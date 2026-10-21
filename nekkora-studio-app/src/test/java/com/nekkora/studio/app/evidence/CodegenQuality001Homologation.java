@@ -2387,7 +2387,9 @@ public final class CodegenQuality001Homologation {
                 && Json.write(manifest.get("trace")).contains("\"previousTraceIds\":[\"processo.abrir_pagina_inicial\",\"INICIO\"]"));
         check("Q11: colunas da lista e cabeçalhos da planilha continuam o contrato (não traduzidos); mapeamento explícito no código",
                 process.contains("search_term=_required_input(data, \"termo_de_busca\"),") && main.contains("OutputColumn(\"Nome completo\", \"full_name\"")
-                        && main.contains("\"--input\", \"--entrada\""));
+                        && main.replaceAll("\\s+", " ").contains("\"--input\", \"--entrada\","));
+        check("R3: o Enter da busca confirma a chegada à ficha pela troca de endereço (a leitura do endereço não corre contra a navegação)",
+                pages.replaceAll("\\s+", " ").contains("postcondition=lambda: self.actions.current_address() != address_before"));
         String ident = Json.write(manifest.get("naming"));
         check("Q11: manifesto 1.4.0 em inglês com o mapa de nomes (origem → código) e sem palavra sem tradução",
                 "1.4.0".equals(manifest.get("version")) && "en".equals(manifest.get("language")) && ident.contains("\"model\":\"termo_de_busca\",\"python\":\"search_term\"")
