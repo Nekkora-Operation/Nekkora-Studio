@@ -87,7 +87,9 @@ def main() -> int:
             return "; ".join(values.get(key_index(key), []))
 
         def navigate(self, url: str, *, step_id: str | None = None, **_: Any) -> None:
-            calls.append(["navigate", idx(step_id) if step_id != "INICIO" else "INICIO"])
+            # abertura sintética do endereço inicial: "INICIO" (antes) e "processo.abrir_pagina_inicial" (rodada 2) são a mesma
+            start = step_id in ("INICIO", "processo.abrir_pagina_inicial")
+            calls.append(["navigate", "INICIO" if start else idx(step_id)])
 
     sys.path.insert(0, str(root))
     processo = importlib.import_module("processo")
@@ -101,8 +103,8 @@ def main() -> int:
     try:
         result = cls().process(rt, TransactionItem("x", scenario["input"]))  # type: ignore[arg-type]
         outcome = {"status": "SUCCEEDED", "row": dict(result.output)}
-    except BusinessRuleRejected:
-        outcome = {"status": "BUSINESS_REJECTED"}
+    except BusinessRuleRejected as err:
+        outcome = {"status": "BUSINESS_REJECTED", "reason": err.reason}
     except RuntimeError as err:
         outcome = {"status": "TECHNICAL", "detail": str(err)}
     print(json.dumps({"calls": calls, "outcome": outcome}, ensure_ascii=False))

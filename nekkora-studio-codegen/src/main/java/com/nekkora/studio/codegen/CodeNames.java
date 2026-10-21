@@ -19,14 +19,26 @@ import java.util.Set;
  */
 public record CodeNames(Map<String, PageInfo> pages, Map<String, MethodInfo> methods, Map<String, String> traces, Set<String> retired) {
 
-    /** Fonte de um nome (vai ao manifesto e à prévia da arquitetura). */
-    public enum Source { PDD_SECTION_TITLE, PDD_BLOCK_TITLE, SESSION_NAME, ACTIONS, PROVISIONAL }
+    /**
+     * Fonte de um nome (vai ao manifesto e à prévia da arquitetura). {@code PDD_DATA_OWNER}: o dono dos dados dito num
+     * título do PDD ("os dados da ficha" → {@code PaginaFicha}).
+     */
+    public enum Source { PDD_DATA_OWNER, PDD_SECTION_TITLE, PDD_BLOCK_TITLE, SESSION_NAME, ACTIONS, PROVISIONAL }
 
-    public record PageInfo(String title, List<String> blockTitles, Source source, String boundary) {
+    /**
+     * @param model nome da dataclass dos dados lidos nesta tela quando o PDD diz de quem são ({@code DadosDaFicha}); vazio
+     *              = o gerador usa {@code Dados<Tela>}
+     */
+    public record PageInfo(String title, List<String> blockTitles, Source source, String boundary, String model) {
         public PageInfo {
             title = title == null ? "" : title;
             blockTitles = List.copyOf(blockTitles);
             boundary = boundary == null ? "" : boundary;
+            model = model == null ? "" : model;
+        }
+
+        public PageInfo(String title, List<String> blockTitles, Source source, String boundary) {
+            this(title, blockTitles, source, boundary, "");
         }
     }
 

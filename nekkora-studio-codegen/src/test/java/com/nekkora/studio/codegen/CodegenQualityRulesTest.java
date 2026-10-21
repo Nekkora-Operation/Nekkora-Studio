@@ -30,6 +30,39 @@ class CodegenQualityRulesTest {
     }
 
     @Test
+    @DisplayName("rodada 2 (CQ-01): frase nominal inteira e o DONO dos dados dito no PDD; nada fora do texto do PDD")
+    void donoDosDados() {
+        assertEquals(Optional.of("area segura"), CodeNaming.screenNoun("Área segura"), "não corta o adjetivo");
+        assertEquals("PaginaAreaSegura", "Pagina" + CodeNaming.pascal("area segura"));
+        assertEquals(Optional.of(new CodeNaming.DataOwner("da", "ficha")), CodeNaming.dataOwner("Ler o endereço e os dados da ficha"));
+        assertEquals(Optional.of(new CodeNaming.DataOwner("da", "ficha biografica")), CodeNaming.dataOwner("Ler os dados da ficha biográfica"));
+        assertEquals(Optional.of(new CodeNaming.DataOwner("do", "cliente")), CodeNaming.dataOwner("Conferir as informações do cliente na tela"));
+        assertEquals(Optional.empty(), CodeNaming.dataOwner("Extração dos dados"), "sem dono: a seção diz a ação, não de quem são os dados");
+        assertEquals(Optional.empty(), CodeNaming.dataOwner("Pesquisar o artigo pelo nome"));
+        assertEquals(Optional.empty(), CodeNaming.dataOwner("Ler os dados da tela"), "dono genérico não nomeia");
+        assertEquals("DadosDaFicha", "Dados" + CodeNaming.pascal("da ficha"));
+    }
+
+    @Test
+    @DisplayName("rodada 2 (CQ-03): passo do PDD na 3ª pessoa para a docstring da tela (regulares e irregulares)")
+    void terceiraPessoa() {
+        assertEquals(Optional.of("pesquisa o artigo pelo nome"), CodeNaming.thirdPerson("Pesquisar o artigo pelo nome"));
+        assertEquals(Optional.of("lê o endereço e os dados da ficha"), CodeNaming.thirdPerson("Ler o endereço e os dados da ficha"));
+        assertEquals(Optional.of("abre a busca do acervo"), CodeNaming.thirdPerson("Abrir a busca do acervo"));
+        assertEquals(Optional.of("confere o total"), CodeNaming.thirdPerson("Conferir o total"));
+        assertEquals(Optional.of("sai do sistema"), CodeNaming.thirdPerson("Sair do sistema"));
+        assertEquals(Optional.of("inclui o pedido"), CodeNaming.thirdPerson("Incluir o pedido"));
+        assertEquals(Optional.empty(), CodeNaming.thirdPerson("Etapas: Acesso"), "não começa por verbo");
+    }
+
+    @Test
+    @DisplayName("rodada 2 (CQ-04): quem encerra a sessão não é repetido; o resto do rótulo não engana")
+    void fimDeSessao() {
+        for (String yes : List.of("Sair", "Logout", "Log out", "Sign out", "Encerrar sessão", "Desconectar")) assertTrue(CodePlan.endsSession(yes), yes);
+        for (String no : List.of("Consultar", "Login", "Entrar", "Saiba mais", "Pesquisar", "")) assertFalse(CodePlan.endsSession(no), no);
+    }
+
+    @Test
     @DisplayName("método pelo título do bloco que começa por verbo no infinitivo: verbo + objeto")
     void nomeDoMetodo() {
         assertEquals(Optional.of("pesquisar_artigo"), CodeNaming.methodFromTitle("Pesquisar o artigo pelo nome"));

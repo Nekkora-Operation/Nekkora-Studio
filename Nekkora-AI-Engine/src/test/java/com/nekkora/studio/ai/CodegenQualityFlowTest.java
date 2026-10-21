@@ -18,6 +18,7 @@ import com.nekkora.studio.ai.quality.QualityReport;
 import com.nekkora.studio.ai.store.TraceRegistry;
 import com.nekkora.studio.bridge.json.Json;
 import com.nekkora.studio.codegen.CodeNames;
+import com.nekkora.studio.codegen.CodePlan;
 import com.nekkora.studio.codegen.OutputWriter;
 import com.nekkora.studio.codegen.PythonGenerator;
 import com.nekkora.studio.codegen.SingleGenerator;
@@ -64,11 +65,22 @@ class CodegenQualityFlowTest {
         String pages = files.get("paginas.py");
         String process = files.get("processo.py");
         String code = pages + process + files.get("main.py");
-        assertTrue(pages.contains("class PaginaPesquisa(BasePage):\n    \"\"\"Pesquisa da pessoa.") && pages.contains("class PaginaExtracao(BasePage):"), pages);
+        // rodada 2 (CQ-01): a tela onde os dados são lidos leva o nome do DONO dos dados dito no PDD ("os dados da ficha")
+        assertTrue(pages.contains("class PaginaPesquisa(PaginaBase):\n    \"\"\"Tela da seção “Pesquisa da pessoa” do PDD: abre a busca do acervo; "
+                + "pesquisa a pessoa pelo nome.") && pages.contains("class PaginaFicha(PaginaBase):"), pages);
         assertTrue(pages.contains("def pesquisar_pessoa(self, termo_de_busca: str) -> None:") && pages.contains("def abrir_busca(self) -> None:"), pages);
-        assertTrue(pages.contains("class DadosExtracao:") && pages.contains("    nome_completo: str | None\n") && pages.contains("    nascimento: str\n"), pages);
+        assertTrue(pages.contains("def ler_dados_da_ficha(") && pages.contains("class DadosDaFicha:") && pages.contains("    nome_completo: str | None\n")
+                && pages.contains("    nascimento: str\n"), pages);
         assertTrue(process.contains("class FichasDoAcervoSintetica(RpaProcess):") && process.contains("def linha_da_planilha("), process);
-        assertTrue(process.contains("\"nome_completo\": dados.nome_completo or dados.titulo") && process.contains("\"ocupacao\": dados.ocupacao or dados.campos"));
+        assertTrue(process.contains("\"nome_completo\": dados_da_ficha.nome_completo or dados_da_ficha.titulo")
+                && process.contains("\"ocupacao\": dados_da_ficha.ocupacao or dados_da_ficha.campos"), process);
+        // CQ-02: a API do framework aparece com nomes legíveis; act/k só dentro da PaginaBase
+        assertTrue(pages.contains("class PaginaBase(BasePage):") && pages.contains("def acoes(self) -> Actions:") && pages.contains("def elemento(self, nome: str)"));
+        assertEquals(1, count(pages, "self.act"), "self.act só na PaginaBase");
+        assertEquals(1, count(pages, "self.k("), "self.k só na PaginaBase");
+        // CQ-03: a explicação da espera está na docstring, não num comentário solto
+        assertFalse(pages.contains("        # a página está pronta"), pages);
+        assertTrue(pages.replaceAll("\\s+", " ").contains("Antes, espera “Nascimento” (leitura obrigatória)"), pages);
         assertFalse(UUID.matcher(pages + process).find(), "nenhum UUID no corpo das Pages/processo");
         assertFalse(code.contains("# etapa") || code.contains(" a = self.act") || code.contains("etapas_sessao") || code.contains("\"fill\"") || code.contains("campo_s"));
         Map<String, Object> m = Json.parseObject(files.get("manifest.json"));
@@ -78,8 +90,13 @@ class CodegenQualityFlowTest {
         assertEquals(steps, new LinkedHashSet<>(traceToStep.values()), "toda etapa tem um traceId");
         assertEquals(traceToStep.size(), new LinkedHashSet<>(traceToStep.values()).size(), "bijetivo");
         Matcher x = STEP_ID.matcher(pages + process);
-        while (x.find()) assertTrue(traceToStep.containsKey(x.group(1)) || x.group(1).equals("INICIO"), "step_id sem mapa: " + x.group(1));
-        assertTrue(traceToStep.containsKey("pesquisa.preencher_termo_de_busca") && traceToStep.containsKey("extracao.ler_nome_completo"), traceToStep.toString());
+        while (x.find()) assertTrue(traceToStep.containsKey(x.group(1)) || x.group(1).equals(CodePlan.START_TRACE), "step_id sem mapa: " + x.group(1));
+        assertTrue(traceToStep.containsKey("pesquisa.preencher_termo_de_busca") && traceToStep.containsKey("ficha.ler_nome_completo"), traceToStep.toString());
+        // CQ-08: abertura sintética na convenção, declarando o id anterior para correlacionar execuções antigas
+        assertTrue(process.contains("step_id=\"processo.abrir_pagina_inicial\"") && !code.contains("\"INICIO\""), process);
+        Map<?, ?> start = (Map<?, ?>) ((List<?>) ((Map<?, ?>) m.get("trace")).get("synthetic")).get(0);
+        assertEquals(CodePlan.START_TRACE, start.get("traceId"));
+        assertEquals(List.of("INICIO"), start.get("previousTraceIds"));
         assertTrue(files.get("README.md").contains("## Como cada elemento é localizado") && files.get("README.md").contains("âncora de linha"));
         // a busca e o Enter agem no MESMO elemento: uma chave só no registro
         assertTrue(files.get("selectors.json").contains("\"processo.pesquisa.campo_termo_de_busca\"") && !files.get("selectors.json").contains("press_key"));
@@ -96,7 +113,7 @@ class CodegenQualityFlowTest {
         DocumentDraft d = DraftEdits.reviseSectionTitle(c.reviewedDraft(), 2, "Busca da pessoa", "TEST_AGENT");
         Map<String, String> renamed = generate(c, d, reg.applyTo(CodeNames.none()));
         assertEquals(first, renamed, "título do PDD mudou: traceIds iguais");
-        assertTrue(lastPages.contains("class PaginaBusca(BasePage):"), "a Page muda de nome com o PDD");
+        assertTrue(lastPages.contains("class PaginaBusca(PaginaBase):"), "a Page muda de nome com o PDD");
         // sem registro, o novo título daria outra área — é o registro que mantém a correlação
         Map<String, String> unpinned = generate(c, d, CodeNames.none());
         assertNotEquals(first.get(c.search.value().toString()), unpinned.get(c.search.value().toString()));
@@ -141,6 +158,9 @@ class CodegenQualityFlowTest {
             Map<?, ?> oa = (Map<?, ?>) a.get("outcome");
             Map<?, ?> ob = (Map<?, ?>) b.get("outcome");
             assertEquals(oa.get("status"), ob.get("status"), "cenário " + i);
+            // CQ-07: o código novo diz QUAL campo ficou vazio — o nome do campo, nunca o conteúdo
+            if (i == 3) assertEquals("DADO_OBRIGATORIO_VAZIO:nome_completo", ob.get("reason"), "cenário " + i);
+            if (i == 6) assertEquals("DADO_OBRIGATORIO_VAZIO:nacionalidade", ob.get("reason"), "cenário " + i);
             assertEquals(oa.get("row"), ob.get("row"), "cenário " + i);
             if ("SUCCEEDED".equals(oa.get("status"))) assertEquals(a.get("calls"), b.get("calls"), "cenário " + i + ": mesmas chamadas, mesma ordem, mesmos elementos");
         }
@@ -169,9 +189,9 @@ class CodegenQualityFlowTest {
         mutants.put("UUID_EXPOSTO_NO_CODIGO", new String[] {"step_id=\"pesquisa.preencher_termo_de_busca\"", "step_id=\"0e0dfafe-aecb-42d1-a861-57e00fde87f6\""});
         mutants.put("COMENTARIO_POR_ETAPA", new String[] {"    def abrir_busca(self) -> None:\n", "    def abrir_busca(self) -> None:\n        # etapa 1 · NAVIGATE\n"});
         mutants.put("NOME_GENERICO", new String[] {"def pesquisar_pessoa(", "def etapas_sessao_2("});
-        mutants.put("SILENCIA_FALHA", new String[] {"return join_items(self.act.read_items(self.k(alvo), step_id=step_id))",
-                "return join_items(self.act.read_items(self.k(alvo), step_id=step_id)) or \"\""});
-        mutants.put("SELETOR_NO_CODIGO", new String[] {"self.k(\"campo_termo_de_busca\"), termo_de_busca", "\"form#buscaform input\", termo_de_busca"});
+        mutants.put("SILENCIA_FALHA", new String[] {"return join_items(self.acoes.read_items(self.elemento(elemento), step_id=step_id))",
+                "return join_items(self.acoes.read_items(self.elemento(elemento), step_id=step_id)) or \"\""});
+        mutants.put("SELETOR_NO_CODIGO", new String[] {"self.elemento(\"campo_termo_de_busca\"),", "\"form#buscaform input\","});
         mutants.put("TRACE_SEM_MAPEAMENTO", new String[] {"step_id=\"pesquisa.abrir_pagina\"", "step_id=\"pesquisa.passo_inventado\""});
         for (Map.Entry<String, String[]> e : mutants.entrySet()) {
             Path dir = tmp.resolve("mutante-" + e.getKey());
@@ -222,7 +242,7 @@ class CodegenQualityFlowTest {
             assertTrue(run.contains("COMPLETED_WITH_FAILURES") || run.contains("STOPPED"), run);
             assertFalse(Files.exists(xlsx), "tudo ou nada: nenhuma planilha com dado de uma tabela escolhida ao acaso");
             String events = Files.readString(tmp.resolve("exec").resolve("execucao").resolve("events.jsonl"), StandardCharsets.UTF_8);
-            assertTrue(events.contains("\"error_code\":\"TARGET_AMBIGUOUS\"") && events.contains("\"step_id\":\"extracao.ler_nome_completo\""),
+            assertTrue(events.contains("\"error_code\":\"TARGET_AMBIGUOUS\"") && events.contains("\"step_id\":\"ficha.ler_nome_completo\""),
                     "a ambiguidade é do alvo Nome completo, com o step_id legível: " + events.lines().filter(l -> l.contains("AMBIGUOUS")).toList());
         } finally {
             lab.descendants().forEach(ProcessHandle::destroyForcibly);
@@ -321,5 +341,30 @@ class CodegenQualityFlowTest {
             throw new IllegalStateException("tempo esgotado");
         }
         return text;
+    }
+
+    @Test
+    @DisplayName("CQ-05 (rodada 2): ler um botão ou link devolve o TEXTO dele — o nome diz isso, não \"resultado\"")
+    void leituraDeControle() {
+        ConsultaCase c = ConsultaCase.confirmed();
+        com.nekkora.studio.domain.AutomationStep exit = c.a.step(c.exit).orElseThrow();
+        var session = c.a.sessions().get(1).id();
+        com.nekkora.studio.domain.StepId link = c.a.appendStep(session, com.nekkora.studio.domain.StepDraft.builder().name("Observar")
+                .actionType(com.nekkora.studio.domain.action.ActionType.OBSERVE).context(exit.context().orElseThrow())
+                .element(ConsultaCase.el("LINK", "a", "Logout", "#logout", false)).build()).id();
+        com.nekkora.studio.domain.StepId button = c.a.appendStep(session, com.nekkora.studio.domain.StepDraft.builder().name("Observar")
+                .actionType(com.nekkora.studio.domain.action.ActionType.OBSERVE).context(exit.context().orElseThrow())
+                .element(ConsultaCase.el("BUTTON", "button", "Imprimir", "#imprimir", false)).build()).id();
+        Map<com.nekkora.studio.domain.StepId, String> names = new LinkedHashMap<>();
+        for (VariableDeriver.Planned p : VariableDeriver.derive(c.a, ProjectContext.of(c.a, Optional.empty()))) names.put(p.step(), p.name());
+        assertEquals("texto_do_link_logout", names.get(link));
+        assertEquals("texto_do_botao_imprimir", names.get(button));
+        assertEquals("resultado_da_consulta", names.get(c.result), "um elemento comum continua sendo o resultado lido");
+    }
+
+    static int count(String text, String part) {
+        int n = 0;
+        for (int i = text.indexOf(part); i >= 0; i = text.indexOf(part, i + 1)) n++;
+        return n;
     }
 }

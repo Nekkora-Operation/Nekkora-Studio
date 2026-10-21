@@ -16,7 +16,14 @@
    byte a byte igual); a camada VQ o marca como `NOT_CHECKED`.
 5. **Registro de rastreio fica nos dados do Studio** (como a especificação): em outra máquina, o `trace` do manifesto
    anterior da pasta de saída é a semente. Sem nenhum dos dois, o traceId é derivado de novo (pode mudar se o PDD mudou).
-6. **Execução real** (V6) só pelo teste autorizado pela interface, na origem autorizada; nada é dado por executado por
+6. **Coluna opcional na planilha (CQ-06, fora do escopo — limitação real).** Toda coluna da planilha é obrigatória:
+   `morte: str` e `_data("morte")` recusam a ficha de uma pessoa viva (`DATA_INCOMPLETA_OU_AMBIGUA`/`DADO_OBRIGATORIO_VAZIO`).
+   É o contrato do PDD atual (preservado), não um defeito de legibilidade. O framework 0.3.0 já aceita coluna não
+   obrigatória (`OutputColumn(required=False)`); falta o CONTRATO da especificação: a pessoa declarar "esta coluna pode
+   ficar vazia" (pergunta e registro no Studio, fingerprint da decisão), o gerador ler com `_data_se_existir` e excluir
+   a coluna da recusa por vazio, e testes de ausência real × ambíguo × data incompleta. Proposta de missão posterior:
+   **NEKKORA-SPEC-OPTIONAL-COLUMNS-001**. Nada foi inventado: sem a decisão, ausência continua recusando o item.
+7. **Execução real** (V6) só pelo teste autorizado pela interface, na origem autorizada; nada é dado por executado por
    inspeção estática.
 
 ## Segurança e privacidade
@@ -28,5 +35,9 @@
   correlação com gravação, debug, PDD e execução continua exata (mapa bijetivo testado).
 - Nenhum canal Studio ↔ Platform; nenhuma mudança no Agent, no framework ou na extensão; nenhuma publicação.
 - D13 (`FRAMEWORK_CATALOG_MISSING`) continua soberano: a VQ fica `NOT_CHECKED` e nada é dado por validado.
+- Repetição depois de resultado incerto (rodada 2, CQ-04): clique de login e de saída nunca são repetidos, mesmo com
+  "sem efeito" declarado; a decisão fica em `manifest.steps[].retry` e na docstring do método.
+- A proveniência do teste autorizado é conferida pela estrutura (CQ-09): nenhuma folha fora dos conjuntos permitidos e
+  nenhum valor-sentinela; o diagnóstico de falha cita só caminho e regra.
 - A análise AST roda no mesmo intérprete isolado de V4/V5 (`-I -B`, sem rede, sem executar o projeto) e só devolve
   códigos e identificadores gerados.

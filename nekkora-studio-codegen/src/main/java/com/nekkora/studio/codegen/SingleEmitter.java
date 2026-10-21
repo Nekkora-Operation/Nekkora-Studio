@@ -285,6 +285,10 @@ final class SingleEmitter {
         }
         Map<String, String> traceOf = new LinkedHashMap<>();
         code.traces().forEach(t -> traceOf.put(t.stepId(), t.traceId()));
+        Map<String, CodePlan.Retry> retryOf = new LinkedHashMap<>();
+        for (CodePlan.Page p : code.pages()) for (CodePlan.Method mm : p.methods()) for (CodePlan.Op op : mm.ops()) {
+            if (op.retry() != null) retryOf.put(op.step().step().id().value().toString(), op.retry());
+        }
         List<Object> list = new ArrayList<>();
         for (Step s : steps) {
             Map<String, Object> e = new LinkedHashMap<>();
@@ -299,6 +303,8 @@ final class SingleEmitter {
             e.put("output", s.output());
             e.put("effect", s.effect() == null ? null : s.effect().effect());
             e.put("postcondition", s.effect() == null ? null : s.effect().postcondition());
+            // CQ-04: repetição depois de resultado incerto (idempotent=True) só com SAFE; o motivo fica registrado
+            e.put("retry", retryOf.containsKey(s.step().id().value().toString()) ? retryOf.get(s.step().id().value().toString()).name() : null);
             if (cfg.modern()) {
                 e.put("read", s.read() == null ? null : s.read().kind());
                 e.put("optional", s.read() != null && s.read().optional());
@@ -340,6 +346,8 @@ final class SingleEmitter {
         Map<String, Object> start = new LinkedHashMap<>();
         start.put("traceId", CodePlan.START_TRACE);
         start.put("meaning", "abrir o endereço inicial (sem etapa do Studio)");
+        // CQ-08: o id anterior desta mesma abertura, para correlacionar eventos de execuções geradas antes (nada é migrado)
+        start.put("previousTraceIds", List.of(CodePlan.LEGACY_START_TRACE));
         t.put("synthetic", List.of(start));
         return t;
     }

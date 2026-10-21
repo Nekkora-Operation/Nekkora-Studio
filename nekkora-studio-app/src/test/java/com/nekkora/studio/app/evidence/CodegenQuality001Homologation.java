@@ -2359,10 +2359,20 @@ public final class CodegenQuality001Homologation {
         List<String> methods = new ArrayList<>();
         while (defs.find()) methods.add(defs.group(1));
         log("  classes em paginas.py: " + found + " · métodos: " + methods);
-        check("CQ: duas Pages por evidência (busca e ficha separadas pela troca de documento)", pages.contains("class PaginaPesquisa(BasePage)")
-                && pages.contains("class PaginaExtracao(BasePage)"));
+        check("CQ: duas Pages por evidência (busca e ficha separadas pela troca de documento)", pages.contains("class PaginaPesquisa(PaginaBase)")
+                && pages.contains("class PaginaFicha(PaginaBase)"));
+        check("CQ-01: a tela da ficha pelo DONO dos dados no PDD (\"os dados da ficha\"): PaginaFicha, ler_dados_da_ficha, DadosDaFicha",
+                pages.contains("def ler_dados_da_ficha(self) -> DadosDaFicha:") && pages.contains("class DadosDaFicha:") && process.contains("dados_da_ficha"));
         check("CQ: método da busca nomeado pelo passo do PDD (pesquisar_artigo)", pages.contains("def pesquisar_artigo(self, termo_de_busca: str) -> None:"));
-        check("CQ: leituras da ficha num método que devolve dados tipados (dataclass)", pages.contains("@dataclass(frozen=True)") && pages.contains("def ler_dados("));
+        check("CQ: leituras da ficha num método que devolve dados tipados (dataclass)", pages.contains("@dataclass(frozen=True)"));
+        check("CQ-02: API do framework com nomes legíveis (self.acoes / self.elemento); act e k só na PaginaBase",
+                pages.contains("class PaginaBase(BasePage):") && pages.split("self\\.act\\b", -1).length == 2 && pages.split("self\\.k\\(", -1).length == 2);
+        check("CQ-03: docstring da tela diz onde está no PDD e o papel; sem comentário solto da espera",
+                pages.contains("\"\"\"Tela da seção “Pesquisa do artigo” do PDD: pesquisa o artigo pelo nome.\"\"\"") && !pages.contains("# a página está pronta"));
+        check("CQ-07: coluna vazia recusa com o NOME do campo (nunca o conteúdo)", process.contains("raise BusinessRuleRejected(f\"DADO_OBRIGATORIO_VAZIO:{campo}\")"));
+        check("CQ-08: abertura inicial na convenção (processo.abrir_pagina_inicial) e o id anterior declarado no manifesto",
+                process.contains("step_id=\"processo.abrir_pagina_inicial\"") && !process.contains("\"INICIO\"")
+                && Json.write(manifest.get("trace")).contains("\"previousTraceIds\""));
         check("CQ: nenhum UUID nem comentário por etapa no corpo das Pages e do processo", !UUID_RE.matcher(pages + process).find()
                 && !(pages + process).contains("# etapa"));
         check("CQ: sem nomes opacos (a = self.act, etapas_sessao_N, fill, press_key, campo_s, TelaPesquisa)", !java.util.regex.Pattern.compile("\\ba = self\\.act\\b").matcher(pages + process).find()
@@ -2379,7 +2389,7 @@ public final class CodegenQuality001Homologation {
         }
         java.util.regex.Matcher sid = java.util.regex.Pattern.compile("step_id=\"([^\"]+)\"").matcher(pages + process);
         boolean allMapped = true;
-        while (sid.find()) allMapped &= ids.contains(sid.group(1)) || sid.group(1).equals("INICIO");
+        while (sid.find()) allMapped &= ids.contains(sid.group(1)) || sid.group(1).equals(com.nekkora.studio.codegen.CodePlan.START_TRACE);
         check("CQ: step_id legível e mapeado 1:1 para a etapa do Studio (manifesto 1.3.0)", "1.3.0".equals(manifest.get("version")) && allMapped
                 && ids.size() == mappings.size() && stepsMapped.size() == mappings.size() && mappings.size() == ((List<Object>) manifest.get("steps")).size());
         check("CQ: processo com o nome de negócio (BiografiasDaWikipedia)", process.contains("class BiografiasDaWikipedia(RpaProcess)"));
@@ -2394,7 +2404,7 @@ public final class CodegenQuality001Homologation {
         String shown = edt(() -> texts(d));
         captureWindow(d, "CQ-01-revisar-codigo");
         check("CQ: Revisar código mostra arquitetura, mapa step_id → etapa e localizadores", shown.contains("ARQUITETURA") && shown.contains("STEP_ID NO CÓDIGO")
-                && shown.contains("COMO CADA ELEMENTO É LOCALIZADO") && shown.contains("class PaginaExtracao"));
+                && shown.contains("COMO CADA ELEMENTO É LOCALIZADO") && shown.contains("class PaginaFicha"));
         clickButtonWithText(d, "Fechar");
         waitClosed(d);
         copyForHumanReview(gen, "desenvolver");

@@ -88,6 +88,18 @@ class SingleFlowTest {
         assertFalse(all.contains("#senha"), "nenhum seletor escrito à mão fora do registro");
         assertTrue(files.get("processo.py").contains("SingleInputProvider") || files.get("main.py").contains("SingleInputProvider"));
         assertTrue(files.get("manifest.json").contains("\"gate\": \"PDD_READY\""));
+        // CQ-04 (rodada 2): sem efeito de negócio declarado NÃO basta para repetir — entrar e sair mudam o acesso
+        String pages = files.get("paginas.py");
+        assertFalse(call(pages, "acesso.clicar_entrar").contains("idempotent=True"), "o envio das credenciais nunca é repetido: " + pages);
+        assertTrue(call(pages, "acesso.clicar_entrar").contains("postcondition="), "o login continua confirmado pela tela seguinte");
+        assertFalse(call(pages, "consulta.clicar_sair").contains("idempotent=True"), "sair nunca é repetido: " + pages);
+        assertTrue(call(pages, "consulta.clicar_consultar").contains("idempotent=True"), "a consulta (sem efeito) continua repetível");
+        Map<String, String> retry = new java.util.LinkedHashMap<>();
+        for (Object o : (List<?>) com.nekkora.studio.bridge.json.Json.parseObject(files.get("manifest.json")).get("steps")) {
+            Map<?, ?> st = (Map<?, ?>) o;
+            if (st.get("retry") instanceof String) retry.put(String.valueOf(st.get("traceId")), String.valueOf(st.get("retry")));
+        }
+        assertEquals(Map.of("acesso.clicar_entrar", "AUTHENTICATION", "consulta.clicar_consultar", "SAFE", "consulta.clicar_sair", "SESSION_END"), retry);
         // determinismo
         Flow g = develop(ConsultaCase.confirmed());
         assertEquals(f.result().files().keySet(), g.result().files().keySet());
@@ -129,8 +141,9 @@ class SingleFlowTest {
         Path pages = out.resolve("paginas.py");
         String src = java.nio.file.Files.readString(pages);
         src = src.replace("from __future__ import annotations\n", "from __future__ import annotations\n\nimport os\n")
-                .replace("self.act.fill(self.k(\"codigo_do_registro\"), codigo_do_registro,", "self.act.fill(self.k(\"codigo_do_registro\"), \"REG-0001\",")
-                .replace("        return self.act.read_text(", "        x: int = \"texto\"\n        return self.act.read_text(");
+                .replace("            codigo_do_registro,\n            step_id=\"consulta.preencher_codigo_do_registro\",",
+                        "            \"REG-0001\",\n            step_id=\"consulta.preencher_codigo_do_registro\",")
+                .replace("        return self.acoes.read_text(", "        x: int = \"texto\"\n        return self.acoes.read_text(");
         assertTrue(src.contains("\"REG-0001\"") && src.contains("x: int"), "o controle negativo precisa de fato estragar o código:\n" + src);
         java.nio.file.Files.writeString(pages, src);
         PythonChecks.Environment env = PythonChecks.resolve(Optional.of(py), out).orElseThrow();
@@ -142,6 +155,15 @@ class SingleFlowTest {
         assertEquals(PythonChecks.Status.FAIL, by.get("CONTRACT_TESTS").status(), "hash do manifesto e valor escrito no preenchimento");
         assertTrue(by.get("CONTRACT_TESTS").codes().containsKey("MANIFEST_HASH_MISMATCH") && by.get("CONTRACT_TESTS").codes().containsKey("FILL_LITERAL_VALUE"),
                 by.get("CONTRACT_TESTS").codes().toString());
+    }
+
+    /** A chamada ao framework que carrega o {@code step_id} dado (do "self.acoes." anterior até o fim da chamada). */
+    static String call(String pages, String traceId) {
+        int at = pages.indexOf("step_id=\"" + traceId + "\"");
+        assertTrue(at >= 0, "step_id ausente: " + traceId);
+        int from = pages.lastIndexOf("self.acoes.", at);
+        int end = pages.indexOf(")\n", at);
+        return pages.substring(from, end + 1);
     }
 
     static String dump(Path out) {

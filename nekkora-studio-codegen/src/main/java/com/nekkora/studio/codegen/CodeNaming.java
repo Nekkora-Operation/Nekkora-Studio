@@ -30,9 +30,78 @@ public final class CodeNaming {
             "elif", "else", "except", "finally", "for", "from", "global", "if", "import", "in", "is", "lambda", "nonlocal", "not", "or", "pass", "raise", "return",
             "try", "while", "with", "yield", "match", "case", "type", "self", "cls", "print", "input", "id", "list", "dict", "str", "set", "object");
 
-    /** Membros de {@code BasePage}/{@code RpaProcess} que um método gerado nunca pode sobrescrever. */
-    static final Set<String> RESERVED_MEMBERS = Set.of("act", "k", "prefix", "identity", "is_current", "wait_loaded", "name", "process", "init", "end",
-            "recover", "reconcile", "requires_browser", "required_secrets");
+    /**
+     * Membros de {@code BasePage}/{@code RpaProcess} — e de {@code PaginaBase}, a base gerada que dá nomes legíveis à API do
+     * framework ({@code acoes}, {@code elemento}) — que um método gerado nunca pode sobrescrever.
+     */
+    static final Set<String> RESERVED_MEMBERS = Set.of("act", "k", "acoes", "elemento", "prefix", "identity", "is_current", "wait_loaded", "name", "process",
+            "init", "end", "recover", "reconcile", "requires_browser", "required_secrets");
+
+    /** Palavras que anunciam "os dados DE algo" num título do PDD ("Ler os dados da ficha"). */
+    static final Set<String> DATA_WORDS = Set.of("dados", "dado", "informacoes", "informacao", "campos", "detalhes");
+
+    /** Conectivos que ligam os dados ao seu dono ("dados DA ficha", "informações DO cliente"). */
+    static final Set<String> OWNER_CONNECTIVES = Set.of("de", "do", "da", "dos", "das");
+
+    /**
+     * Quem é o DONO dos dados lidos, segundo o PDD: "Ler o endereço e os dados da ficha" → ({@code da}, {@code ficha});
+     * "Conferir as informações do cliente cadastrado" → ({@code do}, {@code cliente cadastrado}). É o substantivo que nomeia
+     * a tela onde os dados estão (a ficha, o cliente) — mais preciso que a ação da seção ("Extração dos dados").
+     *
+     * @param connective o conectivo como está no PDD (concorda com o dono: "dados da ficha", "dados do artigo")
+     * @param phrase     o dono: substantivo + adjetivos seguintes (até 3 palavras), em minúsculas ASCII
+     */
+    public record DataOwner(String connective, String phrase) {}
+
+    public static Optional<DataOwner> dataOwner(String title) {
+        if (title == null || genericTitle(title)) return Optional.empty();
+        List<String> w = words(title);
+        for (int i = 0; i + 2 < w.size(); i++) {
+            if (!DATA_WORDS.contains(w.get(i)) || !OWNER_CONNECTIVES.contains(w.get(i + 1))) continue;
+            List<String> phrase = nounPhrase(w, i + 2);
+            if (!phrase.isEmpty()) return Optional.of(new DataOwner(w.get(i + 1), String.join(" ", phrase)));
+        }
+        return Optional.empty();
+    }
+
+    /** Substantivo + palavras seguintes até um artigo/preposição ou o fim (até 3): "área segura", "ficha biográfica". */
+    static List<String> nounPhrase(List<String> w, int from) {
+        List<String> out = new ArrayList<>();
+        for (int i = from; i < w.size() && out.size() < 3; i++) {
+            String x = w.get(i);
+            if (STOPWORDS.contains(x) || !Character.isLetter(x.charAt(0))) break;
+            if (out.isEmpty() && (GENERIC.contains(x) || DATA_WORDS.contains(x))) return List.of();
+            out.add(x);
+        }
+        return out;
+    }
+
+    /**
+     * Verbo no infinitivo do começo de um título do PDD na 3ª pessoa, para a docstring da tela: "Pesquisar o artigo pelo
+     * nome" → "pesquisa o artigo pelo nome"; "Ler os dados" → "lê os dados". Vazio se o título não começa por verbo.
+     */
+    public static Optional<String> thirdPerson(String title) {
+        if (title == null) return Optional.empty();
+        String t = title.strip();
+        int sp = t.indexOf(' ');
+        String verb = (sp < 0 ? t : t.substring(0, sp)).toLowerCase(Locale.ROOT);
+        String rest = sp < 0 ? "" : t.substring(sp);
+        if (!infinitive(Normalizer.normalize(verb, Normalizer.Form.NFD).replaceAll("\\p{M}", ""))) return Optional.empty();
+        String conj = switch (verb) {
+            case "ler" -> "lê";
+            case "ver" -> "vê";
+            case "ir" -> "vai";
+            case "pôr", "por" -> "põe";
+            case "ter" -> "tem";
+            case "vir" -> "vem";
+            case "fazer" -> "faz";
+            case "trazer" -> "traz";
+            case "dizer" -> "diz";
+            default -> verb.endsWith("uir") || verb.endsWith("air") ? verb.substring(0, verb.length() - 1)
+                    : verb.endsWith("ar") ? verb.substring(0, verb.length() - 1) : verb.substring(0, verb.length() - 2) + "e";
+        };
+        return Optional.of(conj + rest);
+    }
 
     /**
      * Marcadores de plural/gênero colados a uma palavra viram parte dela, não uma palavra nova (D-E2E2-12):
@@ -73,8 +142,12 @@ public final class CodeNaming {
      */
     public static Optional<String> screenNoun(String sectionTitle) {
         if (sectionTitle == null || genericTitle(sectionTitle)) return Optional.empty();
-        for (String w : contentWords(sectionTitle)) {
-            if (!GENERIC.contains(w) && Character.isLetter(w.charAt(0))) return Optional.of(w);
+        List<String> w = words(sectionTitle);
+        for (int i = 0; i < w.size(); i++) {
+            String x = w.get(i);
+            if (STOPWORDS.contains(x) || GENERIC.contains(x) || !Character.isLetter(x.charAt(0))) continue;
+            // a frase nominal inteira: "Área segura" → "area segura" (não só "area")
+            return Optional.of(String.join(" ", nounPhrase(w, i).isEmpty() ? List.of(x) : nounPhrase(w, i)));
         }
         return Optional.empty();
     }

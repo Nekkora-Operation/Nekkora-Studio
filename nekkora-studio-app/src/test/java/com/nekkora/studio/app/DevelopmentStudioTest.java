@@ -301,7 +301,7 @@ class DevelopmentStudioTest {
             if (c.steps().get("consultar").value().toString().equals(x.get("studioStepId"))) sendTrace = String.valueOf(x.get("traceId"));
             if (c.steps().get("resultado").value().toString().equals(x.get("studioStepId"))) resultKey = String.valueOf(x.get("targetKey"));
         }
-        assertTrue(pages.contains("postcondition=lambda: self.act.exists(\"" + resultKey + "\")"), "envio confirmado pela etapa seguinte: " + pages);
+        assertTrue(pages.contains("postcondition=lambda: self.acoes.exists(\"" + resultKey + "\")"), "envio confirmado pela etapa seguinte: " + pages);
         String send = pages.substring(pages.indexOf("step_id=\"" + sendTrace + "\""));
         send = send.substring(0, send.indexOf("step_id=", 1) > 0 ? send.indexOf("step_id=", 1) : send.length());
         assertFalse(send.contains("idempotent=True"), "envio com efeito externo sai UMA vez (não idempotente): " + send);

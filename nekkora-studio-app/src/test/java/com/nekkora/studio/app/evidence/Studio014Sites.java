@@ -430,6 +430,17 @@ public final class Studio014Sites {
         String code = dirText(gen);
         check(key + ": sem senhas no código; ambiente benchmark com a origem autorizada", SENTINELS.stream().noneMatch(code::contains)
                 && code.contains("environment = \"benchmark\""));
+        if (key.equals("the-internet")) {
+            // CODEGEN-QUALITY-001 rodada 2: login e logout nunca repetidos (CQ-04); a leitura do Logout diz que é o texto do link (CQ-05)
+            String pages = Files.readString(gen.resolve("paginas.py"), StandardCharsets.UTF_8);
+            java.util.regex.Matcher clicks = java.util.regex.Pattern.compile("self\\.acoes\\.click\\((?:[^()]|\\([^()]*\\))*\\)").matcher(pages);
+            List<String> calls = new ArrayList<>();
+            while (clicks.find()) calls.add(clicks.group());
+            log("  " + key + " · cliques: " + calls.stream().map(c -> c.replaceAll("\\s+", " ")).toList());
+            check(key + ": CQ-04 login e logout sem idempotent=True (uma vez só)", calls.size() == 2 && calls.stream().noneMatch(c -> c.contains("idempotent=True")));
+            check(key + ": CQ-05 a leitura do Logout é nomeada como texto do controle", pages.contains("def ler_texto_do_") && !pages.contains("resultado_logout"));
+            check(key + ": CQ-01 tela pela frase nominal da seção (PaginaAreaSegura)", pages.contains("class PaginaAreaSegura(PaginaBase)"));
+        }
         closeDevelopment();
         save();
         // execução ÚNICA no site de treinamento (Chromium headless), segredos só por variável de ambiente

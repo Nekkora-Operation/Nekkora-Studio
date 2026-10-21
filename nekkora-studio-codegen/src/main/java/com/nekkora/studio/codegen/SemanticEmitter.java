@@ -13,8 +13,8 @@ import java.util.TreeSet;
 
 /**
  * NEKKORA-CODEGEN-QUALITY-001 — traduz o {@link CodePlan} para {@code paginas.py} e {@code processo.py}. Só texto:
- * nenhuma decisão de negócio nasce aqui. Regras de estilo: chamadas explícitas ao framework ({@code self.act.…}, sem
- * apelidos de uma letra), {@code step_id} = traceId legível (o UUID fica no manifesto), docstring curta por classe e
+ * nenhuma decisão de negócio nasce aqui. Regras de estilo: chamadas explícitas ao framework ({@code self.acoes.…} e
+ * {@code self.elemento(…)}, da base {@code PaginaBase}; sem apelidos de uma letra), {@code step_id} = traceId legível (o UUID fica no manifesto), docstring curta por classe e
  * método, comentário só onde a intenção não é óbvia, nenhum valor de negócio e nenhum seletor no código.
  */
 final class SemanticEmitter {
@@ -28,9 +28,10 @@ final class SemanticEmitter {
         StringBuilder b = new StringBuilder(HEADER);
         List<String> titles = plan.pages().stream().map(p -> p.className()).toList();
         b.append("\"\"\"Telas da automação: ").append(CodePlan.join(titles)).append(".\n\n");
-        b.append("Cada Page localiza os elementos pelas chaves do registro de alvos (selectors.json): ``self.k(\"nome\")`` devolve a\n");
-        b.append("chave completa do alvo e o nekkora_rpa verifica a identidade e a unicidade de cada um. O ``step_id`` de cada ação\n");
-        b.append("liga a ação à etapa do Studio (mapa em manifest.json).\n\"\"\"\n\n");
+        b.append("Cada tela é uma classe com o que o processo faz nela. ``self.acoes`` são as ações do nekkora_rpa (preencher, clicar,\n");
+        b.append("ler) e ``self.elemento(\"nome\")`` aponta um elemento da tela pelo nome dele no registro selectors.json: o framework\n");
+        b.append("confere a identidade e a unicidade do elemento antes de agir. O ``step_id`` de cada ação liga a ação à etapa do\n");
+        b.append("Studio (mapa em manifest.json).\n\"\"\"\n\n");
         b.append("from __future__ import annotations\n\n");
         Set<String> text = new TreeSet<>();
         boolean rejects = false;
@@ -55,13 +56,28 @@ final class SemanticEmitter {
             }
         }
         if (dataclass) b.append("from dataclasses import dataclass\n\n");
+        b.append("from nekkora_rpa import Actions\n");
         if (rejects) b.append("from nekkora_rpa.errors import BusinessRuleRejected\n");
         b.append("from nekkora_rpa.pages import BasePage\n");
         if (secrets) b.append("from nekkora_rpa.security.secrets import SecretProvider\n");
         if (!text.isEmpty()) b.append("from nekkora_rpa.text import ").append(String.join(", ", text)).append('\n');
+        base(b);
         for (CodePlan.Model model : plan.models()) model(b, model);
         for (Page p : plan.pages()) page(b, plan, p);
         return b.toString();
+    }
+
+    /**
+     * Base das telas (CQ-02): nomes legíveis para a API de Pages do framework — {@code acoes} = {@code BasePage.act},
+     * {@code elemento(nome)} = {@code BasePage.k(nome)} — sem mudar o framework (o requisito 0.2.0/0.3.0 continua o mesmo).
+     */
+    private static void base(StringBuilder b) {
+        b.append("\n\nclass PaginaBase(BasePage):\n");
+        b.append("    \"\"\"Base das telas: nomes legíveis para a API de Pages do nekkora_rpa (o comportamento é o do framework).\"\"\"\n\n");
+        b.append("    @property\n    def acoes(self) -> Actions:\n");
+        b.append("        \"\"\"Ações do nekkora_rpa nesta tela (o mesmo objeto que ``BasePage.act``).\"\"\"\n        return self.act\n\n");
+        b.append("    def elemento(self, nome: str) -> str:\n");
+        b.append("        \"\"\"Chave do elemento ``nome`` desta tela no registro de alvos (``BasePage.k``).\"\"\"\n        return self.k(nome)\n");
     }
 
     private static void model(StringBuilder b, CodePlan.Model model) {
@@ -74,15 +90,9 @@ final class SemanticEmitter {
     }
 
     private static void page(StringBuilder b, CodePlan plan, Page p) {
-        b.append("\n\nclass ").append(p.className()).append("(BasePage):\n");
-        b.append("    \"\"\"").append(p.summary());
-        if (!p.details().isEmpty()) {
-            b.append("\n\n");
-            for (String d : p.details()) b.append("    ").append(d).append('\n');
-            b.append("    \"\"\"\n\n");
-        } else {
-            b.append("\"\"\"\n\n");
-        }
+        b.append("\n\nclass ").append(p.className()).append("(PaginaBase):\n");
+        doc(b, "    ", p.summary(), String.join(" ", p.details()));
+        b.append('\n');
         b.append("    prefix = ").append(Py.str(p.prefix())).append('\n');
         b.append("    identity = ").append(Py.str(p.identity())).append('\n');
         for (Method m : p.methods()) method(b, plan, p, m);
@@ -113,8 +123,8 @@ final class SemanticEmitter {
                 && !only.waitFirst() && (only.step().read() == null || only.step().read().expected() == null)) {
             // uma leitura só: devolve direto, sem variável intermediária
             String sid = "step_id=" + Py.str(only.traceId());
-            String expr = !plan.modern() ? "self.act.read_text(" + k(only) + ", " + sid + ")"
-                    : "address".equals(only.step().read().kind()) ? "self.act.current_address(" + sid + ")" : readExpr(only);
+            String expr = !plan.modern() ? "self.acoes.read_text(" + k(only) + ", " + sid + ")"
+                    : "address".equals(only.step().read().kind()) ? "self.acoes.current_address(" + sid + ")" : readExpr(only);
             b.append("        return ").append(expr).append('\n');
             return;
         }
@@ -135,12 +145,10 @@ final class SemanticEmitter {
     }
 
     private static void waitFor(StringBuilder b, Page p, Op op) {
-        comment(b, "        ", "a página está pronta quando " + CodePlan.quoted(op.waitLabel()) + " (leitura obrigatória) aparece: só então a falta "
-                + "de um dado opcional é conclusiva");
         if (op.waitKey().equals(p.identity())) {
             b.append("        self.wait_loaded(step_id=").append(Py.str(op.waitTrace())).append(")\n");
         } else {
-            b.append("        self.act.wait_visible(self.k(").append(Py.str(op.waitKey())).append("), step_id=").append(Py.str(op.waitTrace())).append(")\n");
+            b.append("        self.acoes.wait_visible(self.elemento(").append(Py.str(op.waitKey())).append("), step_id=").append(Py.str(op.waitTrace())).append(")\n");
         }
     }
 
@@ -192,21 +200,21 @@ final class SemanticEmitter {
     }
 
     private static String k(Op op) {
-        return "self.k(" + Py.str(op.key()) + ")";
+        return "self.elemento(" + Py.str(op.key()) + ")";
     }
 
     private static void op(StringBuilder b, CodePlan plan, Op op, Set<String> locals) {
         Step s = op.step();
         String sid = "step_id=" + Py.str(op.traceId());
         switch (op.action()) {
-            case NAVIGATE -> b.append("        self.act.navigate(").append(Py.str(s.navigateUrl())).append(", ").append(sid).append(")\n");
+            case NAVIGATE -> b.append("        self.acoes.navigate(").append(Py.str(s.navigateUrl())).append(", ").append(sid).append(")\n");
             case FILL -> {
                 String value = s.input() != null ? s.input() : "segredos.get(" + Py.str(s.credential()) + ")";
-                b.append("        self.act.fill(").append(k(op)).append(", ").append(value).append(", ").append(sid).append(")\n");
+                b.append("        self.acoes.fill(").append(k(op)).append(", ").append(value).append(", ").append(sid).append(")\n");
             }
             case CLICK -> interaction(b, op, "click", "", locals);
             case PRESS_KEY -> interaction(b, op, "press", ", \"Enter\"", locals);
-            case WAIT_FOR -> b.append("        self.act.wait_visible(").append(k(op)).append(", ").append(sid).append(")\n");
+            case WAIT_FOR -> b.append("        self.acoes.wait_visible(").append(k(op)).append(", ").append(sid).append(")\n");
             case OBSERVE -> read(b, plan, op);
             default -> throw new IllegalStateException("ação não suportada passou pelo pré-voo");
         }
@@ -227,11 +235,11 @@ final class SemanticEmitter {
         String var = s.output();
         String sid = "step_id=" + Py.str(op.traceId());
         if (!plan.modern()) {
-            b.append("        ").append(var).append(" = self.act.read_text(").append(k(op)).append(", ").append(sid).append(")\n");
+            b.append("        ").append(var).append(" = self.acoes.read_text(").append(k(op)).append(", ").append(sid).append(")\n");
             return;
         }
         if ("address".equals(s.read().kind())) {
-            b.append("        ").append(var).append(" = self.act.current_address(").append(sid).append(")\n");
+            b.append("        ").append(var).append(" = self.acoes.current_address(").append(sid).append(")\n");
         } else {
             b.append("        ").append(var).append(" = ").append(readExpr(op)).append('\n');
         }
@@ -251,31 +259,41 @@ final class SemanticEmitter {
     private static void interaction(StringBuilder b, Op op, String verb, String keyArg, Set<String> locals) {
         Step s = op.step();
         String sid = "step_id=" + Py.str(op.traceId());
-        String call = "self.act." + verb + "(" + k(op) + keyArg + ", " + sid;
+        String call = "self.acoes." + verb + "(" + k(op) + keyArg + ", " + sid;
         SingleConfig.Effect e = s.effect();
+        if (op.retry() == CodePlan.Retry.AUTHENTICATION || op.retry() == CodePlan.Retry.SESSION_END) {
+            // sem efeito de negócio, mas muda o acesso: uma vez só (resultado incerto → OUTCOME_UNKNOWN, nunca repetido)
+            boolean otherScreen = s.nextKey() != null && s.nextOnOtherScreen();
+            if (!otherScreen) {
+                b.append("        ").append(call).append(")\n");
+                return;
+            }
+            b.append("        ").append(call).append(", postcondition=lambda: self.acoes.exists(").append(Py.str(s.nextKey())).append("))\n");
+            return;
+        }
         if ("NONE".equals(e.effect())) {
             if (s.press() != null && s.press().navigates()) {
                 // a gravação viu o documento mudar: o avanço é provado pela troca de endereço
                 String before = CodeNaming.unique("endereco_antes", locals, "_");
-                b.append("        ").append(before).append(" = self.act.current_address(").append(sid).append(")\n");
-                b.append("        ").append(call).append(", idempotent=True, postcondition=lambda: self.act.current_address() != ").append(before).append(")\n");
+                b.append("        ").append(before).append(" = self.acoes.current_address(").append(sid).append(")\n");
+                b.append("        ").append(call).append(", idempotent=True, postcondition=lambda: self.acoes.current_address() != ").append(before).append(")\n");
                 return;
             }
             boolean otherScreen = s.nextKey() != null && s.nextOnOtherScreen();
             b.append("        ").append(call).append(", idempotent=True");
-            if (otherScreen) b.append(", postcondition=lambda: self.act.exists(").append(Py.str(s.nextKey())).append(")");
+            if (otherScreen) b.append(", postcondition=lambda: self.acoes.exists(").append(Py.str(s.nextKey())).append(")");
             b.append(")\n");
             return;
         }
         // efeito externo: uma vez só (não idempotente), concluído apenas com a confirmação declarada na especificação
         switch (e.postcondition()) {
-            case "TARGET_HIDDEN" -> b.append("        ").append(call).append(", postcondition=lambda: not self.act.is_visible(").append(k(op)).append("))\n");
+            case "TARGET_HIDDEN" -> b.append("        ").append(call).append(", postcondition=lambda: not self.acoes.is_visible(").append(k(op)).append("))\n");
             case "FIRST_FIELD_REPLACED" -> {
                 String mark = CodeNaming.unique("campo_antes", locals, "_");
-                b.append("        ").append(mark).append(" = self.act.mark(").append(Py.str(s.firstFillKey())).append(", ").append(sid).append(")\n");
-                b.append("        ").append(call).append(", postcondition=lambda: self.act.replaced(").append(mark).append("))\n");
+                b.append("        ").append(mark).append(" = self.acoes.mark(").append(Py.str(s.firstFillKey())).append(", ").append(sid).append(")\n");
+                b.append("        ").append(call).append(", postcondition=lambda: self.acoes.replaced(").append(mark).append("))\n");
             }
-            case "NEXT_TARGET_VISIBLE" -> b.append("        ").append(call).append(", postcondition=lambda: self.act.exists(").append(Py.str(s.nextKey()))
+            case "NEXT_TARGET_VISIBLE" -> b.append("        ").append(call).append(", postcondition=lambda: self.acoes.exists(").append(Py.str(s.nextKey()))
                     .append("))\n");
             default -> throw new IllegalStateException("confirmação desconhecida passou pelo pré-voo");
         }
@@ -285,28 +303,28 @@ final class SemanticEmitter {
         boolean text = helpers.contains(Helper.TEXT) || helpers.contains(Helper.TEXT_IF_PRESENT);
         boolean date = helpers.contains(Helper.DATE) || helpers.contains(Helper.DATE_IF_PRESENT);
         if (text) {
-            b.append("\n    def _texto(self, alvo: str, *, step_id: str) -> str:\n");
-            b.append("        \"\"\"Texto exibido pelo alvo (itens de uma lista unidos por \"; \").\"\"\"\n");
-            b.append("        return join_items(self.act.read_items(self.k(alvo), step_id=step_id))\n");
+            b.append("\n    def _texto(self, elemento: str, *, step_id: str) -> str:\n");
+            b.append("        \"\"\"Texto exibido pelo elemento (itens de uma lista unidos por \"; \").\"\"\"\n");
+            b.append("        return join_items(self.acoes.read_items(self.elemento(elemento), step_id=step_id))\n");
         }
         if (helpers.contains(Helper.TEXT_IF_PRESENT)) {
-            b.append("\n    def _texto_se_existir(self, alvo: str, *, step_id: str) -> str | None:\n");
-            b.append("        \"\"\"Como ``_texto``; ``None`` se o alvo não existe nesta página (ambíguo continua sendo erro).\"\"\"\n");
-            b.append("        if not self.act.exists(self.k(alvo), step_id=step_id):\n            return None\n");
-            b.append("        return self._texto(alvo, step_id=step_id)\n");
+            b.append("\n    def _texto_se_existir(self, elemento: str, *, step_id: str) -> str | None:\n");
+            b.append("        \"\"\"Como ``_texto``; ``None`` se o elemento não existe nesta página (ambíguo continua sendo erro).\"\"\"\n");
+            b.append("        if not self.acoes.exists(self.elemento(elemento), step_id=step_id):\n            return None\n");
+            b.append("        return self._texto(elemento, step_id=step_id)\n");
         }
         if (date) {
-            b.append("\n    def _data(self, alvo: str, *, step_id: str) -> str:\n");
-            b.append("        \"\"\"Data por extenso do alvo como AAAA-MM-DD; incompleta, ambígua ou impossível recusa o item.\"\"\"\n");
-            b.append("        data = parse_long_date(\" \".join(self.act.read_items(self.k(alvo), step_id=step_id)))\n");
+            b.append("\n    def _data(self, elemento: str, *, step_id: str) -> str:\n");
+            b.append("        \"\"\"Data por extenso do elemento como AAAA-MM-DD; incompleta, ambígua ou impossível recusa o item.\"\"\"\n");
+            b.append("        data = parse_long_date(\" \".join(self.acoes.read_items(self.elemento(elemento), step_id=step_id)))\n");
             b.append("        if data is None:\n            raise BusinessRuleRejected(\"DATA_INCOMPLETA_OU_AMBIGUA\", step_id=step_id)\n");
             b.append("        return data\n");
         }
         if (helpers.contains(Helper.DATE_IF_PRESENT)) {
-            b.append("\n    def _data_se_existir(self, alvo: str, *, step_id: str) -> str | None:\n");
-            b.append("        \"\"\"Como ``_data``; ``None`` se o alvo não existe nesta página.\"\"\"\n");
-            b.append("        if not self.act.exists(self.k(alvo), step_id=step_id):\n            return None\n");
-            b.append("        return self._data(alvo, step_id=step_id)\n");
+            b.append("\n    def _data_se_existir(self, elemento: str, *, step_id: str) -> str | None:\n");
+            b.append("        \"\"\"Como ``_data``; ``None`` se o elemento não existe nesta página.\"\"\"\n");
+            b.append("        if not self.acoes.exists(self.elemento(elemento), step_id=step_id):\n            return None\n");
+            b.append("        return self._data(elemento, step_id=step_id)\n");
         }
     }
 
@@ -400,7 +418,8 @@ final class SemanticEmitter {
         for (CodePlan.Column c : pr.columns()) {
             if (c.fallback() != null) rules.add("    - " + c.header() + ": se faltar na página, vale " + CodePlan.quoted(c.fallbackLabel()) + ".\n");
         }
-        b.append("    \"\"\"Uma linha da planilha pela regra do PDD; coluna que continuar vazia recusa o item (nada é inventado).");
+        b.append("    \"\"\"Uma linha da planilha pela regra do PDD; coluna que continuar vazia recusa o item com o nome do campo (o\n");
+        b.append("    conteúdo nunca vai ao motivo) e nada é inventado.");
         if (rules.isEmpty()) {
             b.append("\"\"\"\n");
         } else {
@@ -413,6 +432,7 @@ final class SemanticEmitter {
             b.append("        ").append(Py.str(c.field())).append(": ").append(c.primary()).append(c.fallback() == null ? "" : " or " + c.fallback()).append(",\n");
         }
         b.append("    }\n");
-        b.append("    if not all(linha.values()):\n        raise BusinessRuleRejected(\"DADO_OBRIGATORIO_VAZIO\")\n    return linha\n");
+        b.append("    for campo, valor in linha.items():\n        if not valor:\n");
+        b.append("            raise BusinessRuleRejected(f\"DADO_OBRIGATORIO_VAZIO:{campo}\")\n    return linha\n");
     }
 }

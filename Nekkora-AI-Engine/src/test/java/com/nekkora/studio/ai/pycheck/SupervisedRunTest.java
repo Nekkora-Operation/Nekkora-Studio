@@ -84,10 +84,15 @@ class SupervisedRunTest {
             Map<String, Object> doc = Json.parseObject(prov);
             List<Object> txs = (List<Object>) doc.get("transactions");
             assertEquals(3, txs.size());
-            // o id da transação é hex aleatório (sal por execução) e pode conter "1867" por acaso: fora da busca por valores
-            String all = prov.replaceAll("\"tx-[0-9a-f]{20}\"", "\"tx-ID\"");
-            assertTrue(all.contains("\"ALTERNATIVA\"") && all.contains("\"PRINCIPAL\""), prov);
-            assertFalse(all.contains("Georgina") || all.contains("1867") || all.contains("ficha-"), "a proveniência não leva valores (nem a chave):\n" + prov);
+            assertTrue(prov.contains("\"ALTERNATIVA\"") && prov.contains("\"PRINCIPAL\""), prov);
+            // CQ-09: sem valores, provado folha a folha pela ESTRUTURA (o id da transação é conferido pelo formato e pelo
+            // estado da planilha, não excluído); valores reais das fichas como sentinelas; diagnóstico sem conteúdo
+            Map<String, Object> state = Json.parseObject(Files.readString(tmp.resolve("exec").resolve("execucao").resolve("fichas.xlsx-output.json"),
+                    StandardCharsets.UTF_8));
+            java.util.Set<String> committed = new java.util.HashSet<>();
+            for (Object id : (List<?>) state.get("committed_transactions")) committed.add(String.valueOf(id));
+            List<String> v = ProvenanceShape.violations(prov, s.project(), s.cfg(), committed, List.of("Georgina", "Fábio Ficticio", "1867", "ficha-"));
+            assertEquals(List.of(), v, "a proveniência não leva valores (nem a chave)");
             // linhas da planilha na ordem da lista: 2 = Ana, 3 = Fábio, 4 = Gina (linha 1 = cabeçalho)
             // Fábio não tem "Nome completo": a coluna veio do título (alternativa); Gina não tem "Ocupação": veio de "Campo(s)"
             assertEquals("ALTERNATIVA", source(txs, 3, "Nome completo"));

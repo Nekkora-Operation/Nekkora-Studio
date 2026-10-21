@@ -102,13 +102,13 @@ public class ListFlowTest {
         assertTrue(f.result().ok(), f.result().blockers().toString());
         Map<String, String> files = f.result().files();
         String code = files.get("paginas.py") + files.get("processo.py") + files.get("main.py");
-        assertTrue(code.contains("self.act.press(") && code.contains("self.act.current_address() != endereco_antes"), "Enter confirmado pela troca de endereço");
+        assertTrue(code.contains("self.acoes.press(") && code.contains("self.acoes.current_address() != endereco_antes"), "Enter confirmado pela troca de endereço");
         assertTrue(code.contains("parse_long_date(") && code.contains("join_items(") && code.contains("XlsxResultSink("));
-        assertTrue(code.contains("raise BusinessRuleRejected(\"ENDERECO_DIFERENTE_DO_ESPERADO\", step_id=\"extracao.ler_endereco_da_pagina\")")
-                && code.contains("raise BusinessRuleRejected(\"DADO_OBRIGATORIO_VAZIO\")") && code.contains("\"DATA_INCOMPLETA_OU_AMBIGUA\""), code);
+        assertTrue(code.contains("raise BusinessRuleRejected(\"ENDERECO_DIFERENTE_DO_ESPERADO\", step_id=\"ficha.ler_endereco_da_pagina\")")
+                && code.contains("raise BusinessRuleRejected(f\"DADO_OBRIGATORIO_VAZIO:{campo}\")") && code.contains("\"DATA_INCOMPLETA_OU_AMBIGUA\""), code);
         assertFalse(code.contains("nth") || code.contains("first()") || code.contains("Ana") || code.contains("wikipedia"), "sem posição, sem dado, sem site");
         // CODEGEN-QUALITY-001: nomes do PDD, step_id legível, nenhum UUID nem comentário por etapa no código
-        assertTrue(code.contains("class PaginaPesquisa(BasePage)") && code.contains("class PaginaExtracao(BasePage)") && code.contains("def pesquisar_pessoa("), code);
+        assertTrue(code.contains("class PaginaPesquisa(PaginaBase)") && code.contains("class PaginaFicha(PaginaBase)") && code.contains("def pesquisar_pessoa("), code);
         assertFalse(code.matches("(?s).*[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-.*") || code.contains("# etapa ") || code.contains(" a = self.act"), code);
         assertTrue(files.get("selectors.json").contains("tr[th[normalize-space(.)=\\\"Nascimento\\\"]]"), files.get("selectors.json"));
         assertTrue(files.get("requirements.txt").contains("nekkora-rpa[excel]==0.3.0"));

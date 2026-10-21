@@ -69,8 +69,9 @@ def run(root: Path) -> list[dict[str, Any]]:
         for c in calls(cls):
             f = c.func
             name = f.attr if isinstance(f, ast.Attribute) else f.id if isinstance(f, ast.Name) else ""
-            # chave relativa: self.k("x") ou um leitor da Page (1.3.0: self._texto("x", ...), self._data("x", ...))
-            relative = name == "k" or (name.startswith("_") and name.lstrip("_").split("_")[0] in ("texto", "data"))
+            # chave relativa: self.k("x"), self.elemento("x") (PaginaBase, rodada 2) ou um leitor da Page (1.3.0:
+            # self._texto("x", ...), self._data("x", ...))
+            relative = name in ("k", "elemento") or (name.startswith("_") and name.lstrip("_").split("_")[0] in ("texto", "data"))
             if relative and c.args and literal(c.args[0]) is not None and prefix:
                 used.add(f"{prefix}.{literal(c.args[0])}")
             if name in ("exists", "mark", "is_visible") and c.args and literal(c.args[0]) is not None:

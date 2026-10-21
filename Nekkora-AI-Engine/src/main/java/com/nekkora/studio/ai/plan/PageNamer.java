@@ -30,8 +30,9 @@ import java.util.Set;
  *       (mesmo com o mesmo modelo de endereço — a busca e a ficha da Wikipédia); voltar a uma tela já vista (não
  *       vizinha) reaproveita a Page;</li>
  *   <li>método novo a cada sessão ou bloco do PDD dentro da tela (uma Page tem seções; nenhuma classe por clique);</li>
- *   <li>Page: título REVISADO da seção do PDD onde a tela começa (1ª palavra de conteúdo), senão o nome seguro da sessão,
- *       senão provisório com apontamento {@code NOME_SEM_EVIDENCIA};</li>
+ *   <li>Page: numa tela onde dados são lidos, o DONO dos dados dito num título revisado do PDD ("os dados da ficha" →
+ *       {@code PaginaFicha}, dataclass {@code DadosDaFicha}); senão a frase nominal do título da seção ("Área segura" →
+ *       {@code PaginaAreaSegura}), senão o nome seguro da sessão, senão provisório com {@code NOME_SEM_EVIDENCIA};</li>
  *   <li>método: título de bloco que começa por verbo no infinitivo (verbo + objeto), senão o que as ações fazem.</li>
  * </ul>
  * Títulos do PDD já passaram pela política de texto e foram revisados por um ator do Studio; nada é inventado.
@@ -90,6 +91,7 @@ final class PageNamer {
         Set<String> prefixes = new HashSet<>();
         Map<String, String> prefixOfPage = new LinkedHashMap<>();
         Map<String, CodeNames.PageInfo> pageInfo = new LinkedHashMap<>();
+        Map<String, CodeNaming.DataOwner> ownerOfPage = new LinkedHashMap<>();
         int n = 0;
         for (String screen : new java.util.LinkedHashSet<>(screenOf)) {
             n++;
@@ -103,8 +105,27 @@ final class PageNamer {
                 }
             }
             String title = sectionTitle.getOrDefault(session, "");
-            Optional<String> noun = CodeNaming.screenNoun(title);
-            CodeNames.Source source = CodeNames.Source.PDD_SECTION_TITLE;
+            // tela onde dados são LIDOS: o dono dos dados dito no PDD ("os dados da ficha") é o que ela é — antes da ação da
+            // seção ("Extração dos dados"); numa tela que só age (busca, login) o dono não a nomeia
+            Optional<CodeNaming.DataOwner> owner = Optional.empty();
+            boolean readsData = false;
+            List<String> titles = new ArrayList<>();
+            for (int i = 0; i < steps.size(); i++) {
+                if (!screenOf.get(i).equals(screen)) continue;
+                ProjectContext.Step s = steps.get(i);
+                if (s.action() == ActionType.OBSERVE && s.hasTarget()) readsData = true;
+                String bt = s.blockId().isEmpty() ? "" : blockTitle.getOrDefault(s.blockId(), "");
+                if (!bt.isEmpty() && !titles.contains(bt)) titles.add(bt);
+            }
+            titles.add(title);
+            if (readsData) {
+                for (String t : titles) {
+                    owner = CodeNaming.dataOwner(t);
+                    if (owner.isPresent()) break;
+                }
+            }
+            Optional<String> noun = owner.isPresent() ? owner.map(CodeNaming.DataOwner::phrase) : CodeNaming.screenNoun(title);
+            CodeNames.Source source = owner.isPresent() ? CodeNames.Source.PDD_DATA_OWNER : CodeNames.Source.PDD_SECTION_TITLE;
             if (noun.isEmpty()) {
                 String safe = ctx.sessionNames().size() >= session ? ctx.sessionNames().get(session - 1) : "";
                 noun = CodeNaming.screenNoun(safe);
@@ -125,7 +146,9 @@ final class PageNamer {
             String prefix = CodeNaming.unique(CodeNaming.snake(base, 40), prefixes, "_");
             pageOfScreen.put(screen, cls);
             prefixOfPage.put(cls, prefix);
-            pageInfo.put(cls, new CodeNames.PageInfo(title, List.of(), source, boundaryOf.getOrDefault(screen, "")));
+            owner.ifPresent(o -> ownerOfPage.put(cls, o));
+            pageInfo.put(cls, new CodeNames.PageInfo(title, List.of(), source, boundaryOf.getOrDefault(screen, ""),
+                    owner.map(o -> "Dados" + CodeNaming.pascal(o.connective() + " " + o.phrase())).orElse("")));
         }
         // 3) métodos: tela × sessão × bloco, em sequência
         List<Chunk> chunks = new ArrayList<>();
@@ -153,6 +176,8 @@ final class PageNamer {
             boolean readsOnly = c.steps().stream().allMatch(x -> x.action() == ActionType.OBSERVE);
             Optional<String> fromTitle = readsOnly ? Optional.empty() : CodeNaming.methodFromTitle(title);
             String base = fromTitle.orElseGet(() -> fromActions(a, c.steps()));
+            CodeNaming.DataOwner owner = ownerOfPage.get(c.page());
+            if (base.equals("ler_dados") && owner != null) base = CodeNaming.snake("ler dados " + owner.connective() + " " + owner.phrase(), 60);
             Set<String> taken = methodsOf.computeIfAbsent(c.page(), k -> new HashSet<>());
             String method = CodeNaming.unique(CodeNaming.safe(base), taken, "_");
             methodInfo.put(c.page() + "." + method, new CodeNames.MethodInfo(title, fromTitle.isPresent() ? CodeNames.Source.PDD_BLOCK_TITLE
@@ -160,7 +185,8 @@ final class PageNamer {
             groups.add(new SingleConfig.Group(c.page(), prefixOfPage.get(c.page()), method, c.steps().stream().map(x -> x.stepId().value().toString()).toList()));
         }
         Map<String, CodeNames.PageInfo> pages = new LinkedHashMap<>();
-        pageInfo.forEach((cls, info) -> pages.put(cls, new CodeNames.PageInfo(info.title(), blockTitlesOf.getOrDefault(cls, List.of()), info.source(), info.boundary())));
+        pageInfo.forEach((cls, info) -> pages.put(cls, new CodeNames.PageInfo(info.title(), blockTitlesOf.getOrDefault(cls, List.of()), info.source(), info.boundary(),
+                info.model())));
         return new Result(groups, new CodeNames(pages, methodInfo, Map.of(), Set.of()), issues);
     }
 

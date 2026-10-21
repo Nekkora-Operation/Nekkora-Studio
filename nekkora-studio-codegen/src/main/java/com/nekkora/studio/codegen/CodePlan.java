@@ -20,11 +20,24 @@ import java.util.Set;
  * @param pages   Pages na ordem em que aparecem
  * @param models  dados lidos por um método (dataclass), só quando um método lê dois ou mais dados
  * @param process o processo (classe, chamadas, linha da planilha)
- * @param traces  mapa traceId ↔ StepId (bijetivo; o {@code INICIO} sintético fica fora)
+ * @param traces  mapa traceId ↔ StepId (bijetivo; a abertura sintética do endereço inicial fica fora)
  */
 public record CodePlan(boolean modern, boolean list, List<Page> pages, List<Model> models, Process process, List<Trace> traces) {
 
-    public static final String START_TRACE = "INICIO";
+    /**
+     * Abertura do endereço inicial (sem etapa do Studio). Rodada 2 da revisão humana (CQ-08): segue a convenção
+     * {@code <área>.<ação>_<objeto>}; o manifesto declara o id anterior ({@link #LEGACY_START_TRACE}) para correlacionar
+     * eventos de execuções antigas — nenhum dos dois é reaproveitado por uma etapa.
+     */
+    public static final String START_TRACE = "processo.abrir_pagina_inicial";
+
+    public static final String LEGACY_START_TRACE = "INICIO";
+
+    /**
+     * Repetição segura de um clique/Enter depois de resultado incerto ({@code idempotent=True} no framework). Efeito
+     * nenhum declarado NÃO basta: autenticação e fim de sessão mudam o estado do acesso (CQ-04).
+     */
+    public enum Retry { SAFE, AUTHENTICATION, SESSION_END, EXTERNAL_EFFECT }
 
     public record Page(String className, String prefix, String identity, String summary, List<String> details, List<Method> methods,
                        Set<Helper> helpers, CodeNames.Source nameSource, String boundary) {}
@@ -54,7 +67,7 @@ public record CodePlan(boolean modern, boolean list, List<Page> pages, List<Mode
      * Uma operação (uma etapa do modelo). {@code key} é relativa ao prefixo da Page; {@code waitFirst} = antes dela, a
      * espera de "página pronta" pelo alvo {@code waitKey} (traceId {@code waitTrace}).
      */
-    public record Op(Step step, String traceId, String key, boolean waitFirst, String waitKey, String waitTrace, String waitLabel) {
+    public record Op(Step step, String traceId, String key, boolean waitFirst, String waitKey, String waitTrace, String waitLabel, Retry retry) {
         public ActionType action() {
             return step.step().actionType();
         }
@@ -84,6 +97,8 @@ public record CodePlan(boolean modern, boolean list, List<Page> pages, List<Mode
         for (SingleConfig.Group g : cfg.groups()) byPage.computeIfAbsent(g.page(), k -> new ArrayList<>()).add(g);
         Set<String> modelNames = new HashSet<>();
         Map<String, Method> methodOf = new LinkedHashMap<>(); // grupo → método
+        Map<String, String> labelOfKey = new LinkedHashMap<>();
+        for (Step s : steps) if (s.key() != null) labelOfKey.putIfAbsent(s.key(), s.label());
         for (Map.Entry<String, List<SingleConfig.Group>> e : byPage.entrySet()) {
             String cls = e.getKey();
             CodeNames.PageInfo info = names.page(cls);
@@ -94,15 +109,17 @@ public record CodePlan(boolean modern, boolean list, List<Page> pages, List<Mode
             Set<Helper> helpers = new LinkedHashSet<>();
             for (SingleConfig.Group g : e.getValue()) {
                 List<Step> mine = steps.stream().filter(s -> s.group().equals(g)).toList();
-                Method m = method(cfg, g, mine, traceOf, identity, names, modelNames, models, cls);
+                Method m = method(cfg, g, mine, traceOf, identity, names, modelNames, models, cls, labelOfKey);
                 for (Op op : m.ops()) if (modern && op.action() == ActionType.OBSERVE && op.key() != null) helpers.add(helper(op));
                 methods.add(m);
                 methodOf.put(g.page() + "." + g.method(), m);
             }
-            String summary = info.title().isEmpty() ? "Tela do processo." : sentence(info.title());
-            pages.add(new Page(cls, PythonGenerator.SYSTEM + "." + e.getValue().get(0).prefix(), identity, summary, info.blockTitles().stream().map(CodePlan::sentence)
-                    .filter(x -> !x.equals(summary)).distinct().toList(), methods, helpers, info.title().isEmpty() ? CodeNames.Source.PROVISIONAL : info.source(),
-                    info.boundary()));
+            // a docstring da tela diz ONDE ela está no PDD e o PAPEL dela — sem repetir o título (CQ-03)
+            String where = info.title().isEmpty() ? "Tela do processo" : "Tela da seção “" + info.title().strip() + "” do PDD";
+            String role = role(info, methods);
+            String summary = role.isEmpty() ? where + "." : where + ": " + role + ".";
+            pages.add(new Page(cls, PythonGenerator.SYSTEM + "." + e.getValue().get(0).prefix(), identity, summary, List.of(), methods, helpers,
+                    info.title().isEmpty() ? CodeNames.Source.PROVISIONAL : info.source(), info.boundary()));
         }
         Process process = process(cfg, pages, models, processClass, names, steps);
         List<Trace> traces = new ArrayList<>();
@@ -114,7 +131,7 @@ public record CodePlan(boolean modern, boolean list, List<Page> pages, List<Mode
     }
 
     private static Method method(SingleConfig cfg, SingleConfig.Group g, List<Step> mine, Map<String, String> traceOf, String identity, CodeNames names,
-                                 Set<String> modelNames, List<Model> models, String cls) {
+                                 Set<String> modelNames, List<Model> models, String cls, Map<String, String> labelOfKey) {
         List<Param> params = new ArrayList<>();
         Set<String> seen = new LinkedHashSet<>();
         for (Step s : mine) {
@@ -132,12 +149,14 @@ public record CodePlan(boolean modern, boolean list, List<Page> pages, List<Mode
         }
         List<Op> ops = new ArrayList<>();
         boolean waited = false;
+        boolean credentials = false;
         for (Step s : mine) {
             boolean waitFirst = cfg.modern() && optional && !waited && anchor != null && s.read() != null && s.read().optional();
             if (waitFirst) waited = true;
+            if (s.credential() != null) credentials = true;
             String tid = traceOf.get(s.step().id().value().toString());
             ops.add(new Op(s, tid, s.key() == null ? null : rel(s.key()), waitFirst, waitFirst ? rel(anchor.key()) : null,
-                    waitFirst ? traceOf.get(anchor.step().id().value().toString()) : null, waitFirst ? anchor.label() : null));
+                    waitFirst ? traceOf.get(anchor.step().id().value().toString()) : null, waitFirst ? anchor.label() : null, retry(s, credentials)));
         }
         List<Field> fields = new ArrayList<>();
         for (Step s : mine) if (s.output() != null) fields.add(new Field(s.output(), cfg.modern() && s.read() != null && s.read().optional()));
@@ -147,18 +166,114 @@ public record CodePlan(boolean modern, boolean list, List<Page> pages, List<Mode
         } else if (fields.size() == 1) {
             result = new Result(Result.Kind.VALUE, fields.get(0).name(), fields.get(0).optional() ? "str | None" : "str", null);
         } else {
-            String base = "Dados" + CodeNaming.pascal(g.prefix());
+            String preferred = names.page(cls).model();
+            String base = preferred.isEmpty() ? "Dados" + CodeNaming.pascal(g.prefix()) : preferred;
             String name = CodeNaming.unique(base, modelNames, "");
             models.add(new Model(name, cls, g.method(), List.copyOf(fields)));
             result = new Result(Result.Kind.MODEL, null, name, name);
         }
         CodeNames.MethodInfo info = names.method(g.page(), g.method());
-        String described = describe(mine, cfg.modern());
-        // nome pelo passo do PDD → o resumo é o passo e o detalhe, o que o código faz; nome pelas ações → só o que faz (o
-        // título do bloco pode descrever mais do que este método)
-        boolean fromStep = info.source() == CodeNames.Source.PDD_BLOCK_TITLE && !info.title().isEmpty();
-        String summary = fromStep ? sentence(info.title()) : described;
-        return new Method(g.page(), g.method(), List.copyOf(params), result, summary, fromStep ? described : "", List.copyOf(ops), info.source());
+        // a docstring diz o que o método faz com as entradas, o que devolve e as condições que importam — o passo do PDD
+        // fica na docstring da tela e no manifesto, não repetido aqui (CQ-03)
+        return new Method(g.page(), g.method(), List.copyOf(params), result, describe(mine, cfg.modern()), conditions(ops, result, cfg.modern(), labelOfKey),
+                List.copyOf(ops), info.source());
+    }
+
+    /** Repetição segura de um clique/Enter: só sem efeito declarado e fora de autenticação e de fim de sessão. */
+    static Retry retry(Step s, boolean credentialsBefore) {
+        ActionType t = s.step().actionType();
+        if (t != ActionType.CLICK && t != ActionType.PRESS_KEY) return null;
+        if (!"NONE".equals(s.effect().effect())) return Retry.EXTERNAL_EFFECT;
+        if (credentialsBefore) return Retry.AUTHENTICATION;
+        if (endsSession(s.label())) return Retry.SESSION_END;
+        return Retry.SAFE;
+    }
+
+    /** Rótulo de quem encerra a sessão ("Sair", "Logout", "Sign out", "Encerrar sessão", "Desconectar"). */
+    static boolean endsSession(String label) {
+        String n = String.join(" ", CodeNaming.words(label));
+        n = n.replace("log out", "logout").replace("sign out", "signout").replace("log off", "logoff");
+        for (String w : n.split(" ")) {
+            if (Set.of("sair", "logout", "signout", "logoff", "desconectar").contains(w)) return true;
+        }
+        return n.contains("encerrar sessao") || n.contains("terminar sessao");
+    }
+
+    /** Papel da tela: os passos do PDD na 3ª pessoa ("pesquisa o artigo pelo nome"); sem eles, o que os métodos fazem. */
+    static String role(CodeNames.PageInfo info, List<Method> methods) {
+        List<String> parts = new ArrayList<>();
+        for (String t : info.blockTitles()) {
+            CodeNaming.thirdPerson(t).map(x -> x.replaceAll("[.!?]+$", "")).filter(x -> !parts.contains(x)).ifPresent(parts::add);
+        }
+        // sem passo do PDD com verbo: com UM método a docstring dele já diz o papel (não repetir); com vários, o resumo deles
+        if (parts.isEmpty() && methods.size() > 1) {
+            for (Method m : methods) {
+                String s = m.summary().replaceAll("[.!?]+$", "");
+                if (!s.isEmpty()) parts.add(Character.toLowerCase(s.charAt(0)) + s.substring(1));
+            }
+        }
+        return String.join("; ", parts);
+    }
+
+    /**
+     * O que vale saber além do resumo: o que o método devolve, quando termina, o que recusa o item e se a ação pode ser
+     * repetida depois de um resultado incerto. Frases curtas, uma por condição.
+     */
+    static String conditions(List<Op> ops, Result result, boolean modern, Map<String, String> labelOfKey) {
+        List<String> out = new ArrayList<>();
+        switch (result.kind()) {
+            case MODEL -> out.add("Devolve ``" + result.model() + "``.");
+            case VALUE -> {
+                boolean address = ops.stream().anyMatch(o -> o.step().read() != null && "address".equals(o.step().read().kind()));
+                out.add(address ? "Devolve o endereço lido." : "Devolve o texto lido.");
+            }
+            case NONE -> {
+            }
+        }
+        List<String> optional = new ArrayList<>();
+        boolean dates = false;
+        for (Op op : ops) {
+            Step s = op.step();
+            if (op.waitFirst()) {
+                out.add("Antes, espera " + quoted(op.waitLabel()) + " (leitura obrigatória): só com a página pronta a falta de um dado opcional é conclusiva.");
+            }
+            if (modern && s.read() != null && s.read().optional()) optional.add(readName(s));
+            if (modern && s.read() != null && "date".equals(s.read().kind())) dates = true;
+            if (s.read() != null && s.read().expected() != null) {
+                out.add("address".equals(s.read().kind()) ? "Endereço diferente recusa o item (``ENDERECO_DIFERENTE_DO_ESPERADO``)."
+                        : "Valor diferente recusa o item (``VALOR_DIFERENTE_DO_ESPERADO``).");
+            }
+            if (op.retry() == null) continue;
+            String next = s.nextKey() != null && s.nextOnOtherScreen() ? quoted(labelOfKey.get(s.nextKey())) : null;
+            switch (op.retry()) {
+                case SAFE -> {
+                    if (s.press() != null && s.press().navigates()) out.add("Termina quando o endereço da página muda.");
+                    else if (next != null) out.add("Termina quando " + next + " aparece.");
+                    out.add("Sem efeito declarado no sistema: se o resultado ficar incerto, " + (s.press() != null ? "o envio" : "o clique") + " pode ser repetido.");
+                }
+                case AUTHENTICATION -> {
+                    if (next != null) out.add("Termina quando " + next + " aparece.");
+                    out.add("Envia as credenciais uma vez só: se o resultado ficar incerto, o item para (``OUTCOME_UNKNOWN``) em vez de tentar entrar "
+                            + "de novo.");
+                }
+                case SESSION_END -> out.add("Encerra a sessão uma vez só: se o resultado ficar incerto, não é repetido (``OUTCOME_UNKNOWN``).");
+                case EXTERNAL_EFFECT -> out.add("Muda algo no sistema: é feito uma vez só e concluído apenas com a confirmação declarada na especificação.");
+            }
+        }
+        if (!optional.isEmpty()) {
+            String who = join(optional);
+            out.add(Character.toUpperCase(who.charAt(0)) + who.substring(1) + (optional.size() == 1 ? " pode" : " podem")
+                    + " faltar nesta página (``None``; a fonte alternativa está no PDD).");
+        }
+        if (dates) out.add("Data por extenso vira AAAA-MM-DD; incompleta ou ambígua recusa o item (``DATA_INCOMPLETA_OU_AMBIGUA``).");
+        return String.join(" ", out);
+    }
+
+    /** Como a leitura aparece no texto: "o título", "o endereço da página" ou o rótulo da tela entre aspas. */
+    static String readName(Step s) {
+        if (s.read() != null && "address".equals(s.read().kind())) return "o endereço da página";
+        if ("título".equals(s.label())) return "o título";
+        return quoted(s.label());
     }
 
     private static Process process(SingleConfig cfg, List<Page> pages, List<Model> models, String processClass, CodeNames names, List<Step> steps) {
@@ -190,7 +305,7 @@ public record CodePlan(boolean modern, boolean list, List<Page> pages, List<Mode
                     resultTypes.put(rv, m.result().type());
                 }
                 case MODEL -> {
-                    rv = CodeNaming.unique("dados", locals, "_");
+                    rv = CodeNaming.unique(m.result().model().replaceAll("([a-z0-9])([A-Z])", "$1_$2").toLowerCase(java.util.Locale.ROOT), locals, "_");
                     Model model = models.stream().filter(x -> x.name().equals(m.result().model())).findFirst().orElseThrow();
                     for (Field f : model.fields()) {
                         refOf.put(f.name(), rv + "." + f.name());
@@ -245,6 +360,7 @@ public record CodePlan(boolean modern, boolean list, List<Page> pages, List<Mode
         Map<String, String> out = new LinkedHashMap<>();
         Set<String> taken = new HashSet<>(names.retired());
         taken.add(START_TRACE);
+        taken.add(LEGACY_START_TRACE);
         for (Step s : steps) {
             String id = s.step().id().value().toString();
             String pinned = names.traces().get(id);
@@ -279,13 +395,13 @@ public record CodePlan(boolean modern, boolean list, List<Page> pages, List<Mode
         };
     }
 
-    /** Descrição derivada das AÇÕES (quando o PDD não deu um título de passo): só o que o código faz, sem inventar. */
+    /** O que o método FAZ, na ordem das etapas, com as entradas que usa: só o que o código faz, sem inventar. */
     static String describe(List<Step> mine, boolean modern) {
-        // frases na ORDEM das etapas; preenchimentos e leituras seguidos viram uma frase só
+        // preenchimentos e leituras seguidos viram uma frase só
         List<String> out = new ArrayList<>();
         List<String> run = new ArrayList<>();
         String runVerb = null;
-        List<String> optional = new ArrayList<>();
+        boolean runSecret = false;
         for (Step s : mine) {
             String verb = null;
             String what = null;
@@ -294,16 +410,15 @@ public record CodePlan(boolean modern, boolean list, List<Page> pages, List<Mode
                 case NAVIGATE -> phrase = "abre a página inicial";
                 case FILL -> {
                     verb = "preenche";
-                    what = quoted(s.label());
+                    what = quoted(s.label()) + (s.input() != null ? " com ``" + s.input() + "``" : "");
                 }
-                case CLICK -> phrase = "aciona " + quoted(s.label());
-                case PRESS_KEY -> phrase = "confirma com Enter";
+                case CLICK -> phrase = "clica em " + quoted(s.label());
+                case PRESS_KEY -> phrase = "envia com Enter";
                 case WAIT_FOR -> phrase = "espera " + quoted(s.label());
                 case OBSERVE -> {
-                    what = s.read() != null && "address".equals(s.read().kind()) || "título".equals(s.label()) ? s.label() : quoted(s.label());
-                    if (modern && s.read() != null && s.read().optional()) optional.add(what);
+                    what = readName(s);
                     if (s.read() != null && s.read().expected() != null) {
-                        phrase = "lê " + what + " e o confere com ``" + s.read().expected() + "`` (diferente recusa o item)";
+                        phrase = "lê " + what + " e o compara com ``" + s.read().expected() + "``";
                         what = null;
                     } else {
                         verb = "lê";
@@ -314,20 +429,20 @@ public record CodePlan(boolean modern, boolean list, List<Page> pages, List<Mode
             }
             if (verb != null && verb.equals(runVerb)) {
                 run.add(what);
+                runSecret |= s.credential() != null;
                 continue;
             }
-            if (runVerb != null) out.add(runVerb + " " + join(run));
+            if (runVerb != null) out.add(runVerb + " " + join(run) + (runSecret ? " com as credenciais do provedor de segredos" : ""));
             run = new ArrayList<>();
             runVerb = verb;
+            runSecret = s.credential() != null;
             if (verb != null) run.add(what);
             if (phrase != null) out.add(phrase);
         }
-        if (runVerb != null) out.add(runVerb + " " + join(run));
-        String text = out.isEmpty() ? "Etapas desta tela" : String.join("; ", out);
-        text = Character.toUpperCase(text.charAt(0)) + text.substring(1) + ".";
-        if (!optional.isEmpty()) text += " " + Character.toUpperCase(join(optional).charAt(0)) + join(optional).substring(1)
-                + (optional.size() == 1 ? " pode" : " podem") + " faltar nesta página (fonte alternativa declarada no PDD).";
-        return text;
+        if (runVerb != null) out.add(runVerb + " " + join(run) + (runSecret ? " com as credenciais do provedor de segredos" : ""));
+        // frases que já têm "e" dentro ficam separadas por ";" (senão "compara com X e lê Y" se confunde)
+        String text = out.isEmpty() ? "Etapas desta tela" : out.stream().anyMatch(x -> x.contains(" e ")) ? String.join("; ", out) : join(out);
+        return Character.toUpperCase(text.charAt(0)) + text.substring(1) + ".";
     }
 
     /** Rótulo de interface entre aspas (o texto exato da tela); vazio vira "o alvo". */
