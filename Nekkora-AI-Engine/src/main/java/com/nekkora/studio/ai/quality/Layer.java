@@ -8,6 +8,8 @@ public enum Layer {
     V3_PLAN("V3", "Plano", "Plano de arquitetura, variáveis e vínculo das etapas verificado."),
     V4_CODE("V4", "Código Python", "Projeto gerado: compilação, importação, ruff e mypy, executados de verdade."),
     V5_TESTS("V5", "Testes", "Testes de contrato do projeto gerado (sem navegador, sem rede)."),
+    /** CODEGEN-QUALITY-001: critérios OBJETIVOS de legibilidade e rastreio do código gerado; não é o aceite humano. */
+    VQ_GENERATION("VQ", "Qualidade da geração", "Nomes com evidência, step_id ↔ etapa, docstrings, localizadores e falhas silenciadas (manifesto e AST)."),
     V6_EXECUTION("V6", "Execução real", "Resultado conferido no sistema-alvo por um oráculo independente.");
 
     private final String code;

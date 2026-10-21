@@ -1,0 +1,115 @@
+{
+  "schema": "nekkora-rpa/selectors",
+  "version": "1.1.0",
+  "system": "processo",
+  "targets": {
+    "processo.tela_1.fill": {
+      "preferred": {
+        "strategy": "css",
+        "expression": "form#buscaform input[name=\"q\"]"
+      },
+      "expected": {
+        "tag": "input"
+      },
+      "provenance": {
+        "studioStepId": "eaffe6af-0ca8-436a-aafe-493da0779f68"
+      }
+    },
+    "processo.tela_1.press_key": {
+      "preferred": {
+        "strategy": "css",
+        "expression": "form#buscaform input[name=\"q\"]"
+      },
+      "expected": {
+        "tag": "input"
+      },
+      "provenance": {
+        "studioStepId": "f756d774-e875-43a4-84b7-872f706baf73"
+      }
+    },
+    "processo.tela_3.titulo": {
+      "preferred": {
+        "strategy": "css",
+        "expression": "h1#titulo"
+      },
+      "expected": {
+        "tag": "h1"
+      },
+      "provenance": {
+        "studioStepId": "61d9e98a-58fc-43c6-9048-752d993e5aa2"
+      }
+    },
+    "processo.tela_3.nome_completo": {
+      "preferred": {
+        "strategy": "xpath",
+        "expression": "//table//tr[th[normalize-space(.)=\"Nome completo\"]]//td"
+      },
+      "expected": {
+        "tag": "td"
+      },
+      "provenance": {
+        "studioStepId": "3bf08523-edbe-4a0f-bbc6-424840c157e1"
+      }
+    },
+    "processo.tela_3.nascimento": {
+      "preferred": {
+        "strategy": "xpath",
+        "expression": "//table//tr[th[normalize-space(.)=\"Nascimento\"]]//td"
+      },
+      "expected": {
+        "tag": "td"
+      },
+      "provenance": {
+        "studioStepId": "8761e769-0b8c-4426-9aa4-7ae8be748f6b"
+      }
+    },
+    "processo.tela_3.morte": {
+      "preferred": {
+        "strategy": "xpath",
+        "expression": "//table//tr[th[normalize-space(.)=\"Morte\"]]//td"
+      },
+      "expected": {
+        "tag": "td"
+      },
+      "provenance": {
+        "studioStepId": "9a8902a8-4921-42b4-92c2-6ad4c2e0192a"
+      }
+    },
+    "processo.tela_3.nacionalidade": {
+      "preferred": {
+        "strategy": "xpath",
+        "expression": "//table//tr[th[normalize-space(.)=\"Nacionalidade\"]]//td"
+      },
+      "expected": {
+        "tag": "td"
+      },
+      "provenance": {
+        "studioStepId": "fff6e3fc-d718-423a-9ecc-b2eb2b48e3a5"
+      }
+    },
+    "processo.tela_3.ocupacao": {
+      "preferred": {
+        "strategy": "xpath",
+        "expression": "//table//tr[th[normalize-space(.)=\"Ocupação\"]]//td"
+      },
+      "expected": {
+        "tag": "td"
+      },
+      "provenance": {
+        "studioStepId": "c5f3431e-5b68-47fa-a5cf-78561a075b33"
+      }
+    },
+    "processo.tela_3.campo_s": {
+      "preferred": {
+        "strategy": "xpath",
+        "expression": "//table//tr[th[normalize-space(.)=\"Campo(s)\"]]//td"
+      },
+      "expected": {
+        "tag": "td"
+      },
+      "provenance": {
+        "studioStepId": "d0125176-9a54-40b2-a11a-10961ad440e7"
+      }
+    }
+  }
+}

@@ -180,7 +180,7 @@ public final class VariableDeriver {
 
     static List<String> words(String text) {
         if (text == null) return List.of();
-        String n = Normalizer.normalize(text, Normalizer.Form.NFD).replaceAll("\\p{M}", "").toLowerCase(Locale.ROOT).replace("e-mail", "email");
+        String n = Normalizer.normalize(com.nekkora.studio.codegen.CodeNaming.foldMarkers(text), Normalizer.Form.NFD).replaceAll("\\p{M}", "").toLowerCase(Locale.ROOT).replace("e-mail", "email");
         List<String> out = new ArrayList<>();
         for (String w : n.split("[^a-z0-9]+")) if (!w.isEmpty()) out.add(w);
         return out;

@@ -400,7 +400,7 @@ public final class DevelopmentPresenter implements DevelopmentPanel.Actions {
             if (n > 0) notes.add("✓ " + n + " variável(is)/ligação(ões) derivada(s) registrada(s) no modelo — Ctrl+Z desfaz (Registrar variáveis derivadas)");
         }
         GenerationOrchestrator.Run run = GenerationOrchestrator.prepare(a, draft, spec, catalog, tabular, store.options(a.id()).origins(), out, clock.instant(),
-                this::phase, cancelled::get);
+                this::phase, cancelled::get, store.traceRegistry(a.id()));
         last = run;
         if (run.stoppedAt() != null) {
             phases.put(run.stoppedAt(), DevelopmentPanel.PhaseState.BLOCKED);
@@ -581,6 +581,15 @@ public final class DevelopmentPresenter implements DevelopmentPanel.Actions {
             out.add(new DevelopmentPanel.Answer("O que será criado?", "processo.py (RpaProcess) e " + plan.pages().size() + " Page(s): "
                     + String.join(", ", plan.pages().stream().map(DevelopmentPlan.PlannedPage::className).toList())
                     + " — uma por tela observada. Nenhum Module: nada se repete o bastante para justificar um (o LoginModule usaria StepIds próprios)."));
+            // CODEGEN-QUALITY-001: prévia da arquitetura — telas, métodos e de onde vem cada nome (antes de gerar)
+            List<String> preview = new ArrayList<>();
+            for (DevelopmentPlan.PlannedPage pg : plan.pages()) {
+                var info = plan.names().page(pg.className());
+                preview.add(pg.className() + (info.title().isEmpty() ? " (nome provisório: dê um título à seção no PDD)" : " (“" + info.title() + "”)") + ": "
+                        + String.join(", ", pg.methods().stream().map(x -> x + "()").toList()));
+            }
+            out.add(new DevelopmentPanel.Answer("Como o código fica organizado? (prévia)", String.join(" · ", preview)
+                    + ". Cada ação leva um step_id legível (ex.: pesquisa.preencher_…) ligado à etapa no manifesto. Para mudar um nome, edite o título no PDD."));
         }
         if (run != null && run.gate() != null) {
             var r = run.gate().record();
@@ -847,6 +856,17 @@ public final class DevelopmentPresenter implements DevelopmentPanel.Actions {
     @Override
     public void openCode() {
         active().flatMap(a -> projectFile(a).map(p -> outputDir(a, p))).filter(Files::isDirectory).ifPresent(p -> host.openFolder(p));
+    }
+
+    @Override
+    public void reviewCode() {
+        active().flatMap(a -> projectFile(a).map(p -> outputDir(a, p))).filter(Files::isDirectory).ifPresent(dir -> {
+            try {
+                host.showText("Revisar código gerado", CodeReviewText.build(dir));
+            } catch (IOException | RuntimeException e) {
+                host.showText("Revisar código gerado", "Não foi possível ler o código gerado nesta pasta (" + e.getClass().getSimpleName() + ").");
+            }
+        });
     }
 
     @Override
@@ -1309,8 +1329,11 @@ public final class DevelopmentPresenter implements DevelopmentPanel.Actions {
         return store.quality(a.id()).map(t -> {
             try {
                 QualityReport r = QualityReport.parse(t);
+                // CODEGEN-QUALITY-001: um critério objetivo do gerador quebrado (UUID no código, step_id sem mapa, seletor na
+                // Page, posição, falha silenciada) também impede; aviso de nome não impede
+                QualityReport.LayerResult vq = r.layers().get(Layer.VQ_GENERATION);
                 return manifest.equals(r.codeManifest()) && r.layers().get(Layer.V4_CODE).state() == QualityReport.State.PASS
-                        && r.layers().get(Layer.V5_TESTS).state() == QualityReport.State.PASS;
+                        && r.layers().get(Layer.V5_TESTS).state() == QualityReport.State.PASS && (vq == null || vq.state() != QualityReport.State.BLOCKED);
             } catch (RuntimeException e) {
                 return false;
             }

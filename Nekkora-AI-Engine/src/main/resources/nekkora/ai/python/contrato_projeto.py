@@ -61,10 +61,17 @@ def run(root: Path) -> list[dict[str, Any]]:
         for st in cls.body:
             if isinstance(st, ast.Assign) and any(isinstance(t, ast.Name) and t.id == "prefix" for t in st.targets):
                 prefix = literal(st.value)
+        for st in cls.body:
+            # a identidade da tela (wait_loaded/is_current) também precisa existir no registro
+            if isinstance(st, ast.Assign) and any(isinstance(t, ast.Name) and t.id == "identity" for t in st.targets):
+                if prefix and literal(st.value):
+                    used.add(f"{prefix}.{literal(st.value)}")
         for c in calls(cls):
             f = c.func
             name = f.attr if isinstance(f, ast.Attribute) else f.id if isinstance(f, ast.Name) else ""
-            if name == "k" and c.args and literal(c.args[0]) is not None and prefix:
+            # chave relativa: self.k("x") ou um leitor da Page (1.3.0: self._texto("x", ...), self._data("x", ...))
+            relative = name == "k" or (name.startswith("_") and name.lstrip("_").split("_")[0] in ("texto", "data"))
+            if relative and c.args and literal(c.args[0]) is not None and prefix:
                 used.add(f"{prefix}.{literal(c.args[0])}")
             if name in ("exists", "mark", "is_visible") and c.args and literal(c.args[0]) is not None:
                 used.add(str(literal(c.args[0])))
@@ -74,9 +81,22 @@ def run(root: Path) -> list[dict[str, Any]]:
             if name == "fill" and len(c.args) >= 2 and isinstance(c.args[1], (ast.Constant, ast.JoinedStr)):
                 fills_ok = False  # valor escrito no código (o valor vem de parâmetro, da planilha ou do provedor de segredos)
     check(out, "KEYS_IN_REGISTRY", bool(used) and used <= keys, "KEY_NOT_IN_REGISTRY")
+    # 1.3.0: o código usa traceIds legíveis; o manifesto mapeia cada um a UM StepId (bijetivo). Antes: o próprio StepId.
+    trace = manifest.get("trace") or {}
+    mappings = trace.get("mappings", []) if isinstance(trace, dict) else []
+    to_step = {m["traceId"]: m["studioStepId"] for m in mappings}
+    synthetic = {x.get("traceId") for x in trace.get("synthetic", [])} if isinstance(trace, dict) else set()
+    bijective = len(to_step) == len(mappings) and len(set(to_step.values())) == len(to_step)
+    code_steps = {to_step.get(t, t) for t in step_ids if t not in synthetic}
     manifest_steps = {s["stepId"] for s in manifest.get("steps", [])}
     targeted = {s["stepId"] for s in manifest.get("steps", []) if s.get("key")}
-    check(out, "STEP_IDS_TRACEABLE", step_ids <= manifest_steps and targeted <= step_ids, "STEP_ID_NOT_TRACEABLE")
+    unmapped = bool(mappings) and any(t not in to_step for t in step_ids if t not in synthetic)
+    check(
+        out,
+        "STEP_IDS_TRACEABLE",
+        bijective and not unmapped and code_steps <= manifest_steps and targeted <= code_steps,
+        "STEP_ID_NOT_TRACEABLE",
+    )
     check(out, "FILL_VALUES_NOT_LITERAL", fills_ok, "FILL_LITERAL_VALUE")
 
     sys.path.insert(0, str(root))
@@ -84,10 +104,15 @@ def run(root: Path) -> list[dict[str, Any]]:
         processo = importlib.import_module("processo")
         from nekkora_rpa import RpaProcess
 
-        proc_cls = processo.Processo
-        is_process = isinstance(proc_cls, type) and issubclass(proc_cls, RpaProcess)
+        # a classe do processo tem o nome de negócio (1.3.0) ou "Processo" (antes): a ÚNICA subclasse de RpaProcess
+        candidates = [
+            c for c in vars(processo).values()
+            if isinstance(c, type) and issubclass(c, RpaProcess) and c is not RpaProcess and c.__module__ == "processo"
+        ]
+        proc_cls = candidates[0] if len(candidates) == 1 else None
+        is_process = proc_cls is not None
         check(out, "PROCESS_IS_RPA_PROCESS", is_process, "PROCESS_NOT_RPA_PROCESS")
-        declared = set(getattr(proc_cls, "required_secrets", ()))
+        declared = set(getattr(proc_cls, "required_secrets", ())) if proc_cls is not None else set()
         expected = sum(1 for s in manifest.get("steps", []) if s.get("credential"))
         check(out, "SECRETS_DECLARED", (expected == 0) == (not declared), "SECRETS_NOT_DECLARED")
     except Exception:  # noqa: BLE001 - importação recusada é falha do contrato

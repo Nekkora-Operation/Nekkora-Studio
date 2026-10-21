@@ -1,0 +1,28 @@
+# REFERENCIA_MANUAL_VALIDACAO (NEKKORA-CODEGEN-QUALITY-001): laboratório local do framework, dados fictícios.
+[runtime]
+environment = "lab"
+allowed_origins = ["http://127.0.0.1:18766"]
+base_url = "http://127.0.0.1:18766/leitura/busca.html"
+process_name = "fichas_do_acervo"
+
+[timeouts]
+action_ms = 8000
+navigation_ms = 30000
+transaction_ms = 120000
+
+[retry]
+max_attempts = 2
+initial_backoff_ms = 200
+max_backoff_ms = 1000
+
+[batch]
+max_transaction_attempts = 1
+max_consecutive_technical_failures = 1
+
+[browser]
+channel = "chromium"
+headless = true
+accept_downloads = false
+
+[paths]
+selectors = "../selectors.json"

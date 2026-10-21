@@ -92,6 +92,7 @@ public final class PythonChecks {
             out.add(ruffFormat(env, projectDir, cancelled));
             out.add(mypy(env, projectDir, tmp, cancelled));
             out.add(contract(env, projectDir, contract, cancelled));
+            out.add(quality(env, projectDir, extract(tmp, "qualidade_codigo.py"), cancelled));
         } finally {
             deleteTree(tmp);
         }
@@ -183,6 +184,32 @@ public final class PythonChecks {
             return new Check("CONTRACT_TESTS", Layer.V5_TESTS, failed == 0 ? Status.PASS : Status.FAIL, failed, codes, ms, "");
         } catch (RuntimeException e) {
             return new Check("CONTRACT_TESTS", Layer.V5_TESTS, Status.ERROR, 0, Map.of(), ms, "OUTPUT_INVALID");
+        }
+    }
+
+    /**
+     * CODEGEN-QUALITY-001 (camada VQ): análise da AST do código gerado. Os achados vão em {@code codes} como
+     * {@code "<CÓDIGO> <arquivo>:<símbolo>"} → quantidade (só identificadores gerados; nenhum trecho de código).
+     */
+    @SuppressWarnings("unchecked")
+    private static Check quality(Environment env, Path dir, Path script, BooleanSupplier cancelled) throws IOException {
+        if (cancelled.getAsBoolean()) return new Check("CODE_QUALITY", Layer.VQ_GENERATION, Status.NOT_RUN, 0, Map.of(), 0, "CANCELLED");
+        long t = System.nanoTime();
+        Run r = run(env.python(), dir, List.of("-I", "-B", script.toString(), dir.toAbsolutePath().toString()), "", TIMEOUT, cancelled);
+        long ms = (System.nanoTime() - t) / 1_000_000;
+        if (r.timedOut()) return new Check("CODE_QUALITY", Layer.VQ_GENERATION, Status.ERROR, 0, Map.of(), ms, "TIMEOUT");
+        try {
+            Map<String, Object> m = Json.parseObject(lastLine(r.out()));
+            if (m.get("error") instanceof String e) return new Check("CODE_QUALITY", Layer.VQ_GENERATION, Status.ERROR, 0, Map.of(), ms, e);
+            Map<String, Integer> codes = new LinkedHashMap<>();
+            for (Object o : (List<Object>) m.get("findings")) {
+                Map<String, Object> f = (Map<String, Object>) o;
+                codes.merge(f.get("code") + " " + f.get("file") + ":" + f.get("symbol"), 1, Integer::sum);
+            }
+            int total = ((Number) m.get("total")).intValue();
+            return new Check("CODE_QUALITY", Layer.VQ_GENERATION, total == 0 ? Status.PASS : Status.FAIL, total, codes, ms, "");
+        } catch (RuntimeException e) {
+            return new Check("CODE_QUALITY", Layer.VQ_GENERATION, Status.ERROR, 0, Map.of(), ms, "OUTPUT_INVALID");
         }
     }
 

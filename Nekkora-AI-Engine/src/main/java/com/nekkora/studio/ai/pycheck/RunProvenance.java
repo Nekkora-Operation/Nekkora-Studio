@@ -38,6 +38,24 @@ public final class RunProvenance {
                 keyByStep.put(sid, t.getKey());
             }
         }
+        // CODEGEN-QUALITY-001: o código usa traceIds legíveis; o manifesto 1.3.0 os liga ao StepId (e dá a chave de cada etapa)
+        Map<String, String> stepOfTrace = new LinkedHashMap<>();
+        Path manifestFile = project.resolve("manifest.json");
+        if (Files.isRegularFile(manifestFile)) {
+            Map<String, Object> manifest = Json.parseObject(Files.readString(manifestFile, StandardCharsets.UTF_8));
+            if (manifest.get("trace") instanceof Map<?, ?> t && t.get("mappings") instanceof List<?> list) {
+                for (Object o : list) {
+                    if (o instanceof Map<?, ?> x && x.get("traceId") instanceof String tid && x.get("studioStepId") instanceof String sid) {
+                        stepOfTrace.put(tid, sid);
+                        if (x.get("targetKey") instanceof String key && !keyByStep.containsKey(sid)) {
+                            keyByStep.put(sid, key);
+                            Object target = ((Map<String, Object>) selectors.get("targets")).get(key);
+                            if (target instanceof Map<?, ?> tm) targetByStep.put(sid, (Map<String, Object>) tm);
+                        }
+                    }
+                }
+            }
+        }
         // leituras que ACONTECERAM em cada transação (ACTION_COMPLETED de read_items/current_address, pelo step_id)
         Map<String, Set<String>> readsByTx = new LinkedHashMap<>();
         Path events = runDir.resolve("execucao").resolve("events.jsonl");
@@ -46,7 +64,9 @@ public final class RunProvenance {
                 if (line.isBlank()) continue;
                 Map<String, Object> e = Json.parseObject(line);
                 if (!"ACTION_COMPLETED".equals(e.get("event_code")) || !(e.get("transaction_id") instanceof String tx) || !(e.get("step_id") instanceof String sid)) continue;
-                if ("read_items".equals(e.get("action")) || "current_address".equals(e.get("action"))) readsByTx.computeIfAbsent(tx, k -> new LinkedHashSet<>()).add(sid);
+                if ("read_items".equals(e.get("action")) || "current_address".equals(e.get("action"))) {
+                    readsByTx.computeIfAbsent(tx, k -> new LinkedHashSet<>()).add(stepOfTrace.getOrDefault(sid, sid));
+                }
             }
         }
         // transações da planilha pelo estado do XlsxResultSink (1.1.0): gravadas → na ordem das linhas da planilha (sem

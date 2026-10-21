@@ -161,6 +161,21 @@ public final class DevelopmentStore {
         return read(id.value(), "ia-chamadas.jsonl");
     }
 
+    /** CODEGEN-QUALITY-001: registro de rastreio da automação ({@code rastreio.json}, {@link TraceRegistry}). */
+    public TraceRegistry traceRegistry(AutomationId id) {
+        return read(id.value(), "rastreio.json").map(t -> {
+            try {
+                return TraceRegistry.parse(t);
+            } catch (RuntimeException e) {
+                return TraceRegistry.empty(id); // ilegível: começa de novo, semeado pelo manifesto da pasta de saída
+            }
+        }).orElse(TraceRegistry.empty(id));
+    }
+
+    public void saveTraceRegistry(TraceRegistry r) throws IOException {
+        write(r.automationId().value(), "rastreio.json", r.toJson());
+    }
+
     public Options options(AutomationId id) {
         return read(id.value(), "opcoes.json").map(t -> {
             try {

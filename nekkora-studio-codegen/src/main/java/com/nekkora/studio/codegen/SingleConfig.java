@@ -44,6 +44,8 @@ public record SingleConfig(String processName, String environment, List<String> 
     static final Pattern UUID = Pattern.compile("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}");
     static final Pattern VARIABLE = Pattern.compile("[a-z][a-z0-9_]{0,59}");
     static final Pattern SHA = Pattern.compile("sha256:[0-9a-f]{64}");
+    /** CODEGEN-QUALITY-001: traceId legível ({@code <área>.<ação>}), aceito pelo {@code step_id} do framework (até 79). */
+    public static final Pattern TRACE = Pattern.compile("[a-z][a-z0-9_]{0,30}\\.[a-z][a-z0-9_]{0,47}");
     static final Set<String> READ_KINDS = Set.of("text", "date", "address");
     static final Set<String> COLUMN_KINDS = Set.of("text", "iso_date", "url");
 

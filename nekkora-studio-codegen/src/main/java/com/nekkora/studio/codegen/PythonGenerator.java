@@ -247,12 +247,18 @@ public final class PythonGenerator {
             blockers.add(new Blocker("LOCATOR_NOT_EXPORTABLE", id));
             return null;
         }
+        // CODEGEN-QUALITY-001 (Q03): posição disfarçada em CSS/XPath (nth-*, XPath absoluto, índice) também é posição
+        if (LocatorPolicy.positional(String.valueOf(pref.get("strategy")), (String) pref.get("expression"))) {
+            blockers.add(new Blocker("LOCATOR_POSITIONAL", id));
+            return null;
+        }
         boolean strong = expected.containsKey("name") || expected.containsKey("label");
         List<Object> alternatives = new ArrayList<>();
         if (strong) {
             for (LocatorCandidate c : el.locators()) {
                 if (c == preferred.get() || !c.validated() || c.strategy() == LocatorStrategy.POSITIONAL) continue;
                 Map<String, Object> alt = locator(c, role, name);
+                if (alt != null && LocatorPolicy.positional(String.valueOf(alt.get("strategy")), (String) alt.get("expression"))) continue;
                 if (alt != null && !alt.equals(pref) && !alternatives.contains(alt) && alternatives.size() < 3) alternatives.add(alt);
             }
         }

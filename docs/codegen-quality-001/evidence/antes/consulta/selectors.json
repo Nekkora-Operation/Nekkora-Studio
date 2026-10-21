@@ -1,0 +1,103 @@
+{
+  "schema": "nekkora-rpa/selectors",
+  "version": "1.1.0",
+  "system": "processo",
+  "targets": {
+    "processo.acesso.usuario": {
+      "preferred": {
+        "strategy": "css",
+        "expression": "#usuario"
+      },
+      "expected": {
+        "tag": "input",
+        "role": "textbox",
+        "name": "Usuário"
+      },
+      "provenance": {
+        "studioStepId": "1fab07ac-3f0d-4e6b-b8c2-d25124bd09ba"
+      }
+    },
+    "processo.acesso.senha": {
+      "preferred": {
+        "strategy": "css",
+        "expression": "#senha"
+      },
+      "expected": {
+        "tag": "input",
+        "role": "textbox",
+        "name": "Senha"
+      },
+      "provenance": {
+        "studioStepId": "50563f5d-ebe5-4d13-9ee1-73842d18b21d"
+      }
+    },
+    "processo.acesso.entrar": {
+      "preferred": {
+        "strategy": "css",
+        "expression": "#entrar"
+      },
+      "expected": {
+        "tag": "button",
+        "role": "button",
+        "name": "Entrar"
+      },
+      "provenance": {
+        "studioStepId": "9e334d7b-6c58-4d2c-8046-60736238256f"
+      }
+    },
+    "processo.consulta.codigo_do_registro": {
+      "preferred": {
+        "strategy": "css",
+        "expression": "#registro-codigo"
+      },
+      "expected": {
+        "tag": "input",
+        "role": "searchbox",
+        "name": "Código do registro"
+      },
+      "provenance": {
+        "studioStepId": "977c0eb1-c2b6-4efd-8ec8-647c57166e79"
+      }
+    },
+    "processo.consulta.consultar": {
+      "preferred": {
+        "strategy": "css",
+        "expression": "#consultar"
+      },
+      "expected": {
+        "tag": "button",
+        "role": "button",
+        "name": "Consultar"
+      },
+      "provenance": {
+        "studioStepId": "b0739599-de33-4de4-94a9-144699431e44"
+      }
+    },
+    "processo.consulta.resultado_da_consulta": {
+      "preferred": {
+        "strategy": "css",
+        "expression": "#resultado"
+      },
+      "expected": {
+        "tag": "div"
+      },
+      "provenance": {
+        "studioStepId": "f052abf5-c024-4dfc-9086-39e6a055fb7f"
+      }
+    },
+    "processo.consulta.sair": {
+      "preferred": {
+        "strategy": "css",
+        "expression": "#sair"
+      },
+      "expected": {
+        "tag": "button",
+        "role": "button",
+        "name": "Sair"
+      },
+      "provenance": {
+        "studioStepId": "2639a0ba-422b-4c6c-9d65-adf6ff2f7d2e"
+      }
+    }
+  }
+}

@@ -292,9 +292,18 @@ class DevelopmentStudioTest {
         idle();
         assertTrue(Files.isRegularFile(dir.resolve("consulta-python/paginas.py")), model().pending().toString());
         String pages = Files.readString(dir.resolve("consulta-python/paginas.py"));
-        assertTrue(pages.contains("postcondition=lambda: a.exists(\"processo.consulta.resultado_da_consulta\")"), "envio confirmado pela etapa seguinte");
-        String send = pages.substring(pages.indexOf("step_id=\"" + c.steps().get("consultar").value() + "\""));
-        send = send.substring(0, send.indexOf("# etapa"));
+        // CODEGEN-QUALITY-001: o código usa o traceId legível; o manifesto liga traceId ↔ etapa e dá a chave de cada alvo
+        Map<String, Object> manifest = com.nekkora.studio.bridge.json.Json.parseObject(Files.readString(dir.resolve("consulta-python/manifest.json")));
+        String sendTrace = null;
+        String resultKey = null;
+        for (Object o : (List<?>) ((Map<?, ?>) manifest.get("trace")).get("mappings")) {
+            Map<?, ?> x = (Map<?, ?>) o;
+            if (c.steps().get("consultar").value().toString().equals(x.get("studioStepId"))) sendTrace = String.valueOf(x.get("traceId"));
+            if (c.steps().get("resultado").value().toString().equals(x.get("studioStepId"))) resultKey = String.valueOf(x.get("targetKey"));
+        }
+        assertTrue(pages.contains("postcondition=lambda: self.act.exists(\"" + resultKey + "\")"), "envio confirmado pela etapa seguinte: " + pages);
+        String send = pages.substring(pages.indexOf("step_id=\"" + sendTrace + "\""));
+        send = send.substring(0, send.indexOf("step_id=", 1) > 0 ? send.indexOf("step_id=", 1) : send.length());
         assertFalse(send.contains("idempotent=True"), "envio com efeito externo sai UMA vez (não idempotente): " + send);
         FunctionalSpec spec = studio.development().store().spec(c.a().id());
         assertEquals(FunctionalSpec.Actor.DEVELOPER, spec.decision(FunctionalSpec.Field.EFFECT, c.steps().get("consultar")).orElseThrow().actor());

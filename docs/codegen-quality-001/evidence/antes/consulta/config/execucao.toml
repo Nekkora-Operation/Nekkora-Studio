@@ -1,0 +1,28 @@
+# GERADO pelo Nekkora Studio (STUDIO-014). Sem credenciais nem valores: segredos vêm de NK_SECRET_<NOME>.
+[runtime]
+environment = "lab"
+allowed_origins = ["http://127.0.0.1:18765"]
+base_url = "http://127.0.0.1:18765/lab/studio014/portal.html"
+process_name = "consulta_de_registro_sintetica"
+
+[timeouts]
+action_ms = 8000
+navigation_ms = 30000
+transaction_ms = 120000
+
+[retry]
+max_attempts = 2
+initial_backoff_ms = 200
+max_backoff_ms = 1000
+
+[batch]
+max_transaction_attempts = 1
+max_consecutive_technical_failures = 1
+
+[browser]
+channel = "chrome"
+headless = false
+accept_downloads = false
+
+[paths]
+selectors = "../selectors.json"

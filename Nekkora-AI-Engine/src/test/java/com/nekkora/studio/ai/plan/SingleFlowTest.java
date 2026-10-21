@@ -43,9 +43,9 @@ class SingleFlowTest {
         ctx = ProjectContext.of(c.a, Optional.of(d));
         PddGate.Result gate = PddGate.evaluate(ctx, Optional.of(d), FunctionalSpec.empty(c.a.id()), ProcessProjection.of(c.a), ConsultaCase.CLOCK.instant());
         assertTrue(gate.ready(), gate.issues().toString());
-        DevelopmentPlan plan = DevelopmentPlanner.plan(c.a, ctx, gate, FrameworkCapabilityCatalog.bundled(), Optional.empty());
+        DevelopmentPlan plan = DevelopmentPlanner.plan(c.a, ctx, gate, FrameworkCapabilityCatalog.bundled(), Optional.empty(), Optional.of(d));
         assertTrue(plan.ready(), plan.issues().toString());
-        PythonGenerator.Result r = SingleGenerator.generate(c.a, new AutomationValidator(RuleSet.V1_1).validate(c.a), plan.singleConfig().orElseThrow());
+        PythonGenerator.Result r = SingleGenerator.generate(c.a, new AutomationValidator(RuleSet.V1_1).validate(c.a), plan.singleConfig().orElseThrow(), plan.names());
         return new Flow(c, plan, r);
     }
 
@@ -77,7 +77,7 @@ class SingleFlowTest {
         Flow f = develop(ConsultaCase.confirmed());
         DevelopmentPlan p = f.plan();
         assertEquals(DevelopmentPlan.ExecutionModel.SINGLE, p.model());
-        assertEquals(List.of("TelaAcesso", "TelaConsulta"), p.pages().stream().map(DevelopmentPlan.PlannedPage::className).toList());
+        assertEquals(List.of("PaginaAcesso", "PaginaConsulta"), p.pages().stream().map(DevelopmentPlan.PlannedPage::className).toList());
         assertTrue(p.capabilities().containsAll(List.of("actions.fill", "actions.click", "actions.read_text", "core.single_input", "security.env_secrets")));
         assertFalse(p.capabilities().contains("tabular.input"), "nada de planilha");
         assertTrue(f.result().ok(), f.result().blockers().toString());
@@ -93,7 +93,8 @@ class SingleFlowTest {
         assertEquals(f.result().files().keySet(), g.result().files().keySet());
         assertEquals(f.result().files().get("paginas.py").replaceAll("[0-9a-f]{8}-[0-9a-f-]{27}", "ID"),
                 g.result().files().get("paginas.py").replaceAll("[0-9a-f]{8}-[0-9a-f-]{27}", "ID"));
-        PythonGenerator.Result again = SingleGenerator.generate(f.c().a, new AutomationValidator(RuleSet.V1_1).validate(f.c().a), p.singleConfig().orElseThrow());
+        PythonGenerator.Result again = SingleGenerator.generate(f.c().a, new AutomationValidator(RuleSet.V1_1).validate(f.c().a), p.singleConfig().orElseThrow(),
+                p.names());
         assertEquals(f.result().files(), again.files(), "mesma entrada → mesmos bytes");
     }
 
@@ -113,7 +114,7 @@ class SingleFlowTest {
             assertEquals(PythonChecks.Status.PASS, ch.status(), ch.id() + " " + ch.codes() + " " + ch.reason() + "\n" + (ch.id().startsWith("RUFF") || ch.id().startsWith("MYPY")
                     ? dump(out) : ""));
         }
-        assertEquals(6, checks.size());
+        assertEquals(7, checks.size()); // V4 (5) + V5 contrato + VQ qualidade da geração (CODEGEN-QUALITY-001)
         assertNotNull(checks.stream().filter(x -> x.id().equals("CONTRACT_TESTS")).findFirst().orElseThrow().codes().get("TOTAL"));
     }
 
@@ -128,8 +129,9 @@ class SingleFlowTest {
         Path pages = out.resolve("paginas.py");
         String src = java.nio.file.Files.readString(pages);
         src = src.replace("from __future__ import annotations\n", "from __future__ import annotations\n\nimport os\n")
-                .replace("a.fill(self.k(\"codigo_do_registro\"), codigo_do_registro,", "a.fill(self.k(\"codigo_do_registro\"), \"REG-0001\",")
-                .replace("        return saidas\n", "        x: int = \"texto\"\n        return saidas\n");
+                .replace("self.act.fill(self.k(\"codigo_do_registro\"), codigo_do_registro,", "self.act.fill(self.k(\"codigo_do_registro\"), \"REG-0001\",")
+                .replace("        return self.act.read_text(", "        x: int = \"texto\"\n        return self.act.read_text(");
+        assertTrue(src.contains("\"REG-0001\"") && src.contains("x: int"), "o controle negativo precisa de fato estragar o código:\n" + src);
         java.nio.file.Files.writeString(pages, src);
         PythonChecks.Environment env = PythonChecks.resolve(Optional.of(py), out).orElseThrow();
         Map<String, PythonChecks.Check> by = new java.util.LinkedHashMap<>();
