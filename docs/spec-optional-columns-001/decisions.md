@@ -16,6 +16,13 @@ Decisões técnicas reversíveis (D-OC-xx) e o que fica para a titular. Nada do 
 | D-OC-10 | Contrato V5 ganha `OUTPUT_REQUIREMENT_CONSISTENT` (projetos com planilha): o total de verificações desses projetos passa de 11 para 12 | divergência manifesto × `main.py` × processo é bloqueio objetivo | — |
 | D-OC-11 | Emissor tabular (RPA Challenge) fora do alcance | não tem planilha de saída por colunas | — |
 
+## Achados
+
+| ID | Achado | Estado |
+|---|---|---|
+| F-OC-01 | Na homologação real, o "Nome completo" da pessoa viva saiu com a chamada de nota visível da página (texto do tipo `[nota 1]`). O leitor do framework (`read_items`) devolve o texto VISÍVEL da célula, e a chamada de nota faz parte dele; o conferidor independente a remove (considera que não é dado). Comportamento anterior a esta missão (os quatro artigos da CQ-001 não tinham nota nessas células) e sem relação com a opcionalidade | **decisão da titular**: remover chamadas de nota é transformar o texto lido (contrato de dado) — seria regra explícita do PDD/gerador ou do framework, em missão própria; nada foi alterado para "passar" |
+| F-OC-02 | O orquestrador levava à janela só os AVISOS do gate: as informações de obrigatoriedade não apareciam em Pendências (achado na 1ª execução pela interface) | corrigido no `6828edc`, com teste |
+
 ## Extensões futuras (documentadas, não feitas)
 
 - Colunas numéricas/booleanas: o framework 0.3.0 só tem `TEXT`, `ISO_DATE`, `URL`. Uma coluna `NUMBER`/`BOOL` precisará
@@ -26,4 +33,5 @@ Decisões técnicas reversíveis (D-OC-xx) e o que fica para a titular. Nada do 
 ## Pendências da titular
 
 1. Aceite humano desta mudança funcional (G7): não reutiliza o aceite da CODEGEN-QUALITY-001.
-2. Publicação/push: continua bloqueado (repositórios públicos; código proprietário).
+2. F-OC-01: manter o texto visível como está ou remover chamadas de nota (em missão própria).
+3. Publicação/push: continua bloqueado (repositórios públicos; código proprietário).

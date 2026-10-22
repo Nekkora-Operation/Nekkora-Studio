@@ -433,6 +433,9 @@ class OptionalColumnsTest {
         Path ok = execute(py, code, "ok", List.of("Ana Exemplo," + base + "ficha-ana.html", "Bruno Modelo," + base + "ficha-bruno.html",
                 "Gina Inventada," + base + "ficha-gina.html"));
         assertTrue(Files.exists(ok), "planilha gravada");
+        // cópia para leitura humana (dados FICTÍCIOS do laboratório)
+        Files.createDirectories(Path.of("target", "codegen-samples"));
+        Files.copy(ok, Path.of("target", "codegen-samples", "optional-columns-lab.xlsx"), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
         List<List<Object>> cells = cells(py, ok);
         assertEquals(List.of("URL", "Nome completo", "Nascimento", "Morte", "Nacionalidade", "Ocupação"), cells.get(0), "cabeçalho intacto");
         assertEquals(4, cells.size(), "uma linha por pessoa");
