@@ -1,7 +1,7 @@
 # NEKKORA-SPEC-OPTIONAL-COLUMNS-001 — Optional Fields & Contract-Preserving Data Flow
 
-Estado: **AWAITING_HUMAN_REVIEW (G7)** — implementação local e homologação concluídas; o aceite é só da titular, lendo
-[human-review/rodada-1](human-review/rodada-1/README.md). Publicação remota: **BLOQUEADA** (repositórios públicos; só local).
+Estado: **COMPLETED_LOCALLY / APPROVED_BY_OWNER** (revisão técnica aprovada e aceite da titular em 22/10/2026 — ver
+[encerramento.md](encerramento.md)). Publicação remota: **BLOQUEADA** (repositórios públicos; só local).
 
 - Branch local `feat/spec-optional-columns-001`, criada do baseline aprovado da CODEGEN-QUALITY-001 (`425be58`).
   Commits: `4359c07` (implementação, testes, documentos) · `6828edc` (correção achada na interface; commit testado) ·
@@ -25,7 +25,7 @@ exigidas. A regra é genérica (vale para qualquer coluna lida), nunca decidida 
 | G3 Gerador | OK | [human-review/rodada-1/antes-depois.md](human-review/rodada-1/antes-depois.md) |
 | G4 Manifesto/Quality Gate | OK | manifesto 1.5.0, V5 `OUTPUT_REQUIREMENT_CONSISTENT` |
 | G5 Regressões | OK | 13 testes (`OptionalColumnsTest`); suítes Windows 780/0/0, Linux 780/0 (27 pulados declarados) |
-| G6 Homologação real | OK, com achado F-OC-01 | interface 105/0; conferidor 29/30 (a divergência não é de opcionalidade) |
-| G7 Revisão da titular | **pendente** | [human-review/rodada-1](human-review/rodada-1/README.md) |
+| G6 Homologação real | OK, com achado F-OC-01 (aberto, fora do escopo; texto mantido) | interface 105/0; conferidor 29/30 (a divergência não é de opcionalidade) |
+| G7 Revisão da titular | **aceita** (22/10/2026) | [encerramento.md](encerramento.md) |
 
 Documentos: [decisions.md](decisions.md) (decisões, achados, pendências) · [security.md](security.md).
