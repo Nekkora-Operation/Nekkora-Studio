@@ -144,6 +144,24 @@ class OptionalColumnsTest {
         assertFalse(stale.gate().spec().optionalColumn(f.died), "alvo mudou: a decisão anterior não vale");
     }
 
+    @Test
+    @DisplayName("G2: a obrigatoriedade de cada coluna chega à janela Desenvolver junto do código gerado (o orquestrador não a perde)")
+    void chegaAJanela() {
+        FichaCase c = FichaCase.confirmed();
+        DocumentDraft d = c.reviewedDraft();
+        ProjectContext ctx = ProjectContext.of(c.a, Optional.of(d));
+        VariableDeriver.apply(c.a, VariableDeriver.derive(c.a, ctx));
+        d = c.reviewedDraft();
+        ctx = ProjectContext.of(c.a, Optional.of(d));
+        FunctionalSpec spec = ListFlowTest.spec(c, ctx).with(requirement(ctx, c.died, "OPTIONAL:ABSENT_FOR_SOME_ITEMS"));
+        com.nekkora.studio.ai.generation.GenerationOrchestrator.Run run = com.nekkora.studio.ai.generation.GenerationOrchestrator.prepare(c.a, Optional.of(d), spec,
+                FrameworkCapabilityCatalog.bundled(), Optional.empty(), tmp.resolve("saida"), NOW, p -> { }, () -> false);
+        assertTrue(run.files() != null && run.files().containsKey("main.py"), run.issues().toString());
+        List<QualityIssue> reqs = run.issues().stream().filter(i -> i.code().equals("SPEC_OUTPUT_REQUIREMENT")).toList();
+        assertEquals(5, reqs.size(), run.issues().toString());
+        assertTrue(reqs.stream().anyMatch(i -> i.detail().contains("“Morte”: opcional — o dado não existe em alguns itens")));
+    }
+
     // ------------------------------------------------------------------------------------------- G3: gerador
     @Test
     @DisplayName("G3: \"Morte\" opcional → str | None, exists() sem espera depois da leitura obrigatória, REQUIRED_FIELDS sem ela, OutputColumn(required=False), cabeçalho igual")

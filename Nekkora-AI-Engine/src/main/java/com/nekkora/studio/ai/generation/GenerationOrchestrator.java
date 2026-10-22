@@ -5,6 +5,7 @@ import com.nekkora.studio.ai.context.ProjectContext;
 import com.nekkora.studio.ai.gate.PddGate;
 import com.nekkora.studio.ai.plan.DevelopmentPlan;
 import com.nekkora.studio.ai.plan.DevelopmentPlanner;
+import com.nekkora.studio.ai.quality.AssistanceRequest;
 import com.nekkora.studio.ai.quality.Layer;
 import com.nekkora.studio.ai.quality.QualityIssue;
 import com.nekkora.studio.ai.spec.FunctionalSpec;
@@ -148,7 +149,10 @@ public final class GenerationOrchestrator {
     static List<QualityIssue> withGateNotes(PddGate.Result gate, List<QualityIssue> issues) {
         List<QualityIssue> out = new ArrayList<>(issues);
         for (QualityIssue i : gate.issues()) {
-            if (i.kind() == QualityIssue.Kind.WARNING && i.assistance().isPresent() && !out.contains(i)) out.add(i);
+            // SPEC-OPTIONAL-COLUMNS-001: a obrigatoriedade de cada coluna (INFORMAÇÃO revisável) também segue para a janela
+            boolean requirement = i.kind() == QualityIssue.Kind.INFO
+                    && i.assistance().map(AssistanceRequest::destination).orElse(null) == FunctionalSpec.Field.OUTPUT_REQUIREMENT;
+            if ((i.kind() == QualityIssue.Kind.WARNING || requirement) && i.assistance().isPresent() && !out.contains(i)) out.add(i);
         }
         return out;
     }

@@ -2499,8 +2499,8 @@ public final class CodegenQuality001Homologation {
         check("R3: o Enter da busca confirma a chegada à ficha pela troca de endereço (a leitura do endereço não corre contra a navegação)",
                 pages.replaceAll("\\s+", " ").contains("postcondition=lambda: self.actions.current_address() != address_before"));
         String ident = Json.write(manifest.get("naming"));
-        check("Q11: manifesto 1.4.0 em inglês com o mapa de nomes (origem → código) e sem palavra sem tradução",
-                "1.4.0".equals(manifest.get("version")) && "en".equals(manifest.get("language")) && ident.contains("\"model\":\"termo_de_busca\",\"python\":\"search_term\"")
+        check("Q11: manifesto 1.4.0 (1.5.0 com coluna opcional) em inglês com o mapa de nomes (origem → código) e sem palavra sem tradução",
+                (OPTIONAL_DEATH ? "1.5.0" : "1.4.0").equals(manifest.get("version")) && "en".equals(manifest.get("language")) && ident.contains("\"model\":\"termo_de_busca\",\"python\":\"search_term\"")
                         && ident.contains("\"untranslated\":[]"));
         String sel = Json.write(manifest.get("selectors"));
         check("Q10: manifesto liga SelectorKey ↔ chave ↔ traceId/studioStepId e declara a equivalência .py ↔ JSON",
@@ -2523,7 +2523,7 @@ public final class CodegenQuality001Homologation {
         java.util.regex.Matcher sid = java.util.regex.Pattern.compile("step_id=\"([^\"]+)\"").matcher(pages + process);
         boolean allMapped = true;
         while (sid.find()) allMapped &= ids.contains(sid.group(1)) || sid.group(1).equals(com.nekkora.studio.codegen.CodePlan.START_TRACE);
-        check("CQ: step_id legível em inglês e mapeado 1:1 para a etapa do Studio (manifesto 1.4.0)", "1.4.0".equals(manifest.get("version")) && allMapped
+        check("CQ: step_id legível em inglês e mapeado 1:1 para a etapa do Studio (manifesto 1.4.0; 1.5.0 com coluna opcional)", (OPTIONAL_DEATH ? "1.5.0" : "1.4.0").equals(manifest.get("version")) && allMapped
                 && ids.contains("profile.read_full_name") && ids.contains("search.fill_search_term")
                 && ids.size() == mappings.size() && stepsMapped.size() == mappings.size() && mappings.size() == ((List<Object>) manifest.get("steps")).size());
         check("Q11: processo com o nome de negócio em inglês (WikipediaBiographiesProcess); o nome do processo nas execuções não muda",
