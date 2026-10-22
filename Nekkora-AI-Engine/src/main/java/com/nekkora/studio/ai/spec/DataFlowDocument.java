@@ -55,11 +55,19 @@ public final class DataFlowDocument {
             if (s.value() == ProjectContext.ValueKind.VARIABLE) b.append(", conferido com a entrada");
             StepId alt = fallbackOf.get(s.stepId());
             if (alt != null) ctx.step(alt).ifPresent(x -> b.append("; se não existir na página: ").append(source(ctx, x)));
+            // SPEC-OPTIONAL-COLUMNS-001: a obrigatoriedade revisada vai para o PDD (e muda a especificação → o código fica desatualizado)
+            if (rs.optionalColumn(s.stepId())) {
+                String reason = rs.requirements().get(s.stepId()).value().substring(FunctionalSpec.OPTIONAL.length());
+                b.append("; OPCIONAL (").append(SpecResolver.reasonLabel(reason)).append("): sem o dado, a célula fica vazia");
+            }
             out.add(b.toString());
             if (dateOf(a, s.stepId())) out.add("   " + header + ": data por extenso normalizada para AAAA-MM-DD só se dia, mês e ano estiverem no texto.");
         }
         out.add("Itens de uma lista exibida são unidos por ponto e vírgula; o texto é gravado como texto (nunca fórmula).");
-        out.add("Nada é presumido: dado obrigatório vazio ou data incompleta rejeita o item, e a planilha não é gravada.");
+        boolean anyOptional = rs.requirements().keySet().stream().anyMatch(rs::optionalColumn);
+        out.add(anyOptional ? "Nada é presumido: dado obrigatório vazio ou data incompleta rejeita o item, e a planilha não é gravada; coluna opcional sem "
+                + "dado fica vazia (nunca recebe outro valor). As colunas não marcadas como opcionais são obrigatórias."
+                : "Nada é presumido: dado obrigatório vazio ou data incompleta rejeita o item, e a planilha não é gravada.");
         out.add("Proveniência separada da planilha: para cada linha, coluna → etapa que forneceu o dado → alvo.");
         return out.stream().filter(l -> PddText.problems(l.length() > PddText.MAX_LENGTH ? l.substring(0, PddText.MAX_LENGTH) : l).isEmpty()).toList();
     }

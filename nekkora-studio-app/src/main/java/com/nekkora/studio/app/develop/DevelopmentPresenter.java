@@ -550,9 +550,17 @@ public final class DevelopmentPresenter implements DevelopmentPanel.Actions {
         panel.show(model);
     }
 
+    /**
+     * SPEC-OPTIONAL-COLUMNS-001: a obrigatoriedade de cada coluna é INFORMAÇÃO (não bloqueia), mas fica na lista para poder
+     * ser decidida e revista a qualquer momento.
+     */
+    private static boolean revisable(QualityIssue i) {
+        return i.assistance().map(AssistanceRequest::destination).orElse(null) == FunctionalSpec.Field.OUTPUT_REQUIREMENT;
+    }
+
     private List<QualityIssue> pending(List<QualityIssue> issues) {
         List<QualityIssue> out = new ArrayList<>();
-        for (QualityIssue i : issues) if (i.kind() != QualityIssue.Kind.INFO) out.add(i);
+        for (QualityIssue i : issues) if (i.kind() != QualityIssue.Kind.INFO || revisable(i)) out.add(i);
         out.addAll(aiProposals);
         return out;
     }

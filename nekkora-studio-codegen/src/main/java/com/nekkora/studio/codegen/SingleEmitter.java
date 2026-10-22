@@ -29,6 +29,10 @@ import java.util.TreeSet;
 final class SingleEmitter {
 
     static final String MANIFEST_VERSION = "1.4.0";
+    /** SPEC-OPTIONAL-COLUMNS-001: manifesto com a obrigatoriedade de cada coluna (só quando alguma é opcional). */
+    static final String MANIFEST_VERSION_OPTIONAL = "1.5.0";
+    /** Esquema da regra de obrigatoriedade registrada no manifesto. */
+    static final String REQUIREMENT_SCHEMA = "nekkora-studio/output-requirement/1.0.0";
     static final String TRACE_SCHEMA = "nekkora-studio/trace-map";
     static final String LAYOUT = "nekkora-studio/automation-package/1.0.0";
     static final String CONFIG_FILE = "config/execution.toml";
@@ -257,7 +261,9 @@ final class SingleEmitter {
                     case "url" -> "ColumnKind.URL";
                     default -> "ColumnKind.TEXT";
                 };
-                b.append("        OutputColumn(").append(Py.str(c.header())).append(", ").append(Py.str(c.field())).append(", ").append(kind).append("),\n");
+                // SPEC-OPTIONAL-COLUMNS-001: coluna opcional no PDD → célula vazia sob o cabeçalho (OutputColumn.required do 0.3.0)
+                b.append("        OutputColumn(").append(Py.str(c.header())).append(", ").append(Py.str(c.field())).append(", ").append(kind)
+                        .append(c.required() ? "" : ", required=False").append("),\n");
             }
             b.append("    ),\n    key_field=").append(Py.str(cfg.output().keyField())).append(",\n    sheet=").append(Py.str(cfg.output().sheet())).append(",\n)\n");
             b.append("\"\"\"Output spreadsheet: the column headers are the contract of the spreadsheet; the fields are the row keys.\"\"\"\n");
@@ -325,7 +331,10 @@ final class SingleEmitter {
             b.append("Each row of the input list (CSV or XLSX with the columns ").append(String.join(", ", cfg.inputs().stream().map(x -> "`" + x + "`").toList()))
                     .append(") becomes a transaction; the output `.xlsx` spreadsheet has the columns ")
                     .append(String.join(", ", cfg.output().columns().stream().map(c -> "`" + c.header() + "`").toList()))
-                    .append(" and is written only if ALL items succeed (all or nothing, by the nekkora_rpa `XlsxResultSink`).\n\n");
+                    .append(" and is written only if ALL items succeed (all or nothing, by the nekkora_rpa `XlsxResultSink`).")
+                    .append(cfg.optionalColumns() ? " Optional in the PDD (the cell stays empty when the data is missing; nothing is invented): "
+                            + String.join(", ", cfg.output().columns().stream().filter(c -> !c.required()).map(c -> "`" + c.header() + "`").toList()) + "." : "")
+                    .append("\n\n");
         } else {
             b.append(cfg.inputs().isEmpty() ? "No inputs.\n\n"
                     : "Inputs (JSON file in `--input`): " + String.join(", ", cfg.inputs().stream().map(x -> "`" + x + "`").toList()) + ".\n\n");
@@ -374,7 +383,7 @@ final class SingleEmitter {
                                    Map<String, Map<String, Object>> targets, Map<String, String> files) {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("schema", "nekkora-studio/codegen-manifest");
-        m.put("version", MANIFEST_VERSION);
+        m.put("version", cfg.optionalColumns() ? MANIFEST_VERSION_OPTIONAL : MANIFEST_VERSION);
         m.put("generator", cfg.modern() ? SingleGenerator.GENERATOR_LIST : SingleGenerator.GENERATOR);
         m.put("framework", requirement(cfg));
         m.put("execution", cfg.execution());
@@ -408,12 +417,26 @@ final class SingleEmitter {
                 x.put("kind", c.kind());
                 x.put("stepId", c.step());
                 x.put("fallbackStepId", c.fallbackStep());
+                if (cfg.optionalColumns()) {
+                    // cabeçalho externo ↔ campo interno: header ↔ field acima; a regra vem da especificação funcional (pdd.specRevision)
+                    x.put("requirement", c.required() ? "REQUIRED" : "OPTIONAL");
+                    x.put("requirementReason", c.requirementReason());
+                }
                 cols.add(x);
             }
             Map<String, Object> out = new LinkedHashMap<>();
             out.put("format", "xlsx");
             out.put("sheet", cfg.output().sheet());
             out.put("keyField", cfg.output().keyField());
+            if (cfg.optionalColumns()) {
+                Map<String, Object> rule = new LinkedHashMap<>();
+                rule.put("schema", REQUIREMENT_SCHEMA);
+                rule.put("source", "functional-spec");
+                rule.put("specRevision", cfg.pdd().specRevision());
+                rule.put("default", "REQUIRED");
+                rule.put("emptyCell", "absent");
+                out.put("requirement", rule);
+            }
             out.put("columns", cols);
             m.put("output", out);
         }

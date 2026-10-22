@@ -34,6 +34,8 @@ def main() -> int:
     targets = json.loads((root / "selectors.json").read_text(encoding="utf-8"))["targets"]
     values = {int(k): v for k, v in scenario["values"].items()}
     absent = set(scenario.get("absent", []))
+    # SPEC-OPTIONAL-COLUMNS-001: alvo com mais de um elemento — o framework recusa (nunca "não existe")
+    ambiguous = set(scenario.get("ambiguous", []))
     calls: list[list[Any]] = []
 
     def idx(step_id: str | None) -> Any:
@@ -75,13 +77,18 @@ def main() -> int:
 
         def exists(self, key: str, *, step_id: str | None = None) -> bool:
             calls.append(["exists", idx(step_id), locator(key)])
+            if key_index(key) in ambiguous:
+                raise RuntimeError("TARGET_AMBIGUOUS")
             return key_index(key) not in absent
 
         def read_items(self, key: str, *, step_id: str | None = None, **_: Any) -> tuple[str, ...]:
             calls.append(["read_items", idx(step_id), locator(key)])
+            if key_index(key) in ambiguous:
+                raise RuntimeError("TARGET_AMBIGUOUS")
             if key_index(key) in absent:
                 raise RuntimeError("TARGET_NOT_FOUND")
-            return tuple(values.get(key_index(key), []))
+            # como o framework 0.3.0: cada item normalizado (espaços colapsados) e itens vazios fora
+            return tuple(i for i in (" ".join(str(x).split()) for x in values.get(key_index(key), [])) if i)
 
         def read_text(self, key: str, *, step_id: str | None = None, **_: Any) -> str:
             calls.append(["read_text", idx(step_id), locator(key)])

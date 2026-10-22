@@ -13,6 +13,9 @@ pacote, também: nenhuma chave de alvo escrita como texto nas telas; ``automatio
 ``selectors.json`` (mesmos alvos, mesmas chaves, mesma equivalência declarada no manifesto); cada ``SelectorKey`` mapeado
 no manifesto para suas etapas; e nenhum módulo do projeto encobre a biblioteca padrão (``selectors``, ``subprocess``,
 ``asyncio`` continuam vindo dela com o projeto no ``sys.path``).
+
+Com planilha de saída (SPEC-OPTIONAL-COLUMNS-001): manifesto, ``main.SPREADSHEET`` e ``REQUIRED_FIELDS`` do processo
+concordam sobre cada coluna (obrigatória × opcional, cabeçalhos na ordem, chave obrigatória).
 """
 
 from __future__ import annotations
@@ -81,6 +84,28 @@ def stdlib_not_shadowed(root: Path) -> bool:
     finally:
         sys.path.remove(str(root))
     return True
+
+
+def output_requirement(output: dict[str, Any], processo: Any) -> tuple[bool, str]:
+    """Planilha de saída (SPEC-OPTIONAL-COLUMNS-001): o manifesto, o ``main.SPREADSHEET`` e o ``REQUIRED_FIELDS`` do
+    processo dizem o MESMO sobre cada coluna — cabeçalhos na mesma ordem, opcional só onde o manifesto declara (sem
+    declaração = obrigatória), a chave obrigatória, e a montagem da linha exigindo exatamente as obrigatórias."""
+    try:
+        main_module = importlib.import_module("main")
+        schema = main_module.SPREADSHEET
+        declared = [c for c in output.get("columns", []) if isinstance(c, dict)]
+        required = {str(c.get("field")): c.get("requirement", "REQUIRED") == "REQUIRED" for c in declared}
+        in_code = {c.field: c.required for c in schema.columns}
+        headers = [c.header for c in schema.columns] == [c.get("header") for c in declared]
+        expected = tuple(f for f, r in required.items() if r)
+        listed = getattr(processo, "REQUIRED_FIELDS", None) if processo is not None else None
+        # todas obrigatórias: a linha recusa qualquer coluna vazia (sem REQUIRED_FIELDS); com opcional: só as da tupla
+        row = listed is None if all(required.values()) else listed is not None and tuple(listed) == expected
+        key = in_code.get(schema.key_field) is True and required.get(schema.key_field) is True
+        ok = headers and required == in_code and row and key
+        return ok, "" if ok else "OUTPUT_REQUIREMENT_MISMATCH"
+    except Exception:  # noqa: BLE001 - esquema ausente ou recusado é falha do contrato
+        return False, "OUTPUT_SCHEMA_INVALID"
 
 
 def run(root: Path) -> list[dict[str, Any]]:
@@ -193,6 +218,10 @@ def run(root: Path) -> list[dict[str, Any]]:
         check(out, "SECRETS_DECLARED", (expected == 0) == (not declared), "SECRETS_NOT_DECLARED")
     except Exception:  # noqa: BLE001 - importação recusada é falha do contrato
         check(out, "PROCESS_IS_RPA_PROCESS", False, "PROCESS_IMPORT_FAILED")
+        processo = None
+    output = manifest.get("output") if isinstance(manifest.get("output"), dict) else {}
+    if package and output.get("format") == "xlsx":
+        check(out, "OUTPUT_REQUIREMENT_CONSISTENT", *output_requirement(output, processo))
     if package:
         try:
             selectors_py = importlib.import_module("automation.selectors")

@@ -32,6 +32,10 @@ import java.util.regex.Pattern;
  *   <li>{@code output} — planilha {@code xlsx}: aba, colunas na ordem (cabeçalho, campo, tipo, etapa e fonte alternativa)
  *       e campo-chave; com {@code json}, o destino de resultados de sempre.</li>
  * </ul>
+ *
+ * <p>NEKKORA-SPEC-OPTIONAL-COLUMNS-001 — versão 1.3.0, só quando alguma coluna é OPCIONAL (decisão revisada da
+ * especificação funcional): cada coluna ganha {@code required} e {@code requirementReason}. Sem coluna opcional, a 1.2.0
+ * (e o código gerado) continuam idênticos. A coluna-chave é sempre obrigatória.
  */
 public record SingleConfig(String processName, String environment, List<String> allowedOrigins, String startUrl, List<Group> groups, List<String> inputs,
                            Map<String, String> outputs, Map<String, Effect> effects, Pdd pdd, String execution, Map<String, Read> reads,
@@ -39,6 +43,9 @@ public record SingleConfig(String processName, String environment, List<String> 
 
     public static final String VERSION = "1.1.0";
     public static final String VERSION_LIST = "1.2.0";
+    public static final String VERSION_OPTIONAL = "1.3.0";
+    /** Motivos de coluna opcional (o mesmo vocabulário da especificação funcional). */
+    public static final Set<String> OPTIONAL_REASONS = Set.of("ABSENT_FOR_SOME_ITEMS", "NOT_APPLICABLE_FOR_SOME_ITEMS");
     static final Pattern TOKEN = Pattern.compile("[a-z][a-z0-9_]{0,59}");
     static final Pattern CLASS = Pattern.compile("[A-Z][A-Za-z0-9]{0,39}");
     static final Pattern UUID = Pattern.compile("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}");
@@ -68,8 +75,16 @@ public record SingleConfig(String processName, String environment, List<String> 
     /** 1.2.0: tecla numa etapa Pressionar tecla. */
     public record KeyPress(String key, boolean navigates) {}
 
-    /** 1.2.0: uma coluna da planilha de saída. {@code fallbackStep} = leitura usada quando o alvo de {@code step} falta. */
-    public record Column(String header, String field, String kind, String step, String fallbackStep) {}
+    /**
+     * 1.2.0: uma coluna da planilha de saída. {@code fallbackStep} = leitura usada quando o alvo de {@code step} falta.
+     * 1.3.0: {@code required = false} → a coluna pode ficar vazia (célula vazia sob o cabeçalho), com o motivo revisado.
+     */
+    public record Column(String header, String field, String kind, String step, String fallbackStep, boolean required, String requirementReason) {
+        /** Coluna obrigatória (o padrão de sempre). */
+        public Column(String header, String field, String kind, String step, String fallbackStep) {
+            this(header, field, kind, step, fallbackStep, true, null);
+        }
+    }
 
     /** 1.2.0: saída do processo. */
     public record Output(String format, String sheet, List<Column> columns, String keyField) {
@@ -108,11 +123,16 @@ public record SingleConfig(String processName, String environment, List<String> 
         return "xlsx".equals(output.format());
     }
 
+    /** Alguma coluna opcional? (pede a configuração 1.3.0) */
+    public boolean optionalColumns() {
+        return output.columns().stream().anyMatch(c -> !c.required());
+    }
+
     /** JSON canônico (o que o Studio grava e o que entra no manifesto pela revisão). */
     public String toJson() {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("schema", CodegenConfig.SCHEMA);
-        m.put("version", modern() ? VERSION_LIST : VERSION);
+        m.put("version", optionalColumns() ? VERSION_OPTIONAL : modern() ? VERSION_LIST : VERSION);
         m.put("execution", execution);
         m.put("processName", processName);
         m.put("environment", environment);
@@ -177,6 +197,10 @@ public record SingleConfig(String processName, String environment, List<String> 
                 x.put("kind", c.kind());
                 x.put("stepId", c.step());
                 x.put("fallbackStepId", c.fallbackStep());
+                if (optionalColumns()) {
+                    x.put("required", c.required());
+                    x.put("requirementReason", c.requirementReason());
+                }
                 cols.add(x);
             }
             o.put("columns", cols);
@@ -216,7 +240,8 @@ public record SingleConfig(String processName, String environment, List<String> 
             throw new CodegenConfig.Invalid("CONFIG_JSON");
         }
         Object version = m.get("version");
-        boolean modern = VERSION_LIST.equals(version);
+        boolean optionalVersion = VERSION_OPTIONAL.equals(version);
+        boolean modern = VERSION_LIST.equals(version) || optionalVersion;
         if (modern) {
             only(m, Set.of("schema", "version", "execution", "processName", "environment", "allowedOrigins", "startUrl", "groups", "inputs", "outputs",
                     "effects", "reads", "keys", "output", "pdd"), "CONFIG");
@@ -345,7 +370,19 @@ public record SingleConfig(String processName, String environment, List<String> 
                 for (Object c : list(o, "columns")) {
                     if (!(c instanceof Map<?, ?> rawc)) throw new CodegenConfig.Invalid("CONFIG_OUTPUT_COLUMNS");
                     Map<String, Object> x = (Map<String, Object>) rawc;
-                    only(x, Set.of("header", "field", "kind", "stepId", "fallbackStepId"), "CONFIG_OUTPUT_COLUMNS");
+                    only(x, optionalVersion ? Set.of("header", "field", "kind", "stepId", "fallbackStepId", "required", "requirementReason")
+                            : Set.of("header", "field", "kind", "stepId", "fallbackStepId"), "CONFIG_OUTPUT_COLUMNS");
+                    boolean required = true;
+                    String reason = null;
+                    if (optionalVersion) {
+                        Object rq = x.get("required");
+                        Object rr = x.get("requirementReason");
+                        if (!(rq instanceof Boolean b)) throw new CodegenConfig.Invalid("CONFIG_OUTPUT_COLUMNS");
+                        required = b;
+                        reason = rr == null || rr == Json.NULL ? null : rr instanceof String r ? r : "";
+                        // obrigatória sem motivo; opcional só com um motivo do vocabulário
+                        if (required ? reason != null : reason == null || !OPTIONAL_REASONS.contains(reason)) throw new CodegenConfig.Invalid("CONFIG_OUTPUT_REQUIREMENT");
+                    }
                     String header = str(x, "header");
                     String field = str(x, "field");
                     String kind = str(x, "kind");
@@ -357,10 +394,12 @@ public record SingleConfig(String processName, String environment, List<String> 
                             || fallback != null && (!outputs.containsKey(fallback) || !used.add(fallback))) {
                         throw new CodegenConfig.Invalid("CONFIG_OUTPUT_COLUMNS");
                     }
-                    cols.add(new Column(header, field, kind, step, fallback));
+                    cols.add(new Column(header, field, kind, step, fallback, required, reason));
                 }
                 String keyField = str(o, "keyField");
                 if (cols.isEmpty() || !fields.contains(keyField)) throw new CodegenConfig.Invalid("CONFIG_OUTPUT_KEY");
+                // a chave identifica a linha: nunca opcional (o framework também recusa: schema_key_invalid)
+                if (cols.stream().anyMatch(c -> c.field().equals(keyField) && !c.required())) throw new CodegenConfig.Invalid("CONFIG_OUTPUT_KEY_OPTIONAL");
                 output = new Output("xlsx", sheet, cols, keyField);
             } else {
                 throw new CodegenConfig.Invalid("CONFIG_OUTPUT_FORMAT");
@@ -376,6 +415,7 @@ public record SingleConfig(String processName, String environment, List<String> 
         }
         SingleConfig c = new SingleConfig(processName, environment, origins, startUrl, groups, inputs, outputs, effects, pdd, execution, reads, keys, output, "");
         if (modern != c.modern()) throw new CodegenConfig.Invalid("CONFIG_VERSION"); // 1.2.0 só com recurso novo (e vice-versa)
+        if (optionalVersion != c.optionalColumns()) throw new CodegenConfig.Invalid("CONFIG_VERSION"); // 1.3.0 só com coluna opcional
         return new SingleConfig(processName, environment, origins, startUrl, groups, inputs, outputs, effects, pdd, execution, reads, keys, output,
                 "sha256:" + CodegenConfig.sha256(c.toJson().strip()));
     }

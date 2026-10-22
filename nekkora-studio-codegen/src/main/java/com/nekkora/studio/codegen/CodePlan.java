@@ -79,8 +79,15 @@ public record CodePlan(boolean modern, boolean list, List<Page> pages, List<Mode
 
     public record Model(String name, String page, String method, List<Field> fields) {}
 
-    /** {@code source}: a variável do modelo do Studio que o campo carrega. */
-    public record Field(String name, boolean optional, String source) {}
+    /**
+     * {@code source}: a variável do modelo do Studio que o campo carrega. {@code optionalColumn} (SPEC-OPTIONAL-COLUMNS-001):
+     * o campo pode faltar porque a COLUNA é opcional no PDD (e não por ter fonte alternativa).
+     */
+    public record Field(String name, boolean optional, String source, boolean optionalColumn) {
+        public Field(String name, boolean optional, String source) {
+            this(name, optional, source, false);
+        }
+    }
 
     /** Leitura de texto/data por um helper da Page (0.3.0). */
     public enum Helper { TEXT, TEXT_IF_PRESENT, DATE, DATE_IF_PRESENT }
@@ -102,8 +109,22 @@ public record CodePlan(boolean modern, boolean list, List<Page> pages, List<Mode
 
     public record Call(String page, String method, String pageVar, List<String> args, String resultVar) {}
 
-    /** Coluna da planilha: {@code primary} e (opcional) {@code fallback} são referências Python já resolvidas. */
-    public record Column(String field, String header, String primary, String fallback, String fallbackLabel) {}
+    /**
+     * Coluna da planilha: {@code primary} e (opcional) {@code fallback} são referências Python já resolvidas.
+     * {@code required = false}: a coluna é opcional no PDD (motivo em {@code requirementReason}) e pode ficar vazia.
+     */
+    public record Column(String field, String header, String primary, String fallback, String fallbackLabel, boolean required, String requirementReason) {
+        public Column(String field, String header, String primary, String fallback, String fallbackLabel) {
+            this(field, header, primary, fallback, fallbackLabel, true, null);
+        }
+    }
+
+    /** Etapas cuja leitura pode faltar só porque a coluna é opcional (sem fonte alternativa). */
+    static Set<String> optionalColumnReads(SingleConfig cfg) {
+        Set<String> out = new LinkedHashSet<>();
+        if (cfg.spreadsheet()) for (SingleConfig.Column c : cfg.output().columns()) if (!c.required() && c.fallbackStep() == null) out.add(c.step());
+        return out;
+    }
 
     /** Entrada: identificador Python e a coluna da lista (o nome da variável no modelo, contrato da lista). */
     public record Input(String name, String column) {}
@@ -253,7 +274,12 @@ public record CodePlan(boolean modern, boolean list, List<Page> pages, List<Mode
                     s.read() == null || s.read().expected() == null ? null : py.get(s.read().expected())));
         }
         List<Field> fields = new ArrayList<>();
-        for (Step s : mine) if (s.output() != null) fields.add(new Field(py.get(s.output()), cfg.modern() && s.read() != null && s.read().optional(), s.output()));
+        Set<String> columnOptional = optionalColumnReads(cfg);
+        for (Step s : mine) {
+            if (s.output() == null) continue;
+            boolean readOptional = cfg.modern() && s.read() != null && s.read().optional();
+            fields.add(new Field(py.get(s.output()), readOptional, s.output(), readOptional && columnOptional.contains(s.step().id().value().toString())));
+        }
         Result result;
         if (fields.isEmpty()) {
             result = Result.none();
@@ -268,7 +294,7 @@ public record CodePlan(boolean modern, boolean list, List<Page> pages, List<Mode
         }
         CodeNames.MethodInfo info = names.method(g.page(), g.method());
         // a docstring diz o que o método faz com as entradas, o que devolve e as condições que importam (CQ-03)
-        return new Method(g.page(), g.method(), List.copyOf(params), result, describe(ops), conditions(ops, result, cfg.modern(), labelOfKey), List.copyOf(ops),
+        return new Method(g.page(), g.method(), List.copyOf(params), result, describe(ops), conditions(ops, result, cfg.modern(), labelOfKey, columnOptional), List.copyOf(ops),
                 info.source());
     }
 
@@ -323,7 +349,7 @@ public record CodePlan(boolean modern, boolean list, List<Page> pages, List<Mode
      * O que vale saber além do resumo: o que o método devolve, quando termina, o que recusa o item e se a ação pode ser
      * repetida depois de um resultado incerto. Frases curtas, uma por condição.
      */
-    static String conditions(List<Op> ops, Result result, boolean modern, Map<String, String> labelOfKey) {
+    static String conditions(List<Op> ops, Result result, boolean modern, Map<String, String> labelOfKey, Set<String> columnOptional) {
         List<String> out = new ArrayList<>();
         switch (result.kind()) {
             case MODEL -> out.add("Returns ``" + result.model() + "``.");
@@ -335,13 +361,16 @@ public record CodePlan(boolean modern, boolean list, List<Page> pages, List<Mode
             }
         }
         List<String> optional = new ArrayList<>();
+        List<String> emptyAllowed = new ArrayList<>();
         boolean dates = false;
         for (Op op : ops) {
             Step s = op.step();
             if (op.waitFirst()) {
                 out.add("First waits for " + quoted(op.waitLabel()) + " (a required read): only with the page ready is a missing optional value conclusive.");
             }
-            if (modern && s.read() != null && s.read().optional()) optional.add(readName(op));
+            if (modern && s.read() != null && s.read().optional()) {
+                (columnOptional.contains(s.step().id().value().toString()) ? emptyAllowed : optional).add(readName(op));
+            }
             if (modern && s.read() != null && "date".equals(s.read().kind())) dates = true;
             if (s.read() != null && s.read().expected() != null) {
                 out.add("address".equals(s.read().kind()) ? "A different address rejects the item (``ENDERECO_DIFERENTE_DO_ESPERADO``)."
@@ -366,6 +395,10 @@ public record CodePlan(boolean modern, boolean list, List<Page> pages, List<Mode
         if (!optional.isEmpty()) {
             String who = join(optional);
             out.add(Character.toUpperCase(who.charAt(0)) + who.substring(1) + " may be missing on this page (``None``; the alternative source is in the PDD).");
+        }
+        if (!emptyAllowed.isEmpty()) {
+            String who = join(emptyAllowed);
+            out.add(Character.toUpperCase(who.charAt(0)) + who.substring(1) + " may be missing on this page (``None``; an optional column in the PDD).");
         }
         if (dates) out.add("A written-out date becomes YYYY-MM-DD; an incomplete or ambiguous date rejects the item (``DATA_INCOMPLETA_OU_AMBIGUA``).");
         return String.join(" ", out);
@@ -444,7 +477,7 @@ public record CodePlan(boolean modern, boolean list, List<Page> pages, List<Mode
                 String pv = cfg.outputs().get(c.step());
                 String fv = c.fallbackStep() == null ? null : cfg.outputs().get(c.fallbackStep());
                 String fallbackLabel = c.fallbackStep() == null ? null : readOf.get(c.fallbackStep());
-                columns.add(new Column(c.field(), c.header(), refOf.get(pv), fv == null ? null : refOf.get(fv), fallbackLabel));
+                columns.add(new Column(c.field(), c.header(), refOf.get(pv), fv == null ? null : refOf.get(fv), fallbackLabel, c.required(), c.requirementReason()));
                 used.add(root(refOf.get(pv)));
                 if (fv != null) used.add(root(refOf.get(fv)));
             }

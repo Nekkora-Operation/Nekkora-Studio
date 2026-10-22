@@ -195,7 +195,10 @@ public final class DevelopmentPlanner {
                                 "A conferência de um dado lido só compara com uma variável de ENTRADA.", "Ligue a etapa a uma variável de entrada ou retire o valor."));
                     }
                 }
-                boolean optional = s.hasTarget() && (alternatives.contains(s.stepId()) || fallbackOf.containsKey(s.stepId()));
+                // SPEC-OPTIONAL-COLUMNS-001: coluna opcional por decisão revisada → o alvo pode faltar (exists() → None);
+                // ambíguo, identidade divergente e data inválida continuam erro
+                boolean optionalColumn = list && gate.spec().optionalColumn(s.stepId());
+                boolean optional = s.hasTarget() && (alternatives.contains(s.stepId()) || fallbackOf.containsKey(s.stepId()) || optionalColumn);
                 reads.put(id, new SingleConfig.Read(kind, optional, expected));
             }
             if (list) {
@@ -221,11 +224,20 @@ public final class DevelopmentPlanner {
                         case "date" -> "iso_date";
                         default -> "text";
                     };
-                    if ("url".equals(kind) && keyField == null) keyField = field;
+                    boolean required = !gate.spec().optionalColumn(s.stepId());
+                    if ("url".equals(kind) && keyField == null && required) keyField = field;
                     StepId alt = fallbackOf.get(s.stepId());
-                    columns.add(new SingleConfig.Column(header, field, kind, id, alt == null ? null : alt.value().toString()));
+                    String reason = required ? null : gate.spec().requirements().get(s.stepId()).value().substring(com.nekkora.studio.ai.spec.FunctionalSpec.OPTIONAL.length());
+                    columns.add(new SingleConfig.Column(header, field, kind, id, alt == null ? null : alt.value().toString(), required, reason));
                 }
-                if (!columns.isEmpty()) output = new SingleConfig.Output("xlsx", "Dados", columns, keyField == null ? columns.get(0).field() : keyField);
+                // a chave da planilha é a 1ª coluna de endereço (ou a 1ª obrigatória): nunca uma coluna opcional
+                String fallbackKey = columns.stream().filter(SingleConfig.Column::required).map(SingleConfig.Column::field).findFirst().orElse(null);
+                if (!columns.isEmpty() && (keyField != null || fallbackKey != null)) {
+                    output = new SingleConfig.Output("xlsx", "Dados", columns, keyField == null ? fallbackKey : keyField);
+                } else if (!columns.isEmpty()) {
+                    issues.add(QualityIssue.of("PLAN_OUTPUT_NO_REQUIRED_KEY", Layer.V3_PLAN, QualityIssue.Kind.BLOCKER, null, "Planilha de saída",
+                            "Todas as colunas da planilha são opcionais: nenhuma identifica a linha.", "Declare obrigatória a coluna que identifica cada item."));
+                }
             }
         }
         SingleConfig cfg = null;

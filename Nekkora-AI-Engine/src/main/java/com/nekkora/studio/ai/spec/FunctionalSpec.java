@@ -29,14 +29,19 @@ import java.util.UUID;
  * e uma planilha de saída) — e {@code OUTPUT_COLUMN} por etapa Observar: {@code COLUMN:<cabeçalho>} (rótulo de interface do
  * vocabulário controlado, nunca dado), {@code FALLBACK:<StepId>} (fonte alternativa de outra coluna, quando o alvo dela
  * falta na página) ou {@code NONE}. A 1.0.0 continua sendo gravada quando nenhum campo novo é usado (revisões estáveis).
+ *
+ * <p>NEKKORA-SPEC-OPTIONAL-COLUMNS-001 (1.2.0, lê 1.0.0 e 1.1.0): {@code OUTPUT_REQUIREMENT} por etapa Observar que dá
+ * uma coluna: {@code REQUIRED} ou {@code OPTIONAL:<motivo>} (vocabulário fechado, {@link #OPTIONAL_REASONS}). Sem decisão,
+ * a coluna é obrigatória — o legado não muda. A 1.2.0 só é gravada quando o campo é usado, e o campo só é aceito nela.
  */
 public record FunctionalSpec(AutomationId automationId, List<Decision> decisions) {
 
     public static final String SCHEMA = "nekkora-studio/functional-spec";
-    public static final String VERSION = "1.1.0";
+    public static final String VERSION = "1.2.0";
+    static final String VERSION_1_1 = "1.1.0";
     static final String VERSION_1_0 = "1.0.0";
 
-    public enum Field { EFFECT, POSTCONDITION, CONCLUSION, START_URL, DATA_FLOW, OUTPUT_COLUMN }
+    public enum Field { EFFECT, POSTCONDITION, CONCLUSION, START_URL, DATA_FLOW, OUTPUT_COLUMN, OUTPUT_REQUIREMENT }
 
     /** Quem decidiu. Nunca "confirmado pelo cliente": é o vocabulário de ator do Studio. */
     public enum Actor { DEVELOPER, TEST_AGENT }
@@ -51,6 +56,19 @@ public record FunctionalSpec(AutomationId automationId, List<Decision> decisions
     public static final String COLUMN = "COLUMN:";
     public static final String FALLBACK = "FALLBACK:";
     public static final String NOT_IN_OUTPUT = "NONE";
+    /** A coluna precisa de valor: sem valor depois de todas as fontes, o item é recusado (o padrão, sem decisão). */
+    public static final String REQUIRED = "REQUIRED";
+    public static final String OPTIONAL = "OPTIONAL:";
+    /**
+     * Por que a coluna pode ficar vazia (a justificativa revisada, sem texto livre): o dado não existe em alguns itens
+     * (ex.: algo que ainda não aconteceu) ou não se aplica a alguns itens.
+     */
+    public static final Set<String> OPTIONAL_REASONS = Set.of("ABSENT_FOR_SOME_ITEMS", "NOT_APPLICABLE_FOR_SOME_ITEMS");
+
+    /** {@code true} só para {@code OPTIONAL:<motivo>} do vocabulário. */
+    public static boolean optional(String requirement) {
+        return requirement != null && requirement.startsWith(OPTIONAL) && OPTIONAL_REASONS.contains(requirement.substring(OPTIONAL.length()));
+    }
 
     /** Cabeçalho de coluna aceitável: rótulo de interface do vocabulário controlado, curto, sem cara de fórmula. */
     public static boolean headerOk(String h) {
@@ -75,6 +93,7 @@ public record FunctionalSpec(AutomationId automationId, List<Decision> decisions
                 case OUTPUT_COLUMN -> require(step != null && fingerprint != null && (NOT_IN_OUTPUT.equals(value)
                         || value.startsWith(COLUMN) && headerOk(value.substring(COLUMN.length()))
                         || value.startsWith(FALLBACK) && isUuid(value.substring(FALLBACK.length()))));
+                case OUTPUT_REQUIREMENT -> require(step != null && fingerprint != null && (REQUIRED.equals(value) || optional(value)));
             }
         }
     }
@@ -120,8 +139,9 @@ public record FunctionalSpec(AutomationId automationId, List<Decision> decisions
         }
         Map<String, Object> doc = new LinkedHashMap<>();
         doc.put("schema", SCHEMA);
+        boolean requirement = decisions.stream().anyMatch(d -> d.field() == Field.OUTPUT_REQUIREMENT);
         boolean modern = decisions.stream().anyMatch(d -> d.field() == Field.DATA_FLOW || d.field() == Field.OUTPUT_COLUMN);
-        doc.put("version", modern ? VERSION : VERSION_1_0);
+        doc.put("version", requirement ? VERSION : modern ? VERSION_1_1 : VERSION_1_0);
         doc.put("automationId", automationId.value().toString());
         doc.put("decisions", list);
         return Json.write(doc);
@@ -133,7 +153,8 @@ public record FunctionalSpec(AutomationId automationId, List<Decision> decisions
         try {
             Map<String, Object> m = Json.parseObject(json);
             if (!Set.of("schema", "version", "automationId", "decisions").equals(m.keySet())) throw new IllegalArgumentException("SPEC_FIELDS");
-            if (!SCHEMA.equals(m.get("schema")) || !(VERSION.equals(m.get("version")) || VERSION_1_0.equals(m.get("version")))) {
+            Object version = m.get("version");
+            if (!SCHEMA.equals(m.get("schema")) || !(VERSION.equals(version) || VERSION_1_1.equals(version) || VERSION_1_0.equals(version))) {
                 throw new IllegalArgumentException("SPEC_VERSION");
             }
             AutomationId id = new AutomationId(UUID.fromString((String) m.get("automationId")));
@@ -143,7 +164,10 @@ public record FunctionalSpec(AutomationId automationId, List<Decision> decisions
                 if (!Set.of("field", "stepId", "value", "actor", "basis", "fingerprint", "at").equals(d.keySet())) throw new IllegalArgumentException("SPEC_FIELDS");
                 Object step = d.get("stepId");
                 Object fp = d.get("fingerprint");
-                out.add(new Decision(Field.valueOf((String) d.get("field")), step == Json.NULL ? null : new StepId(UUID.fromString((String) step)),
+                Field field = Field.valueOf((String) d.get("field"));
+                // campo da 1.2.0 num documento de versão anterior: o documento não é dessa versão (nada é presumido)
+                if (field == Field.OUTPUT_REQUIREMENT && !VERSION.equals(version)) throw new IllegalArgumentException("SPEC_VERSION");
+                out.add(new Decision(field, step == Json.NULL ? null : new StepId(UUID.fromString((String) step)),
                         (String) d.get("value"), Actor.valueOf((String) d.get("actor")), Basis.valueOf((String) d.get("basis")),
                         fp == Json.NULL ? null : (String) fp, Instant.parse((String) d.get("at"))));
             }

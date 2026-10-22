@@ -246,6 +246,13 @@ public final class SingleGenerator {
             if (!click) blockers.add(new Blocker("EFFECT_STEP_NOT_CLICK", null));
         }
         for (String st : cfg.reads().keySet()) if (!outputsUsed.contains(st)) blockers.add(new Blocker("READ_STEP_NOT_OBSERVE", null));
+        // SPEC-OPTIONAL-COLUMNS-001: leitura que pode faltar só é conclusiva com a página pronta — a tela precisa de uma leitura
+        // OBRIGATÓRIA com alvo para esperar antes (senão "não existe" poderia ser só "ainda não carregou")
+        for (Step s : steps) {
+            if (s.read() == null || !s.read().optional() || s.key() == null) continue;
+            boolean anchored = steps.stream().anyMatch(o -> o.group().equals(s.group()) && o.read() != null && !o.read().optional() && o.key() != null);
+            if (!anchored) blockers.add(new Blocker("OPTIONAL_READ_WITHOUT_REQUIRED_ANCHOR", s.step().id()));
+        }
         if (!blockers.isEmpty()) return new PythonGenerator.Result(List.copyOf(blockers), Map.of(), plan.planRevision());
         return new PythonGenerator.Result(List.of(), SingleEmitter.emit(a, plan, cfg, steps, names), plan.planRevision());
     }

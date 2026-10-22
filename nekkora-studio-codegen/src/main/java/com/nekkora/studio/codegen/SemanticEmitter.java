@@ -161,9 +161,15 @@ final class SemanticEmitter {
         }
         if (helpers.contains(Helper.DATE_IF_PRESENT)) {
             b.append("\n    def _date_if_present(self, key: str, *, step_id: str) -> str | None:\n");
-            b.append("        \"\"\"Like ``_date``; ``None`` if the element does not exist on this page.\"\"\"\n");
+            // SPEC-OPTIONAL-COLUMNS-001: elemento sem texto (só espaços) também é ausência; texto presente que não é data
+            // completa continua recusando o item (nunca vira None)
+            b.append("        \"\"\"Like ``_date``; ``None`` if the element does not exist on this page or shows no text (ambiguous is still an\n");
+            b.append("        error, and a text that is not a complete date still rejects the item).\n        \"\"\"\n");
             b.append("        if not self.actions.exists(key, step_id=step_id):\n            return None\n");
-            b.append("        return self._date(key, step_id=step_id)\n");
+            b.append("        items = self.actions.read_items(key, step_id=step_id)\n        if not items:\n            return None\n");
+            b.append("        date = parse_long_date(\" \".join(items))\n");
+            b.append("        if date is None:\n            raise BusinessRuleRejected(\"DATA_INCOMPLETA_OU_AMBIGUA\", step_id=step_id)\n");
+            b.append("        return date\n");
         }
     }
 
@@ -172,7 +178,14 @@ final class SemanticEmitter {
         // rodada 5 (CQ-R5-01): sem repr automático — o dado lido pode ser pessoal e não pode aparecer em log ou erro
         b.append("\n\n@dataclass(frozen=True, repr=False)\nclass ").append(model.name()).append(":\n");
         b.append("    \"\"\"Data read by ``").append(model.page()).append('.').append(model.method()).append("()`` (``repr`` does not show the values).");
-        if (anyOptional) b.append("\n\n    ``None``: the value does not exist on this page (absence foreseen in the PDD, with an alternative source).\n    \"\"\"\n\n");
+        boolean column = model.fields().stream().anyMatch(CodePlan.Field::optionalColumn);
+        boolean alternative = model.fields().stream().anyMatch(f -> f.optional() && !f.optionalColumn());
+        String foreseen = !column ? ", with an alternative source" : alternative ? ": an alternative source or an optional column" : ": an optional column";
+        if (anyOptional) {
+            b.append("\n\n");
+            for (String l : wrapWords("``None``: the value does not exist on this page (absence foreseen in the PDD" + foreseen + ").", 112)) b.append("    ").append(l).append('\n');
+            b.append("    \"\"\"\n\n");
+        }
         else b.append("\"\"\"\n\n");
         for (CodePlan.Field f : model.fields()) b.append("    ").append(f.name()).append(": ").append(f.optional() ? "str | None" : "str").append('\n');
     }
@@ -497,13 +510,29 @@ final class SemanticEmitter {
         b.append("    return value if value is not None and value.strip() else None\n");
         List<String> params = new ArrayList<>();
         for (CodePlan.Param p : pr.rowParams()) params.add(p.name() + ": " + p.type());
+        // SPEC-OPTIONAL-COLUMNS-001: com coluna opcional no PDD, só as OBRIGATÓRIAS recusam o item (a opcional fica vazia)
+        boolean optional = pr.columns().stream().anyMatch(c -> !c.required());
+        if (optional) {
+            List<String> required = pr.columns().stream().filter(CodePlan.Column::required).map(c -> Py.str(c.field())).toList();
+            b.append("\n\nREQUIRED_FIELDS = (").append(String.join(", ", required)).append(required.size() == 1 ? ",)" : ")").append('\n');
+            b.append("\"\"\"Row fields that cannot stay empty; the other columns are optional in the PDD.\"\"\"\n");
+        }
         b.append("\n\ndef build_spreadsheet_row(").append(String.join(", ", params)).append(") -> dict[str, object]:\n");
         List<String> rules = new ArrayList<>();
         for (CodePlan.Column c : pr.columns()) {
             if (c.fallback() != null) rules.add("    - " + CodePlan.quoted(c.header()) + ": if missing on the page (or only whitespace), " + c.fallbackLabel() + " is used.\n");
+            if (!c.required()) {
+                rules.add("    - " + CodePlan.quoted(c.header()) + ": optional in the PDD (" + reason(c.requirementReason()) + "): stays empty when "
+                        + (c.fallback() == null ? "" : "both sources are ") + "missing.\n");
+            }
         }
-        b.append("    \"\"\"One spreadsheet row by the PDD rule; a column that stays empty (or only whitespace) rejects the item with the\n");
-        b.append("    field name (the content never goes into the reason) and nothing is invented.");
+        if (optional) {
+            b.append("    \"\"\"One spreadsheet row by the PDD rule; a required column that stays empty (or only whitespace) rejects the item\n");
+            b.append("    with the field name (the content never goes into the reason); an optional one stays empty. Nothing is invented.");
+        } else {
+            b.append("    \"\"\"One spreadsheet row by the PDD rule; a column that stays empty (or only whitespace) rejects the item with the\n");
+            b.append("    field name (the content never goes into the reason) and nothing is invented.");
+        }
         if (rules.isEmpty()) {
             b.append("\"\"\"\n");
         } else {
@@ -517,7 +546,17 @@ final class SemanticEmitter {
                     .append(c.fallback() == null ? "" : " or _filled(" + c.fallback() + ")").append(",\n");
         }
         b.append("    }\n");
-        b.append("    for field, value in row.items():\n        if value is None:\n");
+        if (optional) b.append("    for field in REQUIRED_FIELDS:\n        if row[field] is None:\n");
+        else b.append("    for field, value in row.items():\n        if value is None:\n");
         b.append("            raise BusinessRuleRejected(f\"DADO_OBRIGATORIO_VAZIO:{field}\")\n    return row\n");
+    }
+
+    /** Motivo da coluna opcional (vocabulário da especificação funcional), em inglês. */
+    static String reason(String code) {
+        return switch (code == null ? "" : code) {
+            case "ABSENT_FOR_SOME_ITEMS" -> "the data does not exist for some items";
+            case "NOT_APPLICABLE_FOR_SOME_ITEMS" -> "the data does not apply to some items";
+            default -> "declared optional";
+        };
     }
 }

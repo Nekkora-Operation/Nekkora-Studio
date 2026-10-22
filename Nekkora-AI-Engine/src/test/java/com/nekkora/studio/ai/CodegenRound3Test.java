@@ -42,13 +42,13 @@ class CodegenRound3Test {
     }
 
     @Test
-    @DisplayName("[Python real] V4/V5/VQ no pacote automation/: tudo PASS e o contrato roda as 4 verificações novas (11 no total)")
+    @DisplayName("[Python real] V4/V5/VQ no pacote automation/: tudo PASS e o contrato roda as 4 verificações novas + a de obrigatoriedade das colunas (12 no total)")
     void pacoteAprovado() throws Exception {
         Path py = PythonForTests.framework();
         Assumptions.assumeTrue(py != null, "sem o interpretador do framework neste ambiente");
         Map<String, PythonChecks.Check> by = checks(py, fresh("novo"));
         for (PythonChecks.Check c : by.values()) assertEquals(PythonChecks.Status.PASS, c.status(), c.id() + " " + c.codes() + " " + c.reason());
-        assertEquals(11, by.get("CONTRACT_TESTS").codes().get("TOTAL"), by.get("CONTRACT_TESTS").codes().toString());
+        assertEquals(12, by.get("CONTRACT_TESTS").codes().get("TOTAL"), by.get("CONTRACT_TESTS").codes().toString());
     }
 
     @Test

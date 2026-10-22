@@ -162,6 +162,21 @@ public final class CodegenQuality001Homologation {
     /** Os quatro artigos (lista de entrada controlada): termo pesquisado e caminho do artigo. Nenhum dado biográfico. */
     private static final String[][] ARTICLES = {{"Machado de Assis", "/wiki/Machado_de_Assis"}, {"Clarice Lispector", "/wiki/Clarice_Lispector"},
             {"Marie Curie", "/wiki/Marie_Curie"}, {"Albert Einstein", "/wiki/Albert_Einstein"}};
+    /**
+     * NEKKORA-SPEC-OPTIONAL-COLUMNS-001 ({@code -Dnekkora.homolog.optionalDeath=true}): "Morte" declarada OPCIONAL em
+     * Pendências e o teste autorizado com uma pessoa VIVA a mais (o artigo não tem a linha "Morte"). Sem a propriedade, o
+     * roteiro é o de antes. O debug guiado continua nos quatro artigos (todos com "Morte").
+     */
+    private static final boolean OPTIONAL_DEATH = Boolean.getBoolean("nekkora.homolog.optionalDeath");
+    private static final String[] LIVING = {"Fernanda Montenegro", "/wiki/Fernanda_Montenegro"};
+
+    /** Artigos do teste autorizado (e do oráculo): os quatro, mais a pessoa viva no modo da missão de colunas opcionais. */
+    private static List<String[]> runArticles() {
+        List<String[]> out = new ArrayList<>(List.of(ARTICLES));
+        if (OPTIONAL_DEATH) out.add(LIVING);
+        return out;
+    }
+
     private static final String MAIN = "https://pt.wikipedia.org/wiki/Wikip%C3%A9dia:P%C3%A1gina_principal";
     /** Textos de artigo que NUNCA podem aparecer no modelo, no PDD ou no código (o Recorder não guarda conteúdo). */
     private static final List<String> PAGE_TEXT = List.of("Joaquim Maria", "21 de junho de 1839", "Chaya", "Skłodowska", "escritor", "brasileiro");
@@ -447,6 +462,7 @@ public final class CodegenQuality001Homologation {
         answerRemaining(dp);
         DevelopmentPanel.Model m = waitDevIdle("resultado");
         if (m.pending().stream().anyMatch(i -> i.code().equals("ENVIRONMENT_NOT_READY"))) m = prepareAutomationEnvironment(dp);
+        if (OPTIONAL_DEATH) m = declareDeathOptional(dp, m);
         captureWindow(devDialog(), "G4-05-resultado");
         log("  pendências finais: " + m.pending().stream().map(i -> i.kind() + ":" + i.code()).toList());
         log("  resultado:\n" + String.join("\n", m.results()).indent(4));
@@ -492,6 +508,7 @@ public final class CodegenQuality001Homologation {
         log("  resultado do teste:\n" + String.join("\n", m.results()).indent(4));
         check("G6: teste autorizado terminou com planilha gravada e conferida", m.statusTitle().startsWith("Teste autorizado terminou: planilha gravada e conferida"));
         check("G6: planilha no destino escolhido", Files.isRegularFile(SHEET));
+        if (OPTIONAL_DEATH) optionalSheetChecks();
         closeDevelopment();
 
         // V6 na validação
@@ -513,7 +530,7 @@ public final class CodegenQuality001Homologation {
 
         // oráculo: os dados VISÍVEIS de cada artigo, lidos pelo CDP na página (para o conferidor independente)
         List<Object> pages = new ArrayList<>();
-        for (String[] art : ARTICLES) {
+        for (String[] art : runArticles()) {
             navigate(WP + art[1]);
             pages.add(page.eval("(() => { const rows = {}; for (const r of document.querySelectorAll('table.infobox tr')) { const th = r.querySelector(':scope > th');"
                     + " const td = r.querySelector(':scope > td'); if (!th || !td) continue; const lis = [...td.querySelectorAll('li')].filter(li => li.offsetParent !== null && !li.querySelector('li'));"
@@ -521,8 +538,87 @@ public final class CodegenQuality001Homologation {
                     + " return {url: location.href, h1: document.getElementById('firstHeading').innerText, rows}; })()"));
         }
         Files.writeString(out.toPath().resolve("oraculo-pagina.json"), Json.write(pages), StandardCharsets.UTF_8);
-        log("  oráculo: dados visíveis dos 4 artigos gravados para o conferidor independente (fora do relatório)");
+        log("  oráculo: dados visíveis dos " + runArticles().size() + " artigos gravados para o conferidor independente (fora do relatório)");
         save();
+    }
+
+    /**
+     * SPEC-OPTIONAL-COLUMNS-001 G2/G6 pela interface: a obrigatoriedade de cada coluna aparece em Pendências como
+     * informação; "Morte" é declarada opcional com o botão da opção (clique real). A decisão muda a especificação: o código
+     * gerado antes deixa de valer e o Studio gera de novo (nova revisão da especificação no manifesto).
+     */
+    private DevelopmentPanel.Model declareDeathOptional(DevelopmentPanel dp, DevelopmentPanel.Model before) throws Exception {
+        Path manifest = PROJECT_DIR.resolve("biografias-python").resolve("manifest.json");
+        String specBefore = String.valueOf(((Map<?, ?>) Json.parseObject(Files.readString(manifest, StandardCharsets.UTF_8)).get("pdd")).get("specRevision"));
+        String codeBefore = Files.readString(PROJECT_DIR.resolve("biografias-python").resolve("main.py"), StandardCharsets.UTF_8);
+        List<QualityIssue> reqs = before.pending().stream().filter(i -> i.code().equals("SPEC_OUTPUT_REQUIREMENT")).toList();
+        log("  obrigatoriedade das colunas (Pendências): " + reqs.stream().map(QualityIssue::detail).toList());
+        check("SPEC-OC G2: cada coluna (menos a chave URL) aparece em Pendências como INFORMAÇÃO, obrigatória por padrão", reqs.size() == 5
+                && reqs.stream().allMatch(i -> i.kind() == QualityIssue.Kind.INFO && i.detail().contains("obrigatória (padrão, sem decisão)")));
+        check("SPEC-OC G1: antes da decisão, o código exige \"Morte\" (comportamento de sempre)", !codeBefore.contains("required=False"));
+        QualityIssue morte = selectPendingWhere(dp, "obrigatoriedade de Morte", i -> i.code().equals("SPEC_OUTPUT_REQUIREMENT") && i.detail().contains("“Morte”"));
+        captureWindow(devDialog(), "OC-01-pendencia-morte");
+        String label = morte.assistance().orElseThrow().options().stream().filter(o -> "OPTIONAL:ABSENT_FOR_SOME_ITEMS".equals(o.value())).findFirst().orElseThrow().label();
+        log("  resposta: " + label);
+        clickButtonWithText(edt(dp::pendingButtons), label);
+        DevelopmentPanel.Model m = waitDevIdle("desenvolver com Morte opcional", 300);
+        if (m.pending().stream().anyMatch(i -> i.code().equals("ENVIRONMENT_NOT_READY"))) m = prepareAutomationEnvironment(dp);
+        captureWindow(devDialog(), "OC-02-morte-opcional");
+        List<QualityIssue> after = m.pending().stream().filter(i -> i.code().equals("SPEC_OUTPUT_REQUIREMENT")).toList();
+        log("  depois: " + after.stream().map(QualityIssue::detail).toList());
+        check("SPEC-OC G2: \"Morte\" agora opcional (com o motivo); as outras quatro continuam obrigatórias por padrão",
+                after.stream().anyMatch(i -> i.detail().contains("“Morte”: opcional — o dado não existe em alguns itens"))
+                        && after.stream().filter(i -> i.detail().contains("obrigatória (padrão, sem decisão)")).count() == 4);
+        check("SPEC-OC G4: código de novo CODE_VALIDATED depois da decisão", m.results().contains("✓ CODE_VALIDATED"));
+        Map<String, Object> man = Json.parseObject(Files.readString(manifest, StandardCharsets.UTF_8));
+        String specAfter = String.valueOf(((Map<?, ?>) man.get("pdd")).get("specRevision"));
+        check("SPEC-OC G2: a decisão mudou a especificação (o código anterior não vale; o Studio gerou de novo)", !specAfter.equals(specBefore));
+        String main = Files.readString(PROJECT_DIR.resolve("biografias-python").resolve("main.py"), StandardCharsets.UTF_8);
+        String pages = Files.readString(PROJECT_DIR.resolve("biografias-python").resolve("automation").resolve("pages.py"), StandardCharsets.UTF_8);
+        String process = Files.readString(PROJECT_DIR.resolve("biografias-python").resolve("automation").resolve("process.py"), StandardCharsets.UTF_8);
+        check("SPEC-OC G3: main.py — OutputColumn(\"Morte\", \"death_date\", ColumnKind.ISO_DATE, required=False); cabeçalho igual; as outras obrigatórias",
+                main.contains("OutputColumn(\"Morte\", \"death_date\", ColumnKind.ISO_DATE, required=False),") && main.split("required=False", -1).length == 2);
+        check("SPEC-OC G3: ProfileData.death_date: str | None; leitura _date_if_present; Nascimento continua _date",
+                pages.contains("    death_date: str | None\n") && pages.contains("death_date=self._date_if_present(") && pages.contains("birth_date=self._date("));
+        check("SPEC-OC G3: a linha exige só REQUIRED_FIELDS (sem death_date)", process.contains("REQUIRED_FIELDS = (\"url\", \"full_name\", \"birth_date\", \"nationality\", \"occupation\")"));
+        Map<?, ?> output = (Map<?, ?>) man.get("output");
+        check("SPEC-OC G4: manifesto 1.5.0 com a regra por coluna (Morte OPTIONAL, motivo) e o esquema da regra", "1.5.0".equals(man.get("version"))
+                && Json.write(output).contains("\"header\":\"Morte\",\"field\":\"death_date\"") && Json.write(output).contains("\"requirement\":\"OPTIONAL\"")
+                && Json.write(output).contains("nekkora-studio/output-requirement/1.0.0"));
+        return m;
+    }
+
+    /**
+     * SPEC-OPTIONAL-COLUMNS-001 G6: conferidor independente (openpyxl, sem nekkora_rpa) — a pessoa viva tem a célula Morte
+     * VAZIA; as falecidas têm a data; as obrigatórias estão preenchidas. Só tipos e formatos vão para o relatório.
+     */
+    @SuppressWarnings("unchecked")
+    private void optionalSheetChecks() throws Exception {
+        Path script = out.toPath().resolve("conferir-opcional.py");
+        Files.writeString(script, String.join("\n",
+                "import json, re, sys",
+                "import openpyxl",
+                "ws = openpyxl.load_workbook(sys.argv[1]).active",
+                "rows = [[c.value for c in r] for r in ws.iter_rows()]",
+                "shape = [[None if v is None else ('date' if isinstance(v, str) and re.fullmatch(r'\\d{4}-\\d{2}-\\d{2}', v) else 'text') for v in r] for r in rows[1:]]",
+                "print(json.dumps({'headers': rows[0], 'width': sorted({len(r) for r in rows}), 'shape': shape}))"), StandardCharsets.UTF_8);
+        String outText = runPython(List.of(script.toString(), SHEET.toString()), out.toPath(), Map.of());
+        String last = outText.strip().lines().reduce((a, b) -> b).orElse("{}");
+        Files.writeString(out.toPath().resolve("conferencia-opcional.json"), last + "\n", StandardCharsets.UTF_8);
+        Map<String, Object> r = Json.parseObject(last);
+        List<Object> shape = (List<Object>) r.get("shape");
+        log("  conferência da planilha (só tipos): " + last);
+        check("SPEC-OC G6: cabeçalho \"Morte\" preservado (coluna não removida) e nenhuma célula extra", COLUMNS.equals(r.get("headers"))
+                && List.of(6L).equals(r.get("width")));
+        check("SPEC-OC G6: uma linha por artigo (" + runArticles().size() + ")", shape.size() == runArticles().size());
+        List<Object> living = (List<Object>) shape.get(shape.size() - 1);
+        check("SPEC-OC G6: pessoa viva → célula Morte verdadeiramente vazia (sem valor, nem \"\", nem N/A)", living.get(3) == Json.NULL);
+        check("SPEC-OC G6: pessoa viva → Nascimento gravado como data (obrigatória continua exigida)", "date".equals(living.get(2)));
+        check("SPEC-OC G6: pessoas falecidas → Morte AAAA-MM-DD", shape.subList(0, shape.size() - 1).stream().allMatch(x -> "date".equals(((List<Object>) x).get(3))));
+        check("SPEC-OC G6: colunas obrigatórias preenchidas em todas as linhas", shape.stream().allMatch(x -> {
+            List<Object> row = (List<Object>) x;
+            return List.of(0, 1, 2, 4, 5).stream().allMatch(i -> row.get(i) != Json.NULL);
+        }));
     }
 
     private boolean columnsInOrder(String code) {
@@ -750,6 +846,12 @@ public final class CodegenQuality001Homologation {
             check("G5: PDF declara as fontes alternativas (título e Campo(s))", flat.contains("se não existir na página: título da página")
                     && flat.contains("se não existir na página: linha “Campo(s)”"));
             check("G5: PDF sem texto de artigo", PAGE_TEXT.stream().noneMatch(flat::contains));
+            if (OPTIONAL_DEATH) {
+                check("SPEC-OC G2: o apêndice do PDD diz que \"Morte\" é OPCIONAL e por quê; as outras continuam obrigatórias",
+                        flat.contains("OPCIONAL (o dado não existe em alguns itens): sem o dado, a célula fica vazia")
+                                && flat.contains("coluna opcional sem dado fica vazia (nunca recebe outro valor)")
+                                && flat.split("OPCIONAL \\(", -1).length == 2);
+            }
         }
         closePdd();
     }
@@ -767,13 +869,13 @@ public final class CodegenQuality001Homologation {
         check("G6: o Studio pede a lista com as colunas das variáveis de entrada", mm.find());
         List<String> cols = List.of(mm.group(1).split(", "));
         StringBuilder csv = new StringBuilder(String.join(",", cols)).append("\r\n");
-        for (String[] art : ARTICLES) {
+        for (String[] art : runArticles()) {
             List<String> row = new ArrayList<>();
             for (String c : cols) row.add(c.contains("endereco") ? WP + art[1] : art[0]);
             csv.append(String.join(",", row)).append("\r\n");
         }
         Files.writeString(INPUT, csv.toString(), StandardCharsets.UTF_8);
-        log("  lista de entrada (dados de teste do agente, não código): " + cols + " · 4 linhas");
+        log("  lista de entrada (dados de teste do agente, não código): " + cols + " · " + runArticles().size() + " linhas");
         captureWindow(ch, "G6-01-escolher-lista");
         typePathIn(ch, INPUT);
         waitChooser("Planilha de saída do teste autorizado");
@@ -782,7 +884,7 @@ public final class CodegenQuality001Homologation {
         NekkoraDialog c = waitDialog("Executar teste autorizado?");
         String msg = edt(() -> texts(c));
         log("  confirmação: " + msg.replaceAll("\\s+", " "));
-        check("G6: a confirmação diz o site, o destino, a lista e que não é produção", msg.contains(WP) && msg.contains(SHEET.toString()) && msg.contains("4 linha")
+        check("G6: a confirmação diz o site, o destino, a lista e que não é produção", msg.contains(WP) && msg.contains(SHEET.toString()) && msg.contains(runArticles().size() + " linha")
                 && msg.contains("Não é execução de produção"));
         captureWindow(c, "G6-02-confirmar-execucao");
         clickButtonWithText(c, "Executar");
