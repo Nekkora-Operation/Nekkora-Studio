@@ -239,7 +239,7 @@ public final class DevelopmentPanel extends NekkoraPanel {
         tabs.addTab("Opções avançadas", IconName.SETTINGS, scroll(adv));
         add(tabs, BorderLayout.CENTER);
 
-        NekkoraStack foot = NekkoraStack.horizontal(Spacing.SPACE_3);
+        NekkoraStack foot = NekkoraStack.vertical(Spacing.SPACE_2);
         develop.setName("develop.start");
         develop.onClick(e -> actions.develop());
         cancel.setName("develop.cancel");
@@ -256,11 +256,18 @@ public final class DevelopmentPanel extends NekkoraPanel {
         runButton.setName("develop.run");
         runButton.onClick(e -> actions.supervisedRun());
         runButton.getAccessibleContext().setAccessibleDescription("Roda o código gerado da revisão atual, com confirmação do site e do destino; não é produção.");
-        foot.addAll(develop, cancel, save, openCode, review, report, validate, help, runButton);
-        foot.addGlue();
+        // INTEGRATION-CONSOLIDATION-001: com "Revisar código" os botões não cabem numa linha na largura da janela (1180) e
+        // "Fechar" era cortado; duas linhas, na mesma ordem, com Fechar sempre à direita da segunda.
+        NekkoraStack row1 = NekkoraStack.horizontal(Spacing.SPACE_3);
+        row1.addAll(develop, cancel, save, openCode, review, report);
+        NekkoraStack row2 = NekkoraStack.horizontal(Spacing.SPACE_3);
+        row2.addAll(validate, help, runButton);
+        row2.addGlue();
         NekkoraButton close = NekkoraButton.ghost("Fechar");
         close.onClick(e -> actions.close());
-        foot.add(close);
+        row2.add(close);
+        foot.align(NekkoraStack.Align.STRETCH);
+        foot.addAll(row1, row2);
         NekkoraPanel south = new NekkoraPanel(new BorderLayout());
         south.setPadding(Spacing.SPACE_3, Spacing.SPACE_1);
         south.add(foot, BorderLayout.CENTER);
