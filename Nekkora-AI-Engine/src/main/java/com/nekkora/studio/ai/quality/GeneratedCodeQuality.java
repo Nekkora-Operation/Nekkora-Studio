@@ -166,15 +166,30 @@ public final class GeneratedCodeQuality {
             int sp = key.indexOf(' ');
             String code = sp < 0 ? key : key.substring(0, sp);
             String where = sp < 0 ? "" : key.substring(sp + 1);
-            boolean objective = switch (code) {
-                case "UUID_EXPOSTO_NO_CODIGO", "COMENTARIO_POR_ETAPA", "TRACE_SEM_MAPEAMENTO", "TRACE_ALIAS_CONFLITO", "SELETOR_NO_CODIGO", "SILENCIA_FALHA",
-                     "IDENTIFICADOR_EM_PORTUGUES", "CHAVE_DE_ALVO_LITERAL", "DATACLASS_REPR_COM_VALORES" -> true;
-                default -> false;
-            };
+            boolean objective = objective(code);
             issues.add(QualityIssue.of(code, Layer.VQ_GENERATION, objective ? QualityIssue.Kind.BLOCKER : QualityIssue.Kind.WARNING, null, where,
                     describe(code) + (n > 1 ? " (" + n + "×)" : ""), "O código vem do gerador oficial: a correção vai para o gerador, o modelo ou o PDD — "
                             + "nunca para o arquivo gerado."));
         });
+    }
+
+    /** Achado da AST que é critério objetivo (BLOCKER na camada VQ); os demais são só avisos de legibilidade. */
+    public static boolean objective(String code) {
+        return switch (code) {
+            case "UUID_EXPOSTO_NO_CODIGO", "COMENTARIO_POR_ETAPA", "TRACE_SEM_MAPEAMENTO", "TRACE_ALIAS_CONFLITO", "SELETOR_NO_CODIGO", "SILENCIA_FALHA",
+                 "IDENTIFICADOR_EM_PORTUGUES", "CHAVE_DE_ALVO_LITERAL", "DATACLASS_REPR_COM_VALORES" -> true;
+            default -> false;
+        };
+    }
+
+    /**
+     * Veredito da verificação CODE_QUALITY igual ao da camada VQ: passa sem achados ou só com avisos de legibilidade; não passa
+     * com achado objetivo nem quando a análise não terminou.
+     */
+    public static boolean passes(PythonChecks.Check c) {
+        if (c.status() == PythonChecks.Status.PASS) return true;
+        if (c.status() != PythonChecks.Status.FAIL) return false;
+        return c.codes().keySet().stream().map(k -> k.indexOf(' ') < 0 ? k : k.substring(0, k.indexOf(' '))).noneMatch(GeneratedCodeQuality::objective);
     }
 
     static String describe(String code) {

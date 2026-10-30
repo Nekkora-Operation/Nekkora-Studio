@@ -13,6 +13,7 @@ import com.nekkora.studio.ai.provider.PlanVerifier;
 import com.nekkora.studio.ai.pycheck.PythonChecks;
 import com.nekkora.studio.ai.quality.AssistanceRequest;
 import com.nekkora.studio.ai.quality.AutomationQualityGate;
+import com.nekkora.studio.ai.quality.GeneratedCodeQuality;
 import com.nekkora.studio.ai.quality.Layer;
 import com.nekkora.studio.ai.quality.QualityIssue;
 import com.nekkora.studio.ai.quality.QualityReport;
@@ -457,7 +458,7 @@ public final class DevelopmentPresenter implements DevelopmentPanel.Actions {
         running = false;
         CatalogResolution resolved = catalogFor(run.outputDir());
         // versão declarada sem catálogo: as verificações podem ter rodado, mas o código NÃO é dado por validado
-        boolean allPass = resolved.compatible() && !checks.isEmpty() && checks.stream().allMatch(c -> c.status() == PythonChecks.Status.PASS);
+        boolean allPass = resolved.compatible() && checksPass(checks);
         phases.put(GenerationOrchestrator.Phase.CHECKING, env.isEmpty() || checks.isEmpty() ? DevelopmentPanel.PhaseState.SKIPPED
                 : allPass ? DevelopmentPanel.PhaseState.DONE : DevelopmentPanel.PhaseState.BLOCKED);
         List<String> results = new ArrayList<>(notes);
@@ -473,6 +474,10 @@ public final class DevelopmentPresenter implements DevelopmentPanel.Actions {
                     : "— Código não verificado: ambiente Python da automação — " + le.diagnosis().title() + " (" + le.detail() + "). Nada foi dado por aprovado.");
         } else {
             for (PythonChecks.Check c : checks) {
+                if (c.status() == PythonChecks.Status.FAIL && "CODE_QUALITY".equals(c.id()) && GeneratedCodeQuality.passes(c)) {
+                    results.add("! " + label(c) + ": " + c.problems() + " aviso(s) de legibilidade " + c.codes() + " — veja Pendências (" + c.millis() + " ms)");
+                    continue;
+                }
                 results.add((c.status() == PythonChecks.Status.PASS ? "✓ " : c.status() == PythonChecks.Status.FAIL ? "× " : "— ") + label(c) + ": "
                         + (c.status() == PythonChecks.Status.PASS ? "sem problema" : c.problems() + " problema(s) " + c.codes() + c.reason()) + " (" + c.millis() + " ms)");
             }
@@ -679,6 +684,15 @@ public final class DevelopmentPresenter implements DevelopmentPanel.Actions {
             case RETIRED -> "guardado em " + OutputWriter.PREVIOUS + "/ (geração anterior)";
             case KEPT -> "MANTIDO (editado à mão; não faz mais parte do projeto)";
         };
+    }
+
+    /**
+     * INTEGRATION-CONSOLIDATION-001: mesmo veredito da camada VQ — um aviso só de legibilidade da AST (ex.: Page1 quando a seção
+     * do PDD não tem título) não tira CODE_VALIDATED; achado objetivo ou análise que não terminou, sim.
+     */
+    static boolean checksPass(List<PythonChecks.Check> checks) {
+        return !checks.isEmpty() && checks.stream().allMatch(c -> "CODE_QUALITY".equals(c.id()) ? GeneratedCodeQuality.passes(c)
+                : c.status() == PythonChecks.Status.PASS);
     }
 
     private static String label(PythonChecks.Check c) {
