@@ -1,0 +1,18 @@
+{
+  "rotulo": "oficial-2",
+  "exit": 0,
+  "resumo": "{\"execution_id\": \"ex-da7fda24402746f29594\", \"status\": \"COMPLETED\", \"stop_code\": null, \"stop_detail\": null, \"counts\": {\"SUCCEEDED\": 10}}",
+  "resultados": {
+    "SUCCEEDED": 10
+  },
+  "placar": {
+    "conclusion.read_result": "Your success rate is 100% ( 70 out of 70 fields) in 2714 milliseconds"
+  },
+  "planilha_baixada": {
+    "arquivo": "challenge.xlsx",
+    "sha256": "cf1a8c04a298cc12cb481a0a6c88b078b209dc59c4983f6ca78714d611c04d37",
+    "linhas_com_dados": 10
+  },
+  "sha256_confere_observacoes": true,
+  "valores_vazados_em": []
+}

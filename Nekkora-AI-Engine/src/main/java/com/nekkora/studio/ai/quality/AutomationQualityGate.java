@@ -132,7 +132,7 @@ public final class AutomationQualityGate {
         if (!gate.ready()) {
             layers.put(Layer.V3_PLAN, new QualityReport.LayerResult(Layer.V3_PLAN, QualityReport.State.NOT_CHECKED, "depende do PDD pronto (PDD_READY)"));
         } else {
-            plan = DevelopmentPlanner.plan(a, ctx, gate, in.catalog(), in.declaredTabular());
+            plan = DevelopmentPlanner.plan(a, ctx, gate, in.catalog(), in.declaredTabular(), in.draft());
             List<QualityIssue> own = plan.issues().stream().filter(i -> i.layer() == Layer.V3_PLAN).toList();
             issues.addAll(own);
             layers.put(Layer.V3_PLAN, new QualityReport.LayerResult(Layer.V3_PLAN, stateOf(plan.issues(), true), plan.model().label() + " · "
@@ -177,6 +177,23 @@ public final class AutomationQualityGate {
         } else {
             layers.put(Layer.V4_CODE, checksLayer(Layer.V4_CODE, in.checks(), in.python().get(), issues));
             layers.put(Layer.V5_TESTS, checksLayer(Layer.V5_TESTS, in.checks(), in.python().get(), issues));
+        }
+        // VQ — qualidade da geração (CODEGEN-QUALITY-001): manifesto + AST; D13 continua soberano
+        if (catalogMissing) {
+            layers.put(Layer.VQ_GENERATION, new QualityReport.LayerResult(Layer.VQ_GENERATION, QualityReport.State.NOT_CHECKED,
+                    "não validado: versão do framework sem catálogo"));
+        } else if (!code.exists() || !code.current()) {
+            layers.put(Layer.VQ_GENERATION, new QualityReport.LayerResult(Layer.VQ_GENERATION, QualityReport.State.NOT_CHECKED,
+                    !code.exists() ? "código ainda não gerado" : "código desatualizado"));
+        } else if (in.declaredTabular().isPresent()) {
+            layers.put(Layer.VQ_GENERATION, new QualityReport.LayerResult(Layer.VQ_GENERATION, QualityReport.State.NOT_CHECKED,
+                    "lote tabular declarado (gerador 1.0.0): fora desta camada"));
+        } else if (in.pythonPending()) {
+            layers.put(Layer.VQ_GENERATION, new QualityReport.LayerResult(Layer.VQ_GENERATION, QualityReport.State.RUNNING, "aguardando a verificação do código"));
+        } else {
+            GeneratedCodeQuality.Result q = GeneratedCodeQuality.assess(in.outputDir(), in.checks(), in.python().isPresent());
+            issues.addAll(q.issues());
+            layers.put(Layer.VQ_GENERATION, q.layer());
         }
         // V6 — só o teste autorizado da REVISÃO ATUAL do código comprova a execução
         layers.put(Layer.V6_EXECUTION, catalogMissing ? new QualityReport.LayerResult(Layer.V6_EXECUTION, QualityReport.State.NOT_CHECKED,

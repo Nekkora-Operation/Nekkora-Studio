@@ -72,9 +72,9 @@ public class ListFlowTest {
         FunctionalSpec spec = spec(c, ctx);
         PddGate.Result gate = PddGate.evaluate(ctx, Optional.of(d), spec, ProcessProjection.of(c.a), ConsultaCase.CLOCK.instant());
         assertTrue(gate.ready(), gate.issues().toString());
-        DevelopmentPlan plan = DevelopmentPlanner.plan(c.a, ctx, gate, FrameworkCapabilityCatalog.bundled(), Optional.empty());
+        DevelopmentPlan plan = DevelopmentPlanner.plan(c.a, ctx, gate, FrameworkCapabilityCatalog.bundled(), Optional.empty(), Optional.of(d));
         assertTrue(plan.ready(), plan.issues().toString());
-        PythonGenerator.Result r = SingleGenerator.generate(c.a, new AutomationValidator(RuleSet.V1_1).validate(c.a), plan.singleConfig().orElseThrow());
+        PythonGenerator.Result r = SingleGenerator.generate(c.a, new AutomationValidator(RuleSet.V1_1).validate(c.a), plan.singleConfig().orElseThrow(), plan.names());
         return new Flow(c, plan, r, gate.issues());
     }
 
@@ -101,16 +101,23 @@ public class ListFlowTest {
         assertTrue(cfg.keys().get(f.c().enter.value().toString()).navigates());
         assertTrue(f.result().ok(), f.result().blockers().toString());
         Map<String, String> files = f.result().files();
-        String code = files.get("paginas.py") + files.get("processo.py") + files.get("main.py");
-        assertTrue(code.contains("a.press(") && code.contains("a.current_address() != antes"), "Enter confirmado pela troca de endereço");
+        String code = files.get("automation/pages.py") + files.get("automation/process.py") + files.get("main.py");
+        assertTrue(code.contains("self.actions.press(") && code.contains("self.actions.current_address() != address_before"), "Enter confirmado pela troca de endereço");
         assertTrue(code.contains("parse_long_date(") && code.contains("join_items(") && code.contains("XlsxResultSink("));
-        assertTrue(code.contains("raise BusinessRuleRejected(\"CONFERENCIA_FALHOU\")") && code.contains("raise BusinessRuleRejected(\"DADO_INCOMPLETO\")"));
-        assertFalse(code.contains("nth") || code.contains("first()") || code.contains("Ana") || code.contains("wikipedia"), "sem posição, sem dado, sem site");
+        // os códigos de recusa são contrato público: continuam os mesmos (só o nome interno do campo é inglês)
+        assertTrue(code.contains("raise BusinessRuleRejected(\"ENDERECO_DIFERENTE_DO_ESPERADO\", step_id=\"profile.read_page_address\")")
+                && code.contains("raise BusinessRuleRejected(f\"DADO_OBRIGATORIO_VAZIO:{field}\")") && code.contains("\"DATA_INCOMPLETA_OU_AMBIGUA\""), code);
+        assertFalse(code.contains(":nth-") || code.contains(".nth(") || code.contains("first()") || code.contains("Ana ") || code.contains("wikipedia"),
+                "sem posição, sem dado, sem site");
+        // CODEGEN-QUALITY-001: nomes do PDD, step_id legível, nenhum UUID nem comentário por etapa no código
+        assertTrue(code.contains("class SearchPage(PageBase)") && code.contains("class ProfilePage(PageBase)") && code.contains("def search_person("), code);
+        assertFalse(code.matches("(?s).*[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-.*") || code.contains("# etapa ") || code.contains(" a = self.act"), code);
         assertTrue(files.get("selectors.json").contains("tr[th[normalize-space(.)=\\\"Nascimento\\\"]]"), files.get("selectors.json"));
         assertTrue(files.get("requirements.txt").contains("nekkora-rpa[excel]==0.3.0"));
-        assertTrue(files.get("manifest.json").contains("\"version\": \"1.2.0\"") && files.get("manifest.json").contains("\"Nome completo\""));
+        assertTrue(files.get("manifest.json").contains("\"version\": \"1.4.0\"") && files.get("manifest.json").contains("\"Nome completo\"")
+                && files.get("manifest.json").contains("\"framework\": \"nekkora-rpa[excel]==0.3.0\""));
         // mesma entrada → mesmos bytes
-        PythonGenerator.Result again = SingleGenerator.generate(f.c().a, new AutomationValidator(RuleSet.V1_1).validate(f.c().a), cfg);
+        PythonGenerator.Result again = SingleGenerator.generate(f.c().a, new AutomationValidator(RuleSet.V1_1).validate(f.c().a), cfg, f.plan().names());
         assertEquals(files, again.files());
     }
 
@@ -175,7 +182,7 @@ public class ListFlowTest {
             assertEquals("pronto", ready);
             Path xlsx = tmp.resolve("saida").resolve("fichas.xlsx");
             Files.createDirectories(xlsx.getParent());
-            String run = runPython(py, out, List.of("main.py", "--entrada", lista.toString(), "--planilha", xlsx.toString(), "--saida", tmp.resolve("exec").toString(),
+            String run = runPython(py, out, List.of("main.py", "--input", lista.toString(), "--spreadsheet", xlsx.toString(), "--output", tmp.resolve("exec").toString(),
                     "--channel", "chromium", "--headless"));
             assertTrue(run.contains("\"status\": \"COMPLETED\"") && run.contains("\"COMMITTED\""), run);
             String rows = runPython(py, out, List.of("-c", "import json,sys,openpyxl; ws=openpyxl.load_workbook(sys.argv[1])['Dados']; "
@@ -189,6 +196,7 @@ public class ListFlowTest {
             Path errada = tmp.resolve("errada.csv");
             Files.writeString(errada, String.join(",", cfg.inputs()) + "\nAna Exemplo," + o + "/leitura/ficha-gina.html\n", StandardCharsets.UTF_8);
             Path x2 = tmp.resolve("saida").resolve("errada.xlsx");
+            // compatibilidade: os nomes anteriores das opções continuam aceitos pelo main.py novo
             String run2 = runPython(py, out, List.of("main.py", "--entrada", errada.toString(), "--planilha", x2.toString(), "--saida", tmp.resolve("exec2").toString(),
                     "--channel", "chromium", "--headless"));
             assertTrue(run2.contains("\"COMPLETED_WITH_FAILURES\"") && run2.contains("\"WITHHELD\"") && run2.contains("BUSINESS_REJECTED"), run2);

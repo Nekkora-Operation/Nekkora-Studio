@@ -5,10 +5,12 @@ import com.nekkora.studio.ai.context.ProjectContext;
 import com.nekkora.studio.ai.gate.PddGate;
 import com.nekkora.studio.ai.plan.DevelopmentPlan;
 import com.nekkora.studio.ai.plan.DevelopmentPlanner;
+import com.nekkora.studio.ai.quality.AssistanceRequest;
 import com.nekkora.studio.ai.quality.Layer;
 import com.nekkora.studio.ai.quality.QualityIssue;
 import com.nekkora.studio.ai.spec.FunctionalSpec;
 import com.nekkora.studio.ai.store.DevelopmentStore;
+import com.nekkora.studio.ai.store.TraceRegistry;
 import com.nekkora.studio.codegen.CodegenConfig;
 import com.nekkora.studio.codegen.OutputWriter;
 import com.nekkora.studio.codegen.PythonGenerator;
@@ -93,6 +95,16 @@ public final class GenerationOrchestrator {
     public static Run prepare(Automation a, Optional<DocumentDraft> draft, FunctionalSpec spec, FrameworkCapabilityCatalog cat,
                               Optional<CodegenConfig> declaredTabular, List<String> publicOrigins, Path outputDir, Instant now, Progress progress,
                               BooleanSupplier cancelled) {
+        return prepare(a, draft, spec, cat, declaredTabular, publicOrigins, outputDir, now, progress, cancelled, TraceRegistry.empty(a.id()));
+    }
+
+    /**
+     * CODEGEN-QUALITY-001: com o registro de rastreio da automação (traceIds já atribuídos ficam). Registro vazio é semeado
+     * pelo {@code trace} do manifesto anterior da MESMA automação na pasta de saída (só leitura).
+     */
+    public static Run prepare(Automation a, Optional<DocumentDraft> draft, FunctionalSpec spec, FrameworkCapabilityCatalog cat,
+                              Optional<CodegenConfig> declaredTabular, List<String> publicOrigins, Path outputDir, Instant now, Progress progress,
+                              BooleanSupplier cancelled, TraceRegistry registry) {
         progress.phase(Phase.ANALYZING);
         ProjectContext ctx = ProjectContext.of(a, draft).withAuthorizedPublicOrigins(publicOrigins);
         progress.phase(Phase.PDD);
@@ -100,7 +112,7 @@ public final class GenerationOrchestrator {
         if (!gate.ready()) return new Run(Stage.PROJECT_ANALYZED, Phase.PDD, gate, null, List.of(), null, null, outputDir, null, gate.issues());
         if (cancelled.getAsBoolean()) return cancelledRun(Stage.PDD_READY, Phase.PDD, gate, null, outputDir);
         progress.phase(Phase.PLAN);
-        DevelopmentPlan plan = DevelopmentPlanner.plan(a, ctx, gate, cat, declaredTabular);
+        DevelopmentPlan plan = DevelopmentPlanner.plan(a, ctx, gate, cat, declaredTabular, draft);
         if (!plan.ready()) return new Run(Stage.PDD_READY, Phase.PLAN, gate, plan, List.of(), null, null, outputDir, null, withGateNotes(gate, plan.issues()));
         if (cancelled.getAsBoolean()) return cancelledRun(Stage.PLAN_VALIDATED, Phase.PLAN, gate, plan, outputDir);
         progress.phase(Phase.VALIDATING);
@@ -113,7 +125,9 @@ public final class GenerationOrchestrator {
             configJson = null; // configuração tabular é a DECLARADA no projeto (não é gravada de novo)
         } else {
             configJson = plan.singleConfig().orElseThrow().toJson();
-            result = SingleGenerator.generate(a, report, plan.singleConfig().get());
+            TraceRegistry traces = registry.active().isEmpty() && registry.previous().isEmpty() && outputDir != null
+                    ? TraceRegistry.seed(outputDir.resolve("manifest.json"), a.id(), registry.retired()) : registry;
+            result = SingleGenerator.generate(a, report, plan.singleConfig().get(), traces.applyTo(plan.names()));
         }
         if (!result.ok()) {
             List<QualityIssue> issues = new ArrayList<>();
@@ -135,17 +149,45 @@ public final class GenerationOrchestrator {
     static List<QualityIssue> withGateNotes(PddGate.Result gate, List<QualityIssue> issues) {
         List<QualityIssue> out = new ArrayList<>(issues);
         for (QualityIssue i : gate.issues()) {
-            if (i.kind() == QualityIssue.Kind.WARNING && i.assistance().isPresent() && !out.contains(i)) out.add(i);
+            // SPEC-OPTIONAL-COLUMNS-001: a obrigatoriedade de cada coluna (INFORMAÇÃO revisável) também segue para a janela
+            boolean requirement = i.kind() == QualityIssue.Kind.INFO
+                    && i.assistance().map(AssistanceRequest::destination).orElse(null) == FunctionalSpec.Field.OUTPUT_REQUIREMENT;
+            if ((i.kind() == QualityIssue.Kind.WARNING || requirement) && i.assistance().isPresent() && !out.contains(i)) out.add(i);
         }
         return out;
     }
 
-    /** Grava o projeto preparado (proteção de edição manual) e os registros de auditoria. Fora da thread de interface. */
+    /**
+     * Grava o projeto preparado (proteção de edição manual) e os registros de auditoria — inclusive o registro de rastreio
+     * com os traceIds desta geração. Fora da thread de interface.
+     */
     public static Run write(Run r, DevelopmentStore store) throws IOException {
         if (!r.readyToWrite()) return r;
         store.saveGate(r.gate().record());
-        if (r.configJson() != null) store.saveConfig(java.util.UUID.fromString(r.gate().record().automationId()), r.configJson());
-        return r.withWritten(OutputWriter.write(r.outputDir(), r.files()));
+        java.util.UUID id = java.util.UUID.fromString(r.gate().record().automationId());
+        if (r.configJson() != null) store.saveConfig(id, r.configJson());
+        Run written = r.withWritten(OutputWriter.write(r.outputDir(), r.files()));
+        Map<String, String> traces = traceOf(r.files().get("manifest.json"));
+        if (!traces.isEmpty() && r.plan() != null) {
+            com.nekkora.studio.domain.AutomationId aid = new com.nekkora.studio.domain.AutomationId(id);
+            List<String> inModel = r.plan().steps().stream().map(x -> x.step().value().toString()).toList();
+            store.saveTraceRegistry(store.traceRegistry(aid).updatedWith(traces, inModel));
+        }
+        return written;
+    }
+
+    /** Mapa StepId → traceId do manifesto gerado (vazio sem {@code trace}). */
+    @SuppressWarnings("unchecked")
+    static Map<String, String> traceOf(String manifest) {
+        Map<String, String> out = new java.util.LinkedHashMap<>();
+        if (manifest == null) return out;
+        Map<String, Object> m = com.nekkora.studio.bridge.json.Json.parseObject(manifest);
+        if (m.get("trace") instanceof Map<?, ?> t && t.get("mappings") instanceof List<?> list) {
+            for (Object o : list) {
+                if (o instanceof Map<?, ?> x && x.get("studioStepId") instanceof String sid && x.get("traceId") instanceof String tid) out.put(sid, tid);
+            }
+        }
+        return out;
     }
 
     /** As duas partes em sequência (testes e uso sem interface). */

@@ -84,14 +84,19 @@ public final class PythonChecks {
         Path tmp = Files.createTempDirectory("nekkora-pycheck-");
         try {
             Path contract = extract(tmp, "contrato_projeto.py");
+            // dois layouts: o pacote automation/ (código em inglês, rodada 3) e paginas.py/processo.py na raiz (projetos anteriores)
             out.add(simple("PY_COMPILE", Layer.V4_CODE, env, projectDir, List.of("-I", "-B", "-c",
-                    "import ast, pathlib, sys\nfor p in sorted(pathlib.Path('.').glob('*.py')):\n    ast.parse(p.read_text(encoding='utf-8'), p.name)"), cancelled));
+                    "import ast, pathlib, sys\nfor p in sorted([*pathlib.Path('.').glob('*.py'), *pathlib.Path('automation').glob('*.py')]):\n"
+                            + "    ast.parse(p.read_text(encoding='utf-8'), str(p))"), cancelled));
             out.add(simple("PY_IMPORT", Layer.V4_CODE, env, projectDir, List.of("-I", "-B", "-c",
-                    "import sys\nsys.path.insert(0, '.')\nimport paginas, processo, main"), cancelled));
+                    "import importlib, pathlib, sys\nsys.path.insert(0, '.')\n"
+                            + "mods = ['automation.selectors', 'automation.pages', 'automation.process', 'main'] if pathlib.Path('automation/__init__.py').is_file() "
+                            + "else ['paginas', 'processo', 'main']\nfor m in mods:\n    importlib.import_module(m)"), cancelled));
             out.add(ruffCheck(env, projectDir, cancelled));
             out.add(ruffFormat(env, projectDir, cancelled));
             out.add(mypy(env, projectDir, tmp, cancelled));
             out.add(contract(env, projectDir, contract, cancelled));
+            out.add(quality(env, projectDir, extract(tmp, "qualidade_codigo.py"), cancelled));
         } finally {
             deleteTree(tmp);
         }
@@ -144,6 +149,11 @@ public final class PythonChecks {
         try (var s = Files.list(dir)) {
             s.filter(p -> p.getFileName().toString().endsWith(".py")).map(p -> p.getFileName().toString()).sorted().forEach(files::add);
         }
+        if (Files.isRegularFile(dir.resolve("automation").resolve("__init__.py"))) {
+            try (var s = Files.list(dir.resolve("automation"))) {
+                s.filter(p -> p.getFileName().toString().endsWith(".py")).map(p -> "automation/" + p.getFileName()).sorted().forEach(files::add);
+            }
+        }
         List<String> args = new ArrayList<>(List.of("-I", "-B", "-m", "mypy", "--strict", "--no-incremental", "--cache-dir", tmp.resolve("mypy").toString(),
                 "--python-version", "3.12", "--show-error-codes", "--no-error-summary", "--no-pretty"));
         args.addAll(files);
@@ -183,6 +193,32 @@ public final class PythonChecks {
             return new Check("CONTRACT_TESTS", Layer.V5_TESTS, failed == 0 ? Status.PASS : Status.FAIL, failed, codes, ms, "");
         } catch (RuntimeException e) {
             return new Check("CONTRACT_TESTS", Layer.V5_TESTS, Status.ERROR, 0, Map.of(), ms, "OUTPUT_INVALID");
+        }
+    }
+
+    /**
+     * CODEGEN-QUALITY-001 (camada VQ): análise da AST do código gerado. Os achados vão em {@code codes} como
+     * {@code "<CÓDIGO> <arquivo>:<símbolo>"} → quantidade (só identificadores gerados; nenhum trecho de código).
+     */
+    @SuppressWarnings("unchecked")
+    private static Check quality(Environment env, Path dir, Path script, BooleanSupplier cancelled) throws IOException {
+        if (cancelled.getAsBoolean()) return new Check("CODE_QUALITY", Layer.VQ_GENERATION, Status.NOT_RUN, 0, Map.of(), 0, "CANCELLED");
+        long t = System.nanoTime();
+        Run r = run(env.python(), dir, List.of("-I", "-B", script.toString(), dir.toAbsolutePath().toString()), "", TIMEOUT, cancelled);
+        long ms = (System.nanoTime() - t) / 1_000_000;
+        if (r.timedOut()) return new Check("CODE_QUALITY", Layer.VQ_GENERATION, Status.ERROR, 0, Map.of(), ms, "TIMEOUT");
+        try {
+            Map<String, Object> m = Json.parseObject(lastLine(r.out()));
+            if (m.get("error") instanceof String e) return new Check("CODE_QUALITY", Layer.VQ_GENERATION, Status.ERROR, 0, Map.of(), ms, e);
+            Map<String, Integer> codes = new LinkedHashMap<>();
+            for (Object o : (List<Object>) m.get("findings")) {
+                Map<String, Object> f = (Map<String, Object>) o;
+                codes.merge(f.get("code") + " " + f.get("file") + ":" + f.get("symbol"), 1, Integer::sum);
+            }
+            int total = ((Number) m.get("total")).intValue();
+            return new Check("CODE_QUALITY", Layer.VQ_GENERATION, total == 0 ? Status.PASS : Status.FAIL, total, codes, ms, "");
+        } catch (RuntimeException e) {
+            return new Check("CODE_QUALITY", Layer.VQ_GENERATION, Status.ERROR, 0, Map.of(), ms, "OUTPUT_INVALID");
         }
     }
 

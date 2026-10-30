@@ -14,7 +14,14 @@ import java.util.Optional;
  * em "O que vou utilizar" e o que a camada V3 verifica.
  */
 public record DevelopmentPlan(ExecutionModel model, String modelBasis, List<VariableDeriver.Planned> variables, List<PlannedPage> pages, List<StepPlan> steps,
-                              List<String> capabilities, SingleConfig single, CodegenConfig tabular, List<QualityIssue> issues, String planner) {
+                              List<String> capabilities, SingleConfig single, CodegenConfig tabular, List<QualityIssue> issues, String planner,
+                              com.nekkora.studio.codegen.CodeNames names) {
+
+    /** Sem evidência de nomes (lote tabular, PDD pendente). */
+    public DevelopmentPlan(ExecutionModel model, String modelBasis, List<VariableDeriver.Planned> variables, List<PlannedPage> pages, List<StepPlan> steps,
+                           List<String> capabilities, SingleConfig single, CodegenConfig tabular, List<QualityIssue> issues, String planner) {
+        this(model, modelBasis, variables, pages, steps, capabilities, single, tabular, issues, planner, com.nekkora.studio.codegen.CodeNames.none());
+    }
 
     /** Como o processo recebe os dados. */
     public enum ExecutionModel {
@@ -49,6 +56,7 @@ public record DevelopmentPlan(ExecutionModel model, String modelBasis, List<Vari
         steps = List.copyOf(steps);
         capabilities = List.copyOf(capabilities);
         issues = List.copyOf(issues);
+        names = names == null ? com.nekkora.studio.codegen.CodeNames.none() : names;
     }
 
     public Optional<SingleConfig> singleConfig() {

@@ -1,0 +1,4 @@
+# GERADO pelo Nekkora Studio (CODEGEN-QUALITY-001). O Studio prepara o ambiente desta automação (venv própria, versão exata,
+# dependências conferidas por hash): Desenvolver automação → Pendências → Preparar ambiente.
+# Fora do Studio, num Python 3.12+ limpo: python -m pip install "nekkora-rpa[excel]==0.3.0" (do índice aprovado, depois da publicação).
+nekkora-rpa[excel]==0.3.0

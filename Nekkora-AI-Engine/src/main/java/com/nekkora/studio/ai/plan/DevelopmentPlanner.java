@@ -17,6 +17,7 @@ import com.nekkora.studio.domain.action.ActionType;
 import com.nekkora.studio.domain.action.ValueSource;
 import com.nekkora.studio.domain.variable.VariableDefinition;
 import com.nekkora.studio.domain.variable.VariableOrigin;
+import com.nekkora.studio.pdd.DocumentDraft;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -47,6 +48,15 @@ public final class DevelopmentPlanner {
     public static final String PLANNER = "nekkora-studio/planner-deterministic/1.0.0";
 
     public static DevelopmentPlan plan(Automation a, ProjectContext ctx, PddGate.Result gate, FrameworkCapabilityCatalog cat, Optional<CodegenConfig> declaredTabular) {
+        return plan(a, ctx, gate, cat, declaredTabular, Optional.empty());
+    }
+
+    /**
+     * CODEGEN-QUALITY-001: com o rascunho do PDD, os nomes de Pages e métodos e as docstrings vêm dos títulos REVISADOS do
+     * documento ({@link PageNamer}); sem ele, dos nomes seguros das sessões.
+     */
+    public static DevelopmentPlan plan(Automation a, ProjectContext ctx, PddGate.Result gate, FrameworkCapabilityCatalog cat, Optional<CodegenConfig> declaredTabular,
+                                       Optional<DocumentDraft> draft) {
         List<QualityIssue> issues = new ArrayList<>();
         List<VariableDeriver.Planned> vars = VariableDeriver.derive(a, ctx);
         if (!gate.ready()) {
@@ -89,31 +99,15 @@ public final class DevelopmentPlanner {
                         .withCapability("actions.read_text"));
             }
         }
-        // grupos: tela (ou sessão sem tela conhecida) × sessão, em sequência
-        Map<String, String> pageOfScreen = new LinkedHashMap<>();
+        // grupos: tela (por evidência) × sessão × bloco do PDD, em sequência; nomes pelo PDD (PageNamer)
+        PageNamer.Result named = PageNamer.name(a, ctx, draft);
+        List<SingleConfig.Group> groups = named.groups();
         Map<String, String> prefixOfPage = new LinkedHashMap<>();
         Map<String, List<String>> methodsOfPage = new LinkedHashMap<>();
-        List<SingleConfig.Group> groups = new ArrayList<>();
-        List<String> current = null;
-        String currentKey = null;
-        String currentPage = null;
-        String currentMethod = null;
-        for (ProjectContext.Step s : ctx.steps()) {
-            String screen = s.screenKey().isEmpty() ? "sessao-" + s.session() : s.screenKey();
-            String key = screen + "|" + s.session();
-            if (!key.equals(currentKey)) {
-                if (current != null) groups.add(new SingleConfig.Group(currentPage, prefixOfPage.get(currentPage), currentMethod, current));
-                currentPage = pageOfScreen.computeIfAbsent(screen, k -> pageName(ctx, s.session(), pageOfScreen.values()));
-                String page = currentPage;
-                prefixOfPage.computeIfAbsent(page, k -> prefix(page, prefixOfPage.values()));
-                List<String> methods = methodsOfPage.computeIfAbsent(page, k -> new ArrayList<>());
-                currentMethod = unique(methodName(ctx, s.session()), methods);
-                current = new ArrayList<>();
-                currentKey = key;
-            }
-            current.add(s.stepId().value().toString());
+        for (SingleConfig.Group g : groups) {
+            prefixOfPage.putIfAbsent(g.page(), g.prefix());
+            methodsOfPage.computeIfAbsent(g.page(), k -> new ArrayList<>()).add(g.method());
         }
-        if (current != null) groups.add(new SingleConfig.Group(currentPage, prefixOfPage.get(currentPage), currentMethod, current));
         // entradas, saídas e efeitos a partir do MODELO e da especificação
         List<String> inputs = new ArrayList<>();
         Map<String, String> outputs = new LinkedHashMap<>();
@@ -159,8 +153,9 @@ public final class DevelopmentPlanner {
         List<DevelopmentPlan.PlannedPage> pages = new ArrayList<>();
         for (Map.Entry<String, List<String>> e : methodsOfPage.entrySet()) {
             int count = (int) groups.stream().filter(g -> g.page().equals(e.getKey())).mapToLong(g -> g.steps().size()).sum();
+            String boundary = named.names().page(e.getKey()).boundary();
             pages.add(new DevelopmentPlan.PlannedPage(e.getKey(), prefixOfPage.get(e.getKey()), e.getValue(), count,
-                    "uma tela observada na gravação; intenções da tela por chave, sem seletores"));
+                    boundary.isEmpty() ? "uma tela observada na gravação; intenções da tela por chave, sem seletores" : boundary));
         }
         // NEKKORA-E2E-002: leituras tipadas, Enter e planilha (configuração 1.2.0 só quando usados)
         Map<String, SingleConfig.Read> reads = new LinkedHashMap<>();
@@ -181,7 +176,10 @@ public final class DevelopmentPlanner {
             }
             for (ProjectContext.Step s : ctx.steps()) {
                 String id = s.stepId().value().toString();
-                if (s.action() == ActionType.PRESS_KEY) keys.put(id, new SingleConfig.KeyPress("Enter", s.navigates()));
+                // o Enter "navega" quando a extensão viu a navegação OU quando a gravação registrou troca de documento depois dele
+                // (o mesmo sinal que separa as telas): sem isso, a leitura seguinte (ex.: o endereço) corre contra a navegação
+                // (CODEGEN-QUALITY-001 rodada 3, achado na execução real da Wikipédia)
+                if (s.action() == ActionType.PRESS_KEY) keys.put(id, new SingleConfig.KeyPress("Enter", s.navigates() || s.screenChangeAfter()));
                 if (s.action() != ActionType.OBSERVE || !outputs.containsKey(id)) continue;
                 AutomationStep st = a.step(s.stepId()).orElseThrow();
                 VariableDefinition out = a.variableNamed(outputs.get(id)).orElseThrow();
@@ -197,7 +195,10 @@ public final class DevelopmentPlanner {
                                 "A conferência de um dado lido só compara com uma variável de ENTRADA.", "Ligue a etapa a uma variável de entrada ou retire o valor."));
                     }
                 }
-                boolean optional = s.hasTarget() && (alternatives.contains(s.stepId()) || fallbackOf.containsKey(s.stepId()));
+                // SPEC-OPTIONAL-COLUMNS-001: coluna opcional por decisão revisada → o alvo pode faltar (exists() → None);
+                // ambíguo, identidade divergente e data inválida continuam erro
+                boolean optionalColumn = list && gate.spec().optionalColumn(s.stepId());
+                boolean optional = s.hasTarget() && (alternatives.contains(s.stepId()) || fallbackOf.containsKey(s.stepId()) || optionalColumn);
                 reads.put(id, new SingleConfig.Read(kind, optional, expected));
             }
             if (list) {
@@ -209,19 +210,34 @@ public final class DevelopmentPlanner {
                     String id = s.stepId().value().toString();
                     if (r == null || r.value() == null || !r.value().startsWith(com.nekkora.studio.ai.spec.FunctionalSpec.COLUMN) || !outputs.containsKey(id)) continue;
                     String header = r.value().substring(com.nekkora.studio.ai.spec.FunctionalSpec.COLUMN.length());
-                    String field = VariableDeriver.slug(header);
-                    for (int n = 2; !fields.add(field); n++) field = VariableDeriver.slug(header) + "_" + n;
+                    // CODEGEN-QUALITY-001 rodada 3: o CABEÇALHO é o contrato da planilha (fica como está); o campo é o nome interno
+                    // da linha, em inglês pelo glossário ("Nome completo" → full_name)
+                    // rodada 4 (R4-02): coluna de DATA → o campo diz que é data ("Nascimento" → birth_date; o cabeçalho não muda)
                     SingleConfig.Read read = reads.get(id);
+                    boolean date = read != null && "date".equals(read.kind());
+                    String english = com.nekkora.studio.codegen.EnglishNames.noun(header, date).snake();
+                    String fieldBase = english.isEmpty() || !Character.isLetter(english.charAt(0)) || english.length() > 50 ? VariableDeriver.slug(header) : english;
+                    String field = fieldBase;
+                    for (int n = 2; !fields.add(field); n++) field = fieldBase + "_" + n;
                     String kind = read == null ? "text" : switch (read.kind()) {
                         case "address" -> "url";
                         case "date" -> "iso_date";
                         default -> "text";
                     };
-                    if ("url".equals(kind) && keyField == null) keyField = field;
+                    boolean required = !gate.spec().optionalColumn(s.stepId());
+                    if ("url".equals(kind) && keyField == null && required) keyField = field;
                     StepId alt = fallbackOf.get(s.stepId());
-                    columns.add(new SingleConfig.Column(header, field, kind, id, alt == null ? null : alt.value().toString()));
+                    String reason = required ? null : gate.spec().requirements().get(s.stepId()).value().substring(com.nekkora.studio.ai.spec.FunctionalSpec.OPTIONAL.length());
+                    columns.add(new SingleConfig.Column(header, field, kind, id, alt == null ? null : alt.value().toString(), required, reason));
                 }
-                if (!columns.isEmpty()) output = new SingleConfig.Output("xlsx", "Dados", columns, keyField == null ? columns.get(0).field() : keyField);
+                // a chave da planilha é a 1ª coluna de endereço (ou a 1ª obrigatória): nunca uma coluna opcional
+                String fallbackKey = columns.stream().filter(SingleConfig.Column::required).map(SingleConfig.Column::field).findFirst().orElse(null);
+                if (!columns.isEmpty() && (keyField != null || fallbackKey != null)) {
+                    output = new SingleConfig.Output("xlsx", "Dados", columns, keyField == null ? fallbackKey : keyField);
+                } else if (!columns.isEmpty()) {
+                    issues.add(QualityIssue.of("PLAN_OUTPUT_NO_REQUIRED_KEY", Layer.V3_PLAN, QualityIssue.Kind.BLOCKER, null, "Planilha de saída",
+                            "Todas as colunas da planilha são opcionais: nenhuma identifica a linha.", "Declare obrigatória a coluna que identifica cada item."));
+                }
             }
         }
         SingleConfig cfg = null;
@@ -248,9 +264,10 @@ public final class DevelopmentPlanner {
             used.removeIf(id -> cat.find(id).isEmpty());
         }
         boolean listed = cfg != null && cfg.list();
+        issues.addAll(named.issues());
         return new DevelopmentPlan(listed ? DevelopmentPlan.ExecutionModel.LIST : DevelopmentPlan.ExecutionModel.SINGLE, listed ? "uma transação por linha da lista de entrada; planilha de saída (tudo ou nada)"
                 : "nenhuma configuração tabular declarada: os dados vêm de uma entrada única", vars, pages, steps,
-                new ArrayList<>(new LinkedHashSet<>(used)), cfg, null, issues, PLANNER);
+                new ArrayList<>(new LinkedHashSet<>(used)), cfg, null, issues, PLANNER, named.names());
     }
 
     /**
@@ -270,50 +287,6 @@ public final class DevelopmentPlanner {
     public static String processName(Automation a) {
         String s = VariableDeriver.slug(a.name());
         return s.length() > 60 ? s.substring(0, 60).replaceAll("_+$", "") : s;
-    }
-
-    private static String pageName(ProjectContext ctx, int session, java.util.Collection<String> taken) {
-        String name = ctx.sessionNames().size() >= session ? ctx.sessionNames().get(session - 1) : "";
-        String camel = camel(name);
-        String base = camel.isEmpty() ? "Tela" + session : "Tela" + camel;
-        if (base.length() > 36) base = base.substring(0, 36);
-        String out = base;
-        int i = 2;
-        while (taken.contains(out)) out = base + i++;
-        return out;
-    }
-
-    private static String prefix(String page, java.util.Collection<String> taken) {
-        String base = page.replaceFirst("^Tela", "").replaceAll("([a-z0-9])([A-Z])", "$1_$2").toLowerCase(java.util.Locale.ROOT);
-        if (base.isEmpty() || !Character.isLetter(base.charAt(0))) base = "tela_" + base;
-        String out = base;
-        int i = 2;
-        while (taken.contains(out)) out = base + "_" + i++;
-        return out;
-    }
-
-    private static String methodName(ProjectContext ctx, int session) {
-        String name = ctx.sessionNames().size() >= session ? ctx.sessionNames().get(session - 1) : "";
-        String s = VariableDeriver.slug(name);
-        return name.isBlank() || s.startsWith("campo_") ? "etapas_sessao_" + session : s;
-    }
-
-    private static String unique(String base, List<String> taken) {
-        String out = base;
-        int i = 2;
-        while (taken.contains(out)) out = base + "_" + i++;
-        taken.add(out);
-        return out;
-    }
-
-    private static String camel(String text) {
-        StringBuilder b = new StringBuilder();
-        for (String w : VariableDeriver.words(text)) {
-            if (w.isEmpty() || !Character.isLetterOrDigit(w.charAt(0))) continue;
-            b.append(Character.toUpperCase(w.charAt(0))).append(w.substring(1));
-        }
-        String out = b.toString();
-        return out.isEmpty() || !Character.isLetter(out.charAt(0)) ? "" : out;
     }
 
     /** Etapas do plano por id (para a UI). */

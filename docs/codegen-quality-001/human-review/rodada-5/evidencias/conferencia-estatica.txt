@@ -1,0 +1,24 @@
+OK    final: manifesto 9/9 hashes
+OK    final: SHA256SUMS 10/10
+OK    final: AST de 5 arquivos .py
+OK    final: SelectorKey/TARGETS = selectors.json (8 chaves)
+OK    final: dataclasses com repr=False [('ProfileData', True), ('InputRow', True)]
+OK    desenvolver: manifesto 9/9 hashes
+OK    desenvolver: SHA256SUMS 10/10
+OK    desenvolver: AST de 5 arquivos .py
+OK    desenvolver: SelectorKey/TARGETS = selectors.json (8 chaves)
+OK    desenvolver: dataclasses com repr=False [('ProfileData', True), ('InputRow', True)]
+OK    the-internet: manifesto 9/9 hashes
+OK    the-internet: SHA256SUMS 10/10
+OK    the-internet: AST de 5 arquivos .py
+OK    the-internet: SelectorKey/TARGETS = selectors.json (4 chaves)
+OK    the-internet: dataclasses com repr=False (nenhuma dataclass)
+OK    rpa-challenge: manifesto 9/9 hashes
+OK    rpa-challenge: SHA256SUMS 10/10
+OK    rpa-challenge: AST de 5 arquivos .py
+OK    rpa-challenge: SelectorKey/TARGETS = selectors.json (10 chaves)
+OK    rpa-challenge: dataclasses com repr=False [('InputRow', True)]
+OK    final/ = desenvolver/ (código, seletores e README)
+OK    final: article_url, coluna endereco_do_artigo
+OK    rpa-challenge: chave download_spreadsheet; rótulo da página intacto
+RESULTADO: 23 verificações, 0 falha(s)

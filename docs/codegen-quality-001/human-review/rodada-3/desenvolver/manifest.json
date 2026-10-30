@@ -1,0 +1,703 @@
+{
+  "schema": "nekkora-studio/codegen-manifest",
+  "version": "1.4.0",
+  "generator": "nekkora-studio-codegen/1.2.0",
+  "framework": "nekkora-rpa[excel]==0.3.0",
+  "execution": "list",
+  "language": "en",
+  "layout": {
+    "schema": "nekkora-studio/automation-package/1.0.0",
+    "package": "automation",
+    "modules": [
+      "automation/__init__.py",
+      "automation/selectors.py",
+      "automation/pages.py",
+      "automation/process.py"
+    ],
+    "runner": "main.py",
+    "config": "config/execution.toml"
+  },
+  "automationId": "0373a1f2-9298-4f71-9801-627450efbb1a",
+  "modelVersion": "1.2.0",
+  "automationRevision": 52,
+  "planRevision": "sha256:a54c3edafba5ae58ac2feae3ddb77c1e990c7dd4bde59234eb2c16a4e8c2fda0",
+  "configRevision": "sha256:e75eca3e14f9d1b34defdb16f55b64d6decee9d4248df7e1a392e954b7fbd45c",
+  "pdd": {
+    "gate": "PDD_READY",
+    "processRevision": "sha256:178284feffc301a2339a6ec103f5fd69117ba682c20cd048d184c632bdd42e28",
+    "documentRevision": "sha256:7268d9d164d689461ced7f3103c2049495d1542be5229ace32d3ab29d48cbb62",
+    "specRevision": "sha256:45cfe4253106542049dfb044d1ea17e84e1c8cde1c2741126cd37909a9a66387"
+  },
+  "command": "python main.py --input <list.csv|list.xlsx> --spreadsheet <output.xlsx> --output <folder>",
+  "cli": {
+    "options": {
+      "input": "--input",
+      "spreadsheet": "--spreadsheet",
+      "output": "--output"
+    },
+    "legacyAliases": {
+      "--entrada": "--input",
+      "--planilha": "--spreadsheet",
+      "--saida": "--output"
+    }
+  },
+  "output": {
+    "format": "xlsx",
+    "sheet": "Dados",
+    "keyField": "url",
+    "columns": [
+      {
+        "header": "URL",
+        "field": "url",
+        "kind": "url",
+        "stepId": "572bf563-830c-43c3-9f2e-93e43a3ec0f9",
+        "fallbackStepId": null
+      },
+      {
+        "header": "Nome completo",
+        "field": "full_name",
+        "kind": "text",
+        "stepId": "3c823d85-79ce-431a-a188-0e64f08bdd41",
+        "fallbackStepId": "7f87e32b-a033-411e-b24a-a19075ea3e37"
+      },
+      {
+        "header": "Nascimento",
+        "field": "birth",
+        "kind": "iso_date",
+        "stepId": "8fbbd4cb-34ee-4ce5-8b68-a15b9da8d576",
+        "fallbackStepId": null
+      },
+      {
+        "header": "Morte",
+        "field": "death",
+        "kind": "iso_date",
+        "stepId": "7189983c-cb71-4a6d-af45-a08377d491a2",
+        "fallbackStepId": null
+      },
+      {
+        "header": "Nacionalidade",
+        "field": "nationality",
+        "kind": "text",
+        "stepId": "efecec2d-839d-47c2-b463-63f818d7366f",
+        "fallbackStepId": null
+      },
+      {
+        "header": "Ocupação",
+        "field": "occupation",
+        "kind": "text",
+        "stepId": "53770ecb-3273-47ea-9695-bbc870438679",
+        "fallbackStepId": "14c89c61-c980-43bf-85cd-712da6c9b458"
+      }
+    ]
+  },
+  "steps": [
+    {
+      "stepId": "75b7e239-d5bd-40ae-9153-499ebe40f2f1",
+      "traceId": "search.fill_search_term",
+      "page": "SearchPage",
+      "method": "search_article",
+      "action": "FILL",
+      "key": "process.search.search_term_field",
+      "input": "termo_de_busca",
+      "credential": false,
+      "output": null,
+      "effect": null,
+      "postcondition": null,
+      "retry": null,
+      "read": null,
+      "optional": false,
+      "expected": null,
+      "capability": "actions.fill",
+      "decisionActor": "TEST_AGENT"
+    },
+    {
+      "stepId": "4fabd841-226d-48fd-bf84-cab477dc9ba6",
+      "traceId": "search.press_enter",
+      "page": "SearchPage",
+      "method": "search_article",
+      "action": "PRESS_KEY",
+      "key": "process.search.search_term_field",
+      "input": null,
+      "credential": false,
+      "output": null,
+      "effect": "NONE",
+      "postcondition": null,
+      "retry": "SAFE",
+      "read": null,
+      "optional": false,
+      "expected": null,
+      "capability": "actions.press",
+      "decisionActor": "TEST_AGENT"
+    },
+    {
+      "stepId": "572bf563-830c-43c3-9f2e-93e43a3ec0f9",
+      "traceId": "profile.read_page_address",
+      "page": "ProfilePage",
+      "method": "check_page_address",
+      "action": "OBSERVE",
+      "key": null,
+      "input": null,
+      "credential": false,
+      "output": "endereco_da_pagina",
+      "effect": null,
+      "postcondition": null,
+      "retry": null,
+      "read": "address",
+      "optional": false,
+      "expected": "endereco_do_artigo",
+      "capability": "actions.current_address",
+      "decisionActor": null
+    },
+    {
+      "stepId": "7f87e32b-a033-411e-b24a-a19075ea3e37",
+      "traceId": "profile.read_title",
+      "page": "ProfilePage",
+      "method": "read_profile_data",
+      "action": "OBSERVE",
+      "key": "process.profile.title",
+      "input": null,
+      "credential": false,
+      "output": "titulo",
+      "effect": null,
+      "postcondition": null,
+      "retry": null,
+      "read": "text",
+      "optional": true,
+      "expected": null,
+      "capability": "actions.read_items",
+      "decisionActor": "TEST_AGENT"
+    },
+    {
+      "stepId": "3c823d85-79ce-431a-a188-0e64f08bdd41",
+      "traceId": "profile.read_full_name",
+      "page": "ProfilePage",
+      "method": "read_profile_data",
+      "action": "OBSERVE",
+      "key": "process.profile.full_name",
+      "input": null,
+      "credential": false,
+      "output": "nome_completo",
+      "effect": null,
+      "postcondition": null,
+      "retry": null,
+      "read": "text",
+      "optional": true,
+      "expected": null,
+      "capability": "actions.read_items",
+      "decisionActor": "TEST_AGENT"
+    },
+    {
+      "stepId": "8fbbd4cb-34ee-4ce5-8b68-a15b9da8d576",
+      "traceId": "profile.read_birth",
+      "page": "ProfilePage",
+      "method": "read_profile_data",
+      "action": "OBSERVE",
+      "key": "process.profile.birth",
+      "input": null,
+      "credential": false,
+      "output": "nascimento",
+      "effect": null,
+      "postcondition": null,
+      "retry": null,
+      "read": "date",
+      "optional": false,
+      "expected": null,
+      "capability": "actions.read_items",
+      "decisionActor": "TEST_AGENT"
+    },
+    {
+      "stepId": "7189983c-cb71-4a6d-af45-a08377d491a2",
+      "traceId": "profile.read_death",
+      "page": "ProfilePage",
+      "method": "read_profile_data",
+      "action": "OBSERVE",
+      "key": "process.profile.death",
+      "input": null,
+      "credential": false,
+      "output": "morte",
+      "effect": null,
+      "postcondition": null,
+      "retry": null,
+      "read": "date",
+      "optional": false,
+      "expected": null,
+      "capability": "actions.read_items",
+      "decisionActor": "TEST_AGENT"
+    },
+    {
+      "stepId": "efecec2d-839d-47c2-b463-63f818d7366f",
+      "traceId": "profile.read_nationality",
+      "page": "ProfilePage",
+      "method": "read_profile_data",
+      "action": "OBSERVE",
+      "key": "process.profile.nationality",
+      "input": null,
+      "credential": false,
+      "output": "nacionalidade",
+      "effect": null,
+      "postcondition": null,
+      "retry": null,
+      "read": "text",
+      "optional": false,
+      "expected": null,
+      "capability": "actions.read_items",
+      "decisionActor": "TEST_AGENT"
+    },
+    {
+      "stepId": "53770ecb-3273-47ea-9695-bbc870438679",
+      "traceId": "profile.read_occupation",
+      "page": "ProfilePage",
+      "method": "read_profile_data",
+      "action": "OBSERVE",
+      "key": "process.profile.occupation",
+      "input": null,
+      "credential": false,
+      "output": "ocupacao",
+      "effect": null,
+      "postcondition": null,
+      "retry": null,
+      "read": "text",
+      "optional": true,
+      "expected": null,
+      "capability": "actions.read_items",
+      "decisionActor": "TEST_AGENT"
+    },
+    {
+      "stepId": "14c89c61-c980-43bf-85cd-712da6c9b458",
+      "traceId": "profile.read_fields",
+      "page": "ProfilePage",
+      "method": "read_profile_data",
+      "action": "OBSERVE",
+      "key": "process.profile.fields",
+      "input": null,
+      "credential": false,
+      "output": "campos",
+      "effect": null,
+      "postcondition": null,
+      "retry": null,
+      "read": "text",
+      "optional": true,
+      "expected": null,
+      "capability": "actions.read_items",
+      "decisionActor": "TEST_AGENT"
+    }
+  ],
+  "trace": {
+    "schema": "nekkora-studio/trace-map",
+    "version": "1.1.0",
+    "mappings": [
+      {
+        "traceId": "search.fill_search_term",
+        "studioStepId": "75b7e239-d5bd-40ae-9153-499ebe40f2f1",
+        "action": "FILL",
+        "targetKey": "process.search.search_term_field",
+        "pythonSymbol": "automation/pages.py:SearchPage.search_article"
+      },
+      {
+        "traceId": "search.press_enter",
+        "studioStepId": "4fabd841-226d-48fd-bf84-cab477dc9ba6",
+        "action": "PRESS_KEY",
+        "targetKey": "process.search.search_term_field",
+        "pythonSymbol": "automation/pages.py:SearchPage.search_article"
+      },
+      {
+        "traceId": "profile.read_page_address",
+        "studioStepId": "572bf563-830c-43c3-9f2e-93e43a3ec0f9",
+        "action": "OBSERVE",
+        "targetKey": null,
+        "pythonSymbol": "automation/pages.py:ProfilePage.check_page_address"
+      },
+      {
+        "traceId": "profile.read_title",
+        "studioStepId": "7f87e32b-a033-411e-b24a-a19075ea3e37",
+        "action": "OBSERVE",
+        "targetKey": "process.profile.title",
+        "pythonSymbol": "automation/pages.py:ProfilePage.read_profile_data"
+      },
+      {
+        "traceId": "profile.read_full_name",
+        "studioStepId": "3c823d85-79ce-431a-a188-0e64f08bdd41",
+        "action": "OBSERVE",
+        "targetKey": "process.profile.full_name",
+        "pythonSymbol": "automation/pages.py:ProfilePage.read_profile_data"
+      },
+      {
+        "traceId": "profile.read_birth",
+        "studioStepId": "8fbbd4cb-34ee-4ce5-8b68-a15b9da8d576",
+        "action": "OBSERVE",
+        "targetKey": "process.profile.birth",
+        "pythonSymbol": "automation/pages.py:ProfilePage.read_profile_data"
+      },
+      {
+        "traceId": "profile.read_death",
+        "studioStepId": "7189983c-cb71-4a6d-af45-a08377d491a2",
+        "action": "OBSERVE",
+        "targetKey": "process.profile.death",
+        "pythonSymbol": "automation/pages.py:ProfilePage.read_profile_data"
+      },
+      {
+        "traceId": "profile.read_nationality",
+        "studioStepId": "efecec2d-839d-47c2-b463-63f818d7366f",
+        "action": "OBSERVE",
+        "targetKey": "process.profile.nationality",
+        "pythonSymbol": "automation/pages.py:ProfilePage.read_profile_data"
+      },
+      {
+        "traceId": "profile.read_occupation",
+        "studioStepId": "53770ecb-3273-47ea-9695-bbc870438679",
+        "action": "OBSERVE",
+        "targetKey": "process.profile.occupation",
+        "pythonSymbol": "automation/pages.py:ProfilePage.read_profile_data"
+      },
+      {
+        "traceId": "profile.read_fields",
+        "studioStepId": "14c89c61-c980-43bf-85cd-712da6c9b458",
+        "action": "OBSERVE",
+        "targetKey": "process.profile.fields",
+        "pythonSymbol": "automation/pages.py:ProfilePage.read_profile_data"
+      }
+    ],
+    "synthetic": [
+      {
+        "traceId": "process.open_start_page",
+        "meaning": "open the start address (no Studio step)",
+        "previousTraceIds": [
+          "processo.abrir_pagina_inicial",
+          "INICIO"
+        ]
+      }
+    ]
+  },
+  "architecture": {
+    "pages": [
+      {
+        "class": "SearchPage",
+        "prefix": "process.search",
+        "identityKey": "SelectorKey.SEARCH_TERM_FIELD",
+        "nameSource": "PDD_SECTION_TITLE",
+        "summary": "Screen of the PDD section “Pesquisa do artigo”.",
+        "boundary": "tela observada na gravação (endereço/título diferentes da anterior)",
+        "methods": [
+          {
+            "name": "search_article",
+            "nameSource": "PDD_BLOCK_TITLE",
+            "summary": "Fills the field with ``search_term`` and submits with Enter.",
+            "parameters": [
+              "search_term"
+            ],
+            "returns": "None",
+            "traceIds": [
+              "search.fill_search_term",
+              "search.press_enter"
+            ]
+          }
+        ]
+      },
+      {
+        "class": "ProfilePage",
+        "prefix": "process.profile",
+        "identityKey": "SelectorKey.PROFILE_BIRTH",
+        "nameSource": "PDD_DATA_OWNER",
+        "summary": "Screen of the PDD section “Extração dos dados”: checks the page address and reads the profile data.",
+        "boundary": "tela nova: a etapa anterior registrou troca de documento (o endereço tem o mesmo modelo)",
+        "methods": [
+          {
+            "name": "check_page_address",
+            "nameSource": "ACTIONS",
+            "summary": "Reads the page address and compares it with ``article_address``.",
+            "parameters": [
+              "article_address"
+            ],
+            "returns": "str",
+            "traceIds": [
+              "profile.read_page_address"
+            ]
+          },
+          {
+            "name": "read_profile_data",
+            "nameSource": "ACTIONS",
+            "summary": "Reads the title, “Nome completo”, “Nascimento”, “Morte”, “Nacionalidade”, “Ocupação” and “Campo(s)”.",
+            "parameters": [],
+            "returns": "ProfileData",
+            "traceIds": [
+              "profile.read_title",
+              "profile.read_full_name",
+              "profile.read_birth",
+              "profile.read_death",
+              "profile.read_nationality",
+              "profile.read_occupation",
+              "profile.read_fields"
+            ]
+          }
+        ]
+      }
+    ],
+    "models": [
+      {
+        "name": "ProfileData",
+        "readBy": "ProfilePage.read_profile_data",
+        "fields": [
+          "title?",
+          "full_name?",
+          "birth",
+          "death",
+          "nationality",
+          "occupation?",
+          "fields?"
+        ]
+      }
+    ],
+    "process": "WikipediaBiographiesProcess"
+  },
+  "naming": {
+    "glossary": "nekkora-studio/naming-pt-en/1.0.0",
+    "process": {
+      "from": "biografias_da_wikipedia",
+      "python": "WikipediaBiographiesProcess"
+    },
+    "pages": [
+      {
+        "python": "SearchPage",
+        "from": "pesquisa",
+        "source": "PDD_SECTION_TITLE"
+      },
+      {
+        "python": "ProfilePage",
+        "from": "ficha",
+        "source": "PDD_DATA_OWNER"
+      }
+    ],
+    "identifiers": [
+      {
+        "model": "termo_de_busca",
+        "python": "search_term",
+        "role": "input"
+      },
+      {
+        "model": "endereco_do_artigo",
+        "python": "article_address",
+        "role": "input"
+      },
+      {
+        "model": "endereco_da_pagina",
+        "python": "page_address",
+        "role": "output"
+      },
+      {
+        "model": "titulo",
+        "python": "title",
+        "role": "output"
+      },
+      {
+        "model": "nome_completo",
+        "python": "full_name",
+        "role": "output"
+      },
+      {
+        "model": "nascimento",
+        "python": "birth",
+        "role": "output"
+      },
+      {
+        "model": "morte",
+        "python": "death",
+        "role": "output"
+      },
+      {
+        "model": "nacionalidade",
+        "python": "nationality",
+        "role": "output"
+      },
+      {
+        "model": "ocupacao",
+        "python": "occupation",
+        "role": "output"
+      },
+      {
+        "model": "campos",
+        "python": "fields",
+        "role": "output"
+      }
+    ],
+    "columns": [
+      {
+        "header": "URL",
+        "field": "url"
+      },
+      {
+        "header": "Nome completo",
+        "field": "full_name"
+      },
+      {
+        "header": "Nascimento",
+        "field": "birth"
+      },
+      {
+        "header": "Morte",
+        "field": "death"
+      },
+      {
+        "header": "Nacionalidade",
+        "field": "nationality"
+      },
+      {
+        "header": "Ocupação",
+        "field": "occupation"
+      }
+    ],
+    "untranslated": []
+  },
+  "selectors": {
+    "module": "automation/selectors.py",
+    "enum": "SelectorKey",
+    "registry": "selectors.json",
+    "system": "process",
+    "equivalence": "sha256:9a55903edba85d677527bbe8c3863dcd5217c9c1de72f2ff9382aafca220a18f",
+    "keys": [
+      {
+        "member": "SEARCH_TERM_FIELD",
+        "key": "process.search.search_term_field",
+        "traceIds": [
+          "search.fill_search_term",
+          "search.press_enter"
+        ],
+        "studioStepIds": [
+          "75b7e239-d5bd-40ae-9153-499ebe40f2f1",
+          "4fabd841-226d-48fd-bf84-cab477dc9ba6"
+        ]
+      },
+      {
+        "member": "PROFILE_TITLE",
+        "key": "process.profile.title",
+        "traceIds": [
+          "profile.read_title"
+        ],
+        "studioStepIds": [
+          "7f87e32b-a033-411e-b24a-a19075ea3e37"
+        ]
+      },
+      {
+        "member": "PROFILE_FULL_NAME",
+        "key": "process.profile.full_name",
+        "traceIds": [
+          "profile.read_full_name"
+        ],
+        "studioStepIds": [
+          "3c823d85-79ce-431a-a188-0e64f08bdd41"
+        ]
+      },
+      {
+        "member": "PROFILE_BIRTH",
+        "key": "process.profile.birth",
+        "traceIds": [
+          "profile.read_birth"
+        ],
+        "studioStepIds": [
+          "8fbbd4cb-34ee-4ce5-8b68-a15b9da8d576"
+        ]
+      },
+      {
+        "member": "PROFILE_DEATH",
+        "key": "process.profile.death",
+        "traceIds": [
+          "profile.read_death"
+        ],
+        "studioStepIds": [
+          "7189983c-cb71-4a6d-af45-a08377d491a2"
+        ]
+      },
+      {
+        "member": "PROFILE_NATIONALITY",
+        "key": "process.profile.nationality",
+        "traceIds": [
+          "profile.read_nationality"
+        ],
+        "studioStepIds": [
+          "efecec2d-839d-47c2-b463-63f818d7366f"
+        ]
+      },
+      {
+        "member": "PROFILE_OCCUPATION",
+        "key": "process.profile.occupation",
+        "traceIds": [
+          "profile.read_occupation"
+        ],
+        "studioStepIds": [
+          "53770ecb-3273-47ea-9695-bbc870438679"
+        ]
+      },
+      {
+        "member": "PROFILE_FIELDS",
+        "key": "process.profile.fields",
+        "traceIds": [
+          "profile.read_fields"
+        ],
+        "studioStepIds": [
+          "14c89c61-c980-43bf-85cd-712da6c9b458"
+        ]
+      }
+    ]
+  },
+  "locators": [
+    {
+      "key": "process.search.search_term_field",
+      "kind": "SCOPED",
+      "description": "CSS `header input[name=\"search\"]`"
+    },
+    {
+      "key": "process.profile.title",
+      "kind": "STABLE_ID",
+      "description": "CSS `h1#firstHeading`"
+    },
+    {
+      "key": "process.profile.full_name",
+      "kind": "ROW_ANCHOR",
+      "description": "XPATH `//tr[th[normalize-space(.)=\"Nome completo\"]]//td`"
+    },
+    {
+      "key": "process.profile.birth",
+      "kind": "ROW_ANCHOR",
+      "description": "XPATH `//tr[th[normalize-space(.)=\"Nascimento\"]]//td`"
+    },
+    {
+      "key": "process.profile.death",
+      "kind": "ROW_ANCHOR",
+      "description": "XPATH `//tr[th[normalize-space(.)=\"Morte\"]]//td`"
+    },
+    {
+      "key": "process.profile.nationality",
+      "kind": "ROW_ANCHOR",
+      "description": "XPATH `//tr[th[normalize-space(.)=\"Nacionalidade\"]]//td`"
+    },
+    {
+      "key": "process.profile.occupation",
+      "kind": "ROW_ANCHOR",
+      "description": "XPATH `//tr[th[normalize-space(.)=\"Ocupação\"]]//td`"
+    },
+    {
+      "key": "process.profile.fields",
+      "kind": "ROW_ANCHOR",
+      "description": "XPATH `//tr[th[normalize-space(.)=\"Campo(s)\"]]//td`"
+    }
+  ],
+  "files": {
+    "README.md": "sha256:0b0008d2d34aebe8554d67421eddbf03311a877fa277bc50c1f5759a2abad230",
+    "automation/__init__.py": "sha256:472c60ef4c8ba5a0d5f45d34e60ad857de21d4843ac140f443d0efefa52a9d8c",
+    "automation/pages.py": "sha256:3222d9b11ddb103909ac998ef335aac52740b969923aa81a01a0082ccdac1ab1",
+    "automation/process.py": "sha256:d957be25543f28cb948121c7803ce7bc25f08810be44514d1d8182aa608586c9",
+    "automation/selectors.py": "sha256:7f35184dfa9ca41038d9d7c0ed1769fde678e80e0fda32e3f9732821a36e1d58",
+    "config/execution.toml": "sha256:1b69b5e7888cd645cd28d95e2847ea3339944f2a44c8f4ccb9058a017fd3caaa",
+    "main.py": "sha256:da8ef2811dd28dc864d786b2f6a10b51a408e90e7f57642febf5b2a191f0de3c",
+    "requirements.txt": "sha256:72845ddcbce83c2c5576da87e5d88c957df7100199207f26e73bc694ed3437c2",
+    "selectors.json": "sha256:b0da447a4120efafcf53f86160e6ed8722cf608e7e363a4a702202d13171eb23"
+  },
+  "exclusions": [
+    "INPUT_VALUES",
+    "CREDENTIAL_VALUES",
+    "LITERAL_VALUES",
+    "HAND_WRITTEN_SELECTORS",
+    "POSITIONAL_LOCATORS",
+    "URL_QUERIES",
+    "STUDIO_STEP_IDS_IN_CODE"
+  ]
+}

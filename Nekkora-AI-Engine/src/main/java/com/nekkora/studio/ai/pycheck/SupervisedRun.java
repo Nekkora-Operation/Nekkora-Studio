@@ -103,14 +103,35 @@ public final class SupervisedRun {
         }
     }
 
+    /**
+     * Nomes das opções da linha de comando do projeto: os que o manifesto declara em {@code cli.options} (rodada 3:
+     * {@code --input/--spreadsheet/--output}); sem esse contrato (projeto gerado antes), os de sempre
+     * ({@code --entrada/--planilha/--saida}) — cada projeto roda com o contrato dele.
+     */
+    static Map<String, String> options(Path project) {
+        Map<String, String> out = new LinkedHashMap<>(Map.of("input", "--entrada", "spreadsheet", "--planilha", "output", "--saida"));
+        try {
+            Map<String, Object> m = Json.parseObject(Files.readString(project.resolve("manifest.json"), StandardCharsets.UTF_8));
+            if (m.get("cli") instanceof Map<?, ?> cli && cli.get("options") instanceof Map<?, ?> o) {
+                for (String k : List.of("input", "spreadsheet", "output")) {
+                    if (o.get(k) instanceof String s && s.matches("--[a-z][a-z-]{0,30}")) out.put(k, s);
+                }
+            }
+        } catch (IOException | RuntimeException e) {
+            return out; // verifyGenerated já recusou um manifesto ilegível
+        }
+        return out;
+    }
+
     /** Lança, acompanha e confere. Chamar fora da thread de interface. */
     public static Outcome run(PythonChecks.Environment env, Request r, Consumer<Progress> progress, BooleanSupplier cancelled) throws Refused, IOException {
         String revision = verifyGenerated(r.project());
         if (!Files.isRegularFile(r.input())) throw new Refused("INPUT_MISSING");
         if (r.spreadsheet().getParent() == null || !Files.isDirectory(r.spreadsheet().getParent())) throw new Refused("OUTPUT_FOLDER_MISSING");
         Files.createDirectories(r.runDir());
-        List<String> cmd = new ArrayList<>(List.of(env.python().toString(), "-E", "-s", "-B", "-X", "utf8", "main.py", "--entrada", r.input().toString(), "--planilha",
-                r.spreadsheet().toString(), "--saida", r.runDir().toString(), "--channel", "chrome"));
+        Map<String, String> opt = options(r.project());
+        List<String> cmd = new ArrayList<>(List.of(env.python().toString(), "-E", "-s", "-B", "-X", "utf8", "main.py", opt.get("input"), r.input().toString(),
+                opt.get("spreadsheet"), r.spreadsheet().toString(), opt.get("output"), r.runDir().toString(), "--channel", "chrome"));
         if (!r.visibleBrowser()) cmd.add("--headless");
         ProcessBuilder pb = new ProcessBuilder(cmd).directory(r.project().toFile()).redirectErrorStream(true);
         Map<String, String> envVars = pb.environment();

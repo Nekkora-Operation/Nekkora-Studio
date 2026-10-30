@@ -77,6 +77,48 @@ class DevelopmentPanelUiTest {
         assertTrue(outside.get().isEmpty(), "botões fora do painel: " + outside.get());
     }
 
+    @Test
+    @DisplayName("rodapé na largura da janela Desenvolver (1180): com código gerado e em execução, nenhum botão (nem Fechar) sai do painel")
+    void rodapeNaoCortaFechar() throws Exception {
+        DevelopmentPanel.Actions actions = (DevelopmentPanel.Actions) java.lang.reflect.Proxy.newProxyInstance(getClass().getClassLoader(),
+                new Class<?>[] {DevelopmentPanel.Actions.class}, (p, method, args) -> null);
+        DevelopmentPanel.Model empty = DevelopmentPanel.Model.empty("Biografias", true);
+        for (boolean running : new boolean[] {false, true}) {
+            for (boolean saved : new boolean[] {true, false}) {
+                DevelopmentPanel.Model m = new DevelopmentPanel.Model(empty.subject(), saved, running, "Código gerado e verificado", "", empty.severity(),
+                        List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), "", "", true, true);
+                AtomicReference<List<String>> outside = new AtomicReference<>();
+                AtomicReference<Boolean> closeFound = new AtomicReference<>(false);
+                edt(() -> {
+                    DevelopmentPanel panel = new DevelopmentPanel(actions);
+                    panel.show(m);
+                    // largura útil do diálogo de SwingDevelopmentHost (min(1180, tela - 40)) menos as bordas da janela
+                    panel.setSize(1164, 760);
+                    layout(panel);
+                    List<String> bad = new ArrayList<>();
+                    List<AbstractButton> buttons = new ArrayList<>();
+                    collect(panel, buttons);
+                    for (AbstractButton b : buttons) {
+                        if (!b.isShowing() && !visibleChain(b, panel)) continue;
+                        if ("Fechar".equals(b.getText())) closeFound.set(true);
+                        Rectangle r = SwingUtilities.convertRectangle(b.getParent(), b.getBounds(), panel);
+                        if (r.y < panel.getHeight() / 2) continue; // só o rodapé
+                        if (r.x < 0 || r.x + r.width > panel.getWidth() || r.width < b.getPreferredSize().width) bad.add(b.getText() + " " + r);
+                    }
+                    outside.set(bad);
+                    return null;
+                });
+                assertTrue(closeFound.get(), "botão Fechar presente (running=" + running + ", saved=" + saved + ")");
+                assertTrue(outside.get().isEmpty(), "botões do rodapé cortados ou fora do painel (running=" + running + ", saved=" + saved + "): " + outside.get());
+            }
+        }
+    }
+
+    private static boolean visibleChain(Component c, Container root) {
+        for (Component x = c; x != null && x != root; x = x.getParent()) if (!x.isVisible()) return false;
+        return true;
+    }
+
     private static void layout(Container c) {
         c.doLayout();
         for (Component x : c.getComponents()) if (x instanceof Container k) layout(k);

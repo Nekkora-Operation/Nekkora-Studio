@@ -24,6 +24,9 @@ import java.util.Optional;
  *       por linha de uma lista, planilha de saída" aparece como pergunta NÃO bloqueante;</li>
  *   <li>colunas da planilha (só com {@code LIST_XLSX}): decisão → rótulo da linha que ancora o dado (âncora gravada) →
  *       endereço da página ("URL") para o Observar sem alvo → pergunta (cabeçalho, fonte alternativa ou fora da planilha).</li>
+ *   <li>NEKKORA-SPEC-OPTIONAL-COLUMNS-001 — obrigatoriedade de cada coluna: decisão revisada → {@code REQUIRED} (o padrão;
+ *       nada é inferido do tipo, do nome ou de uma execução). Cada coluna aparece em Pendências como informação revisável;
+ *       a coluna-chave (endereço da página) não pode ser opcional.</li>
  * </ul>
  */
 public final class SpecResolver {
@@ -43,10 +46,16 @@ public final class SpecResolver {
 
     public record ResolvedSpec(Map<StepId, Resolved<EffectVocabulary.Effect>> effects, Map<StepId, Resolved<String>> postconditions,
                                Resolved<StepId> conclusion, Resolved<String> startUrl, Resolved<String> dataFlow,
-                               Map<StepId, Resolved<String>> columns, List<QualityIssue> issues) {
+                               Map<StepId, Resolved<String>> columns, Map<StepId, Resolved<String>> requirements, List<QualityIssue> issues) {
         /** Lista de entrada + planilha de saída? */
         public boolean listToSpreadsheet() {
             return "LIST_XLSX".equals(dataFlow.value());
+        }
+
+        /** A coluna desta etapa pode ficar vazia (decisão revisada {@code OPTIONAL:<motivo>})? */
+        public boolean optionalColumn(StepId step) {
+            Resolved<String> r = requirements.get(step);
+            return r != null && FunctionalSpec.optional(r.value());
         }
     }
 
@@ -80,7 +89,8 @@ public final class SpecResolver {
         if (!start.known() && !ctx.origins().isEmpty()) issues.add(startQuestion(ctx));
         Resolved<String> flow = dataFlow(ctx, spec, issues);
         Map<StepId, Resolved<String>> columns = "LIST_XLSX".equals(flow.value()) ? columns(ctx, spec, issues) : Map.of();
-        return new ResolvedSpec(effects, post, conclusion, start, flow, columns, issues);
+        Map<StepId, Resolved<String>> requirements = requirements(ctx, spec, columns, issues);
+        return new ResolvedSpec(effects, post, conclusion, start, flow, columns, requirements, issues);
     }
 
     // ------------------------------------------------------------------------------------------- E2E-002: dados
@@ -161,6 +171,69 @@ public final class SpecResolver {
                     "A planilha de saída não teria nenhuma coluna.", "Acrescente uma etapa Observar no dado a ler (modo Selecionar dado)."));
         }
         return out;
+    }
+
+    /**
+     * Obrigatoriedade de cada coluna própria ({@code COLUMN:}): decisão válida (fingerprint igual) → {@code REQUIRED}
+     * (padrão). Cada coluna vira uma INFORMAÇÃO revisável em Pendências (nunca bloqueia, nunca é decidida pelo Studio ou pela
+     * IA); a coluna-chave (endereço lido, sem alvo) não pode ser opcional — decisão assim é BLOQUEIO.
+     */
+    static Map<StepId, Resolved<String>> requirements(ProjectContext ctx, FunctionalSpec spec, Map<StepId, Resolved<String>> columns,
+                                                      List<QualityIssue> issues) {
+        Map<StepId, Resolved<String>> out = new LinkedHashMap<>();
+        for (Map.Entry<StepId, Resolved<String>> e : columns.entrySet()) {
+            String v = e.getValue().value();
+            if (v == null || !v.startsWith(FunctionalSpec.COLUMN)) continue;
+            ProjectContext.Step st = ctx.step(e.getKey()).orElseThrow();
+            String header = v.substring(FunctionalSpec.COLUMN.length());
+            Optional<FunctionalSpec.Decision> d = valid(spec.decision(FunctionalSpec.Field.OUTPUT_REQUIREMENT, st.stepId()), st);
+            Resolved<String> r = d.map(x -> new Resolved<>(x.value(), Provenance.DECIDED, x.actor()))
+                    .orElse(new Resolved<>(FunctionalSpec.REQUIRED, Provenance.DERIVED_KIND, null));
+            out.put(st.stepId(), r);
+            if (!st.hasTarget()) {
+                if (FunctionalSpec.optional(r.value())) {
+                    issues.add(new QualityIssue("SPEC_OUTPUT_KEY_OPTIONAL", Layer.V1_PDD, QualityIssue.Kind.BLOCKER, st.stepId(), st.blockId(), place(st),
+                            "A coluna “" + header + "” identifica a linha da planilha e não pode ficar vazia.", "Declare-a obrigatória.",
+                            requirementQuestion(st, header), null, null));
+                }
+                continue; // a chave é sempre obrigatória: nada a revisar
+            }
+            issues.add(new QualityIssue("SPEC_OUTPUT_REQUIREMENT", Layer.V1_PDD, QualityIssue.Kind.INFO, st.stepId(), st.blockId(), place(st),
+                    "Coluna “" + header + "”: " + requirementLabel(r) + ".",
+                    "Declare a coluna opcional só se o dado puder faltar em alguns itens; vazia, ela fica sem valor (nada é inventado).",
+                    requirementQuestion(st, header), null, null));
+        }
+        return out;
+    }
+
+    private static String requirementLabel(Resolved<String> r) {
+        String v = r.value();
+        if (!FunctionalSpec.optional(v)) return r.provenance() == Provenance.DECIDED ? "obrigatória" : "obrigatória (padrão, sem decisão)";
+        return "opcional — " + reasonLabel(v.substring(FunctionalSpec.OPTIONAL.length()));
+    }
+
+    /** Motivo da coluna opcional, em linguagem do PDD (vocabulário fechado). */
+    public static String reasonLabel(String reason) {
+        return switch (reason) {
+            case "ABSENT_FOR_SOME_ITEMS" -> "o dado não existe em alguns itens";
+            case "NOT_APPLICABLE_FOR_SOME_ITEMS" -> "o dado não se aplica a alguns itens";
+            default -> reason;
+        };
+    }
+
+    private static AssistanceRequest requirementQuestion(ProjectContext.Step s, String header) {
+        List<AssistanceRequest.Option> opts = new ArrayList<>();
+        opts.add(AssistanceRequest.Option.answer(FunctionalSpec.REQUIRED, "Obrigatória", "sem valor depois de todas as fontes, o item é recusado"));
+        if (s.hasTarget()) {
+            for (String reason : List.of("ABSENT_FOR_SOME_ITEMS", "NOT_APPLICABLE_FOR_SOME_ITEMS")) {
+                opts.add(AssistanceRequest.Option.answer(FunctionalSpec.OPTIONAL + reason, "Opcional: " + reasonLabel(reason),
+                        "sem valor, a célula fica vazia sob o cabeçalho; valor presente continua conferido (data inválida recusa o item)"));
+            }
+        }
+        opts.add(AssistanceRequest.Option.action("GO_TO_STEP", "Ir para a etapa", "rever o dado apontado"));
+        return new AssistanceRequest("A coluna “" + header + "” pode ficar vazia?",
+                "Só uma decisão revisada torna uma coluna opcional: o Studio não deduz isso do tipo, do nome nem de uma execução. Sem decisão, ela é obrigatória.",
+                opts, FunctionalSpec.Field.OUTPUT_REQUIREMENT, "Especificação funcional · obrigatoriedade da coluna");
     }
 
     private static QualityIssue dataFlowQuestion(ProjectContext ctx) {

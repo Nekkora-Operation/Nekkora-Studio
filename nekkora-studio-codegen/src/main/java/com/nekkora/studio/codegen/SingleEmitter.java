@@ -6,86 +6,161 @@ import com.nekkora.studio.domain.action.ActionType;
 import com.nekkora.studio.guided.GuidedPlan;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.TreeSet;
 
 /**
- * Textos do projeto de EXECUÇÃO ÚNICA (determinísticos; só o que o pré-voo aprovou). Uma Page por tela, um método por
- * grupo de etapas consecutivas da tela; o processo chama os métodos na ordem do modelo dentro de UMA transação
- * ({@code SingleInputProvider}); entradas validadas antes de qualquer ação; segredos só pelo provedor; saídas lidas
- * (Observar) entregues ao destino de resultados. O {@code StepId} de cada etapa vai em cada chamada do framework.
+ * Arquivos do projeto de EXECUÇÃO ÚNICA (1.1.0, framework 0.2.0) e da LISTA → PLANILHA (1.2.0, 0.3.0), determinísticos e
+ * só com o que o pré-voo aprovou. NEKKORA-CODEGEN-QUALITY-001: Pages e processo saem do {@link CodePlan} pelo
+ * {@link SemanticEmitter}; o manifesto descreve a arquitetura, o mapa traceId ↔ StepId e como cada alvo é localizado; o
+ * README explica a automação. Entradas validadas antes de qualquer ação; segredos só pelo provedor; planilha só pelo
+ * {@code XlsxResultSink} (tudo ou nada).
  *
- * <p>NEKKORA-E2E-002 (configuração 1.2.0): leituras pelo {@code read_items}/{@code current_address} com a normalização
- * genérica do framework ({@code nekkora_rpa.text}), Enter pelo {@code press}, lista de entrada pelo {@code tabular} e
- * planilha pelo {@code XlsxResultSink} (tudo ou nada). A linha da planilha é montada pela regra declarada (coluna ←
- * leitura, ou a fonte alternativa quando o alvo da principal falta); dado obrigatório vazio rejeita o item.
+ * <p>Rodada 3 (Q10/Q11, manifesto 1.4.0): código em INGLÊS no pacote {@code automation/} ({@code selectors.py},
+ * {@code pages.py}, {@code process.py}); {@code selectors.json} DERIVADO do mesmo plano para o runtime 0.2.0/0.3.0 (que só
+ * lê o JSON), com a equivalência .py ↔ JSON registrada; linha de comando {@code --input/--spreadsheet/--output} (os nomes
+ * anteriores continuam aceitos); o manifesto registra o mapa de nomes (origem em português → identificador) e as chaves
+ * tipadas. Nenhum módulo de topo com nome da biblioteca padrão.
  */
 final class SingleEmitter {
 
-    static final String HEADER = "# GERADO pelo Nekkora Studio (STUDIO-014, \"Desenvolver automação\") do modelo validado e do PDD pronto.\n"
-            + "# NÃO EDITE: correções vão para o modelo ou o PDD e o código é gerado de novo.\n"
-            + "# Arquivo editado à mão não é sobrescrito.\n";
+    static final String MANIFEST_VERSION = "1.4.0";
+    /** SPEC-OPTIONAL-COLUMNS-001: manifesto com a obrigatoriedade de cada coluna (só quando alguma é opcional). */
+    static final String MANIFEST_VERSION_OPTIONAL = "1.5.0";
+    /** Esquema da regra de obrigatoriedade registrada no manifesto. */
+    static final String REQUIREMENT_SCHEMA = "nekkora-studio/output-requirement/1.0.0";
+    static final String TRACE_SCHEMA = "nekkora-studio/trace-map";
+    static final String LAYOUT = "nekkora-studio/automation-package/1.0.0";
+    static final String CONFIG_FILE = "config/execution.toml";
 
     private SingleEmitter() {}
 
-    /** Um grupo com as etapas prontas. */
-    private record G(SingleConfig.Group group, List<Step> steps) {
-        List<String> inputs() {
-            List<String> out = new ArrayList<>();
-            for (Step s : steps) if (s.input() != null && !out.contains(s.input())) out.add(s.input());
-            return out;
-        }
-
-        boolean secrets() {
-            return steps.stream().anyMatch(s -> s.credential() != null);
-        }
-
-        boolean outputs() {
-            return steps.stream().anyMatch(s -> s.output() != null);
-        }
-    }
-
-    static Map<String, String> emit(Automation a, GuidedPlan plan, SingleConfig cfg, List<Step> steps) {
+    static Map<String, String> emit(Automation a, GuidedPlan plan, SingleConfig cfg, List<Step> steps, CodeNames names) {
         Map<String, String> files = new TreeMap<>();
-        List<G> groups = new ArrayList<>();
-        for (SingleConfig.Group g : cfg.groups()) {
-            List<Step> mine = steps.stream().filter(s -> s.group().equals(g)).toList();
-            groups.add(new G(g, mine));
-        }
-        files.put("selectors.json", selectors(steps));
-        files.put("config/execucao.toml", toml(cfg));
-        if (cfg.modern()) {
-            files.put("paginas.py", PyWrap.wrap(Modern.pages(groups.stream().map(x -> new Modern.G(x.group(), x.steps())).toList())));
-            files.put("processo.py", PyWrap.wrap(Modern.process(cfg, groups.stream().map(x -> new Modern.G(x.group(), x.steps())).toList(), steps)));
-            files.put("main.py", PyWrap.wrap(Modern.main(cfg)));
-            files.put("requirements.txt", InstallHint.requirementsTxt("NEKKORA-E2E-002", SingleGenerator.FRAMEWORK_REQUIREMENT_LIST));
-        } else {
-            files.put("paginas.py", PyWrap.wrap(pages(groups)));
-            files.put("processo.py", PyWrap.wrap(process(cfg, groups, steps)));
-            files.put("main.py", PyWrap.wrap(main(cfg)));
-            files.put("requirements.txt", InstallHint.requirementsTxt("STUDIO-014", SingleGenerator.FRAMEWORK_REQUIREMENT));
-        }
-        files.put("README.md", readme(cfg, steps));
-        files.put("manifest.json", manifest(a, plan, cfg, steps, files));
+        String processClass = processClass(cfg.processName());
+        CodePlan code = CodePlan.build(cfg, steps, names, processClass);
+        Map<String, Map<String, Object>> targets = targets(steps);
+        files.put("selectors.json", selectors(targets));
+        files.put(CONFIG_FILE, toml(cfg));
+        files.put(CodePlan.INIT_FILE, PyWrap.wrap(SemanticEmitter.init(code)));
+        files.put(CodePlan.SELECTORS_FILE, SemanticEmitter.selectors(code, targets));
+        files.put(CodePlan.PAGES_FILE, PyWrap.wrap(SemanticEmitter.pages(code)));
+        files.put(CodePlan.PROCESS_FILE, PyWrap.wrap(SemanticEmitter.process(code, cfg, steps)));
+        files.put("main.py", PyWrap.wrap(main(cfg, code)));
+        files.put("requirements.txt", InstallHint.requirementsTxtEnglish("CODEGEN-QUALITY-001", requirement(cfg)));
+        files.put("README.md", readme(cfg, steps, code));
+        files.put("manifest.json", manifest(a, plan, cfg, steps, code, names, targets, files));
         return files;
     }
 
-    private static String selectors(List<Step> steps) {
-        Map<String, Object> targets = new LinkedHashMap<>();
-        for (Step s : steps) if (s.key() != null) targets.put(s.key(), s.target());
+    static String requirement(SingleConfig cfg) {
+        return cfg.modern() ? SingleGenerator.FRAMEWORK_REQUIREMENT_LIST : SingleGenerator.FRAMEWORK_REQUIREMENT;
+    }
+
+    /**
+     * Classe do processo: o nome de negócio em inglês + {@code Process} ({@code biografias_da_wikipedia} →
+     * {@code WikipediaBiographiesProcess}). O nome de negócio em si ({@code RpaProcess.name}) não muda: identifica o
+     * processo nas execuções e nos checkpoints.
+     */
+    static String processClass(String processName) {
+        String c = EnglishNames.identifier(processName).pascal();
+        if (c.isEmpty() || !Character.isLetter(c.charAt(0))) return "GeneratedProcess";
+        if (c.length() > 53) c = c.substring(0, 53);
+        return c + "Process";
+    }
+
+    /** Alvos do registro na ordem do modelo (uma chave por elemento). Fonte única do JSON e do módulo Python. */
+    private static Map<String, Map<String, Object>> targets(List<Step> steps) {
+        Map<String, Map<String, Object>> targets = new LinkedHashMap<>();
+        for (Step s : steps) if (s.key() != null && s.target() != null && !targets.containsKey(s.key())) targets.put(s.key(), s.target());
+        return targets;
+    }
+
+    private static String selectors(Map<String, Map<String, Object>> targets) {
         Map<String, Object> doc = new LinkedHashMap<>();
         doc.put("schema", "nekkora-rpa/selectors");
         doc.put("version", "1.1.0");
-        doc.put("system", PythonGenerator.SYSTEM);
+        doc.put("system", CodePlan.SYSTEM);
         doc.put("targets", targets);
         return Pretty.json(doc) + "\n";
     }
 
+    /**
+     * Equivalência .py ↔ JSON: SHA-256 do JSON canônico (chaves ordenadas, sem espaços, UTF-8 — o {@code json.dumps(...,
+     * sort_keys=True, ensure_ascii=False, separators=(",", ":"))} do Python) dos alvos SEM a procedência. O Studio recalcula a
+     * partir de {@code TARGETS} e do {@code selectors.json} e compara com este valor.
+     */
+    static String equivalence(Map<String, Map<String, Object>> targets) {
+        Map<String, Object> clean = new LinkedHashMap<>();
+        targets.forEach((k, v) -> {
+            Map<String, Object> t = new LinkedHashMap<>(v);
+            t.remove("provenance");
+            clean.put(k, t);
+        });
+        return "sha256:" + CodegenConfig.sha256(canonical(clean));
+    }
+
+    static String canonical(Object v) {
+        StringBuilder b = new StringBuilder();
+        canonical(b, v);
+        return b.toString();
+    }
+
+    private static void canonical(StringBuilder b, Object v) {
+        if (v == null) {
+            b.append("null");
+        } else if (v instanceof String s) {
+            b.append('"');
+            for (int i = 0; i < s.length(); i++) {
+                char c = s.charAt(i);
+                switch (c) {
+                    case '"' -> b.append("\\\"");
+                    case '\\' -> b.append("\\\\");
+                    case '\n' -> b.append("\\n");
+                    case '\r' -> b.append("\\r");
+                    case '\t' -> b.append("\\t");
+                    case '\b' -> b.append("\\b");
+                    case '\f' -> b.append("\\f");
+                    default -> {
+                        if (c < 0x20) b.append(String.format("\\u%04x", (int) c));
+                        else b.append(c);
+                    }
+                }
+            }
+            b.append('"');
+        } else if (v instanceof Boolean || v instanceof Integer || v instanceof Long) {
+            b.append(v);
+        } else if (v instanceof Map<?, ?> m) {
+            TreeMap<String, Object> sorted = new TreeMap<>();
+            m.forEach((k, x) -> sorted.put(String.valueOf(k), x));
+            b.append('{');
+            int i = 0;
+            for (Map.Entry<String, Object> e : sorted.entrySet()) {
+                if (i++ > 0) b.append(',');
+                canonical(b, e.getKey());
+                b.append(':');
+                canonical(b, e.getValue());
+            }
+            b.append('}');
+        } else if (v instanceof List<?> l) {
+            b.append('[');
+            for (int i = 0; i < l.size(); i++) {
+                if (i > 0) b.append(',');
+                canonical(b, l.get(i));
+            }
+            b.append(']');
+        } else {
+            throw new IllegalArgumentException("tipo não suportado no JSON canônico");
+        }
+    }
+
     private static String toml(SingleConfig cfg) {
         StringBuilder b = new StringBuilder();
-        b.append("# GERADO pelo Nekkora Studio (STUDIO-014). Sem credenciais nem valores: segredos vêm de NK_SECRET_<NOME>.\n");
+        b.append("# GENERATED by Nekkora Studio. No credentials and no values: secrets come from NK_SECRET_<NAME>.\n");
         b.append("[runtime]\n");
         b.append("environment = ").append(Py.str(cfg.environment())).append('\n');
         b.append("allowed_origins = [").append(String.join(", ", cfg.allowedOrigins().stream().map(Py::str).toList())).append("]\n");
@@ -97,84 +172,6 @@ final class SingleEmitter {
         b.append("[browser]\nchannel = \"chrome\"\nheadless = false\naccept_downloads = false\n\n");
         b.append("[paths]\nselectors = \"../selectors.json\"\n");
         return b.toString();
-    }
-
-    // ------------------------------------------------------------------------------------------------ paginas.py
-    private static String pages(List<G> groups) {
-        StringBuilder b = new StringBuilder();
-        b.append(HEADER);
-        b.append("\"\"\"Pages geradas: uma por tela do processo; intenções da tela por CHAVE do registro de alvos (sem seletores).\"\"\"\n\n");
-        b.append("from __future__ import annotations\n\n");
-        boolean secrets = groups.stream().anyMatch(G::secrets);
-        b.append("from nekkora_rpa.pages import BasePage\n");
-        if (secrets) b.append("from nekkora_rpa.security.secrets import SecretProvider\n");
-        Map<String, List<G>> byPage = new LinkedHashMap<>();
-        for (G g : groups) byPage.computeIfAbsent(g.group().page(), k -> new ArrayList<>()).add(g);
-        int n = 0;
-        for (Map.Entry<String, List<G>> e : byPage.entrySet()) {
-            n++;
-            List<G> list = e.getValue();
-            String prefix = list.get(0).group().prefix();
-            String identity = list.stream().flatMap(g -> g.steps().stream()).filter(s -> s.key() != null).map(s -> rel(s.key())).findFirst().orElse("");
-            b.append("\n\nclass ").append(e.getKey()).append("(BasePage):\n");
-            b.append("    \"\"\"Tela ").append(n).append(" do processo.\"\"\"\n\n");
-            b.append("    prefix = ").append(Py.str(PythonGenerator.SYSTEM + "." + prefix)).append('\n');
-            b.append("    identity = ").append(Py.str(identity)).append('\n');
-            for (G g : list) method(b, g);
-        }
-        return b.toString();
-    }
-
-    private static void method(StringBuilder b, G g) {
-        List<String> params = new ArrayList<>();
-        for (String in : g.inputs()) params.add(in + ": str");
-        if (g.secrets()) params.add("segredos: SecretProvider");
-        b.append("\n    def ").append(g.group().method()).append("(self").append(params.isEmpty() ? "" : ", " + String.join(", ", params)).append(") -> ")
-                .append(g.outputs() ? "dict[str, str]" : "None").append(":\n");
-        b.append("        a = self.act\n");
-        if (g.outputs()) b.append("        saidas: dict[str, str] = {}\n");
-        for (Step s : g.steps()) {
-            String sid = Py.str(s.step().id().value().toString());
-            String k = s.key() == null ? null : "self.k(" + Py.str(rel(s.key())) + ")";
-            b.append("        # etapa ").append(s.step().id().value()).append(" · ").append(s.step().actionType().name()).append('\n');
-            switch (s.step().actionType()) {
-                case NAVIGATE -> b.append("        a.navigate(").append(Py.str(s.navigateUrl())).append(", step_id=").append(sid).append(")\n");
-                case FILL -> {
-                    String value = s.input() != null ? s.input() : "segredos.get(" + Py.str(s.credential()) + ")";
-                    b.append("        a.fill(").append(k).append(", ").append(value).append(", step_id=").append(sid).append(")\n");
-                }
-                case CLICK -> click(b, s, k, sid);
-                case WAIT_FOR -> b.append("        a.wait_visible(").append(k).append(", step_id=").append(sid).append(")\n");
-                case OBSERVE -> b.append("        saidas[").append(Py.str(s.output())).append("] = a.read_text(").append(k).append(", step_id=").append(sid)
-                        .append(")\n");
-                default -> throw new IllegalStateException("ação não suportada passou pelo pré-voo");
-            }
-        }
-        if (g.outputs()) b.append("        return saidas\n");
-    }
-
-    private static void click(StringBuilder b, Step s, String k, String sid) {
-        SingleConfig.Effect e = s.effect();
-        if ("NONE".equals(e.effect())) {
-            // sem efeito de negócio: idempotente; se a etapa seguinte é de outra tela, ela prova que o clique avançou
-            boolean otherScreen = s.nextKey() != null && !s.nextKey().startsWith(PythonGenerator.SYSTEM + "." + s.group().prefix() + ".");
-            b.append("        a.click(").append(k).append(", step_id=").append(sid).append(", idempotent=True");
-            if (otherScreen) b.append(", postcondition=lambda: a.exists(").append(Py.str(s.nextKey())).append(")");
-            b.append(")\n");
-            return;
-        }
-        // efeito externo: uma vez só (não idempotente), concluído apenas com a confirmação declarada na especificação
-        switch (e.postcondition()) {
-            case "TARGET_HIDDEN" -> b.append("        a.click(").append(k).append(", step_id=").append(sid).append(", postcondition=lambda: not a.is_visible(")
-                    .append(k).append("))\n");
-            case "FIRST_FIELD_REPLACED" -> {
-                b.append("        marca = a.mark(").append(Py.str(s.firstFillKey())).append(", step_id=").append(sid).append(")\n");
-                b.append("        a.click(").append(k).append(", step_id=").append(sid).append(", postcondition=lambda: a.replaced(marca))\n");
-            }
-            case "NEXT_TARGET_VISIBLE" -> b.append("        a.click(").append(k).append(", step_id=").append(sid).append(", postcondition=lambda: a.exists(")
-                    .append(Py.str(s.nextKey())).append("))\n");
-            default -> throw new IllegalStateException("confirmação desconhecida passou pelo pré-voo");
-        }
     }
 
     /** Ordem natural dos nomes importados (a do isort do ruff): "Tela2" antes de "Tela10" e de "TelaAcesso". */
@@ -202,141 +199,202 @@ final class SingleEmitter {
         return Integer.compare(a.length() - i, b.length() - j);
     }
 
-    private static String rel(String key) {
-        return key.substring(key.lastIndexOf('.') + 1);
-    }
-
-    // ------------------------------------------------------------------------------------------------ processo.py
-    private static String process(SingleConfig cfg, List<G> groups, List<Step> steps) {
-        Set<String> secrets = new java.util.TreeSet<>();
-        for (Step s : steps) if (s.credential() != null) secrets.add(s.credential());
-        boolean inputs = !cfg.inputs().isEmpty();
-        boolean outputs = groups.stream().anyMatch(G::outputs);
-        StringBuilder b = new StringBuilder();
-        b.append(HEADER);
-        b.append("\"\"\"Processo gerado (execução única): INIT abre o início; PROCESS faz as etapas na ordem do modelo; END fecha.\"\"\"\n\n");
-        b.append("from __future__ import annotations\n\n");
-        if (inputs) b.append("from collections.abc import Mapping\nfrom dataclasses import dataclass\n\n");
-        b.append("from nekkora_rpa import ProcessResult, RpaProcess, Runtime, TransactionItem\n");
-        List<String> errs = new ArrayList<>();
-        if (inputs) errs.add("BusinessRuleRejected");
-        if (!secrets.isEmpty()) errs.add("InvalidConfiguration");
-        if (!errs.isEmpty()) b.append("from nekkora_rpa.errors import ").append(String.join(", ", errs)).append('\n');
-        if (!secrets.isEmpty()) b.append("from nekkora_rpa.security.secrets import SecretProvider\n");
-        b.append('\n');
-        b.append("from paginas import ").append(String.join(", ", groups.stream().map(g -> g.group().page()).distinct().sorted(SingleEmitter::natural).toList()))
-                .append("\n\n");
-        b.append("URL_INICIAL = ").append(Py.str(cfg.startUrl())).append('\n');
-        if (inputs) {
-            b.append("ENTRADAS = (").append(String.join(", ", cfg.inputs().stream().map(Py::str).toList())).append(cfg.inputs().size() == 1 ? ",)" : ")")
-                    .append("\n\n\n");
-            b.append("@dataclass(frozen=True, repr=False)\nclass Entrada:\n");
-            b.append("    \"\"\"Entrada da execução (os valores nunca são registrados).\"\"\"\n\n");
-            for (String in : cfg.inputs()) b.append("    ").append(in).append(": str\n");
-            b.append("\n    @classmethod\n    def de(cls, dados: Mapping[str, object]) -> Entrada:\n");
-            b.append("        valores: dict[str, str] = {}\n        for nome in ENTRADAS:\n            valor = dados.get(nome)\n");
-            b.append("            if not isinstance(valor, str) or not valor.strip():\n                raise BusinessRuleRejected(\"ENTRADA_INVALIDA\")\n");
-            b.append("            valores[nome] = valor\n        return cls(**valores)\n");
-        }
-        if (!secrets.isEmpty()) {
-            b.append("\n\ndef _segredos(rt: Runtime) -> SecretProvider:\n");
-            b.append("    if rt.secrets is None:\n        raise InvalidConfiguration(detail=\"sem_provedor_de_segredos\")\n    return rt.secrets\n");
-        }
-        b.append("\n\nclass Processo(RpaProcess):\n");
-        b.append("    name = ").append(Py.str(cfg.processName())).append('\n');
-        b.append("    requires_browser = True\n");
-        b.append("    required_secrets = (").append(String.join(", ", secrets.stream().map(Py::str).toList())).append(secrets.size() == 1 ? ",)" : ")").append("\n\n");
-        b.append("    def init(self, rt: Runtime) -> None:\n        rt.act.navigate(URL_INICIAL, step_id=\"INICIO\")\n\n");
-        b.append("    def process(self, rt: Runtime, item: TransactionItem) -> ProcessResult:\n");
-        if (inputs) b.append("        entrada = Entrada.de(item.data)  # antes de qualquer ação: entrada inválida recusa o item\n");
-        if (!secrets.isEmpty()) b.append("        segredos = _segredos(rt)\n");
-        if (outputs) b.append("        saidas: dict[str, str] = {}\n");
-        for (G g : groups) {
-            List<String> args = new ArrayList<>();
-            for (String in : g.inputs()) args.add("entrada." + in);
-            if (g.secrets()) args.add("segredos");
-            String call = g.group().page() + "(rt.act)." + g.group().method() + "(" + String.join(", ", args) + ")";
-            b.append("        ").append(g.outputs() ? "saidas.update(" + call + ")" : call).append('\n');
-        }
-        b.append("        return ProcessResult(").append(outputs ? "saidas" : "{}").append(")\n");
-        return b.toString();
-    }
-
     // ------------------------------------------------------------------------------------------------ main.py
-    private static String main(SingleConfig cfg) {
+    static String command(SingleConfig cfg) {
+        if (cfg.list()) return "python main.py --input <list.csv|list.xlsx> --spreadsheet <output.xlsx> --output <folder>";
+        return "python main.py --output <folder>" + (cfg.inputs().isEmpty() ? "" : " --input <inputs.json>");
+    }
+
+    /** Linha de comando (vai ao manifesto: o Studio escolhe os nomes das opções por ele; os anteriores continuam aceitos). */
+    static Map<String, Object> cli(SingleConfig cfg) {
+        Map<String, Object> c = new LinkedHashMap<>();
+        Map<String, String> options = new LinkedHashMap<>();
+        Map<String, String> legacy = new LinkedHashMap<>();
+        if (cfg.list() || !cfg.inputs().isEmpty()) {
+            options.put("input", "--input");
+            legacy.put("--entrada", "--input");
+        }
+        if (cfg.list()) {
+            options.put("spreadsheet", "--spreadsheet");
+            legacy.put("--planilha", "--spreadsheet");
+        }
+        options.put("output", "--output");
+        legacy.put("--saida", "--output");
+        c.put("options", options);
+        c.put("legacyAliases", legacy);
+        return c;
+    }
+
+    private static String main(SingleConfig cfg, CodePlan code) {
         boolean inputs = !cfg.inputs().isEmpty();
-        StringBuilder b = new StringBuilder();
-        b.append(HEADER);
-        b.append("\"\"\"Execução: python main.py --saida <pasta>").append(inputs ? " --entrada <entrada.json>" : "")
-                .append(" [--channel chrome|chromium] [--headless]\"\"\"\n\n");
+        String processClass = code.process().className();
+        StringBuilder b = new StringBuilder(SemanticEmitter.HEADER);
+        if (cfg.list()) {
+            b.append("\"\"\"Runs the process over a list.\n\nUsage: ").append(command(cfg)).append("\n    [--channel chrome|chromium] [--headless] [--console]\n\n");
+            b.append("The list has one column per input: ").append(String.join(", ", cfg.inputs())).append(".\n");
+            b.append("The spreadsheet is written only if ALL items succeed.\n");
+            b.append("The previous option names (--entrada, --planilha, --saida) are still accepted.\n\"\"\"\n\n");
+        } else {
+            b.append("\"\"\"Single run.\n\nUsage: ").append(command(cfg)).append("\n    [--channel chrome|chromium] [--headless] [--console]\n\n");
+            b.append("The previous option names (").append(inputs ? "--entrada, --saida" : "--saida").append(") are still accepted.\n\"\"\"\n\n");
+        }
         b.append("from __future__ import annotations\n\nimport argparse\nimport json\nimport sys\nfrom pathlib import Path\n\n");
-        b.append("from nekkora_rpa import Engine, EnvSecretProvider, SingleInputProvider, TransactionItem, load_config\n");
-        b.append("from nekkora_rpa.data import JsonDirectoryResultSink\n\n");
-        b.append("from processo import Processo\n\n");
-        b.append("AQUI = Path(__file__).resolve().parent\n");
-        b.append("SAIDA = {\"COMPLETED\": 0, \"COMPLETED_WITH_FAILURES\": 1, \"STOPPED\": 2, \"INIT_FAILED\": 3, \"CANCELLED\": 4}\n");
-        if (inputs) {
-            b.append("\n\ndef ler_entrada(caminho: Path) -> dict[str, object]:\n");
-            b.append("    \"\"\"Objeto JSON com as entradas da execução; os valores nunca são impressos nem registrados.\"\"\"\n");
-            b.append("    dados: object = json.loads(caminho.read_text(encoding=\"utf-8\"))\n");
-            b.append("    if not isinstance(dados, dict):\n        raise SystemExit(\"entrada: o arquivo precisa ser um objeto JSON\")\n");
-            b.append("    return {str(k): v for k, v in dados.items()}\n");
+        if (cfg.list()) {
+            b.append("from nekkora_rpa import Engine, EnvSecretProvider, load_config\n");
+            b.append("from nekkora_rpa.errors import NekkoraRpaError\n");
+            b.append("from nekkora_rpa.tabular import Column, TabularInputProvider, TabularSchema, read_tabular\n");
+            b.append("from nekkora_rpa.xlsx import ColumnKind, OutputColumn, OverwritePolicy, XlsxResultSink, XlsxSchema\n\n");
+            b.append("from automation.process import INPUT_COLUMNS, ").append(processClass).append("\n\n");
+        } else {
+            b.append("from nekkora_rpa import Engine, EnvSecretProvider, SingleInputProvider, TransactionItem, load_config\n");
+            b.append("from nekkora_rpa.data import JsonDirectoryResultSink\n\n");
+            b.append("from automation.process import ").append(processClass).append("\n\n");
+        }
+        b.append("HERE = Path(__file__).resolve().parent\n");
+        b.append("EXIT_CODES = {\"COMPLETED\": 0, \"COMPLETED_WITH_FAILURES\": 1, \"STOPPED\": 2, \"INIT_FAILED\": 3, \"CANCELLED\": 4}\n");
+        if (cfg.list()) {
+            b.append("INPUT_LIST = TabularSchema(tuple(Column(name) for name in INPUT_COLUMNS), reject_extra_columns=True)\n");
+            b.append("SPREADSHEET = XlsxSchema(\n    (\n");
+            for (SingleConfig.Column c : cfg.output().columns()) {
+                String kind = switch (c.kind()) {
+                    case "iso_date" -> "ColumnKind.ISO_DATE";
+                    case "url" -> "ColumnKind.URL";
+                    default -> "ColumnKind.TEXT";
+                };
+                // SPEC-OPTIONAL-COLUMNS-001: coluna opcional no PDD → célula vazia sob o cabeçalho (OutputColumn.required do 0.3.0)
+                b.append("        OutputColumn(").append(Py.str(c.header())).append(", ").append(Py.str(c.field())).append(", ").append(kind)
+                        .append(c.required() ? "" : ", required=False").append("),\n");
+            }
+            b.append("    ),\n    key_field=").append(Py.str(cfg.output().keyField())).append(",\n    sheet=").append(Py.str(cfg.output().sheet())).append(",\n)\n");
+            b.append("\"\"\"Output spreadsheet: the column headers are the contract of the spreadsheet; the fields are the row keys.\"\"\"\n");
+        }
+        if (!cfg.list() && inputs) {
+            b.append("\n\ndef read_inputs(path: Path) -> dict[str, object]:\n");
+            b.append("    \"\"\"JSON object with the inputs of the run; the values are never printed or logged.\"\"\"\n");
+            b.append("    data: object = json.loads(path.read_text(encoding=\"utf-8\"))\n");
+            b.append("    if not isinstance(data, dict):\n        raise SystemExit(\"input: the file must be a JSON object\")\n");
+            b.append("    return {str(key): value for key, value in data.items()}\n");
         }
         b.append("\n\ndef main(argv: list[str] | None = None) -> int:\n");
-        b.append("    ap = argparse.ArgumentParser(description=").append(Py.str("Processo gerado: " + cfg.processName())).append(")\n");
-        b.append("    ap.add_argument(\"--saida\", required=True, type=Path, help=\"pasta da execução (resultados, eventos, checkpoint)\")\n");
-        if (inputs) b.append("    ap.add_argument(\"--entrada\", required=True, type=Path, help=\"objeto JSON com as entradas\")\n");
-        b.append("    ap.add_argument(\"--channel\", choices=[\"chromium\", \"chrome\"])\n");
-        b.append("    ap.add_argument(\"--headless\", action=\"store_true\")\n    ap.add_argument(\"--console\", action=\"store_true\")\n");
-        b.append("    a = ap.parse_args(argv)\n");
-        b.append("    saida = a.saida.resolve()\n    saida.mkdir(parents=True, exist_ok=True)\n");
-        b.append("    overrides: dict[str, object] = {}\n    if a.channel:\n        overrides[\"browser.channel\"] = a.channel\n");
-        b.append("    if a.headless:\n        overrides[\"browser.headless\"] = True\n");
-        b.append("    config = load_config(AQUI / \"config\" / \"execucao.toml\", overrides)\n");
-        b.append("    processo = Processo()\n");
-        b.append("    item = TransactionItem(\"execucao-unica\", ").append(inputs ? "ler_entrada(a.entrada)" : "{}").append(")\n");
-        b.append("    engine = Engine(\n        processo,\n        SingleInputProvider(item),\n        JsonDirectoryResultSink(saida / \"resultados\"),\n        config,\n");
-        b.append("        secrets=EnvSecretProvider(processo.required_secrets),\n        run_dir=saida / \"execucao\",\n        console=a.console,\n    )\n");
-        b.append("    resumo = engine.run()\n");
-        b.append("    d = resumo.to_dict()\n");
-        b.append("    print(json.dumps({k: d[k] for k in (\"execution_id\", \"status\", \"stop_code\", \"stop_detail\", \"counts\")}))\n");
-        b.append("    return SAIDA[resumo.status.value]\n\n\n");
+        b.append("    \"\"\"Reads the arguments, runs the process and prints the summary (no values); returns the exit code.\"\"\"\n");
+        b.append("    parser = argparse.ArgumentParser(description=").append(Py.str("Generated process: " + cfg.processName())).append(")\n");
+        if (cfg.list()) {
+            b.append("    parser.add_argument(\"--input\", \"--entrada\", dest=\"input\", required=True, type=Path, help=\"CSV or XLSX list (one row per item)\")\n");
+            b.append("    parser.add_argument(\n        \"--spreadsheet\", \"--planilha\", dest=\"spreadsheet\", required=True, type=Path, help=\"output .xlsx spreadsheet\"\n    )\n");
+            b.append("    parser.add_argument(\"--output\", \"--saida\", dest=\"output\", required=True, type=Path, help=\"run folder (events, checkpoint)\")\n");
+        } else {
+            b.append("    parser.add_argument(\n        \"--output\", \"--saida\", dest=\"output\", required=True, type=Path, help=\"run folder (results, events, checkpoint)\"\n    )\n");
+            if (inputs) b.append("    parser.add_argument(\"--input\", \"--entrada\", dest=\"input\", required=True, type=Path, help=\"JSON object with the inputs\")\n");
+        }
+        b.append("    parser.add_argument(\"--channel\", choices=[\"chromium\", \"chrome\"])\n");
+        b.append("    parser.add_argument(\"--headless\", action=\"store_true\")\n    parser.add_argument(\"--console\", action=\"store_true\")\n");
+        b.append("    args = parser.parse_args(argv)\n");
+        b.append("    run_folder = args.output.resolve()\n    run_folder.mkdir(parents=True, exist_ok=True)\n");
+        b.append("    overrides: dict[str, object] = {}\n    if args.channel:\n        overrides[\"browser.channel\"] = args.channel\n");
+        b.append("    if args.headless:\n        overrides[\"browser.headless\"] = True\n");
+        b.append("    config = load_config(HERE / ").append(Py.str(CONFIG_FILE.substring(0, CONFIG_FILE.indexOf('/')))).append(" / ")
+                .append(Py.str(CONFIG_FILE.substring(CONFIG_FILE.indexOf('/') + 1))).append(", overrides)\n");
+        String resultKeys;
+        if (cfg.list()) {
+            b.append("    try:\n        input_list = read_tabular(args.input, INPUT_LIST)\n");
+            b.append("        sink = XlsxResultSink(\n            args.spreadsheet.resolve(),\n            SPREADSHEET,\n            state_dir=run_folder / \"execucao\",\n");
+            b.append("            overwrite=OverwritePolicy.REPLACE,\n            expected_rows=len(input_list.rows),\n        )\n");
+            b.append("    except NekkoraRpaError as error:\n");
+            b.append("        print(json.dumps({\"status\": \"INPUT_INVALID\", \"code\": error.code.value, \"detail\": error.detail}))\n        return 5\n");
+            b.append("    process = ").append(processClass).append("()\n");
+            b.append("    engine = Engine(\n        process,\n        TabularInputProvider(input_list),\n        sink,\n        config,\n");
+            resultKeys = "(\"execution_id\", \"status\", \"stop_code\", \"stop_detail\", \"counts\", \"output\")";
+        } else {
+            b.append("    process = ").append(processClass).append("()\n");
+            b.append("    item = TransactionItem(\"execucao-unica\", ").append(inputs ? "read_inputs(args.input)" : "{}").append(")\n");
+            b.append("    engine = Engine(\n        process,\n        SingleInputProvider(item),\n        JsonDirectoryResultSink(run_folder / \"resultados\"),\n        config,\n");
+            resultKeys = "(\"execution_id\", \"status\", \"stop_code\", \"stop_detail\", \"counts\")";
+        }
+        b.append("        secrets=EnvSecretProvider(process.required_secrets),\n        run_dir=run_folder / \"execucao\",\n        console=args.console,\n    )\n");
+        b.append("    summary = engine.run()\n");
+        b.append("    fields = summary.to_dict()\n");
+        b.append("    published = ").append(resultKeys).append('\n');
+        b.append("    print(json.dumps({key: fields[key] for key in published}))\n");
+        b.append("    return EXIT_CODES[summary.status.value]\n\n\n");
         b.append("if __name__ == \"__main__\":\n    sys.exit(main())\n");
         return b.toString();
     }
 
-    private static String readme(SingleConfig cfg, List<Step> steps) {
-        Set<String> secrets = new java.util.TreeSet<>();
+    // ------------------------------------------------------------------------------------------------ README.md
+    private static String readme(SingleConfig cfg, List<Step> steps, CodePlan code) {
+        Set<String> secrets = new TreeSet<>();
         for (Step s : steps) if (s.credential() != null) secrets.add(s.credential());
-        if (cfg.modern()) return Modern.readme(cfg, secrets);
         StringBuilder b = new StringBuilder();
-        b.append("<!-- GERADO pelo Nekkora Studio (STUDIO-014). -->\n# Processo gerado: ").append(cfg.processName()).append("\n\n");
-        b.append("Gerado por \"Desenvolver automação\" a partir do modelo validado e do PDD pronto (ver `manifest.json`: automação, revisões do PDD, ")
-                .append("StepIds e hashes). Correções vão para o MODELO ou o PDD e o código é gerado de novo; arquivo editado à mão não é sobrescrito.\n\n");
-        b.append("Execução única (sem planilha). ");
-        if (!cfg.inputs().isEmpty()) {
-            b.append("Entradas (arquivo JSON em `--entrada`, um objeto com estas chaves): ")
-                    .append(String.join(", ", cfg.inputs().stream().map(x -> "`" + x + "`").toList())).append(". ");
+        b.append("<!-- GENERATED by Nekkora Studio (\"Desenvolver automação\"). -->\n# ").append(code.process().className()).append("\n\n");
+        b.append("**What it does.** ").append(code.process().summary()).append(' ');
+        if (cfg.list()) {
+            b.append("Each row of the input list (CSV or XLSX with the columns ").append(String.join(", ", cfg.inputs().stream().map(x -> "`" + x + "`").toList()))
+                    .append(") becomes a transaction; the output `.xlsx` spreadsheet has the columns ")
+                    .append(String.join(", ", cfg.output().columns().stream().map(c -> "`" + c.header() + "`").toList()))
+                    .append(" and is written only if ALL items succeed (all or nothing, by the nekkora_rpa `XlsxResultSink`).")
+                    .append(cfg.optionalColumns() ? " Optional in the PDD (the cell stays empty when the data is missing; nothing is invented): "
+                            + String.join(", ", cfg.output().columns().stream().filter(c -> !c.required()).map(c -> "`" + c.header() + "`").toList()) + "." : "")
+                    .append("\n\n");
+        } else {
+            b.append(cfg.inputs().isEmpty() ? "No inputs.\n\n"
+                    : "Inputs (JSON file in `--input`): " + String.join(", ", cfg.inputs().stream().map(x -> "`" + x + "`").toList()) + ".\n\n");
         }
         if (!secrets.isEmpty()) {
-            b.append("Segredos (variáveis de ambiente, nunca no projeto): ")
+            b.append("**Secrets** (environment variables, never in the project): ")
                     .append(String.join(", ", secrets.stream().map(x -> "`NK_SECRET_" + x.toUpperCase().replace('.', '_').replace('-', '_') + "`").toList()))
-                    .append(". ");
+                    .append(".\n\n");
         }
-        b.append("\n\n").append(InstallHint.readmeBlock(SingleGenerator.FRAMEWORK_REQUIREMENT, "python main.py --saida <pasta-da-execucao>"
-                + (cfg.inputs().isEmpty() ? "" : " --entrada <entrada.json>") + " --console"));
-        b.append("Saída: `resultados/` (o desfecho da execução, com as leituras) e `execucao/` (eventos JSONL sem valores, checkpoint, resumo).\n");
-        b.append("Gerar código não é executar: rode somente em ambiente autorizado (").append(cfg.environment()).append(").\n");
+        b.append("Names in the code are in English. Page labels, list columns, spreadsheet headers, secret names and rejection codes\n");
+        b.append("stay as they are: they are data and contracts (the mapping is in `manifest.json` → `naming`).\n\n");
+        b.append("## How it is organized\n\n");
+        b.append("| File | Content |\n|---|---|\n");
+        b.append("| `").append(CodePlan.PAGES_FILE).append("` | one class per screen: ").append(String.join(", ", code.pages().stream().map(p -> "`" + p.className() + "`").toList()))
+                .append(" |\n");
+        b.append("| `").append(CodePlan.PROCESS_FILE).append("` | `").append(code.process().className()).append("`: the order of the screens")
+                .append(cfg.spreadsheet() ? " and the spreadsheet row" : "").append(" |\n");
+        b.append("| `").append(CodePlan.SELECTORS_FILE).append("` | `SelectorKey` (one key per element) and how each element is located |\n");
+        b.append("| `main.py` | command line |\n");
+        b.append("| `selectors.json` | the same targets, read by the nekkora_rpa runtime (generated from the same plan; never edit by hand) |\n");
+        b.append("| `manifest.json` | revisions, hashes, `step_id` ↔ Studio step map, names and keys |\n\n");
+        b.append("## Screens and what each method does\n\n");
+        for (CodePlan.Page p : code.pages()) {
+            b.append("- **`").append(p.className()).append("`** — ").append(p.summary()).append('\n');
+            for (CodePlan.Method m : p.methods()) b.append("  - `").append(m.name()).append("()` — ").append(m.summary()).append('\n');
+        }
+        b.append("\n## How each element is located\n\n| Key | Strategy | Reading |\n|---|---|---|\n");
+        Set<String> shown = new LinkedHashSet<>();
+        for (CodePlan.Selector sel : code.selectors()) {
+            Step s = steps.stream().filter(x -> sel.key().equals(x.key()) && x.target() != null).findFirst().orElse(null);
+            if (s == null || !shown.add(sel.key())) continue;
+            b.append("| `SelectorKey.").append(sel.member()).append("` | ").append(LocatorPolicy.describe(s.target())).append(" | ")
+                    .append(LocatorPolicy.kind(s.target()).label()).append(" |\n");
+        }
+        b.append("\nnekkora_rpa acts only if the locator finds EXACTLY one element with the expected identity; none, or more than one, is an "
+                + "error (it never picks the first one).\n\n## Run\n\n");
+        b.append(InstallHint.readmeBlockEnglish(requirement(cfg), command(cfg) + " --console"));
+        b.append(cfg.list() ? "JSONL events without values, checkpoint and summary in `<folder>/execucao/`.\n"
+                : "Output: `resultados/` (the outcome, with the readings) and `execucao/` (JSONL events without values, checkpoint, summary).\n");
+        b.append("Generating code is not running it: run only in an authorized environment (").append(cfg.environment()).append(").\n");
         return b.toString();
     }
 
-    private static String manifest(Automation a, GuidedPlan plan, SingleConfig cfg, List<Step> steps, Map<String, String> files) {
+    // ------------------------------------------------------------------------------------------------ manifest.json
+    private static String manifest(Automation a, GuidedPlan plan, SingleConfig cfg, List<Step> steps, CodePlan code, CodeNames names,
+                                   Map<String, Map<String, Object>> targets, Map<String, String> files) {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("schema", "nekkora-studio/codegen-manifest");
-        m.put("version", cfg.modern() ? "1.2.0" : "1.1.0");
+        m.put("version", cfg.optionalColumns() ? MANIFEST_VERSION_OPTIONAL : MANIFEST_VERSION);
         m.put("generator", cfg.modern() ? SingleGenerator.GENERATOR_LIST : SingleGenerator.GENERATOR);
-        m.put("framework", cfg.modern() ? SingleGenerator.FRAMEWORK_REQUIREMENT_LIST : SingleGenerator.FRAMEWORK_REQUIREMENT);
+        m.put("framework", requirement(cfg));
         m.put("execution", cfg.execution());
+        m.put("language", "en");
+        Map<String, Object> layout = new LinkedHashMap<>();
+        layout.put("schema", LAYOUT);
+        layout.put("package", CodePlan.PACKAGE);
+        layout.put("modules", List.of(CodePlan.INIT_FILE, CodePlan.SELECTORS_FILE, CodePlan.PAGES_FILE, CodePlan.PROCESS_FILE));
+        layout.put("runner", "main.py");
+        layout.put("config", CONFIG_FILE);
+        m.put("layout", layout);
         m.put("automationId", a.id().value().toString());
         m.put("modelVersion", a.modelVersion());
         m.put("automationRevision", a.revision());
@@ -348,7 +406,8 @@ final class SingleEmitter {
         pdd.put("documentRevision", cfg.pdd().documentRevision());
         pdd.put("specRevision", cfg.pdd().specRevision());
         m.put("pdd", pdd);
-        m.put("command", cfg.list() ? Modern.command() : "python main.py --saida <pasta>" + (cfg.inputs().isEmpty() ? "" : " --entrada <entrada.json>"));
+        m.put("command", command(cfg));
+        m.put("cli", cli(cfg));
         if (cfg.modern() && cfg.spreadsheet()) {
             List<Object> cols = new ArrayList<>();
             for (SingleConfig.Column c : cfg.output().columns()) {
@@ -358,19 +417,40 @@ final class SingleEmitter {
                 x.put("kind", c.kind());
                 x.put("stepId", c.step());
                 x.put("fallbackStepId", c.fallbackStep());
+                if (cfg.optionalColumns()) {
+                    // cabeçalho externo ↔ campo interno: header ↔ field acima; a regra vem da especificação funcional (pdd.specRevision)
+                    x.put("requirement", c.required() ? "REQUIRED" : "OPTIONAL");
+                    x.put("requirementReason", c.requirementReason());
+                }
                 cols.add(x);
             }
             Map<String, Object> out = new LinkedHashMap<>();
             out.put("format", "xlsx");
             out.put("sheet", cfg.output().sheet());
             out.put("keyField", cfg.output().keyField());
+            if (cfg.optionalColumns()) {
+                Map<String, Object> rule = new LinkedHashMap<>();
+                rule.put("schema", REQUIREMENT_SCHEMA);
+                rule.put("source", "functional-spec");
+                rule.put("specRevision", cfg.pdd().specRevision());
+                rule.put("default", "REQUIRED");
+                rule.put("emptyCell", "absent");
+                out.put("requirement", rule);
+            }
             out.put("columns", cols);
             m.put("output", out);
+        }
+        Map<String, String> traceOf = new LinkedHashMap<>();
+        code.traces().forEach(t -> traceOf.put(t.stepId(), t.traceId()));
+        Map<String, CodePlan.Retry> retryOf = new LinkedHashMap<>();
+        for (CodePlan.Page p : code.pages()) for (CodePlan.Method mm : p.methods()) for (CodePlan.Op op : mm.ops()) {
+            if (op.retry() != null) retryOf.put(op.step().step().id().value().toString(), op.retry());
         }
         List<Object> list = new ArrayList<>();
         for (Step s : steps) {
             Map<String, Object> e = new LinkedHashMap<>();
             e.put("stepId", s.step().id().value().toString());
+            e.put("traceId", traceOf.get(s.step().id().value().toString()));
             e.put("page", s.group().page());
             e.put("method", s.group().method());
             e.put("action", s.step().actionType().name());
@@ -380,26 +460,210 @@ final class SingleEmitter {
             e.put("output", s.output());
             e.put("effect", s.effect() == null ? null : s.effect().effect());
             e.put("postcondition", s.effect() == null ? null : s.effect().postcondition());
+            // CQ-04: repetição depois de resultado incerto (idempotent=True) só com SAFE; o motivo fica registrado
+            e.put("retry", retryOf.containsKey(s.step().id().value().toString()) ? retryOf.get(s.step().id().value().toString()).name() : null);
             if (cfg.modern()) {
                 e.put("read", s.read() == null ? null : s.read().kind());
                 e.put("optional", s.read() != null && s.read().optional());
                 e.put("expected", s.read() == null ? null : s.read().expected());
             }
-            e.put("capability", cfg.modern() ? Modern.capability(s) : capability(s.step().actionType()));
+            e.put("capability", capability(s, cfg.modern()));
             e.put("decisionActor", s.step().targetDecision().map(d -> d.actor().name()).orElse(null));
             list.add(e);
         }
         m.put("steps", list);
+        m.put("trace", trace(code));
+        m.put("architecture", architecture(code));
+        m.put("naming", naming(cfg, code, names));
+        m.put("selectors", selectorMap(code, targets));
+        m.put("locators", locators(steps));
         Map<String, Object> hashes = new LinkedHashMap<>();
         for (Map.Entry<String, String> f : files.entrySet()) {
             if (!f.getKey().equals("manifest.json")) hashes.put(f.getKey(), "sha256:" + CodegenConfig.sha256(f.getValue()));
         }
         m.put("files", hashes);
-        m.put("exclusions", List.of("INPUT_VALUES", "CREDENTIAL_VALUES", "LITERAL_VALUES", "HAND_WRITTEN_SELECTORS", "POSITIONAL_LOCATORS", "URL_QUERIES"));
+        m.put("exclusions", List.of("INPUT_VALUES", "CREDENTIAL_VALUES", "LITERAL_VALUES", "HAND_WRITTEN_SELECTORS", "POSITIONAL_LOCATORS", "URL_QUERIES",
+                "STUDIO_STEP_IDS_IN_CODE"));
         return Pretty.json(m) + "\n";
     }
 
-    /** Capacidade do framework usada pela ação (o mesmo id do catálogo do AI Engine). */
+    private static Map<String, Object> trace(CodePlan code) {
+        Map<String, Object> t = new LinkedHashMap<>();
+        t.put("schema", TRACE_SCHEMA);
+        t.put("version", "1.1.0");
+        List<Object> mappings = new ArrayList<>();
+        for (CodePlan.Trace x : code.traces()) {
+            Map<String, Object> e = new LinkedHashMap<>();
+            e.put("traceId", x.traceId());
+            e.put("studioStepId", x.stepId());
+            e.put("action", x.action());
+            e.put("targetKey", x.targetKey());
+            e.put("pythonSymbol", x.symbol());
+            // rodada 3: os ids que esta etapa já teve (ex.: em português) — correlação de eventos antigos, nunca reaproveitados
+            if (!x.previous().isEmpty()) e.put("previousTraceIds", x.previous());
+            mappings.add(e);
+        }
+        t.put("mappings", mappings);
+        Map<String, Object> start = new LinkedHashMap<>();
+        start.put("traceId", CodePlan.START_TRACE);
+        start.put("meaning", "open the start address (no Studio step)");
+        start.put("previousTraceIds", CodePlan.PREVIOUS_START_TRACES);
+        t.put("synthetic", List.of(start));
+        return t;
+    }
+
+    private static Map<String, Object> architecture(CodePlan code) {
+        Map<String, Object> a = new LinkedHashMap<>();
+        List<Object> pages = new ArrayList<>();
+        for (CodePlan.Page p : code.pages()) {
+            Map<String, Object> x = new LinkedHashMap<>();
+            x.put("class", p.className());
+            x.put("prefix", p.prefix());
+            x.put("identityKey", p.identity() == null ? null : "SelectorKey." + p.identity());
+            x.put("nameSource", p.nameSource().name());
+            x.put("summary", p.summary());
+            x.put("boundary", p.boundary());
+            List<Object> methods = new ArrayList<>();
+            for (CodePlan.Method m : p.methods()) {
+                Map<String, Object> y = new LinkedHashMap<>();
+                y.put("name", m.name());
+                y.put("nameSource", m.nameSource().name());
+                y.put("summary", m.summary());
+                y.put("parameters", m.params().stream().map(CodePlan.Param::name).toList());
+                y.put("returns", m.result().type());
+                y.put("traceIds", m.ops().stream().map(CodePlan.Op::traceId).toList());
+                methods.add(y);
+            }
+            x.put("methods", methods);
+            pages.add(x);
+        }
+        a.put("pages", pages);
+        List<Object> models = new ArrayList<>();
+        for (CodePlan.Model md : code.models()) {
+            Map<String, Object> x = new LinkedHashMap<>();
+            x.put("name", md.name());
+            x.put("readBy", md.page() + "." + md.method());
+            x.put("fields", md.fields().stream().map(f -> f.name() + (f.optional() ? "?" : "")).toList());
+            models.add(x);
+        }
+        a.put("models", models);
+        a.put("process", code.process().className());
+        return a;
+    }
+
+    /**
+     * Mapa de nomes (rodada 3, Q11): de onde cada identificador inglês saiu — o texto do PDD, a variável do modelo ou o rótulo
+     * da tela — e as palavras sem tradução no glossário (ficaram como estão: pendência para a pessoa, nunca invenção).
+     */
+    private static Map<String, Object> naming(SingleConfig cfg, CodePlan code, CodeNames names) {
+        Map<String, Object> n = new LinkedHashMap<>();
+        n.put("glossary", EnglishNames.GLOSSARY);
+        List<Object> untranslated = new ArrayList<>();
+        Map<String, Object> process = new LinkedHashMap<>();
+        process.put("from", cfg.processName());
+        process.put("python", code.process().className());
+        n.put("process", process);
+        for (String w : EnglishNames.identifier(cfg.processName()).untranslated()) untranslated.add(pending(w, "process", code.process().className()));
+        List<Object> pages = new ArrayList<>();
+        for (CodePlan.Page p : code.pages()) {
+            CodeNames.PageInfo info = names.page(p.className());
+            Map<String, Object> x = new LinkedHashMap<>();
+            x.put("python", p.className());
+            x.put("from", info.nameFrom());
+            x.put("source", p.nameSource().name());
+            pages.add(x);
+            for (String w : info.untranslated()) untranslated.add(pending(w, "page", p.className()));
+            for (CodePlan.Method m : p.methods()) {
+                CodeNames.MethodInfo mi = names.method(p.className(), m.name());
+                for (String w : mi.untranslated()) untranslated.add(pending(w, "method", p.className() + "." + m.name()));
+            }
+        }
+        n.put("pages", pages);
+        List<Object> ids = new ArrayList<>();
+        code.identifiers().forEach((model, py) -> {
+            Map<String, Object> x = new LinkedHashMap<>();
+            x.put("model", model);
+            x.put("python", py);
+            x.put("role", cfg.inputs().contains(model) ? "input" : "output");
+            ids.add(x);
+            for (String w : EnglishNames.identifier(model).untranslated()) untranslated.add(pending(w, "variable", py));
+        });
+        n.put("identifiers", ids);
+        if (cfg.spreadsheet()) {
+            List<Object> cols = new ArrayList<>();
+            for (SingleConfig.Column c : cfg.output().columns()) {
+                Map<String, Object> x = new LinkedHashMap<>();
+                x.put("header", c.header());
+                x.put("field", c.field());
+                cols.add(x);
+                for (String w : EnglishNames.noun(c.header()).untranslated()) untranslated.add(pending(w, "column", c.field()));
+            }
+            n.put("columns", cols);
+        }
+        for (CodePlan.Selector s : code.selectors()) {
+            String slug = s.key().substring(s.key().lastIndexOf('.') + 1);
+            for (String w : EnglishNames.noun(slug).untranslated()) untranslated.add(pending(w, "selector", "SelectorKey." + s.member()));
+        }
+        n.put("untranslated", untranslated);
+        return n;
+    }
+
+    private static Map<String, Object> pending(String word, String kind, String where) {
+        Map<String, Object> x = new LinkedHashMap<>();
+        x.put("word", word);
+        x.put("kind", kind);
+        x.put("python", where);
+        return x;
+    }
+
+    /** Chaves tipadas (Q10): membro ↔ chave canônica ↔ etapas (traceId e StepId), e a equivalência .py ↔ JSON. */
+    private static Map<String, Object> selectorMap(CodePlan code, Map<String, Map<String, Object>> targets) {
+        Map<String, Object> s = new LinkedHashMap<>();
+        s.put("module", CodePlan.SELECTORS_FILE);
+        s.put("enum", "SelectorKey");
+        s.put("registry", "selectors.json");
+        s.put("system", CodePlan.SYSTEM);
+        s.put("equivalence", equivalence(targets));
+        List<Object> keys = new ArrayList<>();
+        for (CodePlan.Selector x : code.selectors()) {
+            Map<String, Object> e = new LinkedHashMap<>();
+            e.put("member", x.member());
+            e.put("key", x.key());
+            e.put("traceIds", x.traceIds());
+            e.put("studioStepIds", x.stepIds());
+            keys.add(e);
+        }
+        s.put("keys", keys);
+        return s;
+    }
+
+    private static List<Object> locators(List<Step> steps) {
+        List<Object> out = new ArrayList<>();
+        for (Step s : steps) {
+            if (s.key() == null || s.target() == null) continue;
+            Map<String, Object> x = new LinkedHashMap<>();
+            x.put("key", s.key());
+            x.put("kind", LocatorPolicy.kind(s.target()).name());
+            x.put("description", LocatorPolicy.describe(s.target()));
+            out.add(x);
+        }
+        return out;
+    }
+
+    /** Capacidade do framework usada pela etapa (o mesmo id do catálogo do AI Engine). */
+    static String capability(Step s, boolean modern) {
+        if (!modern) return capability(s.step().actionType());
+        return switch (s.step().actionType()) {
+            case NAVIGATE -> "actions.navigate";
+            case FILL -> "actions.fill";
+            case CLICK -> "actions.click";
+            case WAIT_FOR -> "actions.wait_visible";
+            case PRESS_KEY -> "actions.press";
+            case OBSERVE -> s.read() != null && "address".equals(s.read().kind()) ? "actions.current_address" : "actions.read_items";
+            default -> null;
+        };
+    }
+
     static String capability(ActionType t) {
         return switch (t) {
             case NAVIGATE -> "actions.navigate";

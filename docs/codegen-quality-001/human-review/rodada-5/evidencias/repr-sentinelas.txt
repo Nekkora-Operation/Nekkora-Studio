@@ -1,0 +1,2 @@
+final: [{"class": "ProfileData", "fields": 7, "values_shown": false, "values_kept": true}, {"class": "InputRow", "fields": 2, "values_shown": false, "values_kept": true}]
+rpa-challenge: [{"class": "InputRow", "fields": 7, "values_shown": false, "values_kept": true}]

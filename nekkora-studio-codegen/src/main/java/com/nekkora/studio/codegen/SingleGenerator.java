@@ -17,12 +17,10 @@ import com.nekkora.studio.validation.Finding;
 import com.nekkora.studio.validation.Severity;
 import com.nekkora.studio.validation.ValidationReport;
 import com.nekkora.studio.validation.ValidationStatus;
-import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -58,11 +56,17 @@ public final class SingleGenerator {
 
     /** Etapa pronta para gerar. */
     record Step(AutomationStep step, SingleConfig.Group group, String key, Map<String, Object> target, String input, String credential, String output,
-                String navigateUrl, SingleConfig.Effect effect, String nextKey, String firstFillKey, SingleConfig.Read read, SingleConfig.KeyPress press) {}
+                String navigateUrl, SingleConfig.Effect effect, String nextKey, String firstFillKey, SingleConfig.Read read, SingleConfig.KeyPress press,
+                String label, boolean nextOnOtherScreen) {}
 
     private SingleGenerator() {}
 
     public static PythonGenerator.Result generate(Automation a, ValidationReport report, SingleConfig cfg) {
+        return generate(a, report, cfg, CodeNames.none());
+    }
+
+    /** CODEGEN-QUALITY-001: com a evidência de nomes do PDD e o registro de rastreio da automação. */
+    public static PythonGenerator.Result generate(Automation a, ValidationReport report, SingleConfig cfg, CodeNames names) {
         GuidedPlan plan = GuidedPlan.of(a, report);
         List<Blocker> blockers = new ArrayList<>();
         if (report.status() == ValidationStatus.INCOMPLETE) {
@@ -72,6 +76,12 @@ public final class SingleGenerator {
         // ordem do modelo = ordem dos grupos
         List<AutomationStep> modelOrder = new ArrayList<>();
         a.sessions().forEach(s -> modelOrder.addAll(s.steps()));
+        Map<String, Integer> sessionOf = new LinkedHashMap<>();
+        int sessionNumber = 0;
+        for (var session : a.sessions()) {
+            sessionNumber++;
+            for (AutomationStep st : session.steps()) sessionOf.put(st.id().value().toString(), sessionNumber);
+        }
         List<String> configOrder = new ArrayList<>();
         Map<String, SingleConfig.Group> groupOf = new LinkedHashMap<>();
         for (SingleConfig.Group g : cfg.groups()) for (String id : g.steps()) {
@@ -93,6 +103,7 @@ public final class SingleGenerator {
         Map<String, String> keyOf = new LinkedHashMap<>();
         Map<String, Map<String, Object>> targetOf = new LinkedHashMap<>();
         Set<String> used = new LinkedHashSet<>();
+        Map<String, String> keyOfTarget = new LinkedHashMap<>(); // mesmo elemento (mesma identidade e localizador) na mesma tela → mesma chave
         for (AutomationStep s : modelOrder) {
             String id = s.id().value().toString();
             if (!supported.contains(s.actionType())) {
@@ -125,8 +136,14 @@ public final class SingleGenerator {
                 continue;
             }
             SingleConfig.Group g = groupOf.get(id);
-            keyOf.put(id, key(g.prefix(), el.get(), s.actionType(), used));
-            targetOf.put(id, t);
+            String same = g.prefix() + "|" + identityOf(t);
+            String k = keyOfTarget.get(same);
+            if (k == null) {
+                k = key(g.prefix(), el.get(), s, used, cfg.reads().get(id) != null && "date".equals(cfg.reads().get(id).kind()));
+                keyOfTarget.put(same, k);
+                targetOf.put(id, t);
+            }
+            keyOf.put(id, k);
         }
         List<Step> steps = new ArrayList<>();
         Set<String> inputsUsed = new LinkedHashSet<>();
@@ -218,7 +235,8 @@ public final class SingleGenerator {
                 default -> {
                 }
             }
-            steps.add(new Step(s, g, keyOf.get(id), targetOf.get(id), input, credential, output, url, effect, next, firstFill, read, press));
+            steps.add(new Step(s, g, keyOf.get(id), targetOf.get(id), input, credential, output, url, effect, next, firstFill, read, press, label(s, input, credential,
+                    output, read), next != null && !sameRecordedScreen(s, nextTargeted(modelOrder, i, keyOf), sessionOf)));
         }
         for (String v : cfg.inputs()) if (!inputsUsed.contains(v)) blockers.add(new Blocker("INPUT_NOT_USED", null));
         for (String st : cfg.outputs().keySet()) if (!outputsUsed.contains(st)) blockers.add(new Blocker("OUTPUT_STEP_NOT_OBSERVE", null));
@@ -228,12 +246,42 @@ public final class SingleGenerator {
             if (!click) blockers.add(new Blocker("EFFECT_STEP_NOT_CLICK", null));
         }
         for (String st : cfg.reads().keySet()) if (!outputsUsed.contains(st)) blockers.add(new Blocker("READ_STEP_NOT_OBSERVE", null));
+        // SPEC-OPTIONAL-COLUMNS-001: leitura que pode faltar só é conclusiva com a página pronta — a tela precisa de uma leitura
+        // OBRIGATÓRIA com alvo para esperar antes (senão "não existe" poderia ser só "ainda não carregou")
+        for (Step s : steps) {
+            if (s.read() == null || !s.read().optional() || s.key() == null) continue;
+            boolean anchored = steps.stream().anyMatch(o -> o.group().equals(s.group()) && o.read() != null && !o.read().optional() && o.key() != null);
+            if (!anchored) blockers.add(new Blocker("OPTIONAL_READ_WITHOUT_REQUIRED_ANCHOR", s.step().id()));
+        }
         if (!blockers.isEmpty()) return new PythonGenerator.Result(List.copyOf(blockers), Map.of(), plan.planRevision());
-        return new PythonGenerator.Result(List.of(), SingleEmitter.emit(a, plan, cfg, steps), plan.planRevision());
+        return new PythonGenerator.Result(List.of(), SingleEmitter.emit(a, plan, cfg, steps, names), plan.planRevision());
     }
 
     static boolean allowed(SingleConfig cfg, String url) {
         return url != null && cfg.allowedOrigins().stream().anyMatch(o -> url.equals(o) || url.startsWith(o + "/"));
+    }
+
+    private static AutomationStep nextTargeted(List<AutomationStep> order, int i, Map<String, String> keyOf) {
+        for (int j = i + 1; j < order.size(); j++) if (keyOf.containsKey(order.get(j).id().value().toString())) return order.get(j);
+        return null;
+    }
+
+    /**
+     * CODEGEN-QUALITY-001: a confirmação "o próximo alvo existe" de um clique/Enter SEM efeito continua decidida pela
+     * TELA GRAVADA (modelo de endereço + título; sem eles, a sessão) — a mesma regra de antes da divisão das Pages por
+     * troca de documento. Assim, separar a busca e a ficha em duas classes não acrescenta nem retira pós-condição.
+     */
+    static boolean sameRecordedScreen(AutomationStep a, AutomationStep b, Map<String, Integer> sessionOf) {
+        if (b == null) return true;
+        String sa = recordedScreen(a, sessionOf);
+        String sb = recordedScreen(b, sessionOf);
+        return sa.equals(sb);
+    }
+
+    private static String recordedScreen(AutomationStep s, Map<String, Integer> sessionOf) {
+        String l = s.context().map(c -> c.location() == null ? "" : c.location()).orElse("");
+        String t = s.context().map(c -> c.screenTitle() == null ? "" : c.screenTitle()).orElse("");
+        return l.isEmpty() && t.isEmpty() ? "sessao-" + sessionOf.get(s.id().value().toString()) : l + "\n" + t;
     }
 
     private static String nextKey(List<AutomationStep> order, int i, Map<String, String> keyOf) {
@@ -252,8 +300,53 @@ public final class SingleGenerator {
         return null;
     }
 
-    /** Chave estável e legível: {@code processo.<prefixo da Page>.<rótulo|nome|ação>} (texto de interface, sem valores). */
-    static String key(String prefix, ElementReference el, ActionType action, Set<String> used) {
+    /**
+     * CODEGEN-QUALITY-001: como a etapa é CHAMADA nas docstrings — o texto de INTERFACE que identifica o alvo (rótulo,
+     * âncora da linha, nome acessível), exatamente como está na página (não é traduzido). Vazio sem esse texto: a
+     * docstring diz o papel em inglês ("the page address", "the title", "the field"). Nunca valores.
+     */
+    static String label(AutomationStep s, String input, String credential, String output, SingleConfig.Read read) {
+        if (read != null && "address".equals(read.kind())) return "";
+        ElementReference el = s.element().orElse(null);
+        if (el != null) {
+            for (LocatorCandidate c : el.locators()) {
+                if (c.strategy() == LocatorStrategy.LABEL && PythonGenerator.labelText(c.expression()) != null) return PythonGenerator.labelText(c.expression());
+            }
+            String anchor = PythonGenerator.anchorText(el);
+            if (anchor != null) return anchor;
+            if (el.accessibleName() != null && !el.accessibleName().isBlank()) return el.accessibleName().strip();
+        }
+        return "";
+    }
+
+    /** Identidade do alvo no registro, sem a procedência: dois passos sobre o MESMO elemento compartilham a chave. */
+    private static String identityOf(Map<String, Object> target) {
+        Map<String, Object> t = new LinkedHashMap<>(target);
+        t.remove("provenance");
+        return Pretty.json(t);
+    }
+
+    /**
+     * Chave estável e legível do alvo: {@code process.<prefixo da Page>.<nome>} — o nome vem, nesta ordem, do rótulo
+     * associado, da âncora da linha (th/dt), do nome acessível, da variável de entrada do preenchimento
+     * ("campo &lt;variável&gt;"), do cabeçalho lido ("título") ou, sem evidência, de "alvo" (provisório, apontado pelo
+     * Quality Gate) — e vira inglês pelo glossário governado ({@link EnglishNames}: "Nome completo" → {@code full_name},
+     * "campo termo_de_busca" → {@code search_term_field}). Texto de interface, nunca valores.
+     */
+    static String key(String prefix, ElementReference el, AutomationStep s, Set<String> used) {
+        return key(prefix, el, s, used, false);
+    }
+
+    /** Rodada 4 (R4-02): com {@code date}, o elemento guarda uma data e o nome diz isso ("Nascimento" → {@code birth_date}). */
+    static String key(String prefix, ElementReference el, AutomationStep s, Set<String> used, boolean date) {
+        return key(prefix, el, s, used, date, null);
+    }
+
+    /**
+     * Rodada 5 (CQ-R5-02): com {@code effect}, o nome é o do efeito confirmado da etapa (o clique que baixa a planilha →
+     * {@code download_spreadsheet}), não o texto do botão. O texto da página continua nos localizadores, sem mudança.
+     */
+    static String key(String prefix, ElementReference el, AutomationStep s, Set<String> used, boolean date, String effect) {
         String base = null;
         for (LocatorCandidate c : el.locators()) {
             if (c.strategy() == LocatorStrategy.LABEL && PythonGenerator.labelText(c.expression()) != null) {
@@ -263,15 +356,46 @@ public final class SingleGenerator {
         }
         if (base == null) base = PythonGenerator.anchorText(el);
         if (base == null && el.accessibleName() != null && !el.accessibleName().isBlank()) base = el.accessibleName();
-        if (base == null && "HEADING".equals(el.semanticKind()) && action == ActionType.OBSERVE) base = "titulo";
-        if (base == null) base = action.name().toLowerCase(Locale.ROOT);
-        String slug = Normalizer.normalize(base, Normalizer.Form.NFD).replaceAll("\\p{M}", "").toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]+", "_")
-                .replaceAll("^_+|_+$", "");
-        if (slug.isEmpty() || !Character.isLetter(slug.charAt(0))) slug = "alvo_" + slug;
+        if (base != null) base = withoutIconTokens(base);
+        if (base == null && s.actionType() == ActionType.FILL && s.parameters().value().orElse(null) instanceof ValueSource.VariableReference ref) {
+            base = "campo " + ref.name();
+        }
+        if (base == null && s.actionType() == ActionType.FILL && s.parameters().value().orElse(null) instanceof ValueSource.CredentialReference cred) {
+            base = "campo " + cred.alias().substring(cred.alias().lastIndexOf('.') + 1);
+        }
+        if (base == null && "HEADING".equals(el.semanticKind()) && s.actionType() == ActionType.OBSERVE) base = "titulo";
+        if (base == null) base = "alvo";
+        String slug = effect != null ? effect : EnglishNames.noun(base, date).snake();
         if (slug.length() > 40) slug = slug.substring(0, 40).replaceAll("_+$", "");
-        String key = PythonGenerator.SYSTEM + "." + prefix + "." + slug;
+        if (slug.isEmpty() || !Character.isLetter(slug.charAt(0))) slug = "target";
+        // o nome do elemento repete o da tela (botão "Consultar" na tela de consulta): o tipo do elemento desfaz a ambiguidade
+        if (slug.equals(prefix)) slug = slug + "_" + switch (el.semanticKind() == null ? "" : el.semanticKind()) {
+            case "BUTTON" -> "button";
+            case "LINK" -> "link";
+            case "HEADING" -> "heading";
+            default -> "element";
+        };
+        String key = CodePlan.SYSTEM + "." + prefix + "." + slug;
         int n = 2;
-        while (!used.add(key)) key = PythonGenerator.SYSTEM + "." + prefix + "." + slug + "_" + n++;
+        while (!used.add(key)) key = CodePlan.SYSTEM + "." + prefix + "." + slug + "_" + n++;
         return key;
+    }
+
+    /** Nome de ícone de fonte (ligadura em snake_case minúsculo: {@code cloud_download}, {@code arrow_forward}). */
+    private static final java.util.regex.Pattern ICON_TOKEN = java.util.regex.Pattern.compile("[a-z][a-z0-9]*(?:_[a-z0-9]+)+");
+
+    /**
+     * Rodada 5 (CQ-R5-02): o texto acessível de botões e links com ícone de fonte traz o NOME do ícone junto do rótulo
+     * ("Download Excel cloud_download"). Para o NOME no código, esses tokens são artefato visual e saem — só quando sobra
+     * outra palavra (um rótulo feito só do nome do ícone fica como está). O texto da página nos localizadores não muda.
+     */
+    static String withoutIconTokens(String label) {
+        List<String> kept = new ArrayList<>();
+        boolean dropped = false;
+        for (String w : label.trim().split("\\s+")) {
+            if (ICON_TOKEN.matcher(w).matches()) dropped = true;
+            else kept.add(w);
+        }
+        return dropped && !kept.isEmpty() ? String.join(" ", kept) : label;
     }
 }

@@ -1,0 +1,165 @@
+{
+  "schema": "nekkora-rpa/selectors",
+  "version": "1.1.0",
+  "system": "process",
+  "targets": {
+    "process.preparation.download_spreadsheet": {
+      "preferred": {
+        "strategy": "xpath",
+        "expression": "//a[normalize-space(.)=\"Download Excel cloud_download\"]"
+      },
+      "alternatives": [
+        {
+          "strategy": "role",
+          "role": "link",
+          "name": "Download Excel cloud_download"
+        }
+      ],
+      "expected": {
+        "tag": "a",
+        "role": "link",
+        "name": "Download Excel cloud_download"
+      },
+      "provenance": {
+        "studioStepId": "2e51e9b2-3313-44c4-ae53-c08164e3f811"
+      }
+    },
+    "process.preparation.start": {
+      "preferred": {
+        "strategy": "xpath",
+        "expression": "//button[normalize-space(.)=\"Start\"]"
+      },
+      "alternatives": [
+        {
+          "strategy": "role",
+          "role": "button",
+          "name": "Start"
+        }
+      ],
+      "expected": {
+        "tag": "button",
+        "role": "button",
+        "name": "Start"
+      },
+      "provenance": {
+        "studioStepId": "85dd950c-d3cf-4623-91ab-479f6144a1c3"
+      }
+    },
+    "process.record_filling.first_name": {
+      "preferred": {
+        "strategy": "label",
+        "text": "First Name"
+      },
+      "expected": {
+        "tag": "input",
+        "label": "First Name"
+      },
+      "provenance": {
+        "studioStepId": "40a1f407-37e0-4c6e-8e6d-d6737e784d74"
+      }
+    },
+    "process.record_filling.last_name": {
+      "preferred": {
+        "strategy": "label",
+        "text": "Last Name"
+      },
+      "expected": {
+        "tag": "input",
+        "label": "Last Name"
+      },
+      "provenance": {
+        "studioStepId": "e50b8865-182d-4aed-8bd0-bd0b13fcbd9c"
+      }
+    },
+    "process.record_filling.company_name": {
+      "preferred": {
+        "strategy": "label",
+        "text": "Company Name"
+      },
+      "expected": {
+        "tag": "input",
+        "label": "Company Name"
+      },
+      "provenance": {
+        "studioStepId": "a08c54bb-7bcd-44ad-885c-350a9bc6d7d3"
+      }
+    },
+    "process.record_filling.role_in_company": {
+      "preferred": {
+        "strategy": "label",
+        "text": "Role in Company"
+      },
+      "expected": {
+        "tag": "input",
+        "label": "Role in Company"
+      },
+      "provenance": {
+        "studioStepId": "480db37e-e9ce-4ca4-b0c2-1f4856609d9a"
+      }
+    },
+    "process.record_filling.address": {
+      "preferred": {
+        "strategy": "label",
+        "text": "Address"
+      },
+      "expected": {
+        "tag": "input",
+        "label": "Address"
+      },
+      "provenance": {
+        "studioStepId": "11ab1956-5e1d-44f5-a917-5e964ed4018f"
+      }
+    },
+    "process.record_filling.email": {
+      "preferred": {
+        "strategy": "label",
+        "text": "Email"
+      },
+      "expected": {
+        "tag": "input",
+        "label": "Email"
+      },
+      "provenance": {
+        "studioStepId": "e0f4c420-cbce-4199-b847-a81cd08eafdb"
+      }
+    },
+    "process.record_filling.phone_number": {
+      "preferred": {
+        "strategy": "label",
+        "text": "Phone Number"
+      },
+      "expected": {
+        "tag": "input",
+        "label": "Phone Number"
+      },
+      "provenance": {
+        "studioStepId": "070d6140-3769-4107-bdcd-4de0bcc5638c"
+      }
+    },
+    "process.record_filling.submit": {
+      "preferred": {
+        "strategy": "css",
+        "expression": "form input[type=\"submit\"]"
+      },
+      "alternatives": [
+        {
+          "strategy": "role",
+          "role": "button",
+          "name": "Submit"
+        },
+        {
+          "strategy": "css",
+          "expression": "input[type=\"submit\"]"
+        }
+      ],
+      "expected": {
+        "tag": "input",
+        "role": "button",
+        "name": "Submit"
+      },
+      "provenance": {
+        "studioStepId": "944a9801-8f21-4d2e-861b-a68895c20fd5"
+      }
+    }
+  }
+}

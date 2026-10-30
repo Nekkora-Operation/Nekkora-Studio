@@ -1,0 +1,773 @@
+{
+  "schema": "nekkora-studio/codegen-manifest",
+  "version": "1.4.0",
+  "generator": "nekkora-studio-codegen/1.3.0",
+  "framework": "nekkora-rpa[excel]==0.2.0",
+  "execution": "tabular",
+  "language": "en",
+  "layout": {
+    "schema": "nekkora-studio/automation-package/1.0.0",
+    "package": "automation",
+    "modules": [
+      "automation/__init__.py",
+      "automation/selectors.py",
+      "automation/pages.py",
+      "automation/process.py"
+    ],
+    "runner": "main.py",
+    "config": "config/execution.toml"
+  },
+  "automationId": "a18ec786-e101-4686-b849-f58fa3f5f54a",
+  "modelVersion": "1.2.0",
+  "automationRevision": 60,
+  "planRevision": "sha256:57fa8b8f285b676a4fcf72767e7972ad2f6bb07a3b87369d71309ee6bb1d64c6",
+  "configRevision": "sha256:33b982fda01c377eb202955756e81d181022a1820803d0fa9b7a103169ad36a7",
+  "command": "python main.py --output <folder>",
+  "cli": {
+    "options": {
+      "output": "--output"
+    },
+    "legacyAliases": {
+      "--saida": "--output"
+    }
+  },
+  "input": {
+    "format": "xlsx",
+    "sheet": "Sheet1",
+    "source": "DOWNLOAD",
+    "fileName": "challenge.xlsx",
+    "columns": [
+      {
+        "header": "First Name",
+        "variable": "first_name",
+        "field": "first_name",
+        "integerAsText": false
+      },
+      {
+        "header": "Last Name",
+        "variable": "last_name",
+        "field": "last_name",
+        "integerAsText": false
+      },
+      {
+        "header": "Company Name",
+        "variable": "company_name",
+        "field": "company_name",
+        "integerAsText": false
+      },
+      {
+        "header": "Role in Company",
+        "variable": "role_in_company",
+        "field": "role_in_company",
+        "integerAsText": false
+      },
+      {
+        "header": "Address",
+        "variable": "address",
+        "field": "address",
+        "integerAsText": false
+      },
+      {
+        "header": "Email",
+        "variable": "email",
+        "field": "email",
+        "integerAsText": false
+      },
+      {
+        "header": "Phone Number",
+        "variable": "phone_number",
+        "field": "phone_number",
+        "integerAsText": true
+      }
+    ]
+  },
+  "steps": [
+    {
+      "stepId": "2e51e9b2-3313-44c4-ae53-c08164e3f811",
+      "traceId": "preparation.download_spreadsheet",
+      "session": 1,
+      "role": "INIT",
+      "page": "PreparationPage",
+      "method": "download_spreadsheet",
+      "action": "CLICK",
+      "key": "process.preparation.download_spreadsheet",
+      "column": null,
+      "credential": false,
+      "download": true,
+      "textPattern": false,
+      "capability": "actions.download",
+      "decisionActor": "TEST_AGENT"
+    },
+    {
+      "stepId": "85dd950c-d3cf-4623-91ab-479f6144a1c3",
+      "traceId": "preparation.click_start",
+      "session": 1,
+      "role": "INIT",
+      "page": "PreparationPage",
+      "method": "click_start",
+      "action": "CLICK",
+      "key": "process.preparation.start",
+      "column": null,
+      "credential": false,
+      "download": false,
+      "textPattern": false,
+      "capability": "actions.click",
+      "decisionActor": "TEST_AGENT"
+    },
+    {
+      "stepId": "40a1f407-37e0-4c6e-8e6d-d6737e784d74",
+      "traceId": "record_filling.fill_first_name",
+      "session": 2,
+      "role": "RECORD",
+      "page": "RecordFillingPage",
+      "method": "submit_record",
+      "action": "FILL",
+      "key": "process.record_filling.first_name",
+      "column": "First Name",
+      "credential": false,
+      "download": false,
+      "textPattern": false,
+      "capability": "actions.fill",
+      "decisionActor": "TEST_AGENT"
+    },
+    {
+      "stepId": "e50b8865-182d-4aed-8bd0-bd0b13fcbd9c",
+      "traceId": "record_filling.fill_last_name",
+      "session": 2,
+      "role": "RECORD",
+      "page": "RecordFillingPage",
+      "method": "submit_record",
+      "action": "FILL",
+      "key": "process.record_filling.last_name",
+      "column": "Last Name",
+      "credential": false,
+      "download": false,
+      "textPattern": false,
+      "capability": "actions.fill",
+      "decisionActor": "TEST_AGENT"
+    },
+    {
+      "stepId": "a08c54bb-7bcd-44ad-885c-350a9bc6d7d3",
+      "traceId": "record_filling.fill_company_name",
+      "session": 2,
+      "role": "RECORD",
+      "page": "RecordFillingPage",
+      "method": "submit_record",
+      "action": "FILL",
+      "key": "process.record_filling.company_name",
+      "column": "Company Name",
+      "credential": false,
+      "download": false,
+      "textPattern": false,
+      "capability": "actions.fill",
+      "decisionActor": "TEST_AGENT"
+    },
+    {
+      "stepId": "480db37e-e9ce-4ca4-b0c2-1f4856609d9a",
+      "traceId": "record_filling.fill_role_in_company",
+      "session": 2,
+      "role": "RECORD",
+      "page": "RecordFillingPage",
+      "method": "submit_record",
+      "action": "FILL",
+      "key": "process.record_filling.role_in_company",
+      "column": "Role in Company",
+      "credential": false,
+      "download": false,
+      "textPattern": false,
+      "capability": "actions.fill",
+      "decisionActor": "TEST_AGENT"
+    },
+    {
+      "stepId": "11ab1956-5e1d-44f5-a917-5e964ed4018f",
+      "traceId": "record_filling.fill_address",
+      "session": 2,
+      "role": "RECORD",
+      "page": "RecordFillingPage",
+      "method": "submit_record",
+      "action": "FILL",
+      "key": "process.record_filling.address",
+      "column": "Address",
+      "credential": false,
+      "download": false,
+      "textPattern": false,
+      "capability": "actions.fill",
+      "decisionActor": "TEST_AGENT"
+    },
+    {
+      "stepId": "e0f4c420-cbce-4199-b847-a81cd08eafdb",
+      "traceId": "record_filling.fill_email",
+      "session": 2,
+      "role": "RECORD",
+      "page": "RecordFillingPage",
+      "method": "submit_record",
+      "action": "FILL",
+      "key": "process.record_filling.email",
+      "column": "Email",
+      "credential": false,
+      "download": false,
+      "textPattern": false,
+      "capability": "actions.fill",
+      "decisionActor": "TEST_AGENT"
+    },
+    {
+      "stepId": "070d6140-3769-4107-bdcd-4de0bcc5638c",
+      "traceId": "record_filling.fill_phone_number",
+      "session": 2,
+      "role": "RECORD",
+      "page": "RecordFillingPage",
+      "method": "submit_record",
+      "action": "FILL",
+      "key": "process.record_filling.phone_number",
+      "column": "Phone Number",
+      "credential": false,
+      "download": false,
+      "textPattern": false,
+      "capability": "actions.fill",
+      "decisionActor": "TEST_AGENT"
+    },
+    {
+      "stepId": "944a9801-8f21-4d2e-861b-a68895c20fd5",
+      "traceId": "record_filling.click_submit",
+      "session": 2,
+      "role": "RECORD",
+      "page": "RecordFillingPage",
+      "method": "submit_record",
+      "action": "CLICK",
+      "key": "process.record_filling.submit",
+      "column": null,
+      "credential": false,
+      "download": false,
+      "textPattern": false,
+      "capability": "actions.click",
+      "decisionActor": "TEST_AGENT"
+    },
+    {
+      "stepId": "ed12c86a-ac06-431b-9e87-1e5216f01f11",
+      "traceId": "conclusion.read_result",
+      "session": 3,
+      "role": "END",
+      "page": "ConclusionPage",
+      "method": "read_result",
+      "action": "OBSERVE",
+      "key": null,
+      "column": null,
+      "credential": false,
+      "download": false,
+      "textPattern": true,
+      "capability": "actions.read_text_matching",
+      "decisionActor": null
+    }
+  ],
+  "trace": {
+    "schema": "nekkora-studio/trace-map",
+    "version": "1.1.0",
+    "mappings": [
+      {
+        "traceId": "preparation.download_spreadsheet",
+        "studioStepId": "2e51e9b2-3313-44c4-ae53-c08164e3f811",
+        "action": "CLICK",
+        "targetKey": "process.preparation.download_spreadsheet",
+        "previousTargetKeys": [
+          "processo.s1.download_excel_cloud_download"
+        ],
+        "pythonSymbol": "PreparationPage.download_spreadsheet",
+        "previousTraceIds": [
+          "2e51e9b2-3313-44c4-ae53-c08164e3f811"
+        ]
+      },
+      {
+        "traceId": "preparation.click_start",
+        "studioStepId": "85dd950c-d3cf-4623-91ab-479f6144a1c3",
+        "action": "CLICK",
+        "targetKey": "process.preparation.start",
+        "previousTargetKeys": [
+          "processo.s1.start"
+        ],
+        "pythonSymbol": "PreparationPage.click_start",
+        "previousTraceIds": [
+          "85dd950c-d3cf-4623-91ab-479f6144a1c3"
+        ]
+      },
+      {
+        "traceId": "record_filling.fill_first_name",
+        "studioStepId": "40a1f407-37e0-4c6e-8e6d-d6737e784d74",
+        "action": "FILL",
+        "targetKey": "process.record_filling.first_name",
+        "previousTargetKeys": [
+          "processo.s2.first_name"
+        ],
+        "pythonSymbol": "RecordFillingPage.submit_record",
+        "previousTraceIds": [
+          "40a1f407-37e0-4c6e-8e6d-d6737e784d74"
+        ]
+      },
+      {
+        "traceId": "record_filling.fill_last_name",
+        "studioStepId": "e50b8865-182d-4aed-8bd0-bd0b13fcbd9c",
+        "action": "FILL",
+        "targetKey": "process.record_filling.last_name",
+        "previousTargetKeys": [
+          "processo.s2.last_name"
+        ],
+        "pythonSymbol": "RecordFillingPage.submit_record",
+        "previousTraceIds": [
+          "e50b8865-182d-4aed-8bd0-bd0b13fcbd9c"
+        ]
+      },
+      {
+        "traceId": "record_filling.fill_company_name",
+        "studioStepId": "a08c54bb-7bcd-44ad-885c-350a9bc6d7d3",
+        "action": "FILL",
+        "targetKey": "process.record_filling.company_name",
+        "previousTargetKeys": [
+          "processo.s2.company_name"
+        ],
+        "pythonSymbol": "RecordFillingPage.submit_record",
+        "previousTraceIds": [
+          "a08c54bb-7bcd-44ad-885c-350a9bc6d7d3"
+        ]
+      },
+      {
+        "traceId": "record_filling.fill_role_in_company",
+        "studioStepId": "480db37e-e9ce-4ca4-b0c2-1f4856609d9a",
+        "action": "FILL",
+        "targetKey": "process.record_filling.role_in_company",
+        "previousTargetKeys": [
+          "processo.s2.role_in_company"
+        ],
+        "pythonSymbol": "RecordFillingPage.submit_record",
+        "previousTraceIds": [
+          "480db37e-e9ce-4ca4-b0c2-1f4856609d9a"
+        ]
+      },
+      {
+        "traceId": "record_filling.fill_address",
+        "studioStepId": "11ab1956-5e1d-44f5-a917-5e964ed4018f",
+        "action": "FILL",
+        "targetKey": "process.record_filling.address",
+        "previousTargetKeys": [
+          "processo.s2.address"
+        ],
+        "pythonSymbol": "RecordFillingPage.submit_record",
+        "previousTraceIds": [
+          "11ab1956-5e1d-44f5-a917-5e964ed4018f"
+        ]
+      },
+      {
+        "traceId": "record_filling.fill_email",
+        "studioStepId": "e0f4c420-cbce-4199-b847-a81cd08eafdb",
+        "action": "FILL",
+        "targetKey": "process.record_filling.email",
+        "previousTargetKeys": [
+          "processo.s2.email"
+        ],
+        "pythonSymbol": "RecordFillingPage.submit_record",
+        "previousTraceIds": [
+          "e0f4c420-cbce-4199-b847-a81cd08eafdb"
+        ]
+      },
+      {
+        "traceId": "record_filling.fill_phone_number",
+        "studioStepId": "070d6140-3769-4107-bdcd-4de0bcc5638c",
+        "action": "FILL",
+        "targetKey": "process.record_filling.phone_number",
+        "previousTargetKeys": [
+          "processo.s2.phone_number"
+        ],
+        "pythonSymbol": "RecordFillingPage.submit_record",
+        "previousTraceIds": [
+          "070d6140-3769-4107-bdcd-4de0bcc5638c"
+        ]
+      },
+      {
+        "traceId": "record_filling.click_submit",
+        "studioStepId": "944a9801-8f21-4d2e-861b-a68895c20fd5",
+        "action": "CLICK",
+        "targetKey": "process.record_filling.submit",
+        "previousTargetKeys": [
+          "processo.s2.submit"
+        ],
+        "pythonSymbol": "RecordFillingPage.submit_record",
+        "previousTraceIds": [
+          "944a9801-8f21-4d2e-861b-a68895c20fd5"
+        ]
+      },
+      {
+        "traceId": "conclusion.read_result",
+        "studioStepId": "ed12c86a-ac06-431b-9e87-1e5216f01f11",
+        "action": "OBSERVE",
+        "targetKey": null,
+        "pythonSymbol": "ConclusionPage.read_result",
+        "previousTraceIds": [
+          "ed12c86a-ac06-431b-9e87-1e5216f01f11"
+        ]
+      }
+    ],
+    "synthetic": [
+      {
+        "traceId": "process.open_start_page",
+        "meaning": "open the start address (no Studio step)",
+        "previousTraceIds": [
+          "processo.abrir_pagina_inicial",
+          "INICIO"
+        ]
+      }
+    ]
+  },
+  "architecture": {
+    "pages": [
+      {
+        "class": "PreparationPage",
+        "prefix": "process.preparation",
+        "identityKey": "SelectorKey.PREPARATION_DOWNLOAD_SPREADSHEET",
+        "session": 1,
+        "role": "INIT",
+        "nameSource": "SESSION_NAME",
+        "summary": "Screen of the session “Preparação” (runs once, before the spreadsheet rows): downloads the spreadsheet (“Download Excel cloud_download”) and clicks “Start”.",
+        "methods": [
+          {
+            "name": "download_spreadsheet",
+            "summary": "Clicks “Download Excel cloud_download” and saves the downloaded file in ``folder`` as ``challenge.xlsx``.",
+            "parameters": [
+              "folder"
+            ],
+            "returns": "DownloadedFile",
+            "traceIds": [
+              "preparation.download_spreadsheet"
+            ]
+          },
+          {
+            "name": "click_start",
+            "summary": "Clicks “Start”.",
+            "parameters": [],
+            "returns": "None",
+            "traceIds": [
+              "preparation.click_start"
+            ]
+          }
+        ]
+      },
+      {
+        "class": "RecordFillingPage",
+        "prefix": "process.record_filling",
+        "identityKey": "SelectorKey.RECORD_FILLING_FIRST_NAME",
+        "session": 2,
+        "role": "RECORD",
+        "nameSource": "SESSION_NAME",
+        "summary": "Screen of the session “Preenchimento por registro” (runs once per spreadsheet row): fills “First Name”, “Last Name”, “Company Name”, “Role in Company”, “Address”, “Email” and “Phone Number” and clicks “Submit”.",
+        "methods": [
+          {
+            "name": "submit_record",
+            "summary": "Fills “First Name”, “Last Name”, “Company Name”, “Role in Company”, “Address”, “Email” and “Phone Number” with the values of one spreadsheet row and clicks “Submit”.",
+            "parameters": [
+              "first_name",
+              "last_name",
+              "company_name",
+              "role_in_company",
+              "address",
+              "email",
+              "phone_number"
+            ],
+            "returns": "None",
+            "traceIds": [
+              "record_filling.fill_first_name",
+              "record_filling.fill_last_name",
+              "record_filling.fill_company_name",
+              "record_filling.fill_role_in_company",
+              "record_filling.fill_address",
+              "record_filling.fill_email",
+              "record_filling.fill_phone_number",
+              "record_filling.click_submit"
+            ]
+          }
+        ]
+      },
+      {
+        "class": "ConclusionPage",
+        "prefix": "process.conclusion",
+        "identityKey": null,
+        "session": 3,
+        "role": "END",
+        "nameSource": "SESSION_NAME",
+        "summary": "Screen of the session “Conclusão” (runs once, after the spreadsheet rows): reads the text that matches the declared pattern.",
+        "methods": [
+          {
+            "name": "read_result",
+            "summary": "Reads the page text that matches the pattern declared in the generation config.",
+            "parameters": [],
+            "returns": "str",
+            "traceIds": [
+              "conclusion.read_result"
+            ]
+          }
+        ]
+      }
+    ],
+    "models": [
+      {
+        "name": "InputRow",
+        "fields": [
+          "first_name",
+          "last_name",
+          "company_name",
+          "role_in_company",
+          "address",
+          "email",
+          "phone_number"
+        ],
+        "readBy": "InputRow.from_item"
+      }
+    ],
+    "process": "RpaChallengeInputFormsProcess"
+  },
+  "naming": {
+    "glossary": "nekkora-studio/naming-pt-en/1.2.0",
+    "process": {
+      "from": "rpa_challenge_input_forms",
+      "python": "RpaChallengeInputFormsProcess"
+    },
+    "pages": [
+      {
+        "python": "PreparationPage",
+        "from": "Preparação",
+        "source": "SESSION_NAME"
+      },
+      {
+        "python": "RecordFillingPage",
+        "from": "Preenchimento por registro",
+        "source": "SESSION_NAME"
+      },
+      {
+        "python": "ConclusionPage",
+        "from": "Conclusão",
+        "source": "SESSION_NAME"
+      }
+    ],
+    "identifiers": [
+      {
+        "model": "first_name",
+        "header": "First Name",
+        "python": "first_name",
+        "role": "input"
+      },
+      {
+        "model": "last_name",
+        "header": "Last Name",
+        "python": "last_name",
+        "role": "input"
+      },
+      {
+        "model": "company_name",
+        "header": "Company Name",
+        "python": "company_name",
+        "role": "input"
+      },
+      {
+        "model": "role_in_company",
+        "header": "Role in Company",
+        "python": "role_in_company",
+        "role": "input"
+      },
+      {
+        "model": "address",
+        "header": "Address",
+        "python": "address",
+        "role": "input"
+      },
+      {
+        "model": "email",
+        "header": "Email",
+        "python": "email",
+        "role": "input"
+      },
+      {
+        "model": "phone_number",
+        "header": "Phone Number",
+        "python": "phone_number",
+        "role": "input"
+      }
+    ],
+    "untranslated": []
+  },
+  "selectors": {
+    "module": "automation/selectors.py",
+    "enum": "SelectorKey",
+    "registry": "selectors.json",
+    "system": "process",
+    "equivalence": "sha256:c4a1931fb7f91c30ce2cdfa8418e47b873d754573b3c1e5801ffb21f3c5bded9",
+    "keys": [
+      {
+        "member": "PREPARATION_DOWNLOAD_SPREADSHEET",
+        "key": "process.preparation.download_spreadsheet",
+        "traceIds": [
+          "preparation.download_spreadsheet"
+        ],
+        "studioStepIds": [
+          "2e51e9b2-3313-44c4-ae53-c08164e3f811"
+        ]
+      },
+      {
+        "member": "PREPARATION_START",
+        "key": "process.preparation.start",
+        "traceIds": [
+          "preparation.click_start"
+        ],
+        "studioStepIds": [
+          "85dd950c-d3cf-4623-91ab-479f6144a1c3"
+        ]
+      },
+      {
+        "member": "RECORD_FILLING_FIRST_NAME",
+        "key": "process.record_filling.first_name",
+        "traceIds": [
+          "record_filling.fill_first_name"
+        ],
+        "studioStepIds": [
+          "40a1f407-37e0-4c6e-8e6d-d6737e784d74"
+        ]
+      },
+      {
+        "member": "RECORD_FILLING_LAST_NAME",
+        "key": "process.record_filling.last_name",
+        "traceIds": [
+          "record_filling.fill_last_name"
+        ],
+        "studioStepIds": [
+          "e50b8865-182d-4aed-8bd0-bd0b13fcbd9c"
+        ]
+      },
+      {
+        "member": "RECORD_FILLING_COMPANY_NAME",
+        "key": "process.record_filling.company_name",
+        "traceIds": [
+          "record_filling.fill_company_name"
+        ],
+        "studioStepIds": [
+          "a08c54bb-7bcd-44ad-885c-350a9bc6d7d3"
+        ]
+      },
+      {
+        "member": "RECORD_FILLING_ROLE_IN_COMPANY",
+        "key": "process.record_filling.role_in_company",
+        "traceIds": [
+          "record_filling.fill_role_in_company"
+        ],
+        "studioStepIds": [
+          "480db37e-e9ce-4ca4-b0c2-1f4856609d9a"
+        ]
+      },
+      {
+        "member": "RECORD_FILLING_ADDRESS",
+        "key": "process.record_filling.address",
+        "traceIds": [
+          "record_filling.fill_address"
+        ],
+        "studioStepIds": [
+          "11ab1956-5e1d-44f5-a917-5e964ed4018f"
+        ]
+      },
+      {
+        "member": "RECORD_FILLING_EMAIL",
+        "key": "process.record_filling.email",
+        "traceIds": [
+          "record_filling.fill_email"
+        ],
+        "studioStepIds": [
+          "e0f4c420-cbce-4199-b847-a81cd08eafdb"
+        ]
+      },
+      {
+        "member": "RECORD_FILLING_PHONE_NUMBER",
+        "key": "process.record_filling.phone_number",
+        "traceIds": [
+          "record_filling.fill_phone_number"
+        ],
+        "studioStepIds": [
+          "070d6140-3769-4107-bdcd-4de0bcc5638c"
+        ]
+      },
+      {
+        "member": "RECORD_FILLING_SUBMIT",
+        "key": "process.record_filling.submit",
+        "traceIds": [
+          "record_filling.click_submit"
+        ],
+        "studioStepIds": [
+          "944a9801-8f21-4d2e-861b-a68895c20fd5"
+        ]
+      }
+    ]
+  },
+  "locators": [
+    {
+      "key": "process.preparation.download_spreadsheet",
+      "kind": "RELATIONAL_XPATH",
+      "description": "XPATH `//a[normalize-space(.)=\"Download Excel cloud_download\"]`"
+    },
+    {
+      "key": "process.preparation.start",
+      "kind": "RELATIONAL_XPATH",
+      "description": "XPATH `//button[normalize-space(.)=\"Start\"]`"
+    },
+    {
+      "key": "process.record_filling.first_name",
+      "kind": "LABEL",
+      "description": "field labelled `First Name`"
+    },
+    {
+      "key": "process.record_filling.last_name",
+      "kind": "LABEL",
+      "description": "field labelled `Last Name`"
+    },
+    {
+      "key": "process.record_filling.company_name",
+      "kind": "LABEL",
+      "description": "field labelled `Company Name`"
+    },
+    {
+      "key": "process.record_filling.role_in_company",
+      "kind": "LABEL",
+      "description": "field labelled `Role in Company`"
+    },
+    {
+      "key": "process.record_filling.address",
+      "kind": "LABEL",
+      "description": "field labelled `Address`"
+    },
+    {
+      "key": "process.record_filling.email",
+      "kind": "LABEL",
+      "description": "field labelled `Email`"
+    },
+    {
+      "key": "process.record_filling.phone_number",
+      "kind": "LABEL",
+      "description": "field labelled `Phone Number`"
+    },
+    {
+      "key": "process.record_filling.submit",
+      "kind": "SCOPED",
+      "description": "CSS `form input[type=\"submit\"]`"
+    }
+  ],
+  "files": {
+    "README.md": "sha256:0cceff7f28ab7ba3685aa719b6379781f076e2ccee7e9926e054f7e5590089b4",
+    "automation/__init__.py": "sha256:b17ddd01be99971085a6f95a9b957885096473e1a3b9b9af340b411788b95cda",
+    "automation/pages.py": "sha256:f5d6e009fe6c856bc2d99092d6be3547c79057c6b2a2420581c988c3f64b21c7",
+    "automation/process.py": "sha256:bb9912eece4e8f13aa0aac453fa8011d2ee09c954cc6238c4514fcd694552a73",
+    "automation/selectors.py": "sha256:dcc657093d5ac7513146009e069d5b1e4e6883a5308ddd437c4d0b523b20c28b",
+    "config/execution.toml": "sha256:c5f300a9ba842966bfea7aee5875dce7271cf15ad294902ddef7d18abba022c1",
+    "main.py": "sha256:3f0ead193861bfcba0e096abddcbacbb9a53ef874f17e71797173ccb6a9052c8",
+    "requirements.txt": "sha256:9f6031412d9c062234367eaf70924ca31afb87535310384f2094e7caa1adef84",
+    "selectors.json": "sha256:2af0d3536e141ac563a356aad4531b739b2555d6462deede6dd6d3d66b34e60d"
+  },
+  "exclusions": [
+    "CELL_VALUES",
+    "CREDENTIAL_VALUES",
+    "LITERAL_VALUES",
+    "HAND_WRITTEN_SELECTORS",
+    "POSITIONAL_LOCATORS",
+    "STUDIO_STEP_IDS_IN_CODE"
+  ]
+}

@@ -84,9 +84,15 @@ class SupervisedRunTest {
             Map<String, Object> doc = Json.parseObject(prov);
             List<Object> txs = (List<Object>) doc.get("transactions");
             assertEquals(3, txs.size());
-            String all = prov;
-            assertTrue(all.contains("\"ALTERNATIVA\"") && all.contains("\"PRINCIPAL\""), prov);
-            assertFalse(all.contains("Georgina") || all.contains("1867") || all.contains("ficha-"), "a proveniência não leva valores (nem a chave)");
+            assertTrue(prov.contains("\"ALTERNATIVA\"") && prov.contains("\"PRINCIPAL\""), prov);
+            // CQ-09: sem valores, provado folha a folha pela ESTRUTURA (o id da transação é conferido pelo formato e pelo
+            // estado da planilha, não excluído); valores reais das fichas como sentinelas; diagnóstico sem conteúdo
+            Map<String, Object> state = Json.parseObject(Files.readString(tmp.resolve("exec").resolve("execucao").resolve("fichas.xlsx-output.json"),
+                    StandardCharsets.UTF_8));
+            java.util.Set<String> committed = new java.util.HashSet<>();
+            for (Object id : (List<?>) state.get("committed_transactions")) committed.add(String.valueOf(id));
+            List<String> v = ProvenanceShape.violations(prov, s.project(), s.cfg(), committed, List.of("Georgina", "Fábio Ficticio", "1867", "ficha-"));
+            assertEquals(List.of(), v, "a proveniência não leva valores (nem a chave)");
             // linhas da planilha na ordem da lista: 2 = Ana, 3 = Fábio, 4 = Gina (linha 1 = cabeçalho)
             // Fábio não tem "Nome completo": a coluna veio do título (alternativa); Gina não tem "Ocupação": veio de "Campo(s)"
             assertEquals("ALTERNATIVA", source(txs, 3, "Nome completo"));
@@ -117,7 +123,7 @@ class SupervisedRunTest {
     @DisplayName("código adulterado depois da geração não roda (hash do manifesto)")
     void codigoAdulteradoRecusado() throws Exception {
         Setup s = setup();
-        Path pages = s.project().resolve("paginas.py");
+        Path pages = s.project().resolve("automation").resolve("pages.py");
         Files.writeString(pages, Files.readString(pages) + "\n# editado à mão\n");
         SupervisedRun.Refused e = assertThrows(SupervisedRun.Refused.class, () -> SupervisedRun.verifyGenerated(s.project()));
         assertEquals("CODE_CHANGED_SINCE_GENERATION", e.code());
@@ -146,6 +152,53 @@ class SupervisedRunTest {
             lab.descendants().forEach(ProcessHandle::destroyForcibly);
             lab.destroyForcibly();
         }
+    }
+
+    @Test
+    @DisplayName("rodada 3: as opções da linha de comando vêm do contrato do manifesto; projeto anterior (sem cli) usa as de antes")
+    void opcoesDoProjeto() throws Exception {
+        Path novo = tmp.resolve("novo");
+        OutputWriter.write(novo, ListFlowTest.develop(FichaCase.confirmed()).result().files());
+        assertEquals(Map.of("input", "--input", "spreadsheet", "--spreadsheet", "output", "--output"), SupervisedRun.options(novo));
+        assertEquals(Map.of("input", "--entrada", "spreadsheet", "--planilha", "output", "--saida"), SupervisedRun.options(anterior()));
+    }
+
+    @Test
+    @DisplayName("[Python real + laboratório] G-Q13: projeto gerado ANTES (português, paginas.py, --entrada, main.PLANILHA) roda e é conferido como antes")
+    void projetoAnteriorContinuaOperando() throws Exception {
+        Path py = PythonForTests.framework();
+        Assumptions.assumeTrue(py != null, "sem o interpretador do framework neste ambiente");
+        Path old = tmp.resolve("anterior");
+        try (var w = Files.walk(anterior())) {
+            for (Path p : w.toList()) {
+                Path to = old.resolve(anterior().relativize(p).toString());
+                if (Files.isDirectory(p)) Files.createDirectories(to);
+                else Files.copy(p, to);
+            }
+        }
+        PythonChecks.Environment env = PythonChecks.resolve(Optional.of(py), old).orElseThrow();
+        String o = FichaCase.ORIGIN;
+        Path in = tmp.resolve("lista-anterior.csv");
+        Files.writeString(in, "termo_de_busca,endereco_esperado\nAna Exemplo," + o + "/leitura/ficha-ana.html\n", StandardCharsets.UTF_8);
+        Path sheet = tmp.resolve("saida-anterior").resolve("fichas.xlsx");
+        Files.createDirectories(sheet.getParent());
+        Process lab = lab();
+        try {
+            SupervisedRun.Outcome r = SupervisedRun.run(env, new SupervisedRun.Request(old, in, sheet, tmp.resolve("exec-anterior"), false, Duration.ofMinutes(5)),
+                    p -> { }, () -> false);
+            assertEquals(SupervisedRun.Status.COMPLETED, r.status(), r.toString());
+            assertTrue(r.proven(), "a planilha do projeto anterior é conferida pelo esquema dele (main.PLANILHA): " + r);
+            assertEquals(List.of("URL", "Nome completo", "Nascimento", "Morte", "Nacionalidade", "Ocupação"), r.verification().headers());
+        } finally {
+            lab.descendants().forEach(ProcessHandle::destroyForcibly);
+            lab.destroyForcibly();
+        }
+        assertTrue(Files.isRegularFile(old.resolve("paginas.py")) && !Files.exists(old.resolve("automation")), "nada foi migrado nem regenerado");
+    }
+
+    /** Projeto gerado antes da missão (fichas, gerador 1.2.0): português, paginas.py/processo.py, --entrada/--planilha/--saida. */
+    static Path anterior() {
+        return Path.of("..", "docs", "codegen-quality-001", "evidence", "antes", "fichas").toAbsolutePath().normalize();
     }
 
     @Test

@@ -61,6 +61,9 @@ public final class DevelopmentPanel extends NekkoraPanel {
 
         void openCode();
 
+        /** CODEGEN-QUALITY-001: arquitetura, mapa step_id ↔ etapa, localizadores e o código das Pages e do processo, só leitura. */
+        void reviewCode();
+
         void showReport();
 
         void validate();
@@ -145,6 +148,7 @@ public final class DevelopmentPanel extends NekkoraPanel {
     private final NekkoraButton cancel = NekkoraButton.secondary("Cancelar");
     private final NekkoraButton save = NekkoraButton.secondary("Salvar projeto").withIcon(IconName.SAVE);
     private final NekkoraButton openCode = NekkoraButton.secondary("Abrir código").withIcon(IconName.FOLDER_OPEN);
+    private final NekkoraButton review = NekkoraButton.secondary("Revisar código").withIcon(IconName.FILE);
     private final NekkoraButton report = NekkoraButton.secondary("Ver relatório");
     private final NekkoraButton validate = NekkoraButton.secondary("Validar novamente").withIcon(IconName.CHECK_CIRCLE);
     private final NekkoraButton help = NekkoraButton.secondary("Solicitar ajuda");
@@ -235,13 +239,16 @@ public final class DevelopmentPanel extends NekkoraPanel {
         tabs.addTab("Opções avançadas", IconName.SETTINGS, scroll(adv));
         add(tabs, BorderLayout.CENTER);
 
-        NekkoraStack foot = NekkoraStack.horizontal(Spacing.SPACE_3);
+        NekkoraStack foot = NekkoraStack.vertical(Spacing.SPACE_2);
         develop.setName("develop.start");
         develop.onClick(e -> actions.develop());
         cancel.setName("develop.cancel");
         cancel.onClick(e -> actions.cancel());
         save.onClick(e -> actions.saveProject());
         openCode.onClick(e -> actions.openCode());
+        review.setName("develop.review");
+        review.onClick(e -> actions.reviewCode());
+        review.getAccessibleContext().setAccessibleDescription("Mostra como o código gerado está organizado, de onde vêm os nomes e o código das telas.");
         report.onClick(e -> actions.showReport());
         validate.onClick(e -> actions.validate());
         help.onClick(e -> actions.analyzeWithAi());
@@ -249,11 +256,18 @@ public final class DevelopmentPanel extends NekkoraPanel {
         runButton.setName("develop.run");
         runButton.onClick(e -> actions.supervisedRun());
         runButton.getAccessibleContext().setAccessibleDescription("Roda o código gerado da revisão atual, com confirmação do site e do destino; não é produção.");
-        foot.addAll(develop, cancel, save, openCode, report, validate, help, runButton);
-        foot.addGlue();
+        // INTEGRATION-CONSOLIDATION-001: com "Revisar código" os botões não cabem numa linha na largura da janela (1180) e
+        // "Fechar" era cortado; duas linhas, na mesma ordem, com Fechar sempre à direita da segunda.
+        NekkoraStack row1 = NekkoraStack.horizontal(Spacing.SPACE_3);
+        row1.addAll(develop, cancel, save, openCode, review, report);
+        NekkoraStack row2 = NekkoraStack.horizontal(Spacing.SPACE_3);
+        row2.addAll(validate, help, runButton);
+        row2.addGlue();
         NekkoraButton close = NekkoraButton.ghost("Fechar");
         close.onClick(e -> actions.close());
-        foot.add(close);
+        row2.add(close);
+        foot.align(NekkoraStack.Align.STRETCH);
+        foot.addAll(row1, row2);
         NekkoraPanel south = new NekkoraPanel(new BorderLayout());
         south.setPadding(Spacing.SPACE_3, Spacing.SPACE_1);
         south.add(foot, BorderLayout.CENTER);
@@ -305,6 +319,7 @@ public final class DevelopmentPanel extends NekkoraPanel {
         cancel.setVisible(m.running());
         save.setVisible(!m.projectSaved());
         openCode.setEnabled(!m.running() && m.canOpenCode());
+        review.setEnabled(!m.running() && m.canOpenCode());
         report.setEnabled(!m.running());
         validate.setEnabled(!m.running() && m.projectSaved());
         help.setEnabled(!m.running());

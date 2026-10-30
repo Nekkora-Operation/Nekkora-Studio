@@ -13,6 +13,7 @@ import com.nekkora.studio.ai.provider.PlanVerifier;
 import com.nekkora.studio.ai.pycheck.PythonChecks;
 import com.nekkora.studio.ai.quality.AssistanceRequest;
 import com.nekkora.studio.ai.quality.AutomationQualityGate;
+import com.nekkora.studio.ai.quality.GeneratedCodeQuality;
 import com.nekkora.studio.ai.quality.Layer;
 import com.nekkora.studio.ai.quality.QualityIssue;
 import com.nekkora.studio.ai.quality.QualityReport;
@@ -400,7 +401,7 @@ public final class DevelopmentPresenter implements DevelopmentPanel.Actions {
             if (n > 0) notes.add("✓ " + n + " variável(is)/ligação(ões) derivada(s) registrada(s) no modelo — Ctrl+Z desfaz (Registrar variáveis derivadas)");
         }
         GenerationOrchestrator.Run run = GenerationOrchestrator.prepare(a, draft, spec, catalog, tabular, store.options(a.id()).origins(), out, clock.instant(),
-                this::phase, cancelled::get);
+                this::phase, cancelled::get, store.traceRegistry(a.id()));
         last = run;
         if (run.stoppedAt() != null) {
             phases.put(run.stoppedAt(), DevelopmentPanel.PhaseState.BLOCKED);
@@ -457,7 +458,7 @@ public final class DevelopmentPresenter implements DevelopmentPanel.Actions {
         running = false;
         CatalogResolution resolved = catalogFor(run.outputDir());
         // versão declarada sem catálogo: as verificações podem ter rodado, mas o código NÃO é dado por validado
-        boolean allPass = resolved.compatible() && !checks.isEmpty() && checks.stream().allMatch(c -> c.status() == PythonChecks.Status.PASS);
+        boolean allPass = resolved.compatible() && checksPass(checks);
         phases.put(GenerationOrchestrator.Phase.CHECKING, env.isEmpty() || checks.isEmpty() ? DevelopmentPanel.PhaseState.SKIPPED
                 : allPass ? DevelopmentPanel.PhaseState.DONE : DevelopmentPanel.PhaseState.BLOCKED);
         List<String> results = new ArrayList<>(notes);
@@ -473,6 +474,10 @@ public final class DevelopmentPresenter implements DevelopmentPanel.Actions {
                     : "— Código não verificado: ambiente Python da automação — " + le.diagnosis().title() + " (" + le.detail() + "). Nada foi dado por aprovado.");
         } else {
             for (PythonChecks.Check c : checks) {
+                if (c.status() == PythonChecks.Status.FAIL && "CODE_QUALITY".equals(c.id()) && GeneratedCodeQuality.passes(c)) {
+                    results.add("! " + label(c) + ": " + c.problems() + " aviso(s) de legibilidade " + c.codes() + " — veja Pendências (" + c.millis() + " ms)");
+                    continue;
+                }
                 results.add((c.status() == PythonChecks.Status.PASS ? "✓ " : c.status() == PythonChecks.Status.FAIL ? "× " : "— ") + label(c) + ": "
                         + (c.status() == PythonChecks.Status.PASS ? "sem problema" : c.problems() + " problema(s) " + c.codes() + c.reason()) + " (" + c.millis() + " ms)");
             }
@@ -550,9 +555,17 @@ public final class DevelopmentPresenter implements DevelopmentPanel.Actions {
         panel.show(model);
     }
 
+    /**
+     * SPEC-OPTIONAL-COLUMNS-001: a obrigatoriedade de cada coluna é INFORMAÇÃO (não bloqueia), mas fica na lista para poder
+     * ser decidida e revista a qualquer momento.
+     */
+    private static boolean revisable(QualityIssue i) {
+        return i.assistance().map(AssistanceRequest::destination).orElse(null) == FunctionalSpec.Field.OUTPUT_REQUIREMENT;
+    }
+
     private List<QualityIssue> pending(List<QualityIssue> issues) {
         List<QualityIssue> out = new ArrayList<>();
-        for (QualityIssue i : issues) if (i.kind() != QualityIssue.Kind.INFO) out.add(i);
+        for (QualityIssue i : issues) if (i.kind() != QualityIssue.Kind.INFO || revisable(i)) out.add(i);
         out.addAll(aiProposals);
         return out;
     }
@@ -578,9 +591,19 @@ public final class DevelopmentPresenter implements DevelopmentPanel.Actions {
             out.add(new DevelopmentPanel.Answer("O que será criado?", "Processo em lote (uma transação por linha da planilha) e uma Page por sessão — gerador "
                     + "tabular da E2E-001, com a configuração declarada no projeto."));
         } else {
-            out.add(new DevelopmentPanel.Answer("O que será criado?", "processo.py (RpaProcess) e " + plan.pages().size() + " Page(s): "
+            out.add(new DevelopmentPanel.Answer("O que será criado?", "Pacote automation/ em inglês: process.py (RpaProcess), selectors.py (SelectorKey) e "
+                    + plan.pages().size() + " Page(s) em pages.py: "
                     + String.join(", ", plan.pages().stream().map(DevelopmentPlan.PlannedPage::className).toList())
                     + " — uma por tela observada. Nenhum Module: nada se repete o bastante para justificar um (o LoginModule usaria StepIds próprios)."));
+            // CODEGEN-QUALITY-001: prévia da arquitetura — telas, métodos e de onde vem cada nome (antes de gerar)
+            List<String> preview = new ArrayList<>();
+            for (DevelopmentPlan.PlannedPage pg : plan.pages()) {
+                var info = plan.names().page(pg.className());
+                preview.add(pg.className() + (info.title().isEmpty() ? " (nome provisório: dê um título à seção no PDD)" : " (“" + info.title() + "”)") + ": "
+                        + String.join(", ", pg.methods().stream().map(x -> x + "()").toList()));
+            }
+            out.add(new DevelopmentPanel.Answer("Como o código fica organizado? (prévia)", String.join(" · ", preview)
+                    + ". Cada ação leva um step_id legível (ex.: pesquisa.preencher_…) ligado à etapa no manifesto. Para mudar um nome, edite o título no PDD."));
         }
         if (run != null && run.gate() != null) {
             var r = run.gate().record();
@@ -658,7 +681,18 @@ public final class DevelopmentPresenter implements DevelopmentPanel.Actions {
             case WRITTEN -> "gravado";
             case UNCHANGED -> "igual";
             case PROTECTED -> "PROTEGIDO (.novo/.diff)";
+            case RETIRED -> "guardado em " + OutputWriter.PREVIOUS + "/ (geração anterior)";
+            case KEPT -> "MANTIDO (editado à mão; não faz mais parte do projeto)";
         };
+    }
+
+    /**
+     * INTEGRATION-CONSOLIDATION-001: mesmo veredito da camada VQ — um aviso só de legibilidade da AST (ex.: Page1 quando a seção
+     * do PDD não tem título) não tira CODE_VALIDATED; achado objetivo ou análise que não terminou, sim.
+     */
+    static boolean checksPass(List<PythonChecks.Check> checks) {
+        return !checks.isEmpty() && checks.stream().allMatch(c -> "CODE_QUALITY".equals(c.id()) ? GeneratedCodeQuality.passes(c)
+                : c.status() == PythonChecks.Status.PASS);
     }
 
     private static String label(PythonChecks.Check c) {
@@ -847,6 +881,17 @@ public final class DevelopmentPresenter implements DevelopmentPanel.Actions {
     @Override
     public void openCode() {
         active().flatMap(a -> projectFile(a).map(p -> outputDir(a, p))).filter(Files::isDirectory).ifPresent(p -> host.openFolder(p));
+    }
+
+    @Override
+    public void reviewCode() {
+        active().flatMap(a -> projectFile(a).map(p -> outputDir(a, p))).filter(Files::isDirectory).ifPresent(dir -> {
+            try {
+                host.showText("Revisar código gerado", CodeReviewText.build(dir));
+            } catch (IOException | RuntimeException e) {
+                host.showText("Revisar código gerado", "Não foi possível ler o código gerado nesta pasta (" + e.getClass().getSimpleName() + ").");
+            }
+        });
     }
 
     @Override
@@ -1309,8 +1354,11 @@ public final class DevelopmentPresenter implements DevelopmentPanel.Actions {
         return store.quality(a.id()).map(t -> {
             try {
                 QualityReport r = QualityReport.parse(t);
+                // CODEGEN-QUALITY-001: um critério objetivo do gerador quebrado (UUID no código, step_id sem mapa, seletor na
+                // Page, posição, falha silenciada) também impede; aviso de nome não impede
+                QualityReport.LayerResult vq = r.layers().get(Layer.VQ_GENERATION);
                 return manifest.equals(r.codeManifest()) && r.layers().get(Layer.V4_CODE).state() == QualityReport.State.PASS
-                        && r.layers().get(Layer.V5_TESTS).state() == QualityReport.State.PASS;
+                        && r.layers().get(Layer.V5_TESTS).state() == QualityReport.State.PASS && (vq == null || vq.state() != QualityReport.State.BLOCKED);
             } catch (RuntimeException e) {
                 return false;
             }

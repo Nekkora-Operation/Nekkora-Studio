@@ -1,0 +1,49 @@
+extensão: bbcf96d
+[INFO] Tests run: 24, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Tests run: 48, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Tests run: 115, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Tests run: 24, Failures: 0, Errors: 0, Skipped: 0
+INFO: Troca de sessão sem resposta da extensão: reconciliando
+INFO: Troca de sessão sem resposta da extensão: reconciliando
+[INFO] Tests run: 71, Failures: 0, Errors: 0, Skipped: 0
+[WARNING] Tests run: 8, Failures: 0, Errors: 0, Skipped: 1, Time elapsed: 0.741 s -- in com.nekkora.studio.persistence.AtomicSaveTest
+[WARNING] Tests run: 56, Failures: 0, Errors: 0, Skipped: 1
+[INFO] Tests run: 43, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Tests run: 10, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Tests run: 13, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Tests run: 42, Failures: 0, Errors: 0, Skipped: 0
+[WARNING] Tests run: 1, Failures: 0, Errors: 0, Skipped: 1, Time elapsed: 0.034 s -- in com.nekkora.studio.codegen.TabularReprTest
+[WARNING] Tests run: 40, Failures: 0, Errors: 0, Skipped: 1
+[WARNING] Tests run: 3, Failures: 0, Errors: 0, Skipped: 3, Time elapsed: 0.059 s -- in com.nekkora.studio.ai.CodegenRound3Test
+[WARNING] Tests run: 4, Failures: 0, Errors: 0, Skipped: 1, Time elapsed: 0.043 s -- in com.nekkora.studio.ai.capability.FrameworkCapabilityCatalogTest
+[WARNING] Tests run: 6, Failures: 0, Errors: 0, Skipped: 4, Time elapsed: 0.103 s -- in com.nekkora.studio.ai.pycheck.SupervisedRunTest
+[WARNING] Tests run: 7, Failures: 0, Errors: 0, Skipped: 3, Time elapsed: 0.046 s -- in com.nekkora.studio.ai.deps.DependencyManagerTest
+[WARNING] Tests run: 9, Failures: 0, Errors: 0, Skipped: 4, Time elapsed: 0.194 s -- in com.nekkora.studio.ai.CodegenQualityFlowTest
+[WARNING] Tests run: 4, Failures: 0, Errors: 0, Skipped: 2, Time elapsed: 0.075 s -- in com.nekkora.studio.ai.plan.ListFlowTest
+[WARNING] Tests run: 14, Failures: 0, Errors: 0, Skipped: 4, Time elapsed: 0.404 s -- in com.nekkora.studio.ai.plan.OptionalColumnsTest
+[WARNING] Tests run: 1, Failures: 0, Errors: 0, Skipped: 1, Time elapsed: 0.010 s -- in com.nekkora.studio.ai.plan.DocstringEscapeTest
+[WARNING] Tests run: 4, Failures: 0, Errors: 0, Skipped: 2, Time elapsed: 0.087 s -- in com.nekkora.studio.ai.plan.SingleFlowTest
+[WARNING] Tests run: 3, Failures: 0, Errors: 0, Skipped: 3, Time elapsed: 0.032 s -- in com.nekkora.studio.ai.plan.EnterNavigationNegativeTest
+[WARNING] Tests run: 89, Failures: 0, Errors: 0, Skipped: 27
+[INFO] Tests run: 20, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Tests run: 185, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Nekkora Studio (parent) ............................ SUCCESS [  0.172 s]
+[INFO] Nekkora Design Tokens .............................. SUCCESS [  3.129 s]
+[INFO] Nekkora Swing UI ................................... SUCCESS [  9.131 s]
+[INFO] Nekkora Design System Showcase ..................... SUCCESS [  5.151 s]
+[INFO] Nekkora Studio Domain .............................. SUCCESS [  2.431 s]
+[INFO] Nekkora Studio Bridge .............................. SUCCESS [  4.241 s]
+[INFO] Nekkora Studio Recorder ............................ SUCCESS [ 12.404 s]
+[INFO] Nekkora Studio Persistence ......................... SUCCESS [  4.797 s]
+[INFO] Nekkora Studio Validation .......................... SUCCESS [  9.760 s]
+[INFO] Nekkora Studio Semantics ........................... SUCCESS [  0.955 s]
+[INFO] Nekkora Studio Guided Debug ........................ SUCCESS [  1.075 s]
+[INFO] Nekkora Studio Visual PDD .......................... SUCCESS [ 12.613 s]
+[INFO] Nekkora Studio Python Generator .................... SUCCESS [  4.311 s]
+[INFO] Nekkora AI Engine .................................. SUCCESS [ 16.504 s]
+[INFO] Nekkora Studio UI .................................. SUCCESS [  4.461 s]
+[INFO] Nekkora Studio App ................................. SUCCESS [01:47 min]
+[INFO] BUILD SUCCESS
+[INFO] Total time:  03:18 min

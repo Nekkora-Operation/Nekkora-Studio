@@ -108,8 +108,10 @@ public final class VariableDeriver {
                             Provenance.DERIVED_LABEL, "dado da linha “" + s.anchor() + "”" + (date ? " (rótulo de data: lido como data por extenso)" : ""), false));
                 } else {
                     boolean heading = "HEADING".equals(s.targetKind());
+                    // ler um botão ou link devolve o TEXTO dele, não um "resultado" do processo (CODEGEN-QUALITY-001 CQ-05)
+                    String control = "BUTTON".equals(s.targetKind()) ? "texto_do_botao_" : "LINK".equals(s.targetKind()) ? "texto_do_link_" : null;
                     String base = heading ? "titulo" : s.targetName().isEmpty() ? "resultado" : slug(s.targetName());
-                    String name = unique(heading || base.startsWith("resultado") ? base : "resultado_" + base, taken);
+                    String name = unique(heading || base.startsWith("resultado") ? base : control != null ? control + base : "resultado_" + base, taken);
                     out.add(new Planned(s.stepId(), Kind.DECLARE_OUTPUT, name, "texto", "STEP_OUTPUT", Sensitivity.INTERNAL, Provenance.DERIVED_OBSERVATION,
                             "texto lido na etapa Observar" + (s.targetName().isEmpty() ? (heading ? " (título)" : "") : " “" + s.targetName() + "”"),
                             s.targetName().isEmpty() && !heading));
@@ -180,7 +182,7 @@ public final class VariableDeriver {
 
     static List<String> words(String text) {
         if (text == null) return List.of();
-        String n = Normalizer.normalize(text, Normalizer.Form.NFD).replaceAll("\\p{M}", "").toLowerCase(Locale.ROOT).replace("e-mail", "email");
+        String n = Normalizer.normalize(com.nekkora.studio.codegen.CodeNaming.foldMarkers(text), Normalizer.Form.NFD).replaceAll("\\p{M}", "").toLowerCase(Locale.ROOT).replace("e-mail", "email");
         List<String> out = new ArrayList<>();
         for (String w : n.split("[^a-z0-9]+")) if (!w.isEmpty()) out.add(w);
         return out;

@@ -43,9 +43,9 @@ class SingleFlowTest {
         ctx = ProjectContext.of(c.a, Optional.of(d));
         PddGate.Result gate = PddGate.evaluate(ctx, Optional.of(d), FunctionalSpec.empty(c.a.id()), ProcessProjection.of(c.a), ConsultaCase.CLOCK.instant());
         assertTrue(gate.ready(), gate.issues().toString());
-        DevelopmentPlan plan = DevelopmentPlanner.plan(c.a, ctx, gate, FrameworkCapabilityCatalog.bundled(), Optional.empty());
+        DevelopmentPlan plan = DevelopmentPlanner.plan(c.a, ctx, gate, FrameworkCapabilityCatalog.bundled(), Optional.empty(), Optional.of(d));
         assertTrue(plan.ready(), plan.issues().toString());
-        PythonGenerator.Result r = SingleGenerator.generate(c.a, new AutomationValidator(RuleSet.V1_1).validate(c.a), plan.singleConfig().orElseThrow());
+        PythonGenerator.Result r = SingleGenerator.generate(c.a, new AutomationValidator(RuleSet.V1_1).validate(c.a), plan.singleConfig().orElseThrow(), plan.names());
         return new Flow(c, plan, r);
     }
 
@@ -77,23 +77,46 @@ class SingleFlowTest {
         Flow f = develop(ConsultaCase.confirmed());
         DevelopmentPlan p = f.plan();
         assertEquals(DevelopmentPlan.ExecutionModel.SINGLE, p.model());
-        assertEquals(List.of("TelaAcesso", "TelaConsulta"), p.pages().stream().map(DevelopmentPlan.PlannedPage::className).toList());
+        assertEquals(List.of("AccessPage", "QueryPage"), p.pages().stream().map(DevelopmentPlan.PlannedPage::className).toList());
         assertTrue(p.capabilities().containsAll(List.of("actions.fill", "actions.click", "actions.read_text", "core.single_input", "security.env_secrets")));
         assertFalse(p.capabilities().contains("tabular.input"), "nada de planilha");
         assertTrue(f.result().ok(), f.result().blockers().toString());
         Map<String, String> files = f.result().files();
-        assertTrue(files.keySet().containsAll(List.of("paginas.py", "processo.py", "main.py", "selectors.json", "manifest.json", "config/execucao.toml")));
-        String all = files.get("paginas.py") + files.get("processo.py") + files.get("main.py");
+        assertTrue(files.keySet().containsAll(List.of("automation/__init__.py", "automation/selectors.py", "automation/pages.py", "automation/process.py", "main.py",
+                "selectors.json", "manifest.json", "config/execution.toml")), files.keySet().toString());
+        String all = files.get("automation/pages.py") + files.get("automation/process.py") + files.get("main.py");
         assertFalse(all.contains("perRecord") || all.contains("TabularSchema") || all.contains("xlsx"), "sem lote fabricado");
         assertFalse(all.contains("#senha"), "nenhum seletor escrito à mão fora do registro");
-        assertTrue(files.get("processo.py").contains("SingleInputProvider") || files.get("main.py").contains("SingleInputProvider"));
+        assertTrue(files.get("main.py").contains("SingleInputProvider"));
+        // a credencial continua com o apelido do provedor de segredos (contrato), o parâmetro é inglês
+        assertTrue(files.get("automation/pages.py").contains("secrets.get(\"credencial.usuario\")") && all.contains("def sign_in(self, secrets: SecretProvider)"), all);
+        // o resultado sem planilha mantém a chave do modelo (contrato do resultado); a variável Python é inglesa
+        assertTrue(files.get("automation/process.py").contains("return ProcessResult({\"resultado_da_consulta\": query_result})"), all);
+        // linha de comando nova, com os nomes anteriores aceitos
+        assertTrue(files.get("main.py").replaceAll("\\s+", " ").contains("parser.add_argument( \"--input\", \"--entrada\", dest=\"input\""), files.get("main.py"));
+        // S105: a CHAVE do campo de senha não é uma senha (o membro é anotado, nada é suprimido em geral)
+        assertTrue(files.get("automation/selectors.py").contains("ACCESS_PASSWORD = \"process.access.password\"  # noqa: S105 - element key, not a secret"));
         assertTrue(files.get("manifest.json").contains("\"gate\": \"PDD_READY\""));
+        // CQ-04 (rodada 2): sem efeito de negócio declarado NÃO basta para repetir — entrar e sair mudam o acesso
+        String pages = files.get("automation/pages.py");
+        assertFalse(call(pages, "access.click_sign_in").contains("idempotent=True"), "o envio das credenciais nunca é repetido: " + pages);
+        assertTrue(call(pages, "access.click_sign_in").contains("postcondition=lambda: self.actions.exists(SelectorKey.QUERY_RECORD_CODE.value)"),
+                "o login continua confirmado pela tela seguinte, com chave tipada");
+        assertFalse(call(pages, "query.click_sign_out").contains("idempotent=True"), "sair nunca é repetido: " + pages);
+        assertTrue(call(pages, "query.click_query_button").contains("idempotent=True"), "a consulta (sem efeito) continua repetível");
+        Map<String, String> retry = new java.util.LinkedHashMap<>();
+        for (Object o : (List<?>) com.nekkora.studio.bridge.json.Json.parseObject(files.get("manifest.json")).get("steps")) {
+            Map<?, ?> st = (Map<?, ?>) o;
+            if (st.get("retry") instanceof String) retry.put(String.valueOf(st.get("traceId")), String.valueOf(st.get("retry")));
+        }
+        assertEquals(Map.of("access.click_sign_in", "AUTHENTICATION", "query.click_query_button", "SAFE", "query.click_sign_out", "SESSION_END"), retry);
         // determinismo
         Flow g = develop(ConsultaCase.confirmed());
         assertEquals(f.result().files().keySet(), g.result().files().keySet());
-        assertEquals(f.result().files().get("paginas.py").replaceAll("[0-9a-f]{8}-[0-9a-f-]{27}", "ID"),
-                g.result().files().get("paginas.py").replaceAll("[0-9a-f]{8}-[0-9a-f-]{27}", "ID"));
-        PythonGenerator.Result again = SingleGenerator.generate(f.c().a, new AutomationValidator(RuleSet.V1_1).validate(f.c().a), p.singleConfig().orElseThrow());
+        assertEquals(f.result().files().get("automation/pages.py").replaceAll("[0-9a-f]{8}-[0-9a-f-]{27}", "ID"),
+                g.result().files().get("automation/pages.py").replaceAll("[0-9a-f]{8}-[0-9a-f-]{27}", "ID"));
+        PythonGenerator.Result again = SingleGenerator.generate(f.c().a, new AutomationValidator(RuleSet.V1_1).validate(f.c().a), p.singleConfig().orElseThrow(),
+                p.names());
         assertEquals(f.result().files(), again.files(), "mesma entrada → mesmos bytes");
     }
 
@@ -113,7 +136,7 @@ class SingleFlowTest {
             assertEquals(PythonChecks.Status.PASS, ch.status(), ch.id() + " " + ch.codes() + " " + ch.reason() + "\n" + (ch.id().startsWith("RUFF") || ch.id().startsWith("MYPY")
                     ? dump(out) : ""));
         }
-        assertEquals(6, checks.size());
+        assertEquals(7, checks.size()); // V4 (5) + V5 contrato + VQ qualidade da geração (CODEGEN-QUALITY-001)
         assertNotNull(checks.stream().filter(x -> x.id().equals("CONTRACT_TESTS")).findFirst().orElseThrow().codes().get("TOTAL"));
     }
 
@@ -125,11 +148,12 @@ class SingleFlowTest {
         Flow f = develop(ConsultaCase.confirmed());
         Path out = tmp.resolve("estragado");
         OutputWriter.write(out, f.result().files());
-        Path pages = out.resolve("paginas.py");
+        Path pages = out.resolve("automation").resolve("pages.py");
         String src = java.nio.file.Files.readString(pages);
         src = src.replace("from __future__ import annotations\n", "from __future__ import annotations\n\nimport os\n")
-                .replace("a.fill(self.k(\"codigo_do_registro\"), codigo_do_registro,", "a.fill(self.k(\"codigo_do_registro\"), \"REG-0001\",")
-                .replace("        return saidas\n", "        x: int = \"texto\"\n        return saidas\n");
+                .replace(", record_code, step_id=\"query.fill_record_code\")", ", \"REG-0001\", step_id=\"query.fill_record_code\")")
+                .replace("        return self.actions.read_text(", "        x: int = \"texto\"\n        return self.actions.read_text(");
+        assertTrue(src.contains("\"REG-0001\"") && src.contains("x: int"), "o controle negativo precisa de fato estragar o código:\n" + src);
         java.nio.file.Files.writeString(pages, src);
         PythonChecks.Environment env = PythonChecks.resolve(Optional.of(py), out).orElseThrow();
         Map<String, PythonChecks.Check> by = new java.util.LinkedHashMap<>();
@@ -142,9 +166,19 @@ class SingleFlowTest {
                 by.get("CONTRACT_TESTS").codes().toString());
     }
 
+    /** A chamada ao framework que carrega o {@code step_id} dado (do "self.actions." anterior até o fim da chamada). */
+    static String call(String pages, String traceId) {
+        int at = pages.indexOf("step_id=\"" + traceId + "\"");
+        assertTrue(at >= 0, "step_id ausente: " + traceId);
+        int from = pages.lastIndexOf("self.actions.", at);
+        int end = pages.indexOf(")\n", at);
+        return pages.substring(from, end + 1);
+    }
+
     static String dump(Path out) {
         try {
-            return java.nio.file.Files.readString(out.resolve("paginas.py")) + "\n-----\n" + java.nio.file.Files.readString(out.resolve("processo.py"));
+            return java.nio.file.Files.readString(out.resolve("automation/pages.py")) + "\n-----\n" + java.nio.file.Files.readString(out.resolve("automation/process.py"))
+                    + "\n-----\n" + java.nio.file.Files.readString(out.resolve("automation/selectors.py")) + "\n-----\n" + java.nio.file.Files.readString(out.resolve("main.py"));
         } catch (java.io.IOException e) {
             return "";
         }

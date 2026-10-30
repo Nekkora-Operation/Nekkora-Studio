@@ -1,0 +1,383 @@
+23:05:56.537 -                 ENGINE_STARTED
+23:05:56.537 INIT              PHASE_STARTED
+23:05:57.221 INIT              ACTION_STARTED step=process.open_start_page acao=navigate
+23:05:58.898 INIT              ACTION_COMPLETED step=process.open_start_page acao=navigate tentativa=1 resultado=OK ms=1671
+23:05:58.899 INIT              ACTION_STARTED step=preparation.download_spreadsheet key=process.preparation.download_spreadsheet acao=download
+23:05:58.901 INIT              ACTION_STARTED step=preparation.download_spreadsheet key=process.preparation.download_spreadsheet acao=click
+23:05:58.951 INIT              TARGET_RESOLVED step=preparation.download_spreadsheet key=process.preparation.download_spreadsheet
+23:05:59.014 INIT              ACTION_COMPLETED step=preparation.download_spreadsheet key=process.preparation.download_spreadsheet acao=click tentativa=1 resultado=OK ms=125
+23:05:59.274 INIT              ACTION_COMPLETED step=preparation.download_spreadsheet key=process.preparation.download_spreadsheet acao=download tentativa=1 resultado=OK ms=375
+23:05:59.274 INIT              ACTION_STARTED step=preparation.click_start key=process.record_filling.first_name acao=mark
+23:05:59.306 INIT              TARGET_RESOLVED step=preparation.click_start key=process.record_filling.first_name
+23:05:59.306 INIT              ACTION_COMPLETED step=preparation.click_start key=process.record_filling.first_name acao=mark tentativa=1 resultado=OK ms=31
+23:05:59.306 INIT              ACTION_STARTED step=preparation.click_start key=process.preparation.start acao=click
+23:05:59.346 INIT              TARGET_RESOLVED step=preparation.click_start key=process.preparation.start
+23:05:59.395 INIT              ACTION_COMPLETED step=preparation.click_start key=process.preparation.start acao=click tentativa=1 resultado=OK ms=93
+23:05:59.395 INIT              PHASE_COMPLETED
+23:05:59.395 TRANSFER_DATA_IN  PHASE_STARTED
+23:05:59.845 TRANSFER_DATA_IN  PHASE_COMPLETED tx=tx-bff309869ea84a525d49
+23:05:59.845 PROCESS           PHASE_STARTED
+23:05:59.845 PROCESS           TRANSACTION_STARTED tx=tx-bff309869ea84a525d49 tentativa=1
+23:05:59.854 PROCESS           CHECKPOINT_SAVED tx=tx-bff309869ea84a525d49 resultado=IN_PROGRESS
+23:05:59.854 PROCESS           ACTION_STARTED tx=tx-bff309869ea84a525d49 step=record_filling.fill_first_name key=process.record_filling.first_name acao=fill
+23:05:59.863 PROCESS           TARGET_RESOLVED tx=tx-bff309869ea84a525d49 step=record_filling.fill_first_name key=process.record_filling.first_name
+23:05:59.880 PROCESS           ACTION_COMPLETED tx=tx-bff309869ea84a525d49 step=record_filling.fill_first_name key=process.record_filling.first_name acao=fill tentativa=1 resultado=OK ms=30
+23:05:59.880 PROCESS           ACTION_STARTED tx=tx-bff309869ea84a525d49 step=record_filling.fill_last_name key=process.record_filling.last_name acao=fill
+23:05:59.889 PROCESS           TARGET_RESOLVED tx=tx-bff309869ea84a525d49 step=record_filling.fill_last_name key=process.record_filling.last_name
+23:05:59.903 PROCESS           ACTION_COMPLETED tx=tx-bff309869ea84a525d49 step=record_filling.fill_last_name key=process.record_filling.last_name acao=fill tentativa=1 resultado=OK ms=31
+23:05:59.903 PROCESS           ACTION_STARTED tx=tx-bff309869ea84a525d49 step=record_filling.fill_company_name key=process.record_filling.company_name acao=fill
+23:05:59.912 PROCESS           TARGET_RESOLVED tx=tx-bff309869ea84a525d49 step=record_filling.fill_company_name key=process.record_filling.company_name
+23:05:59.927 PROCESS           ACTION_COMPLETED tx=tx-bff309869ea84a525d49 step=record_filling.fill_company_name key=process.record_filling.company_name acao=fill tentativa=1 resultado=OK ms=16
+23:05:59.927 PROCESS           ACTION_STARTED tx=tx-bff309869ea84a525d49 step=record_filling.fill_role_in_company key=process.record_filling.role_in_company acao=fill
+23:05:59.935 PROCESS           TARGET_RESOLVED tx=tx-bff309869ea84a525d49 step=record_filling.fill_role_in_company key=process.record_filling.role_in_company
+23:05:59.948 PROCESS           ACTION_COMPLETED tx=tx-bff309869ea84a525d49 step=record_filling.fill_role_in_company key=process.record_filling.role_in_company acao=fill tentativa=1 resultado=OK ms=14
+23:05:59.949 PROCESS           ACTION_STARTED tx=tx-bff309869ea84a525d49 step=record_filling.fill_address key=process.record_filling.address acao=fill
+23:05:59.957 PROCESS           TARGET_RESOLVED tx=tx-bff309869ea84a525d49 step=record_filling.fill_address key=process.record_filling.address
+23:05:59.972 PROCESS           ACTION_COMPLETED tx=tx-bff309869ea84a525d49 step=record_filling.fill_address key=process.record_filling.address acao=fill tentativa=1 resultado=OK ms=16
+23:05:59.972 PROCESS           ACTION_STARTED tx=tx-bff309869ea84a525d49 step=record_filling.fill_email key=process.record_filling.email acao=fill
+23:05:59.980 PROCESS           TARGET_RESOLVED tx=tx-bff309869ea84a525d49 step=record_filling.fill_email key=process.record_filling.email
+23:05:59.992 PROCESS           ACTION_COMPLETED tx=tx-bff309869ea84a525d49 step=record_filling.fill_email key=process.record_filling.email acao=fill tentativa=1 resultado=OK ms=14
+23:05:59.992 PROCESS           ACTION_STARTED tx=tx-bff309869ea84a525d49 step=record_filling.fill_phone_number key=process.record_filling.phone_number acao=fill
+23:06:00.001 PROCESS           TARGET_RESOLVED tx=tx-bff309869ea84a525d49 step=record_filling.fill_phone_number key=process.record_filling.phone_number
+23:06:00.015 PROCESS           ACTION_COMPLETED tx=tx-bff309869ea84a525d49 step=record_filling.fill_phone_number key=process.record_filling.phone_number acao=fill tentativa=1 resultado=OK ms=31
+23:06:00.015 PROCESS           ACTION_STARTED tx=tx-bff309869ea84a525d49 step=record_filling.click_submit key=process.record_filling.first_name acao=mark
+23:06:00.024 PROCESS           TARGET_RESOLVED tx=tx-bff309869ea84a525d49 step=record_filling.click_submit key=process.record_filling.first_name
+23:06:00.026 PROCESS           ACTION_COMPLETED tx=tx-bff309869ea84a525d49 step=record_filling.click_submit key=process.record_filling.first_name acao=mark tentativa=1 resultado=OK ms=0
+23:06:00.026 PROCESS           ACTION_STARTED tx=tx-bff309869ea84a525d49 step=record_filling.click_submit key=process.record_filling.submit acao=click
+23:06:00.053 PROCESS           TARGET_RESOLVED tx=tx-bff309869ea84a525d49 step=record_filling.click_submit key=process.record_filling.submit
+23:06:00.087 PROCESS           ACTION_COMPLETED tx=tx-bff309869ea84a525d49 step=record_filling.click_submit key=process.record_filling.submit acao=click tentativa=1 resultado=OK ms=61
+23:06:00.087 TRANSFER_DATA_OUT PHASE_STARTED
+23:06:00.088 TRANSFER_DATA_OUT SINK_COMMITTED tx=tx-bff309869ea84a525d49 resultado=SUCCEEDED
+23:06:00.092 TRANSFER_DATA_OUT CHECKPOINT_SAVED tx=tx-bff309869ea84a525d49 resultado=SUCCEEDED
+23:06:00.092 TRANSFER_DATA_OUT TRANSACTION_COMPLETED tx=tx-bff309869ea84a525d49 tentativa=1 resultado=SUCCEEDED
+23:06:00.092 TRANSFER_DATA_IN  PHASE_STARTED
+23:06:00.092 TRANSFER_DATA_IN  PHASE_COMPLETED tx=tx-7a5c6dc02590ab224489
+23:06:00.092 PROCESS           PHASE_STARTED
+23:06:00.092 PROCESS           TRANSACTION_STARTED tx=tx-7a5c6dc02590ab224489 tentativa=1
+23:06:00.093 PROCESS           CHECKPOINT_SAVED tx=tx-7a5c6dc02590ab224489 resultado=IN_PROGRESS
+23:06:00.093 PROCESS           ACTION_STARTED tx=tx-7a5c6dc02590ab224489 step=record_filling.fill_first_name key=process.record_filling.first_name acao=fill
+23:06:00.104 PROCESS           TARGET_RESOLVED tx=tx-7a5c6dc02590ab224489 step=record_filling.fill_first_name key=process.record_filling.first_name
+23:06:00.115 PROCESS           ACTION_COMPLETED tx=tx-7a5c6dc02590ab224489 step=record_filling.fill_first_name key=process.record_filling.first_name acao=fill tentativa=1 resultado=OK ms=14
+23:06:00.115 PROCESS           ACTION_STARTED tx=tx-7a5c6dc02590ab224489 step=record_filling.fill_last_name key=process.record_filling.last_name acao=fill
+23:06:00.123 PROCESS           TARGET_RESOLVED tx=tx-7a5c6dc02590ab224489 step=record_filling.fill_last_name key=process.record_filling.last_name
+23:06:00.138 PROCESS           ACTION_COMPLETED tx=tx-7a5c6dc02590ab224489 step=record_filling.fill_last_name key=process.record_filling.last_name acao=fill tentativa=1 resultado=OK ms=31
+23:06:00.138 PROCESS           ACTION_STARTED tx=tx-7a5c6dc02590ab224489 step=record_filling.fill_company_name key=process.record_filling.company_name acao=fill
+23:06:00.146 PROCESS           TARGET_RESOLVED tx=tx-7a5c6dc02590ab224489 step=record_filling.fill_company_name key=process.record_filling.company_name
+23:06:00.159 PROCESS           ACTION_COMPLETED tx=tx-7a5c6dc02590ab224489 step=record_filling.fill_company_name key=process.record_filling.company_name acao=fill tentativa=1 resultado=OK ms=14
+23:06:00.159 PROCESS           ACTION_STARTED tx=tx-7a5c6dc02590ab224489 step=record_filling.fill_role_in_company key=process.record_filling.role_in_company acao=fill
+23:06:00.168 PROCESS           TARGET_RESOLVED tx=tx-7a5c6dc02590ab224489 step=record_filling.fill_role_in_company key=process.record_filling.role_in_company
+23:06:00.182 PROCESS           ACTION_COMPLETED tx=tx-7a5c6dc02590ab224489 step=record_filling.fill_role_in_company key=process.record_filling.role_in_company acao=fill tentativa=1 resultado=OK ms=16
+23:06:00.182 PROCESS           ACTION_STARTED tx=tx-7a5c6dc02590ab224489 step=record_filling.fill_address key=process.record_filling.address acao=fill
+23:06:00.190 PROCESS           TARGET_RESOLVED tx=tx-7a5c6dc02590ab224489 step=record_filling.fill_address key=process.record_filling.address
+23:06:00.206 PROCESS           ACTION_COMPLETED tx=tx-7a5c6dc02590ab224489 step=record_filling.fill_address key=process.record_filling.address acao=fill tentativa=1 resultado=OK ms=30
+23:06:00.206 PROCESS           ACTION_STARTED tx=tx-7a5c6dc02590ab224489 step=record_filling.fill_email key=process.record_filling.email acao=fill
+23:06:00.215 PROCESS           TARGET_RESOLVED tx=tx-7a5c6dc02590ab224489 step=record_filling.fill_email key=process.record_filling.email
+23:06:00.228 PROCESS           ACTION_COMPLETED tx=tx-7a5c6dc02590ab224489 step=record_filling.fill_email key=process.record_filling.email acao=fill tentativa=1 resultado=OK ms=16
+23:06:00.228 PROCESS           ACTION_STARTED tx=tx-7a5c6dc02590ab224489 step=record_filling.fill_phone_number key=process.record_filling.phone_number acao=fill
+23:06:00.235 PROCESS           TARGET_RESOLVED tx=tx-7a5c6dc02590ab224489 step=record_filling.fill_phone_number key=process.record_filling.phone_number
+23:06:00.248 PROCESS           ACTION_COMPLETED tx=tx-7a5c6dc02590ab224489 step=record_filling.fill_phone_number key=process.record_filling.phone_number acao=fill tentativa=1 resultado=OK ms=30
+23:06:00.248 PROCESS           ACTION_STARTED tx=tx-7a5c6dc02590ab224489 step=record_filling.click_submit key=process.record_filling.first_name acao=mark
+23:06:00.256 PROCESS           TARGET_RESOLVED tx=tx-7a5c6dc02590ab224489 step=record_filling.click_submit key=process.record_filling.first_name
+23:06:00.256 PROCESS           ACTION_COMPLETED tx=tx-7a5c6dc02590ab224489 step=record_filling.click_submit key=process.record_filling.first_name acao=mark tentativa=1 resultado=OK ms=0
+23:06:00.256 PROCESS           ACTION_STARTED tx=tx-7a5c6dc02590ab224489 step=record_filling.click_submit key=process.record_filling.submit acao=click
+23:06:00.279 PROCESS           TARGET_RESOLVED tx=tx-7a5c6dc02590ab224489 step=record_filling.click_submit key=process.record_filling.submit
+23:06:00.309 PROCESS           ACTION_COMPLETED tx=tx-7a5c6dc02590ab224489 step=record_filling.click_submit key=process.record_filling.submit acao=click tentativa=1 resultado=OK ms=62
+23:06:00.309 TRANSFER_DATA_OUT PHASE_STARTED
+23:06:00.312 TRANSFER_DATA_OUT SINK_COMMITTED tx=tx-7a5c6dc02590ab224489 resultado=SUCCEEDED
+23:06:00.313 TRANSFER_DATA_OUT CHECKPOINT_SAVED tx=tx-7a5c6dc02590ab224489 resultado=SUCCEEDED
+23:06:00.313 TRANSFER_DATA_OUT TRANSACTION_COMPLETED tx=tx-7a5c6dc02590ab224489 tentativa=1 resultado=SUCCEEDED
+23:06:00.313 TRANSFER_DATA_IN  PHASE_STARTED
+23:06:00.313 TRANSFER_DATA_IN  PHASE_COMPLETED tx=tx-c2b203df9870b9852000
+23:06:00.313 PROCESS           PHASE_STARTED
+23:06:00.313 PROCESS           TRANSACTION_STARTED tx=tx-c2b203df9870b9852000 tentativa=1
+23:06:00.315 PROCESS           CHECKPOINT_SAVED tx=tx-c2b203df9870b9852000 resultado=IN_PROGRESS
+23:06:00.315 PROCESS           ACTION_STARTED tx=tx-c2b203df9870b9852000 step=record_filling.fill_first_name key=process.record_filling.first_name acao=fill
+23:06:00.324 PROCESS           TARGET_RESOLVED tx=tx-c2b203df9870b9852000 step=record_filling.fill_first_name key=process.record_filling.first_name
+23:06:00.336 PROCESS           ACTION_COMPLETED tx=tx-c2b203df9870b9852000 step=record_filling.fill_first_name key=process.record_filling.first_name acao=fill tentativa=1 resultado=OK ms=15
+23:06:00.336 PROCESS           ACTION_STARTED tx=tx-c2b203df9870b9852000 step=record_filling.fill_last_name key=process.record_filling.last_name acao=fill
+23:06:00.343 PROCESS           TARGET_RESOLVED tx=tx-c2b203df9870b9852000 step=record_filling.fill_last_name key=process.record_filling.last_name
+23:06:00.356 PROCESS           ACTION_COMPLETED tx=tx-c2b203df9870b9852000 step=record_filling.fill_last_name key=process.record_filling.last_name acao=fill tentativa=1 resultado=OK ms=31
+23:06:00.356 PROCESS           ACTION_STARTED tx=tx-c2b203df9870b9852000 step=record_filling.fill_company_name key=process.record_filling.company_name acao=fill
+23:06:00.362 PROCESS           TARGET_RESOLVED tx=tx-c2b203df9870b9852000 step=record_filling.fill_company_name key=process.record_filling.company_name
+23:06:00.376 PROCESS           ACTION_COMPLETED tx=tx-c2b203df9870b9852000 step=record_filling.fill_company_name key=process.record_filling.company_name acao=fill tentativa=1 resultado=OK ms=15
+23:06:00.377 PROCESS           ACTION_STARTED tx=tx-c2b203df9870b9852000 step=record_filling.fill_role_in_company key=process.record_filling.role_in_company acao=fill
+23:06:00.385 PROCESS           TARGET_RESOLVED tx=tx-c2b203df9870b9852000 step=record_filling.fill_role_in_company key=process.record_filling.role_in_company
+23:06:00.398 PROCESS           ACTION_COMPLETED tx=tx-c2b203df9870b9852000 step=record_filling.fill_role_in_company key=process.record_filling.role_in_company acao=fill tentativa=1 resultado=OK ms=16
+23:06:00.398 PROCESS           ACTION_STARTED tx=tx-c2b203df9870b9852000 step=record_filling.fill_address key=process.record_filling.address acao=fill
+23:06:00.407 PROCESS           TARGET_RESOLVED tx=tx-c2b203df9870b9852000 step=record_filling.fill_address key=process.record_filling.address
+23:06:00.421 PROCESS           ACTION_COMPLETED tx=tx-c2b203df9870b9852000 step=record_filling.fill_address key=process.record_filling.address acao=fill tentativa=1 resultado=OK ms=31
+23:06:00.421 PROCESS           ACTION_STARTED tx=tx-c2b203df9870b9852000 step=record_filling.fill_email key=process.record_filling.email acao=fill
+23:06:00.428 PROCESS           TARGET_RESOLVED tx=tx-c2b203df9870b9852000 step=record_filling.fill_email key=process.record_filling.email
+23:06:00.441 PROCESS           ACTION_COMPLETED tx=tx-c2b203df9870b9852000 step=record_filling.fill_email key=process.record_filling.email acao=fill tentativa=1 resultado=OK ms=14
+23:06:00.441 PROCESS           ACTION_STARTED tx=tx-c2b203df9870b9852000 step=record_filling.fill_phone_number key=process.record_filling.phone_number acao=fill
+23:06:00.448 PROCESS           TARGET_RESOLVED tx=tx-c2b203df9870b9852000 step=record_filling.fill_phone_number key=process.record_filling.phone_number
+23:06:00.460 PROCESS           ACTION_COMPLETED tx=tx-c2b203df9870b9852000 step=record_filling.fill_phone_number key=process.record_filling.phone_number acao=fill tentativa=1 resultado=OK ms=15
+23:06:00.461 PROCESS           ACTION_STARTED tx=tx-c2b203df9870b9852000 step=record_filling.click_submit key=process.record_filling.first_name acao=mark
+23:06:00.468 PROCESS           TARGET_RESOLVED tx=tx-c2b203df9870b9852000 step=record_filling.click_submit key=process.record_filling.first_name
+23:06:00.469 PROCESS           ACTION_COMPLETED tx=tx-c2b203df9870b9852000 step=record_filling.click_submit key=process.record_filling.first_name acao=mark tentativa=1 resultado=OK ms=16
+23:06:00.469 PROCESS           ACTION_STARTED tx=tx-c2b203df9870b9852000 step=record_filling.click_submit key=process.record_filling.submit acao=click
+23:06:00.494 PROCESS           TARGET_RESOLVED tx=tx-c2b203df9870b9852000 step=record_filling.click_submit key=process.record_filling.submit
+23:06:00.531 PROCESS           ACTION_COMPLETED tx=tx-c2b203df9870b9852000 step=record_filling.click_submit key=process.record_filling.submit acao=click tentativa=1 resultado=OK ms=61
+23:06:00.531 TRANSFER_DATA_OUT PHASE_STARTED
+23:06:00.533 TRANSFER_DATA_OUT SINK_COMMITTED tx=tx-c2b203df9870b9852000 resultado=SUCCEEDED
+23:06:00.535 TRANSFER_DATA_OUT CHECKPOINT_SAVED tx=tx-c2b203df9870b9852000 resultado=SUCCEEDED
+23:06:00.535 TRANSFER_DATA_OUT TRANSACTION_COMPLETED tx=tx-c2b203df9870b9852000 tentativa=1 resultado=SUCCEEDED
+23:06:00.535 TRANSFER_DATA_IN  PHASE_STARTED
+23:06:00.535 TRANSFER_DATA_IN  PHASE_COMPLETED tx=tx-b7fa28e3e881fdbeae60
+23:06:00.535 PROCESS           PHASE_STARTED
+23:06:00.535 PROCESS           TRANSACTION_STARTED tx=tx-b7fa28e3e881fdbeae60 tentativa=1
+23:06:00.538 PROCESS           CHECKPOINT_SAVED tx=tx-b7fa28e3e881fdbeae60 resultado=IN_PROGRESS
+23:06:00.538 PROCESS           ACTION_STARTED tx=tx-b7fa28e3e881fdbeae60 step=record_filling.fill_first_name key=process.record_filling.first_name acao=fill
+23:06:00.545 PROCESS           TARGET_RESOLVED tx=tx-b7fa28e3e881fdbeae60 step=record_filling.fill_first_name key=process.record_filling.first_name
+23:06:00.557 PROCESS           ACTION_COMPLETED tx=tx-b7fa28e3e881fdbeae60 step=record_filling.fill_first_name key=process.record_filling.first_name acao=fill tentativa=1 resultado=OK ms=16
+23:06:00.557 PROCESS           ACTION_STARTED tx=tx-b7fa28e3e881fdbeae60 step=record_filling.fill_last_name key=process.record_filling.last_name acao=fill
+23:06:00.565 PROCESS           TARGET_RESOLVED tx=tx-b7fa28e3e881fdbeae60 step=record_filling.fill_last_name key=process.record_filling.last_name
+23:06:00.578 PROCESS           ACTION_COMPLETED tx=tx-b7fa28e3e881fdbeae60 step=record_filling.fill_last_name key=process.record_filling.last_name acao=fill tentativa=1 resultado=OK ms=30
+23:06:00.578 PROCESS           ACTION_STARTED tx=tx-b7fa28e3e881fdbeae60 step=record_filling.fill_company_name key=process.record_filling.company_name acao=fill
+23:06:00.585 PROCESS           TARGET_RESOLVED tx=tx-b7fa28e3e881fdbeae60 step=record_filling.fill_company_name key=process.record_filling.company_name
+23:06:00.599 PROCESS           ACTION_COMPLETED tx=tx-b7fa28e3e881fdbeae60 step=record_filling.fill_company_name key=process.record_filling.company_name acao=fill tentativa=1 resultado=OK ms=16
+23:06:00.599 PROCESS           ACTION_STARTED tx=tx-b7fa28e3e881fdbeae60 step=record_filling.fill_role_in_company key=process.record_filling.role_in_company acao=fill
+23:06:00.608 PROCESS           TARGET_RESOLVED tx=tx-b7fa28e3e881fdbeae60 step=record_filling.fill_role_in_company key=process.record_filling.role_in_company
+23:06:00.623 PROCESS           ACTION_COMPLETED tx=tx-b7fa28e3e881fdbeae60 step=record_filling.fill_role_in_company key=process.record_filling.role_in_company acao=fill tentativa=1 resultado=OK ms=30
+23:06:00.623 PROCESS           ACTION_STARTED tx=tx-b7fa28e3e881fdbeae60 step=record_filling.fill_address key=process.record_filling.address acao=fill
+23:06:00.629 PROCESS           TARGET_RESOLVED tx=tx-b7fa28e3e881fdbeae60 step=record_filling.fill_address key=process.record_filling.address
+23:06:00.642 PROCESS           ACTION_COMPLETED tx=tx-b7fa28e3e881fdbeae60 step=record_filling.fill_address key=process.record_filling.address acao=fill tentativa=1 resultado=OK ms=16
+23:06:00.642 PROCESS           ACTION_STARTED tx=tx-b7fa28e3e881fdbeae60 step=record_filling.fill_email key=process.record_filling.email acao=fill
+23:06:00.651 PROCESS           TARGET_RESOLVED tx=tx-b7fa28e3e881fdbeae60 step=record_filling.fill_email key=process.record_filling.email
+23:06:00.665 PROCESS           ACTION_COMPLETED tx=tx-b7fa28e3e881fdbeae60 step=record_filling.fill_email key=process.record_filling.email acao=fill tentativa=1 resultado=OK ms=14
+23:06:00.665 PROCESS           ACTION_STARTED tx=tx-b7fa28e3e881fdbeae60 step=record_filling.fill_phone_number key=process.record_filling.phone_number acao=fill
+23:06:00.678 PROCESS           TARGET_RESOLVED tx=tx-b7fa28e3e881fdbeae60 step=record_filling.fill_phone_number key=process.record_filling.phone_number
+23:06:00.692 PROCESS           ACTION_COMPLETED tx=tx-b7fa28e3e881fdbeae60 step=record_filling.fill_phone_number key=process.record_filling.phone_number acao=fill tentativa=1 resultado=OK ms=31
+23:06:00.692 PROCESS           ACTION_STARTED tx=tx-b7fa28e3e881fdbeae60 step=record_filling.click_submit key=process.record_filling.first_name acao=mark
+23:06:00.699 PROCESS           TARGET_RESOLVED tx=tx-b7fa28e3e881fdbeae60 step=record_filling.click_submit key=process.record_filling.first_name
+23:06:00.701 PROCESS           ACTION_COMPLETED tx=tx-b7fa28e3e881fdbeae60 step=record_filling.click_submit key=process.record_filling.first_name acao=mark tentativa=1 resultado=OK ms=15
+23:06:00.701 PROCESS           ACTION_STARTED tx=tx-b7fa28e3e881fdbeae60 step=record_filling.click_submit key=process.record_filling.submit acao=click
+23:06:00.725 PROCESS           TARGET_RESOLVED tx=tx-b7fa28e3e881fdbeae60 step=record_filling.click_submit key=process.record_filling.submit
+23:06:00.760 PROCESS           ACTION_COMPLETED tx=tx-b7fa28e3e881fdbeae60 step=record_filling.click_submit key=process.record_filling.submit acao=click tentativa=1 resultado=OK ms=46
+23:06:00.760 TRANSFER_DATA_OUT PHASE_STARTED
+23:06:00.762 TRANSFER_DATA_OUT SINK_COMMITTED tx=tx-b7fa28e3e881fdbeae60 resultado=SUCCEEDED
+23:06:00.764 TRANSFER_DATA_OUT CHECKPOINT_SAVED tx=tx-b7fa28e3e881fdbeae60 resultado=SUCCEEDED
+23:06:00.764 TRANSFER_DATA_OUT TRANSACTION_COMPLETED tx=tx-b7fa28e3e881fdbeae60 tentativa=1 resultado=SUCCEEDED
+23:06:00.764 TRANSFER_DATA_IN  PHASE_STARTED
+23:06:00.764 TRANSFER_DATA_IN  PHASE_COMPLETED tx=tx-5b0fa4e33d5e9635a4ba
+23:06:00.765 PROCESS           PHASE_STARTED
+23:06:00.765 PROCESS           TRANSACTION_STARTED tx=tx-5b0fa4e33d5e9635a4ba tentativa=1
+23:06:00.767 PROCESS           CHECKPOINT_SAVED tx=tx-5b0fa4e33d5e9635a4ba resultado=IN_PROGRESS
+23:06:00.767 PROCESS           ACTION_STARTED tx=tx-5b0fa4e33d5e9635a4ba step=record_filling.fill_first_name key=process.record_filling.first_name acao=fill
+23:06:00.782 PROCESS           TARGET_RESOLVED tx=tx-5b0fa4e33d5e9635a4ba step=record_filling.fill_first_name key=process.record_filling.first_name
+23:06:00.794 PROCESS           ACTION_COMPLETED tx=tx-5b0fa4e33d5e9635a4ba step=record_filling.fill_first_name key=process.record_filling.first_name acao=fill tentativa=1 resultado=OK ms=31
+23:06:00.794 PROCESS           ACTION_STARTED tx=tx-5b0fa4e33d5e9635a4ba step=record_filling.fill_last_name key=process.record_filling.last_name acao=fill
+23:06:00.803 PROCESS           TARGET_RESOLVED tx=tx-5b0fa4e33d5e9635a4ba step=record_filling.fill_last_name key=process.record_filling.last_name
+23:06:00.818 PROCESS           ACTION_COMPLETED tx=tx-5b0fa4e33d5e9635a4ba step=record_filling.fill_last_name key=process.record_filling.last_name acao=fill tentativa=1 resultado=OK ms=14
+23:06:00.818 PROCESS           ACTION_STARTED tx=tx-5b0fa4e33d5e9635a4ba step=record_filling.fill_company_name key=process.record_filling.company_name acao=fill
+23:06:00.825 PROCESS           TARGET_RESOLVED tx=tx-5b0fa4e33d5e9635a4ba step=record_filling.fill_company_name key=process.record_filling.company_name
+23:06:00.838 PROCESS           ACTION_COMPLETED tx=tx-5b0fa4e33d5e9635a4ba step=record_filling.fill_company_name key=process.record_filling.company_name acao=fill tentativa=1 resultado=OK ms=15
+23:06:00.838 PROCESS           ACTION_STARTED tx=tx-5b0fa4e33d5e9635a4ba step=record_filling.fill_role_in_company key=process.record_filling.role_in_company acao=fill
+23:06:00.845 PROCESS           TARGET_RESOLVED tx=tx-5b0fa4e33d5e9635a4ba step=record_filling.fill_role_in_company key=process.record_filling.role_in_company
+23:06:00.858 PROCESS           ACTION_COMPLETED tx=tx-5b0fa4e33d5e9635a4ba step=record_filling.fill_role_in_company key=process.record_filling.role_in_company acao=fill tentativa=1 resultado=OK ms=31
+23:06:00.858 PROCESS           ACTION_STARTED tx=tx-5b0fa4e33d5e9635a4ba step=record_filling.fill_address key=process.record_filling.address acao=fill
+23:06:00.867 PROCESS           TARGET_RESOLVED tx=tx-5b0fa4e33d5e9635a4ba step=record_filling.fill_address key=process.record_filling.address
+23:06:00.879 PROCESS           ACTION_COMPLETED tx=tx-5b0fa4e33d5e9635a4ba step=record_filling.fill_address key=process.record_filling.address acao=fill tentativa=1 resultado=OK ms=15
+23:06:00.879 PROCESS           ACTION_STARTED tx=tx-5b0fa4e33d5e9635a4ba step=record_filling.fill_email key=process.record_filling.email acao=fill
+23:06:00.887 PROCESS           TARGET_RESOLVED tx=tx-5b0fa4e33d5e9635a4ba step=record_filling.fill_email key=process.record_filling.email
+23:06:00.900 PROCESS           ACTION_COMPLETED tx=tx-5b0fa4e33d5e9635a4ba step=record_filling.fill_email key=process.record_filling.email acao=fill tentativa=1 resultado=OK ms=16
+23:06:00.900 PROCESS           ACTION_STARTED tx=tx-5b0fa4e33d5e9635a4ba step=record_filling.fill_phone_number key=process.record_filling.phone_number acao=fill
+23:06:00.907 PROCESS           TARGET_RESOLVED tx=tx-5b0fa4e33d5e9635a4ba step=record_filling.fill_phone_number key=process.record_filling.phone_number
+23:06:00.922 PROCESS           ACTION_COMPLETED tx=tx-5b0fa4e33d5e9635a4ba step=record_filling.fill_phone_number key=process.record_filling.phone_number acao=fill tentativa=1 resultado=OK ms=31
+23:06:00.922 PROCESS           ACTION_STARTED tx=tx-5b0fa4e33d5e9635a4ba step=record_filling.click_submit key=process.record_filling.first_name acao=mark
+23:06:00.931 PROCESS           TARGET_RESOLVED tx=tx-5b0fa4e33d5e9635a4ba step=record_filling.click_submit key=process.record_filling.first_name
+23:06:00.931 PROCESS           ACTION_COMPLETED tx=tx-5b0fa4e33d5e9635a4ba step=record_filling.click_submit key=process.record_filling.first_name acao=mark tentativa=1 resultado=OK ms=0
+23:06:00.931 PROCESS           ACTION_STARTED tx=tx-5b0fa4e33d5e9635a4ba step=record_filling.click_submit key=process.record_filling.submit acao=click
+23:06:00.956 PROCESS           TARGET_RESOLVED tx=tx-5b0fa4e33d5e9635a4ba step=record_filling.click_submit key=process.record_filling.submit
+23:06:00.989 PROCESS           ACTION_COMPLETED tx=tx-5b0fa4e33d5e9635a4ba step=record_filling.click_submit key=process.record_filling.submit acao=click tentativa=1 resultado=OK ms=61
+23:06:00.989 TRANSFER_DATA_OUT PHASE_STARTED
+23:06:00.992 TRANSFER_DATA_OUT SINK_COMMITTED tx=tx-5b0fa4e33d5e9635a4ba resultado=SUCCEEDED
+23:06:00.993 TRANSFER_DATA_OUT CHECKPOINT_SAVED tx=tx-5b0fa4e33d5e9635a4ba resultado=SUCCEEDED
+23:06:00.993 TRANSFER_DATA_OUT TRANSACTION_COMPLETED tx=tx-5b0fa4e33d5e9635a4ba tentativa=1 resultado=SUCCEEDED
+23:06:00.993 TRANSFER_DATA_IN  PHASE_STARTED
+23:06:00.993 TRANSFER_DATA_IN  PHASE_COMPLETED tx=tx-3890e20c00fe5763080e
+23:06:00.993 PROCESS           PHASE_STARTED
+23:06:00.993 PROCESS           TRANSACTION_STARTED tx=tx-3890e20c00fe5763080e tentativa=1
+23:06:00.996 PROCESS           CHECKPOINT_SAVED tx=tx-3890e20c00fe5763080e resultado=IN_PROGRESS
+23:06:00.996 PROCESS           ACTION_STARTED tx=tx-3890e20c00fe5763080e step=record_filling.fill_first_name key=process.record_filling.first_name acao=fill
+23:06:01.005 PROCESS           TARGET_RESOLVED tx=tx-3890e20c00fe5763080e step=record_filling.fill_first_name key=process.record_filling.first_name
+23:06:01.018 PROCESS           ACTION_COMPLETED tx=tx-3890e20c00fe5763080e step=record_filling.fill_first_name key=process.record_filling.first_name acao=fill tentativa=1 resultado=OK ms=16
+23:06:01.018 PROCESS           ACTION_STARTED tx=tx-3890e20c00fe5763080e step=record_filling.fill_last_name key=process.record_filling.last_name acao=fill
+23:06:01.025 PROCESS           TARGET_RESOLVED tx=tx-3890e20c00fe5763080e step=record_filling.fill_last_name key=process.record_filling.last_name
+23:06:01.040 PROCESS           ACTION_COMPLETED tx=tx-3890e20c00fe5763080e step=record_filling.fill_last_name key=process.record_filling.last_name acao=fill tentativa=1 resultado=OK ms=14
+23:06:01.040 PROCESS           ACTION_STARTED tx=tx-3890e20c00fe5763080e step=record_filling.fill_company_name key=process.record_filling.company_name acao=fill
+23:06:01.047 PROCESS           TARGET_RESOLVED tx=tx-3890e20c00fe5763080e step=record_filling.fill_company_name key=process.record_filling.company_name
+23:06:01.071 PROCESS           ACTION_COMPLETED tx=tx-3890e20c00fe5763080e step=record_filling.fill_company_name key=process.record_filling.company_name acao=fill tentativa=1 resultado=OK ms=31
+23:06:01.071 PROCESS           ACTION_STARTED tx=tx-3890e20c00fe5763080e step=record_filling.fill_role_in_company key=process.record_filling.role_in_company acao=fill
+23:06:01.079 PROCESS           TARGET_RESOLVED tx=tx-3890e20c00fe5763080e step=record_filling.fill_role_in_company key=process.record_filling.role_in_company
+23:06:01.094 PROCESS           ACTION_COMPLETED tx=tx-3890e20c00fe5763080e step=record_filling.fill_role_in_company key=process.record_filling.role_in_company acao=fill tentativa=1 resultado=OK ms=31
+23:06:01.094 PROCESS           ACTION_STARTED tx=tx-3890e20c00fe5763080e step=record_filling.fill_address key=process.record_filling.address acao=fill
+23:06:01.104 PROCESS           TARGET_RESOLVED tx=tx-3890e20c00fe5763080e step=record_filling.fill_address key=process.record_filling.address
+23:06:01.116 PROCESS           ACTION_COMPLETED tx=tx-3890e20c00fe5763080e step=record_filling.fill_address key=process.record_filling.address acao=fill tentativa=1 resultado=OK ms=14
+23:06:01.117 PROCESS           ACTION_STARTED tx=tx-3890e20c00fe5763080e step=record_filling.fill_email key=process.record_filling.email acao=fill
+23:06:01.125 PROCESS           TARGET_RESOLVED tx=tx-3890e20c00fe5763080e step=record_filling.fill_email key=process.record_filling.email
+23:06:01.136 PROCESS           ACTION_COMPLETED tx=tx-3890e20c00fe5763080e step=record_filling.fill_email key=process.record_filling.email acao=fill tentativa=1 resultado=OK ms=31
+23:06:01.137 PROCESS           ACTION_STARTED tx=tx-3890e20c00fe5763080e step=record_filling.fill_phone_number key=process.record_filling.phone_number acao=fill
+23:06:01.144 PROCESS           TARGET_RESOLVED tx=tx-3890e20c00fe5763080e step=record_filling.fill_phone_number key=process.record_filling.phone_number
+23:06:01.157 PROCESS           ACTION_COMPLETED tx=tx-3890e20c00fe5763080e step=record_filling.fill_phone_number key=process.record_filling.phone_number acao=fill tentativa=1 resultado=OK ms=14
+23:06:01.157 PROCESS           ACTION_STARTED tx=tx-3890e20c00fe5763080e step=record_filling.click_submit key=process.record_filling.first_name acao=mark
+23:06:01.165 PROCESS           TARGET_RESOLVED tx=tx-3890e20c00fe5763080e step=record_filling.click_submit key=process.record_filling.first_name
+23:06:01.165 PROCESS           ACTION_COMPLETED tx=tx-3890e20c00fe5763080e step=record_filling.click_submit key=process.record_filling.first_name acao=mark tentativa=1 resultado=OK ms=0
+23:06:01.165 PROCESS           ACTION_STARTED tx=tx-3890e20c00fe5763080e step=record_filling.click_submit key=process.record_filling.submit acao=click
+23:06:01.189 PROCESS           TARGET_RESOLVED tx=tx-3890e20c00fe5763080e step=record_filling.click_submit key=process.record_filling.submit
+23:06:01.223 PROCESS           ACTION_COMPLETED tx=tx-3890e20c00fe5763080e step=record_filling.click_submit key=process.record_filling.submit acao=click tentativa=1 resultado=OK ms=63
+23:06:01.223 TRANSFER_DATA_OUT PHASE_STARTED
+23:06:01.225 TRANSFER_DATA_OUT SINK_COMMITTED tx=tx-3890e20c00fe5763080e resultado=SUCCEEDED
+23:06:01.227 TRANSFER_DATA_OUT CHECKPOINT_SAVED tx=tx-3890e20c00fe5763080e resultado=SUCCEEDED
+23:06:01.227 TRANSFER_DATA_OUT TRANSACTION_COMPLETED tx=tx-3890e20c00fe5763080e tentativa=1 resultado=SUCCEEDED
+23:06:01.227 TRANSFER_DATA_IN  PHASE_STARTED
+23:06:01.227 TRANSFER_DATA_IN  PHASE_COMPLETED tx=tx-cdb433b3ac3b6bda77b5
+23:06:01.227 PROCESS           PHASE_STARTED
+23:06:01.227 PROCESS           TRANSACTION_STARTED tx=tx-cdb433b3ac3b6bda77b5 tentativa=1
+23:06:01.229 PROCESS           CHECKPOINT_SAVED tx=tx-cdb433b3ac3b6bda77b5 resultado=IN_PROGRESS
+23:06:01.229 PROCESS           ACTION_STARTED tx=tx-cdb433b3ac3b6bda77b5 step=record_filling.fill_first_name key=process.record_filling.first_name acao=fill
+23:06:01.237 PROCESS           TARGET_RESOLVED tx=tx-cdb433b3ac3b6bda77b5 step=record_filling.fill_first_name key=process.record_filling.first_name
+23:06:01.248 PROCESS           ACTION_COMPLETED tx=tx-cdb433b3ac3b6bda77b5 step=record_filling.fill_first_name key=process.record_filling.first_name acao=fill tentativa=1 resultado=OK ms=15
+23:06:01.248 PROCESS           ACTION_STARTED tx=tx-cdb433b3ac3b6bda77b5 step=record_filling.fill_last_name key=process.record_filling.last_name acao=fill
+23:06:01.255 PROCESS           TARGET_RESOLVED tx=tx-cdb433b3ac3b6bda77b5 step=record_filling.fill_last_name key=process.record_filling.last_name
+23:06:01.268 PROCESS           ACTION_COMPLETED tx=tx-cdb433b3ac3b6bda77b5 step=record_filling.fill_last_name key=process.record_filling.last_name acao=fill tentativa=1 resultado=OK ms=16
+23:06:01.268 PROCESS           ACTION_STARTED tx=tx-cdb433b3ac3b6bda77b5 step=record_filling.fill_company_name key=process.record_filling.company_name acao=fill
+23:06:01.277 PROCESS           TARGET_RESOLVED tx=tx-cdb433b3ac3b6bda77b5 step=record_filling.fill_company_name key=process.record_filling.company_name
+23:06:01.289 PROCESS           ACTION_COMPLETED tx=tx-cdb433b3ac3b6bda77b5 step=record_filling.fill_company_name key=process.record_filling.company_name acao=fill tentativa=1 resultado=OK ms=14
+23:06:01.289 PROCESS           ACTION_STARTED tx=tx-cdb433b3ac3b6bda77b5 step=record_filling.fill_role_in_company key=process.record_filling.role_in_company acao=fill
+23:06:01.297 PROCESS           TARGET_RESOLVED tx=tx-cdb433b3ac3b6bda77b5 step=record_filling.fill_role_in_company key=process.record_filling.role_in_company
+23:06:01.308 PROCESS           ACTION_COMPLETED tx=tx-cdb433b3ac3b6bda77b5 step=record_filling.fill_role_in_company key=process.record_filling.role_in_company acao=fill tentativa=1 resultado=OK ms=31
+23:06:01.309 PROCESS           ACTION_STARTED tx=tx-cdb433b3ac3b6bda77b5 step=record_filling.fill_address key=process.record_filling.address acao=fill
+23:06:01.315 PROCESS           TARGET_RESOLVED tx=tx-cdb433b3ac3b6bda77b5 step=record_filling.fill_address key=process.record_filling.address
+23:06:01.329 PROCESS           ACTION_COMPLETED tx=tx-cdb433b3ac3b6bda77b5 step=record_filling.fill_address key=process.record_filling.address acao=fill tentativa=1 resultado=OK ms=15
+23:06:01.329 PROCESS           ACTION_STARTED tx=tx-cdb433b3ac3b6bda77b5 step=record_filling.fill_email key=process.record_filling.email acao=fill
+23:06:01.337 PROCESS           TARGET_RESOLVED tx=tx-cdb433b3ac3b6bda77b5 step=record_filling.fill_email key=process.record_filling.email
+23:06:01.350 PROCESS           ACTION_COMPLETED tx=tx-cdb433b3ac3b6bda77b5 step=record_filling.fill_email key=process.record_filling.email acao=fill tentativa=1 resultado=OK ms=16
+23:06:01.350 PROCESS           ACTION_STARTED tx=tx-cdb433b3ac3b6bda77b5 step=record_filling.fill_phone_number key=process.record_filling.phone_number acao=fill
+23:06:01.357 PROCESS           TARGET_RESOLVED tx=tx-cdb433b3ac3b6bda77b5 step=record_filling.fill_phone_number key=process.record_filling.phone_number
+23:06:01.371 PROCESS           ACTION_COMPLETED tx=tx-cdb433b3ac3b6bda77b5 step=record_filling.fill_phone_number key=process.record_filling.phone_number acao=fill tentativa=1 resultado=OK ms=30
+23:06:01.371 PROCESS           ACTION_STARTED tx=tx-cdb433b3ac3b6bda77b5 step=record_filling.click_submit key=process.record_filling.first_name acao=mark
+23:06:01.379 PROCESS           TARGET_RESOLVED tx=tx-cdb433b3ac3b6bda77b5 step=record_filling.click_submit key=process.record_filling.first_name
+23:06:01.379 PROCESS           ACTION_COMPLETED tx=tx-cdb433b3ac3b6bda77b5 step=record_filling.click_submit key=process.record_filling.first_name acao=mark tentativa=1 resultado=OK ms=0
+23:06:01.379 PROCESS           ACTION_STARTED tx=tx-cdb433b3ac3b6bda77b5 step=record_filling.click_submit key=process.record_filling.submit acao=click
+23:06:01.405 PROCESS           TARGET_RESOLVED tx=tx-cdb433b3ac3b6bda77b5 step=record_filling.click_submit key=process.record_filling.submit
+23:06:01.435 PROCESS           ACTION_COMPLETED tx=tx-cdb433b3ac3b6bda77b5 step=record_filling.click_submit key=process.record_filling.submit acao=click tentativa=1 resultado=OK ms=62
+23:06:01.435 TRANSFER_DATA_OUT PHASE_STARTED
+23:06:01.438 TRANSFER_DATA_OUT SINK_COMMITTED tx=tx-cdb433b3ac3b6bda77b5 resultado=SUCCEEDED
+23:06:01.439 TRANSFER_DATA_OUT CHECKPOINT_SAVED tx=tx-cdb433b3ac3b6bda77b5 resultado=SUCCEEDED
+23:06:01.439 TRANSFER_DATA_OUT TRANSACTION_COMPLETED tx=tx-cdb433b3ac3b6bda77b5 tentativa=1 resultado=SUCCEEDED
+23:06:01.439 TRANSFER_DATA_IN  PHASE_STARTED
+23:06:01.439 TRANSFER_DATA_IN  PHASE_COMPLETED tx=tx-8a79a032e94df7dcc3a2
+23:06:01.441 PROCESS           PHASE_STARTED
+23:06:01.441 PROCESS           TRANSACTION_STARTED tx=tx-8a79a032e94df7dcc3a2 tentativa=1
+23:06:01.442 PROCESS           CHECKPOINT_SAVED tx=tx-8a79a032e94df7dcc3a2 resultado=IN_PROGRESS
+23:06:01.442 PROCESS           ACTION_STARTED tx=tx-8a79a032e94df7dcc3a2 step=record_filling.fill_first_name key=process.record_filling.first_name acao=fill
+23:06:01.451 PROCESS           TARGET_RESOLVED tx=tx-8a79a032e94df7dcc3a2 step=record_filling.fill_first_name key=process.record_filling.first_name
+23:06:01.462 PROCESS           ACTION_COMPLETED tx=tx-8a79a032e94df7dcc3a2 step=record_filling.fill_first_name key=process.record_filling.first_name acao=fill tentativa=1 resultado=OK ms=15
+23:06:01.462 PROCESS           ACTION_STARTED tx=tx-8a79a032e94df7dcc3a2 step=record_filling.fill_last_name key=process.record_filling.last_name acao=fill
+23:06:01.469 PROCESS           TARGET_RESOLVED tx=tx-8a79a032e94df7dcc3a2 step=record_filling.fill_last_name key=process.record_filling.last_name
+23:06:01.482 PROCESS           ACTION_COMPLETED tx=tx-8a79a032e94df7dcc3a2 step=record_filling.fill_last_name key=process.record_filling.last_name acao=fill tentativa=1 resultado=OK ms=31
+23:06:01.482 PROCESS           ACTION_STARTED tx=tx-8a79a032e94df7dcc3a2 step=record_filling.fill_company_name key=process.record_filling.company_name acao=fill
+23:06:01.491 PROCESS           TARGET_RESOLVED tx=tx-8a79a032e94df7dcc3a2 step=record_filling.fill_company_name key=process.record_filling.company_name
+23:06:01.503 PROCESS           ACTION_COMPLETED tx=tx-8a79a032e94df7dcc3a2 step=record_filling.fill_company_name key=process.record_filling.company_name acao=fill tentativa=1 resultado=OK ms=15
+23:06:01.503 PROCESS           ACTION_STARTED tx=tx-8a79a032e94df7dcc3a2 step=record_filling.fill_role_in_company key=process.record_filling.role_in_company acao=fill
+23:06:01.512 PROCESS           TARGET_RESOLVED tx=tx-8a79a032e94df7dcc3a2 step=record_filling.fill_role_in_company key=process.record_filling.role_in_company
+23:06:01.524 PROCESS           ACTION_COMPLETED tx=tx-8a79a032e94df7dcc3a2 step=record_filling.fill_role_in_company key=process.record_filling.role_in_company acao=fill tentativa=1 resultado=OK ms=16
+23:06:01.525 PROCESS           ACTION_STARTED tx=tx-8a79a032e94df7dcc3a2 step=record_filling.fill_address key=process.record_filling.address acao=fill
+23:06:01.532 PROCESS           TARGET_RESOLVED tx=tx-8a79a032e94df7dcc3a2 step=record_filling.fill_address key=process.record_filling.address
+23:06:01.547 PROCESS           ACTION_COMPLETED tx=tx-8a79a032e94df7dcc3a2 step=record_filling.fill_address key=process.record_filling.address acao=fill tentativa=1 resultado=OK ms=31
+23:06:01.547 PROCESS           ACTION_STARTED tx=tx-8a79a032e94df7dcc3a2 step=record_filling.fill_email key=process.record_filling.email acao=fill
+23:06:01.555 PROCESS           TARGET_RESOLVED tx=tx-8a79a032e94df7dcc3a2 step=record_filling.fill_email key=process.record_filling.email
+23:06:01.569 PROCESS           ACTION_COMPLETED tx=tx-8a79a032e94df7dcc3a2 step=record_filling.fill_email key=process.record_filling.email acao=fill tentativa=1 resultado=OK ms=14
+23:06:01.569 PROCESS           ACTION_STARTED tx=tx-8a79a032e94df7dcc3a2 step=record_filling.fill_phone_number key=process.record_filling.phone_number acao=fill
+23:06:01.576 PROCESS           TARGET_RESOLVED tx=tx-8a79a032e94df7dcc3a2 step=record_filling.fill_phone_number key=process.record_filling.phone_number
+23:06:01.589 PROCESS           ACTION_COMPLETED tx=tx-8a79a032e94df7dcc3a2 step=record_filling.fill_phone_number key=process.record_filling.phone_number acao=fill tentativa=1 resultado=OK ms=31
+23:06:01.589 PROCESS           ACTION_STARTED tx=tx-8a79a032e94df7dcc3a2 step=record_filling.click_submit key=process.record_filling.first_name acao=mark
+23:06:01.597 PROCESS           TARGET_RESOLVED tx=tx-8a79a032e94df7dcc3a2 step=record_filling.click_submit key=process.record_filling.first_name
+23:06:01.597 PROCESS           ACTION_COMPLETED tx=tx-8a79a032e94df7dcc3a2 step=record_filling.click_submit key=process.record_filling.first_name acao=mark tentativa=1 resultado=OK ms=0
+23:06:01.597 PROCESS           ACTION_STARTED tx=tx-8a79a032e94df7dcc3a2 step=record_filling.click_submit key=process.record_filling.submit acao=click
+23:06:01.619 PROCESS           TARGET_RESOLVED tx=tx-8a79a032e94df7dcc3a2 step=record_filling.click_submit key=process.record_filling.submit
+23:06:01.652 PROCESS           ACTION_COMPLETED tx=tx-8a79a032e94df7dcc3a2 step=record_filling.click_submit key=process.record_filling.submit acao=click tentativa=1 resultado=OK ms=61
+23:06:01.652 TRANSFER_DATA_OUT PHASE_STARTED
+23:06:01.654 TRANSFER_DATA_OUT SINK_COMMITTED tx=tx-8a79a032e94df7dcc3a2 resultado=SUCCEEDED
+23:06:01.655 TRANSFER_DATA_OUT CHECKPOINT_SAVED tx=tx-8a79a032e94df7dcc3a2 resultado=SUCCEEDED
+23:06:01.655 TRANSFER_DATA_OUT TRANSACTION_COMPLETED tx=tx-8a79a032e94df7dcc3a2 tentativa=1 resultado=SUCCEEDED
+23:06:01.655 TRANSFER_DATA_IN  PHASE_STARTED
+23:06:01.655 TRANSFER_DATA_IN  PHASE_COMPLETED tx=tx-37b15c2199a6bfdea47f
+23:06:01.655 PROCESS           PHASE_STARTED
+23:06:01.655 PROCESS           TRANSACTION_STARTED tx=tx-37b15c2199a6bfdea47f tentativa=1
+23:06:01.658 PROCESS           CHECKPOINT_SAVED tx=tx-37b15c2199a6bfdea47f resultado=IN_PROGRESS
+23:06:01.658 PROCESS           ACTION_STARTED tx=tx-37b15c2199a6bfdea47f step=record_filling.fill_first_name key=process.record_filling.first_name acao=fill
+23:06:01.665 PROCESS           TARGET_RESOLVED tx=tx-37b15c2199a6bfdea47f step=record_filling.fill_first_name key=process.record_filling.first_name
+23:06:01.681 PROCESS           ACTION_COMPLETED tx=tx-37b15c2199a6bfdea47f step=record_filling.fill_first_name key=process.record_filling.first_name acao=fill tentativa=1 resultado=OK ms=16
+23:06:01.681 PROCESS           ACTION_STARTED tx=tx-37b15c2199a6bfdea47f step=record_filling.fill_last_name key=process.record_filling.last_name acao=fill
+23:06:01.688 PROCESS           TARGET_RESOLVED tx=tx-37b15c2199a6bfdea47f step=record_filling.fill_last_name key=process.record_filling.last_name
+23:06:01.702 PROCESS           ACTION_COMPLETED tx=tx-37b15c2199a6bfdea47f step=record_filling.fill_last_name key=process.record_filling.last_name acao=fill tentativa=1 resultado=OK ms=30
+23:06:01.702 PROCESS           ACTION_STARTED tx=tx-37b15c2199a6bfdea47f step=record_filling.fill_company_name key=process.record_filling.company_name acao=fill
+23:06:01.708 PROCESS           TARGET_RESOLVED tx=tx-37b15c2199a6bfdea47f step=record_filling.fill_company_name key=process.record_filling.company_name
+23:06:01.721 PROCESS           ACTION_COMPLETED tx=tx-37b15c2199a6bfdea47f step=record_filling.fill_company_name key=process.record_filling.company_name acao=fill tentativa=1 resultado=OK ms=16
+23:06:01.721 PROCESS           ACTION_STARTED tx=tx-37b15c2199a6bfdea47f step=record_filling.fill_role_in_company key=process.record_filling.role_in_company acao=fill
+23:06:01.728 PROCESS           TARGET_RESOLVED tx=tx-37b15c2199a6bfdea47f step=record_filling.fill_role_in_company key=process.record_filling.role_in_company
+23:06:01.741 PROCESS           ACTION_COMPLETED tx=tx-37b15c2199a6bfdea47f step=record_filling.fill_role_in_company key=process.record_filling.role_in_company acao=fill tentativa=1 resultado=OK ms=14
+23:06:01.741 PROCESS           ACTION_STARTED tx=tx-37b15c2199a6bfdea47f step=record_filling.fill_address key=process.record_filling.address acao=fill
+23:06:01.748 PROCESS           TARGET_RESOLVED tx=tx-37b15c2199a6bfdea47f step=record_filling.fill_address key=process.record_filling.address
+23:06:01.759 PROCESS           ACTION_COMPLETED tx=tx-37b15c2199a6bfdea47f step=record_filling.fill_address key=process.record_filling.address acao=fill tentativa=1 resultado=OK ms=15
+23:06:01.761 PROCESS           ACTION_STARTED tx=tx-37b15c2199a6bfdea47f step=record_filling.fill_email key=process.record_filling.email acao=fill
+23:06:01.768 PROCESS           TARGET_RESOLVED tx=tx-37b15c2199a6bfdea47f step=record_filling.fill_email key=process.record_filling.email
+23:06:01.780 PROCESS           ACTION_COMPLETED tx=tx-37b15c2199a6bfdea47f step=record_filling.fill_email key=process.record_filling.email acao=fill tentativa=1 resultado=OK ms=14
+23:06:01.780 PROCESS           ACTION_STARTED tx=tx-37b15c2199a6bfdea47f step=record_filling.fill_phone_number key=process.record_filling.phone_number acao=fill
+23:06:01.786 PROCESS           TARGET_RESOLVED tx=tx-37b15c2199a6bfdea47f step=record_filling.fill_phone_number key=process.record_filling.phone_number
+23:06:01.799 PROCESS           ACTION_COMPLETED tx=tx-37b15c2199a6bfdea47f step=record_filling.fill_phone_number key=process.record_filling.phone_number acao=fill tentativa=1 resultado=OK ms=16
+23:06:01.799 PROCESS           ACTION_STARTED tx=tx-37b15c2199a6bfdea47f step=record_filling.click_submit key=process.record_filling.first_name acao=mark
+23:06:01.807 PROCESS           TARGET_RESOLVED tx=tx-37b15c2199a6bfdea47f step=record_filling.click_submit key=process.record_filling.first_name
+23:06:01.807 PROCESS           ACTION_COMPLETED tx=tx-37b15c2199a6bfdea47f step=record_filling.click_submit key=process.record_filling.first_name acao=mark tentativa=1 resultado=OK ms=14
+23:06:01.807 PROCESS           ACTION_STARTED tx=tx-37b15c2199a6bfdea47f step=record_filling.click_submit key=process.record_filling.submit acao=click
+23:06:01.832 PROCESS           TARGET_RESOLVED tx=tx-37b15c2199a6bfdea47f step=record_filling.click_submit key=process.record_filling.submit
+23:06:01.865 PROCESS           ACTION_COMPLETED tx=tx-37b15c2199a6bfdea47f step=record_filling.click_submit key=process.record_filling.submit acao=click tentativa=1 resultado=OK ms=46
+23:06:01.865 TRANSFER_DATA_OUT PHASE_STARTED
+23:06:01.867 TRANSFER_DATA_OUT SINK_COMMITTED tx=tx-37b15c2199a6bfdea47f resultado=SUCCEEDED
+23:06:01.869 TRANSFER_DATA_OUT CHECKPOINT_SAVED tx=tx-37b15c2199a6bfdea47f resultado=SUCCEEDED
+23:06:01.869 TRANSFER_DATA_OUT TRANSACTION_COMPLETED tx=tx-37b15c2199a6bfdea47f tentativa=1 resultado=SUCCEEDED
+23:06:01.869 TRANSFER_DATA_IN  PHASE_STARTED
+23:06:01.869 TRANSFER_DATA_IN  PHASE_COMPLETED tx=tx-16ba2f44ef513e0c52a1
+23:06:01.869 PROCESS           PHASE_STARTED
+23:06:01.869 PROCESS           TRANSACTION_STARTED tx=tx-16ba2f44ef513e0c52a1 tentativa=1
+23:06:01.871 PROCESS           CHECKPOINT_SAVED tx=tx-16ba2f44ef513e0c52a1 resultado=IN_PROGRESS
+23:06:01.871 PROCESS           ACTION_STARTED tx=tx-16ba2f44ef513e0c52a1 step=record_filling.fill_first_name key=process.record_filling.first_name acao=fill
+23:06:01.879 PROCESS           TARGET_RESOLVED tx=tx-16ba2f44ef513e0c52a1 step=record_filling.fill_first_name key=process.record_filling.first_name
+23:06:01.892 PROCESS           ACTION_COMPLETED tx=tx-16ba2f44ef513e0c52a1 step=record_filling.fill_first_name key=process.record_filling.first_name acao=fill tentativa=1 resultado=OK ms=16
+23:06:01.893 PROCESS           ACTION_STARTED tx=tx-16ba2f44ef513e0c52a1 step=record_filling.fill_last_name key=process.record_filling.last_name acao=fill
+23:06:01.899 PROCESS           TARGET_RESOLVED tx=tx-16ba2f44ef513e0c52a1 step=record_filling.fill_last_name key=process.record_filling.last_name
+23:06:01.912 PROCESS           ACTION_COMPLETED tx=tx-16ba2f44ef513e0c52a1 step=record_filling.fill_last_name key=process.record_filling.last_name acao=fill tentativa=1 resultado=OK ms=14
+23:06:01.912 PROCESS           ACTION_STARTED tx=tx-16ba2f44ef513e0c52a1 step=record_filling.fill_company_name key=process.record_filling.company_name acao=fill
+23:06:01.920 PROCESS           TARGET_RESOLVED tx=tx-16ba2f44ef513e0c52a1 step=record_filling.fill_company_name key=process.record_filling.company_name
+23:06:01.933 PROCESS           ACTION_COMPLETED tx=tx-16ba2f44ef513e0c52a1 step=record_filling.fill_company_name key=process.record_filling.company_name acao=fill tentativa=1 resultado=OK ms=31
+23:06:01.933 PROCESS           ACTION_STARTED tx=tx-16ba2f44ef513e0c52a1 step=record_filling.fill_role_in_company key=process.record_filling.role_in_company acao=fill
+23:06:01.941 PROCESS           TARGET_RESOLVED tx=tx-16ba2f44ef513e0c52a1 step=record_filling.fill_role_in_company key=process.record_filling.role_in_company
+23:06:01.956 PROCESS           ACTION_COMPLETED tx=tx-16ba2f44ef513e0c52a1 step=record_filling.fill_role_in_company key=process.record_filling.role_in_company acao=fill tentativa=1 resultado=OK ms=15
+23:06:01.956 PROCESS           ACTION_STARTED tx=tx-16ba2f44ef513e0c52a1 step=record_filling.fill_address key=process.record_filling.address acao=fill
+23:06:01.964 PROCESS           TARGET_RESOLVED tx=tx-16ba2f44ef513e0c52a1 step=record_filling.fill_address key=process.record_filling.address
+23:06:01.977 PROCESS           ACTION_COMPLETED tx=tx-16ba2f44ef513e0c52a1 step=record_filling.fill_address key=process.record_filling.address acao=fill tentativa=1 resultado=OK ms=16
+23:06:01.977 PROCESS           ACTION_STARTED tx=tx-16ba2f44ef513e0c52a1 step=record_filling.fill_email key=process.record_filling.email acao=fill
+23:06:01.985 PROCESS           TARGET_RESOLVED tx=tx-16ba2f44ef513e0c52a1 step=record_filling.fill_email key=process.record_filling.email
+23:06:01.997 PROCESS           ACTION_COMPLETED tx=tx-16ba2f44ef513e0c52a1 step=record_filling.fill_email key=process.record_filling.email acao=fill tentativa=1 resultado=OK ms=30
+23:06:01.997 PROCESS           ACTION_STARTED tx=tx-16ba2f44ef513e0c52a1 step=record_filling.fill_phone_number key=process.record_filling.phone_number acao=fill
+23:06:02.005 PROCESS           TARGET_RESOLVED tx=tx-16ba2f44ef513e0c52a1 step=record_filling.fill_phone_number key=process.record_filling.phone_number
+23:06:02.019 PROCESS           ACTION_COMPLETED tx=tx-16ba2f44ef513e0c52a1 step=record_filling.fill_phone_number key=process.record_filling.phone_number acao=fill tentativa=1 resultado=OK ms=16
+23:06:02.019 PROCESS           ACTION_STARTED tx=tx-16ba2f44ef513e0c52a1 step=record_filling.click_submit key=process.record_filling.first_name acao=mark
+23:06:02.026 PROCESS           TARGET_RESOLVED tx=tx-16ba2f44ef513e0c52a1 step=record_filling.click_submit key=process.record_filling.first_name
+23:06:02.026 PROCESS           ACTION_COMPLETED tx=tx-16ba2f44ef513e0c52a1 step=record_filling.click_submit key=process.record_filling.first_name acao=mark tentativa=1 resultado=OK ms=14
+23:06:02.027 PROCESS           ACTION_STARTED tx=tx-16ba2f44ef513e0c52a1 step=record_filling.click_submit key=process.record_filling.submit acao=click
+23:06:02.052 PROCESS           TARGET_RESOLVED tx=tx-16ba2f44ef513e0c52a1 step=record_filling.click_submit key=process.record_filling.submit
+23:06:02.085 PROCESS           ACTION_COMPLETED tx=tx-16ba2f44ef513e0c52a1 step=record_filling.click_submit key=process.record_filling.submit acao=click tentativa=1 resultado=OK ms=46
+23:06:02.086 TRANSFER_DATA_OUT PHASE_STARTED
+23:06:02.088 TRANSFER_DATA_OUT SINK_COMMITTED tx=tx-16ba2f44ef513e0c52a1 resultado=SUCCEEDED
+23:06:02.089 TRANSFER_DATA_OUT CHECKPOINT_SAVED tx=tx-16ba2f44ef513e0c52a1 resultado=SUCCEEDED
+23:06:02.089 TRANSFER_DATA_OUT TRANSACTION_COMPLETED tx=tx-16ba2f44ef513e0c52a1 tentativa=1 resultado=SUCCEEDED
+23:06:02.089 TRANSFER_DATA_IN  PHASE_STARTED
+23:06:02.089 TRANSFER_DATA_IN  PHASE_COMPLETED resultado=NO_MORE_ITEMS
+23:06:02.089 END               PHASE_STARTED
+23:06:02.089 END               ACTION_STARTED step=conclusion.read_result acao=read_text_matching
+23:06:02.095 END               ACTION_COMPLETED step=conclusion.read_result acao=read_text_matching tentativa=1 resultado=OK ms=0
+23:06:02.282 END               CLEANUP_COMPLETED detalhe=browser
+23:06:02.282 END               ENGINE_COMPLETED resultado=COMPLETED

@@ -1,0 +1,39 @@
+{
+  "schema": "nekkora-rpa/selectors",
+  "version": "1.1.0",
+  "system": "acervo",
+  "targets": {
+    "acervo.pesquisa.campo_de_pesquisa": {
+      "preferred": {"strategy": "css", "expression": "form#buscaform input[name=\"q\"]"},
+      "expected": {"tag": "input"}
+    },
+    "acervo.ficha.titulo": {
+      "preferred": {"strategy": "css", "expression": "h1#titulo"},
+      "expected": {"tag": "h1"}
+    },
+    "acervo.ficha.nome_completo": {
+      "preferred": {"strategy": "xpath", "expression": "//table//tr[th[normalize-space(.)=\"Nome completo\"]]//td"},
+      "expected": {"tag": "td"}
+    },
+    "acervo.ficha.nascimento": {
+      "preferred": {"strategy": "xpath", "expression": "//table//tr[th[normalize-space(.)=\"Nascimento\"]]//td"},
+      "expected": {"tag": "td"}
+    },
+    "acervo.ficha.morte": {
+      "preferred": {"strategy": "xpath", "expression": "//table//tr[th[normalize-space(.)=\"Morte\"]]//td"},
+      "expected": {"tag": "td"}
+    },
+    "acervo.ficha.nacionalidade": {
+      "preferred": {"strategy": "xpath", "expression": "//table//tr[th[normalize-space(.)=\"Nacionalidade\"]]//td"},
+      "expected": {"tag": "td"}
+    },
+    "acervo.ficha.ocupacao": {
+      "preferred": {"strategy": "xpath", "expression": "//table//tr[th[normalize-space(.)=\"Ocupação\"]]//td"},
+      "expected": {"tag": "td"}
+    },
+    "acervo.ficha.campos": {
+      "preferred": {"strategy": "xpath", "expression": "//table//tr[th[normalize-space(.)=\"Campo(s)\"]]//td"},
+      "expected": {"tag": "td"}
+    }
+  }
+}

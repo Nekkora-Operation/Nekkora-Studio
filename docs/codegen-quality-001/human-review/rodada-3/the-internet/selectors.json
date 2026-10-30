@@ -1,0 +1,116 @@
+{
+  "schema": "nekkora-rpa/selectors",
+  "version": "1.1.0",
+  "system": "process",
+  "targets": {
+    "process.access.username": {
+      "preferred": {
+        "strategy": "css",
+        "expression": "input#username"
+      },
+      "alternatives": [
+        {
+          "strategy": "css",
+          "expression": "input[name=\"username\"]"
+        },
+        {
+          "strategy": "label",
+          "text": "Username"
+        },
+        {
+          "strategy": "css",
+          "expression": "form#login input#username"
+        }
+      ],
+      "expected": {
+        "tag": "input",
+        "role": "textbox",
+        "name": "Username"
+      },
+      "provenance": {
+        "studioStepId": "4b9d2a0a-0690-4bc4-97bb-ff83a056fd8b"
+      }
+    },
+    "process.access.password": {
+      "preferred": {
+        "strategy": "css",
+        "expression": "input#password"
+      },
+      "alternatives": [
+        {
+          "strategy": "css",
+          "expression": "input[name=\"password\"]"
+        },
+        {
+          "strategy": "label",
+          "text": "Password"
+        },
+        {
+          "strategy": "css",
+          "expression": "form#login input#password"
+        }
+      ],
+      "expected": {
+        "tag": "input",
+        "label": "Password"
+      },
+      "provenance": {
+        "studioStepId": "b211eb60-6590-4bdf-8b44-204d5b664bea"
+      }
+    },
+    "process.access.login": {
+      "preferred": {
+        "strategy": "xpath",
+        "expression": "//form[@id=\"login\"]//button[normalize-space(.)=\"Login\"]"
+      },
+      "alternatives": [
+        {
+          "strategy": "role",
+          "role": "button",
+          "name": "Login"
+        },
+        {
+          "strategy": "xpath",
+          "expression": "//button[normalize-space(.)=\"Login\"]"
+        },
+        {
+          "strategy": "css",
+          "expression": "form#login > button"
+        }
+      ],
+      "expected": {
+        "tag": "button",
+        "role": "button",
+        "name": "Login"
+      },
+      "provenance": {
+        "studioStepId": "cde93ef9-94c7-4256-bcaa-47884b471049"
+      }
+    },
+    "process.secure_area.logout": {
+      "preferred": {
+        "strategy": "xpath",
+        "expression": "//a[normalize-space(.)=\"Logout\"]"
+      },
+      "alternatives": [
+        {
+          "strategy": "role",
+          "role": "link",
+          "name": "Logout"
+        },
+        {
+          "strategy": "css",
+          "expression": "div#content > div > a"
+        }
+      ],
+      "expected": {
+        "tag": "a",
+        "role": "link",
+        "name": "Logout"
+      },
+      "provenance": {
+        "studioStepId": "d4b43468-001c-4b31-96f7-5657a183b885"
+      }
+    }
+  }
+}

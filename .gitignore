@@ -21,3 +21,7 @@ build/
 .env.*
 __pycache__/
 *.pyc
+
+# STUDIO-LEAN-001 (decisão 4 da titular, 24/10/2026): ambiente Python local criado por quem roda a evidência G5
+# (README dela: python -m venv .venv); regenerável, nunca versionado. Só esta pasta: nada mais da evidência fica oculto.
+/docs/e2e-001/evidence/g5-codigo-final/venv/

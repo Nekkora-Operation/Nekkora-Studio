@@ -20,10 +20,21 @@ import java.util.Map;
  *   <li>{@code PROTECTED}: difere do que o gerador gravou → foi editado à mão (ou não é do gerador): o novo vai para
  *       {@code <arquivo>.novo} e a comparação para {@code <arquivo>.diff}; o manifesto anterior é preservado.</li>
  * </ul>
+ * CODEGEN-QUALITY-001 rodada 3 (layout novo): arquivo da geração ANTERIOR que a nova não tem mais (ex.: {@code paginas.py}
+ * quando o código passa para o pacote {@code automation/}) nunca é apagado:
+ * <ul>
+ *   <li>{@code RETIRED}: igual ao que o gerador gravou → movido intacto para {@code previous-generation/<versão>/}, com
+ *       uma cópia do manifesto anterior (a geração anterior continua inteira e conferível);</li>
+ *   <li>{@code KEPT}: editado à mão → fica onde está (nada é movido nem sobrescrito) e é informado.</li>
+ * </ul>
+ * Com algum arquivo {@code PROTECTED}, nada é aposentado (o manifesto anterior continua valendo).
  */
 public final class OutputWriter {
 
-    public enum Status { WRITTEN, UNCHANGED, PROTECTED }
+    public enum Status { WRITTEN, UNCHANGED, PROTECTED, RETIRED, KEPT }
+
+    /** Pasta onde os arquivos da geração anterior que saíram do projeto ficam guardados (por versão). */
+    public static final String PREVIOUS = "previous-generation";
 
     public record Report(Map<String, Status> files) {
         public boolean protectedAny() {
@@ -36,13 +47,16 @@ public final class OutputWriter {
     public static Report write(Path dir, Map<String, String> files) throws IOException {
         Files.createDirectories(dir);
         Map<String, String> previous = previousHashes(dir.resolve("manifest.json"));
+        String previousManifest = Files.isRegularFile(dir.resolve("manifest.json")) ? Files.readString(dir.resolve("manifest.json"), StandardCharsets.UTF_8) : null;
         Map<String, Status> out = new LinkedHashMap<>();
         for (Map.Entry<String, String> f : files.entrySet()) {
             if (f.getKey().equals("manifest.json")) continue;
             out.put(f.getKey(), one(dir, f.getKey(), f.getValue(), previous));
         }
         boolean blocked = out.containsValue(Status.PROTECTED);
+        if (!blocked && previousManifest != null) retire(dir, files, previous, previousManifest, out);
         String manifest = files.get("manifest.json");
+        if (manifest != null && previousManifest != null) manifest = linkPreviousKeys(manifest, previousManifest);
         if (manifest != null) {
             Path m = dir.resolve("manifest.json");
             if (blocked) {
@@ -80,6 +94,119 @@ public final class OutputWriter {
         atomic(sibling(target, ".novo"), content);
         atomic(sibling(target, ".diff"), Diff.unified(rel, current, content));
         return Status.PROTECTED;
+    }
+
+    /** Arquivos do manifesto anterior que a geração nova não tem: guardados por versão (ou mantidos, se editados). */
+    private static void retire(Path dir, Map<String, String> files, Map<String, String> previous, String previousManifest, Map<String, Status> out)
+            throws IOException {
+        Path version = null;
+        for (Map.Entry<String, String> e : previous.entrySet()) {
+            String rel = e.getKey();
+            if (files.containsKey(rel)) continue;
+            Path target = dir.resolve(rel).normalize();
+            if (!target.startsWith(dir.normalize()) || !Files.isRegularFile(target)) continue;
+            String current = Files.readString(target, StandardCharsets.UTF_8);
+            if (!e.getValue().equals("sha256:" + CodegenConfig.sha256(current))) {
+                out.put(rel, Status.KEPT);
+                continue;
+            }
+            if (version == null) {
+                version = dir.resolve(PREVIOUS).resolve(versionName(previousManifest));
+                Files.createDirectories(version);
+                atomic(version.resolve("manifest.json"), previousManifest);
+            }
+            Path moved = version.resolve(rel).normalize();
+            Files.createDirectories(moved.getParent());
+            Files.move(target, moved, StandardCopyOption.REPLACE_EXISTING);
+            out.put(rel, Status.RETIRED);
+        }
+    }
+
+    /**
+     * Rodada 5 (CQ-R5-02): chave de alvo renomeada nunca é trocada em silêncio. Se o manifesto ANTERIOR da pasta deu outra
+     * chave à mesma etapa do Studio (no {@code trace} 1.3.0+ ou nos {@code steps} de qualquer versão), o mapeamento novo
+     * declara as chaves anteriores em {@code previousTargetKeys} (as que o manifesto anterior já declarava vêm junto).
+     * Gerar do zero não tem anterior e não ganha o campo. Manifesto que não volta igual pela releitura fica como veio.
+     */
+    @SuppressWarnings("unchecked")
+    static String linkPreviousKeys(String manifest, String previousManifest) {
+        Map<String, List<String>> before = new LinkedHashMap<>();
+        try {
+            Map<String, Object> old = Json.parseObject(previousManifest);
+            if (Json.object(old, "trace") != null && Json.object(old, "trace").get("mappings") instanceof List<?> l) {
+                for (Object o : l) {
+                    if (!(o instanceof Map<?, ?> x) || !(x.get("studioStepId") instanceof String id)) continue;
+                    List<String> keys = before.computeIfAbsent(id, k -> new ArrayList<>());
+                    if (x.get("previousTargetKeys") instanceof List<?> p) for (Object k : p) if (k instanceof String s && !keys.contains(s)) keys.add(s);
+                    if (x.get("targetKey") instanceof String k && !keys.contains(k)) keys.add(k);
+                }
+            }
+            if (old.get("steps") instanceof List<?> l) {
+                for (Object o : l) {
+                    if (!(o instanceof Map<?, ?> x) || !(x.get("key") instanceof String k)) continue;
+                    Object id = x.get("stepId") instanceof String s ? s : x.get("studioStepId") instanceof String s ? s : x.get("id");
+                    if (!(id instanceof String sid)) continue;
+                    List<String> keys = before.computeIfAbsent(sid, z -> new ArrayList<>());
+                    if (!keys.contains(k)) keys.add(k);
+                }
+            }
+        } catch (RuntimeException e) {
+            return manifest; // manifesto anterior ilegível: nada é presumido
+        }
+        if (before.isEmpty()) return manifest;
+        Map<String, Object> m;
+        try {
+            m = (Map<String, Object>) plain(Json.parseObject(manifest));
+        } catch (RuntimeException e) {
+            return manifest;
+        }
+        if (!(Pretty.json(m) + "\n").equals(manifest)) return manifest; // releitura não é fiel: não mexe
+        Map<String, Object> trace = (Map<String, Object>) (m.get("trace") instanceof Map<?, ?> t ? t : null);
+        if (trace == null || !(trace.get("mappings") instanceof List<?> mappings)) return manifest;
+        boolean changed = false;
+        for (Object o : mappings) {
+            Map<String, Object> x = (Map<String, Object>) o;
+            if (!(x.get("studioStepId") instanceof String id) || !(x.get("targetKey") instanceof String key) || !before.containsKey(id)) continue;
+            List<String> prev = before.get(id).stream().filter(k -> !k.equals(key)).toList();
+            if (prev.isEmpty()) continue;
+            Map<String, Object> next = new LinkedHashMap<>();
+            for (Map.Entry<String, Object> e : x.entrySet()) {
+                next.put(e.getKey(), e.getValue());
+                if (e.getKey().equals("targetKey")) next.put("previousTargetKeys", prev);
+            }
+            x.clear();
+            x.putAll(next);
+            changed = true;
+        }
+        return changed ? Pretty.json(m) + "\n" : manifest;
+    }
+
+    /** Valor lido pelo {@link Json} no formato do {@link Pretty} ({@code Json.NULL} → {@code null}). */
+    private static Object plain(Object v) {
+        if (v == Json.NULL) return null;
+        if (v instanceof Map<?, ?> m) {
+            Map<String, Object> out = new LinkedHashMap<>();
+            m.forEach((k, x) -> out.put(String.valueOf(k), plain(x)));
+            return out;
+        }
+        if (v instanceof List<?> l) {
+            List<Object> out = new ArrayList<>();
+            for (Object x : l) out.add(plain(x));
+            return out;
+        }
+        return v;
+    }
+
+    /** Nome da pasta da versão anterior: manifesto e revisão da automação ({@code manifest-1.3.0-rev52}). */
+    static String versionName(String manifest) {
+        try {
+            Map<String, Object> m = Json.parseObject(manifest);
+            String v = String.valueOf(m.get("version")).replaceAll("[^0-9.]", "");
+            String r = String.valueOf(m.get("automationRevision")).replaceAll("[^0-9]", "");
+            return "manifest-" + (v.isEmpty() ? "unknown" : v) + (r.isEmpty() ? "" : "-rev" + r);
+        } catch (RuntimeException e) {
+            return "manifest-unknown";
+        }
     }
 
     private static Path sibling(Path p, String suffix) {

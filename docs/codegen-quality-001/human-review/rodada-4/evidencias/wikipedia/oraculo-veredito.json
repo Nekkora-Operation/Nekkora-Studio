@@ -1,0 +1,177 @@
+{
+  "sheet": "Dados",
+  "headers_ok": true,
+  "rows": 4,
+  "formulas": 0,
+  "cells": [
+    {
+      "linha": 1,
+      "coluna": "URL",
+      "ok": true,
+      "tipo": "str",
+      "pagina_certa": true
+    },
+    {
+      "linha": 1,
+      "coluna": "Nome completo",
+      "ok": true,
+      "tipo": "str",
+      "pagina_certa": true
+    },
+    {
+      "linha": 1,
+      "coluna": "Nascimento",
+      "ok": true,
+      "tipo": "str",
+      "pagina_certa": true
+    },
+    {
+      "linha": 1,
+      "coluna": "Morte",
+      "ok": true,
+      "tipo": "str",
+      "pagina_certa": true
+    },
+    {
+      "linha": 1,
+      "coluna": "Nacionalidade",
+      "ok": true,
+      "tipo": "str",
+      "pagina_certa": true
+    },
+    {
+      "linha": 1,
+      "coluna": "Ocupação",
+      "ok": true,
+      "tipo": "str",
+      "pagina_certa": true
+    },
+    {
+      "linha": 2,
+      "coluna": "URL",
+      "ok": true,
+      "tipo": "str",
+      "pagina_certa": true
+    },
+    {
+      "linha": 2,
+      "coluna": "Nome completo",
+      "ok": true,
+      "tipo": "str",
+      "pagina_certa": true
+    },
+    {
+      "linha": 2,
+      "coluna": "Nascimento",
+      "ok": true,
+      "tipo": "str",
+      "pagina_certa": true
+    },
+    {
+      "linha": 2,
+      "coluna": "Morte",
+      "ok": true,
+      "tipo": "str",
+      "pagina_certa": true
+    },
+    {
+      "linha": 2,
+      "coluna": "Nacionalidade",
+      "ok": true,
+      "tipo": "str",
+      "pagina_certa": true
+    },
+    {
+      "linha": 2,
+      "coluna": "Ocupação",
+      "ok": true,
+      "tipo": "str",
+      "pagina_certa": true
+    },
+    {
+      "linha": 3,
+      "coluna": "URL",
+      "ok": true,
+      "tipo": "str",
+      "pagina_certa": true
+    },
+    {
+      "linha": 3,
+      "coluna": "Nome completo",
+      "ok": true,
+      "tipo": "str",
+      "pagina_certa": true
+    },
+    {
+      "linha": 3,
+      "coluna": "Nascimento",
+      "ok": true,
+      "tipo": "str",
+      "pagina_certa": true
+    },
+    {
+      "linha": 3,
+      "coluna": "Morte",
+      "ok": true,
+      "tipo": "str",
+      "pagina_certa": true
+    },
+    {
+      "linha": 3,
+      "coluna": "Nacionalidade",
+      "ok": true,
+      "tipo": "str",
+      "pagina_certa": true
+    },
+    {
+      "linha": 3,
+      "coluna": "Ocupação",
+      "ok": true,
+      "tipo": "str",
+      "pagina_certa": true
+    },
+    {
+      "linha": 4,
+      "coluna": "URL",
+      "ok": true,
+      "tipo": "str",
+      "pagina_certa": true
+    },
+    {
+      "linha": 4,
+      "coluna": "Nome completo",
+      "ok": true,
+      "tipo": "str",
+      "pagina_certa": true
+    },
+    {
+      "linha": 4,
+      "coluna": "Nascimento",
+      "ok": true,
+      "tipo": "str",
+      "pagina_certa": true
+    },
+    {
+      "linha": 4,
+      "coluna": "Morte",
+      "ok": true,
+      "tipo": "str",
+      "pagina_certa": true
+    },
+    {
+      "linha": 4,
+      "coluna": "Nacionalidade",
+      "ok": true,
+      "tipo": "str",
+      "pagina_certa": true
+    },
+    {
+      "linha": 4,
+      "coluna": "Ocupação",
+      "ok": true,
+      "tipo": "str",
+      "pagina_certa": true
+    }
+  ],
+  "ok": true
+}

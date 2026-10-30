@@ -43,7 +43,7 @@ public final class LabReplicaSample {
         LogicalSession rec = a.addSession("Preenchimento por registro", null);
         LogicalSession end = a.addSession("Conclusão", null);
         StepContext page = new StepContext("Navegador", "Desafio", origin + "/{…}");
-        AutomationStep dl = step(a, prep, ActionType.CLICK, page, FormCase.el("LINK", "a", "Baixar planilha",
+        AutomationStep dl = step(a, prep, ActionType.CLICK, page, FormCase.el("LINK", "a", "Download Excel cloud_download",
                 new LocatorCandidate(LocatorStrategy.ROLE_NAME, "", "", LocatorStability.HEURISTIC_STABLE, 1, true)), null);
         step(a, prep, ActionType.CLICK, page, FormCase.el("BUTTON", "button", "Start",
                 new LocatorCandidate(LocatorStrategy.ROLE_NAME, "", "", LocatorStability.HEURISTIC_STABLE, 1, true)), null);
@@ -69,7 +69,7 @@ public final class LabReplicaSample {
                  "input": {"format": "xlsx", "sheet": null, "source": "DOWNLOAD", "downloadStep": "%s", "fileName": "entrada.xlsx",
                    "columns": [%s]},
                  "textObservations": [{"stepId": "%s",
-                   "pattern": "^Congratulations! Your success rate is \\\\d+%% \\\\( \\\\d+ out of \\\\d+ fields\\\\) in \\\\d+ milliseconds$"}]}
+                   "pattern": "^Your success rate is \\\\d+%% \\\\( \\\\d+ out of \\\\d+ fields\\\\) in \\\\d+ milliseconds$"}]}
                 """.formatted(origin, origin, dl.id().value(), cols, obs.id().value());
         PythonGenerator.Result r = PythonGenerator.generate(a, new AutomationValidator().validate(a), CodegenConfig.parse(config));
         if (!r.ok()) throw new IllegalStateException(r.blockers().toString());

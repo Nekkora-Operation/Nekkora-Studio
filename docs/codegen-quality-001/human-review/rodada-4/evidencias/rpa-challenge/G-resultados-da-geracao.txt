@@ -1,0 +1,76 @@
+Revisão do plano: sha256:57fa8b8f285b676a4fcf72767e7972ad2f6bb07a3b87369d71309ee6bb1d64c6
+Configuração: sha256:33b982fda01c377eb202955756e81d181022a1820803d0fa9b7a103169ad36a7
+GERADO em %USERPROFILE%\AppData\Local\Temp\claude\<projeto>\71612f78-e4a2-4ca9-82db-ec933a4a9267\scratchpad\tab-t4\codigo-gerado:
+  WRITTEN  README.md
+  WRITTEN  automation/__init__.py
+  WRITTEN  automation/pages.py
+  WRITTEN  automation/process.py
+  WRITTEN  automation/selectors.py
+  WRITTEN  config/execution.toml
+  WRITTEN  main.py
+  WRITTEN  requirements.txt
+  WRITTEN  selectors.json
+  WRITTEN  manifest.json
+
+---
+Revisão do plano: sha256:57fa8b8f285b676a4fcf72767e7972ad2f6bb07a3b87369d71309ee6bb1d64c6
+Configuração: sha256:33b982fda01c377eb202955756e81d181022a1820803d0fa9b7a103169ad36a7
+GERADO em %USERPROFILE%\AppData\Local\Temp\claude\<projeto>\71612f78-e4a2-4ca9-82db-ec933a4a9267\scratchpad\tab-t4\codigo-gerado:
+  UNCHANGED  README.md
+  UNCHANGED  automation/__init__.py
+  UNCHANGED  automation/pages.py
+  UNCHANGED  automation/process.py
+  UNCHANGED  automation/selectors.py
+  UNCHANGED  config/execution.toml
+  UNCHANGED  main.py
+  UNCHANGED  requirements.txt
+  UNCHANGED  selectors.json
+  UNCHANGED  manifest.json
+
+---
+Revisão do plano: sha256:57fa8b8f285b676a4fcf72767e7972ad2f6bb07a3b87369d71309ee6bb1d64c6
+Configuração: sha256:33b982fda01c377eb202955756e81d181022a1820803d0fa9b7a103169ad36a7
+GERADO COM PENDÊNCIA — arquivo(s) editado(s) à mão preservado(s); veja .novo e .diff:
+  UNCHANGED  README.md
+  UNCHANGED  automation/__init__.py
+  PROTECTED  automation/pages.py
+  UNCHANGED  automation/process.py
+  UNCHANGED  automation/selectors.py
+  UNCHANGED  config/execution.toml
+  UNCHANGED  main.py
+  UNCHANGED  requirements.txt
+  UNCHANGED  selectors.json
+  PROTECTED  manifest.json
+
+---
+Revisão do plano: sha256:57fa8b8f285b676a4fcf72767e7972ad2f6bb07a3b87369d71309ee6bb1d64c6
+Configuração: sha256:33b982fda01c377eb202955756e81d181022a1820803d0fa9b7a103169ad36a7
+GERADO em %USERPROFILE%\AppData\Local\Temp\claude\<projeto>\71612f78-e4a2-4ca9-82db-ec933a4a9267\scratchpad\tab-t4\codigo-gerado:
+  UNCHANGED  README.md
+  UNCHANGED  automation/__init__.py
+  UNCHANGED  automation/pages.py
+  UNCHANGED  automation/process.py
+  UNCHANGED  automation/selectors.py
+  UNCHANGED  config/execution.toml
+  UNCHANGED  main.py
+  UNCHANGED  requirements.txt
+  UNCHANGED  selectors.json
+  UNCHANGED  manifest.json
+
+---
+Revisão do plano: sha256:57fa8b8f285b676a4fcf72767e7972ad2f6bb07a3b87369d71309ee6bb1d64c6
+Configuração: sha256:33b982fda01c377eb202955756e81d181022a1820803d0fa9b7a103169ad36a7
+GERADO em %USERPROFILE%\AppData\Local\Temp\claude\<projeto>\71612f78-e4a2-4ca9-82db-ec933a4a9267\scratchpad\tab-t4\codigo-anterior-regerado:
+  WRITTEN  README.md
+  WRITTEN  automation/__init__.py
+  WRITTEN  automation/pages.py
+  WRITTEN  automation/process.py
+  WRITTEN  automation/selectors.py
+  WRITTEN  config/execution.toml
+  WRITTEN  main.py
+  WRITTEN  requirements.txt
+  WRITTEN  selectors.json
+  RETIRED  config/execucao.toml
+  RETIRED  paginas.py
+  RETIRED  processo.py
+  WRITTEN  manifest.json

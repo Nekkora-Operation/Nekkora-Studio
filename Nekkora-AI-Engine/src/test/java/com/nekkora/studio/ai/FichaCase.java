@@ -85,18 +85,22 @@ public final class FichaCase {
         return c;
     }
 
-    /** Rascunho do PDD da revisão atual com TODOS os textos revisados (como a pessoa faria no editor). */
+    /**
+     * Rascunho do PDD da revisão atual com os textos revisados como a pessoa faria no editor (os mesmos títulos do PDD da
+     * E2E-002): seções "Inicialização do processo", "Pesquisa da pessoa" e "Extração dos dados"; blocos "Abrir a busca do
+     * acervo", "Pesquisar a pessoa pelo nome", "Ler o endereço e os dados da ficha" e, nas leituras, o genérico "Etapas do
+     * processo" (o código cai no nome pelas ações).
+     */
     public com.nekkora.studio.pdd.DocumentDraft reviewedDraft() {
         com.nekkora.studio.pdd.DocumentDraft d = com.nekkora.studio.pdd.DraftBuilder.build(com.nekkora.studio.pdd.ProcessProjection.of(a));
+        String[] sections = {"Inicialização do processo", "Pesquisa da pessoa", "Extração dos dados"};
         for (var s : d.sections()) {
-            if (s.title().state() == com.nekkora.studio.pdd.DocText.State.NEEDS_REVIEW) {
-                d = com.nekkora.studio.pdd.DraftEdits.reviseSectionTitle(d, s.number(), "Etapa do processo", "TEST_AGENT");
-            }
+            d = com.nekkora.studio.pdd.DraftEdits.reviseSectionTitle(d, s.number(), sections[s.number() - 1], "TEST_AGENT");
         }
         for (var b : d.blocks()) {
-            if (b.title().state() == com.nekkora.studio.pdd.DocText.State.NEEDS_REVIEW) {
-                d = com.nekkora.studio.pdd.DraftEdits.reviseBlockTitle(d, b.blockId(), "Bloco do processo", "TEST_AGENT");
-            }
+            String title = b.stepIds().contains(start) ? "Abrir a busca do acervo" : b.stepIds().contains(search) ? "Pesquisar a pessoa pelo nome"
+                    : b.stepIds().contains(address) ? "Ler o endereço e os dados da ficha" : "Etapas do processo";
+            d = com.nekkora.studio.pdd.DraftEdits.reviseBlockTitle(d, b.blockId(), title, "TEST_AGENT");
             for (var i : b.instructions()) {
                 if (i.text().state() == com.nekkora.studio.pdd.DocText.State.NEEDS_REVIEW) {
                     d = com.nekkora.studio.pdd.DraftEdits.reviseInstruction(d, b.blockId(), i.ordinal(), "Ler o dado indicado", "TEST_AGENT");

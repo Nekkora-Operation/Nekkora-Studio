@@ -27,10 +27,6 @@
     </dependency>
     <dependency>
       <groupId>com.nekkora</groupId>
-      <artifactId>nekkora-studio-guided</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>com.nekkora</groupId>
       <artifactId>nekkora-studio-pdd</artifactId>
     </dependency>
     <dependency>
@@ -53,8 +49,13 @@
     <resources>
       <resource>
         <directory>src/main/resources</directory>
+        <!-- STUDIO-LEAN-001: caches locais de ferramentas Python nunca vão para o jar (PackagedResourcesTest) -->
         <excludes>
           <exclude>**/__pycache__/**</exclude>
+          <exclude>**/*.pyc</exclude>
+          <exclude>**/.ruff_cache/**</exclude>
+          <exclude>**/.mypy_cache/**</exclude>
+          <exclude>**/.pytest_cache/**</exclude>
         </excludes>
       </resource>
       <!-- o Prompt-Mestre e o índice NÃO são copiados à mão: o jar leva exatamente os arquivos deste diretório -->

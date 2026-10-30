@@ -116,9 +116,11 @@ class FrameworkCatalogGateTest {
         assertTrue(issue.detail().contains("nekkora-rpa[excel]==0.9.9"), issue.detail());
         assertEquals(QualityReport.State.BLOCKED, layer(as, Layer.V2_CAPABILITY).state());
         assertTrue(layer(as, Layer.V2_CAPABILITY).summary().startsWith("incompatível"), layer(as, Layer.V2_CAPABILITY).summary());
-        for (Layer l : List.of(Layer.V4_CODE, Layer.V5_TESTS, Layer.V6_EXECUTION)) {
+        for (Layer l : List.of(Layer.V4_CODE, Layer.V5_TESTS, Layer.VQ_GENERATION, Layer.V6_EXECUTION)) {
             assertNotEquals(QualityReport.State.PASS, layer(as, l).state(), l + ": " + layer(as, l).summary());
         }
+        // CODEGEN-QUALITY-001: a qualidade da geração não converte a incompatibilidade em PASS (D13 soberano)
+        assertEquals(QualityReport.State.NOT_CHECKED, layer(as, Layer.VQ_GENERATION).state());
         assertTrue(as.report().checks().isEmpty(), "as verificações não entram no relatório como prova");
         assertFalse(as.report().catalog().contains(FrameworkCapabilityCatalog.bundled().fingerprint()), "o catálogo padrão não é registrado como o que conferiu");
     }

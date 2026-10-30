@@ -1,0 +1,26 @@
+{
+  "rotulo": "oficial-2",
+  "exit": 0,
+  "resumo": "{\"execution_id\": \"ex-3d3ffda21f1d4afbb740\", \"status\": \"COMPLETED\", \"stop_code\": null, \"stop_detail\": null, \"counts\": {\"SUCCEEDED\": 10}}",
+  "resultados": {
+    "SUCCEEDED": 10
+  },
+  "transacoes_esperadas": 10,
+  "placar": {
+    "conclusion.read_result": "Your success rate is 100% ( 70 out of 70 fields) in 2519 milliseconds"
+  },
+  "planilha_baixada": {
+    "arquivo": "challenge.xlsx",
+    "sha256": "cf1a8c04a298cc12cb481a0a6c88b078b209dc59c4983f6ca78714d611c04d37",
+    "linhas_declaradas": 1000,
+    "linhas_lidas_com_cabecalho": 1000,
+    "linhas_com_dados": 10,
+    "significado": {
+      "linhas_declaradas": "dimensão que o arquivo declara (openpyxl max_row): inclui linhas vazias formatadas",
+      "linhas_lidas_com_cabecalho": "linhas que o leitor percorre, cabeçalho incluído (vazias também)",
+      "linhas_com_dados": "linhas depois do cabeçalho com pelo menos uma célula não vazia = transações esperadas"
+    }
+  },
+  "sha256_confere_observacoes": true,
+  "valores_vazados_em": []
+}

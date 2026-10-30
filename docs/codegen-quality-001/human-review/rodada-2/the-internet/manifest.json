@@ -1,0 +1,251 @@
+{
+  "schema": "nekkora-studio/codegen-manifest",
+  "version": "1.3.0",
+  "generator": "nekkora-studio-codegen/1.1.0",
+  "framework": "nekkora-rpa==0.2.0",
+  "execution": "single",
+  "automationId": "84175a58-5b54-4469-9fd4-c72f459ad4b9",
+  "modelVersion": "1.2.0",
+  "automationRevision": 16,
+  "planRevision": "sha256:e5770cd8da8cc615a9977283dcc2af9c46d52cc3466704ce99e41fe3da4e6f1a",
+  "configRevision": "sha256:952f871cd7dec51b64f52a66ff56c6bde9fe796897ae3b8438b37f8965478e4b",
+  "pdd": {
+    "gate": "PDD_READY",
+    "processRevision": "sha256:258b59b3f6a0ddd5f39a7133da18430f604e151aac1c9c9242a784bfba640f86",
+    "documentRevision": "sha256:0e16c09f1bbfc056dfa8908e157c9096efc87ebaa59bab90ff4ee87305ab9915",
+    "specRevision": "sha256:df8387f2258420f78b8937a0571bad173a59b2a45fe5b4265e49ce368564e3fe"
+  },
+  "command": "python main.py --saida <pasta>",
+  "steps": [
+    {
+      "stepId": "f015a7e7-a235-4263-996a-ff26bec334cf",
+      "traceId": "acesso.preencher_usuario",
+      "page": "PaginaAcesso",
+      "method": "entrar",
+      "action": "FILL",
+      "key": "processo.acesso.username",
+      "input": null,
+      "credential": true,
+      "output": null,
+      "effect": null,
+      "postcondition": null,
+      "retry": null,
+      "capability": "actions.fill",
+      "decisionActor": "TEST_AGENT"
+    },
+    {
+      "stepId": "a51b85a1-91f3-4382-8869-55f9c9ec4206",
+      "traceId": "acesso.preencher_senha",
+      "page": "PaginaAcesso",
+      "method": "entrar",
+      "action": "FILL",
+      "key": "processo.acesso.password",
+      "input": null,
+      "credential": true,
+      "output": null,
+      "effect": null,
+      "postcondition": null,
+      "retry": null,
+      "capability": "actions.fill",
+      "decisionActor": "TEST_AGENT"
+    },
+    {
+      "stepId": "abd274d0-6397-4c4c-9304-9a8fdb10dd9f",
+      "traceId": "acesso.clicar_login",
+      "page": "PaginaAcesso",
+      "method": "entrar",
+      "action": "CLICK",
+      "key": "processo.acesso.login",
+      "input": null,
+      "credential": false,
+      "output": null,
+      "effect": "NONE",
+      "postcondition": null,
+      "retry": "AUTHENTICATION",
+      "capability": "actions.click",
+      "decisionActor": "TEST_AGENT"
+    },
+    {
+      "stepId": "1f9cb77a-ebef-4d72-833c-fdd3b0eb15be",
+      "traceId": "area_segura.ler_texto_do_link_logout",
+      "page": "PaginaAreaSegura",
+      "method": "ler_texto_do_link_logout",
+      "action": "OBSERVE",
+      "key": "processo.area_segura.logout",
+      "input": null,
+      "credential": false,
+      "output": "texto_do_link_logout",
+      "effect": null,
+      "postcondition": null,
+      "retry": null,
+      "capability": "actions.read_text",
+      "decisionActor": "TEST_AGENT"
+    },
+    {
+      "stepId": "f72ffa87-c1ee-42e3-8d78-ea8afe91ed3d",
+      "traceId": "area_segura.clicar_logout",
+      "page": "PaginaAreaSegura",
+      "method": "clicar_logout",
+      "action": "CLICK",
+      "key": "processo.area_segura.logout",
+      "input": null,
+      "credential": false,
+      "output": null,
+      "effect": "NONE",
+      "postcondition": null,
+      "retry": "SESSION_END",
+      "capability": "actions.click",
+      "decisionActor": "TEST_AGENT"
+    }
+  ],
+  "trace": {
+    "schema": "nekkora-studio/trace-map",
+    "version": "1.0.0",
+    "mappings": [
+      {
+        "traceId": "acesso.preencher_usuario",
+        "studioStepId": "f015a7e7-a235-4263-996a-ff26bec334cf",
+        "action": "FILL",
+        "targetKey": "processo.acesso.username",
+        "pythonSymbol": "paginas.py:PaginaAcesso.entrar"
+      },
+      {
+        "traceId": "acesso.preencher_senha",
+        "studioStepId": "a51b85a1-91f3-4382-8869-55f9c9ec4206",
+        "action": "FILL",
+        "targetKey": "processo.acesso.password",
+        "pythonSymbol": "paginas.py:PaginaAcesso.entrar"
+      },
+      {
+        "traceId": "acesso.clicar_login",
+        "studioStepId": "abd274d0-6397-4c4c-9304-9a8fdb10dd9f",
+        "action": "CLICK",
+        "targetKey": "processo.acesso.login",
+        "pythonSymbol": "paginas.py:PaginaAcesso.entrar"
+      },
+      {
+        "traceId": "area_segura.ler_texto_do_link_logout",
+        "studioStepId": "1f9cb77a-ebef-4d72-833c-fdd3b0eb15be",
+        "action": "OBSERVE",
+        "targetKey": "processo.area_segura.logout",
+        "pythonSymbol": "paginas.py:PaginaAreaSegura.ler_texto_do_link_logout"
+      },
+      {
+        "traceId": "area_segura.clicar_logout",
+        "studioStepId": "f72ffa87-c1ee-42e3-8d78-ea8afe91ed3d",
+        "action": "CLICK",
+        "targetKey": "processo.area_segura.logout",
+        "pythonSymbol": "paginas.py:PaginaAreaSegura.clicar_logout"
+      }
+    ],
+    "synthetic": [
+      {
+        "traceId": "processo.abrir_pagina_inicial",
+        "meaning": "abrir o endereço inicial (sem etapa do Studio)",
+        "previousTraceIds": [
+          "INICIO"
+        ]
+      }
+    ]
+  },
+  "architecture": {
+    "pages": [
+      {
+        "class": "PaginaAcesso",
+        "prefix": "processo.acesso",
+        "identity": "username",
+        "nameSource": "PDD_SECTION_TITLE",
+        "summary": "Tela da seção “Acesso” do PDD.",
+        "boundary": "tela observada na gravação (endereço/título diferentes da anterior)",
+        "methods": [
+          {
+            "name": "entrar",
+            "nameSource": "ACTIONS",
+            "summary": "Preenche “Username” e “Password” com as credenciais do provedor de segredos; clica em “Login”.",
+            "parameters": [
+              "segredos"
+            ],
+            "returns": "None",
+            "traceIds": [
+              "acesso.preencher_usuario",
+              "acesso.preencher_senha",
+              "acesso.clicar_login"
+            ]
+          }
+        ]
+      },
+      {
+        "class": "PaginaAreaSegura",
+        "prefix": "processo.area_segura",
+        "identity": "logout",
+        "nameSource": "PDD_SECTION_TITLE",
+        "summary": "Tela da seção “Área segura” do PDD: lê “Logout”; clica em “Logout”.",
+        "boundary": "tela nova: a etapa anterior registrou troca de documento",
+        "methods": [
+          {
+            "name": "ler_texto_do_link_logout",
+            "nameSource": "ACTIONS",
+            "summary": "Lê “Logout”.",
+            "parameters": [],
+            "returns": "str",
+            "traceIds": [
+              "area_segura.ler_texto_do_link_logout"
+            ]
+          },
+          {
+            "name": "clicar_logout",
+            "nameSource": "ACTIONS",
+            "summary": "Clica em “Logout”.",
+            "parameters": [],
+            "returns": "None",
+            "traceIds": [
+              "area_segura.clicar_logout"
+            ]
+          }
+        ]
+      }
+    ],
+    "models": [],
+    "process": "AreaSeguraTheInternet"
+  },
+  "locators": [
+    {
+      "key": "processo.acesso.username",
+      "kind": "STABLE_ID",
+      "description": "CSS `input#username`"
+    },
+    {
+      "key": "processo.acesso.password",
+      "kind": "STABLE_ID",
+      "description": "CSS `input#password`"
+    },
+    {
+      "key": "processo.acesso.login",
+      "kind": "RELATIONAL_XPATH",
+      "description": "XPATH `//form[@id=\"login\"]//button[normalize-space(.)=\"Login\"]`"
+    },
+    {
+      "key": "processo.area_segura.logout",
+      "kind": "RELATIONAL_XPATH",
+      "description": "XPATH `//a[normalize-space(.)=\"Logout\"]`"
+    }
+  ],
+  "files": {
+    "README.md": "sha256:1bef1d89140e3ded27e32e81eb803572833df360a203d5a1c8ab2d162583fbd9",
+    "config/execucao.toml": "sha256:1a82503b78ea8d3197cd1599c8671dee85a1a76132893786cffa5c0b05464d92",
+    "main.py": "sha256:3fd0e4cc2d7bf0620b696c5572c55f3c11dfd3c7871e049273c3dcc77ee47b2b",
+    "paginas.py": "sha256:b99a89763f493fb626bd37429ad800b09c3cbe276b8856d48812a347ac77f1cd",
+    "processo.py": "sha256:f4b2535c0a152fdc39dced71a7b834a95081e7b8e9a8d0193d88c60679d602c7",
+    "requirements.txt": "sha256:bdda4dc8100a878a9f6f0a2778521aba9115c16a4f8110c86a0181f488fa701b",
+    "selectors.json": "sha256:d5fbe877f4a62427ebca233b08d934dec9cf1dded11bc1ce0b73c4a4d6afaec4"
+  },
+  "exclusions": [
+    "INPUT_VALUES",
+    "CREDENTIAL_VALUES",
+    "LITERAL_VALUES",
+    "HAND_WRITTEN_SELECTORS",
+    "POSITIONAL_LOCATORS",
+    "URL_QUERIES",
+    "STUDIO_STEP_IDS_IN_CODE"
+  ]
+}
