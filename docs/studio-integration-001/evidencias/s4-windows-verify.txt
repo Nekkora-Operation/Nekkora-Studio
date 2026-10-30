@@ -1,0 +1,50 @@
+[INFO] Building Nekkora Studio (parent) 1.0.0-SNAPSHOT                   [1/16]
+[INFO] Building Nekkora Design Tokens 1.0.0-SNAPSHOT                     [2/16]
+[INFO] Tests run: 24, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Building Nekkora Swing UI 1.0.0-SNAPSHOT                          [3/16]
+[INFO] Tests run: 48, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Building Nekkora Design System Showcase 1.0.0-SNAPSHOT            [4/16]
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Building Nekkora Studio Domain 1.0.0-SNAPSHOT                     [5/16]
+[INFO] Tests run: 115, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Building Nekkora Studio Bridge 1.0.0-SNAPSHOT                     [6/16]
+[INFO] Tests run: 24, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Building Nekkora Studio Recorder 1.0.0-SNAPSHOT                   [7/16]
+[INFO] Tests run: 71, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Building Nekkora Studio Persistence 1.0.0-SNAPSHOT                [8/16]
+[INFO] Tests run: 56, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Building Nekkora Studio Validation 1.0.0-SNAPSHOT                 [9/16]
+[INFO] Tests run: 43, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Building Nekkora Studio Semantics 1.0.0-SNAPSHOT                 [10/16]
+[INFO] Tests run: 10, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Building Nekkora Studio Guided Debug 1.0.0-SNAPSHOT              [11/16]
+[INFO] Tests run: 13, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Building Nekkora Studio Visual PDD 1.0.0-SNAPSHOT                [12/16]
+[INFO] Tests run: 42, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Building Nekkora Studio Python Generator 1.0.0-SNAPSHOT          [13/16]
+[INFO] Tests run: 40, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Building Nekkora AI Engine 1.0.0-SNAPSHOT                        [14/16]
+[INFO] Tests run: 89, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Building Nekkora Studio UI 1.0.0-SNAPSHOT                        [15/16]
+[INFO] Tests run: 20, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Building Nekkora Studio App 1.0.0-SNAPSHOT                       [16/16]
+[INFO] Tests run: 185, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Nekkora Studio (parent) ............................ SUCCESS [  0.294 s]
+[INFO] Nekkora Design Tokens .............................. SUCCESS [  5.063 s]
+[INFO] Nekkora Swing UI ................................... SUCCESS [ 11.299 s]
+[INFO] Nekkora Design System Showcase ..................... SUCCESS [  7.850 s]
+[INFO] Nekkora Studio Domain .............................. SUCCESS [  4.468 s]
+[INFO] Nekkora Studio Bridge .............................. SUCCESS [  6.850 s]
+[INFO] Nekkora Studio Recorder ............................ SUCCESS [ 15.160 s]
+[INFO] Nekkora Studio Persistence ......................... SUCCESS [  5.470 s]
+[INFO] Nekkora Studio Validation .......................... SUCCESS [ 12.000 s]
+[INFO] Nekkora Studio Semantics ........................... SUCCESS [  2.167 s]
+[INFO] Nekkora Studio Guided Debug ........................ SUCCESS [  2.255 s]
+[INFO] Nekkora Studio Visual PDD .......................... SUCCESS [ 12.354 s]
+[INFO] Nekkora Studio Python Generator .................... SUCCESS [  4.223 s]
+[INFO] Nekkora AI Engine .................................. SUCCESS [05:19 min]
+[INFO] Nekkora Studio UI .................................. SUCCESS [  4.134 s]
+[INFO] Nekkora Studio App ................................. SUCCESS [01:29 min]
+[INFO] BUILD SUCCESS
+[INFO] Total time:  08:22 min

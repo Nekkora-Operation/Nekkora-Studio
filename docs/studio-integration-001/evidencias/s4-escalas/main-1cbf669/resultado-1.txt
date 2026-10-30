@@ -1,0 +1,14 @@
+OK    escala 1: área útil lógica 1920x1032
+OK    janela principal dentro da área útil java.awt.Rectangle[x=160,y=78,width=1600,height=877]
+OK    menu "Arquivo" com mnemônico (Alt+A)
+OK    menu "Arquivo" aberto inteiro na tela java.awt.Rectangle[x=200,y=79,width=221,height=286]
+OK    menu "Automação" com mnemônico (Alt+U)
+OK    menu "Automação" aberto inteiro na tela java.awt.Rectangle[x=264,y=79,width=287,height=228]
+OK    Desenvolver (gerado) dentro da área útil java.awt.Rectangle[x=370,y=116,width=1180,height=800]
+OK    Desenvolver (gerado): nenhum botão cortado ou fora da janela []
+OK    Desenvolver (gerado): Tab percorre o rodapé até Fechar [Desenvolver de novo, Abrir código, Ver relatório, Validar novamente, Solicitar ajuda (IA opcional), Fechar]
+OK    Desenvolver (em-execucao) dentro da área útil java.awt.Rectangle[x=370,y=116,width=1180,height=800]
+FALHA Desenvolver (em-execucao): nenhum botão cortado ou fora da janela [Executar teste autorizado java.awt.Rectangle[x=1053,y=709,width=209,height=34], Fechar java.awt.Rectangle[x=1268,y=709,width=72,height=34]]
+OK    Desenvolver (em-execucao): Tab percorre o rodapé até Fechar [Cancelar, Salvar projeto, Fechar]
+OK    Desenvolver (pergunta) dentro da área útil java.awt.Rectangle[x=370,y=116,width=1180,height=800]
+OK    Desenvolver (pergunta): nenhum botão cortado ou fora da janela []

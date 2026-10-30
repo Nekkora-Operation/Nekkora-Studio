@@ -1,0 +1,6 @@
+﻿02:46:14.122 [REAL] J1 Agent empacotado do commit 7986e84afc656c1c7e2b791aa4411e55fe0ee961
+02:46:16.571 [REAL] L1 Agent empacotado aberto (JVM 53504); Studio fechado: True
+02:46:57.035 [REAL] L2 execução ex-dac547996c2aaa8fdccc5dee95ff59d0 iniciada (pacote do Studio aprovado; autorização pré-escolhida)
+02:46:57.645 [INJETADA] L3 nginx do laboratório PAUSADO durante a execução
+02:47:38.092 [INJETADA] L3 nginx de volta
+02:48:31.457 [REAL] L5 Agent e automação encerrados à força (2 processos)

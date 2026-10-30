@@ -1,0 +1,6 @@
+OK    projeto reaberto: "Biografias da Wikipédia", 5 sessões, 10 etapas; mesmo automationId do pacote
+OK    especificação reaberta: 11 decisões, 1 coluna(s) opcional(is) preservada(s)
+OK    PDD revisado reaberto
+OK    geração a partir do projeto reaberto sem bloqueio []
+OK    10 arquivos regerados idênticos ao pacote da interface []
+RESULTADO: 5 verificações, 0 falha(s)
