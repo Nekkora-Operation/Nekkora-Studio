@@ -29,6 +29,9 @@ import sys
 from pathlib import Path
 from typing import Any
 
+# SingleConfig.OPTIONAL_REASONS (gerador): motivos aceitos para uma coluna de saída opcional
+OPTIONAL_REASONS = ("ABSENT_FOR_SOME_ITEMS", "NOT_APPLICABLE_FOR_SOME_ITEMS")
+
 
 def check(results: list[dict[str, Any]], cid: str, ok: bool, code: str = "") -> None:
     results.append({"id": cid, "ok": bool(ok), "code": "" if ok else code})
@@ -94,6 +97,11 @@ def output_requirement(output: dict[str, Any], processo: Any) -> tuple[bool, str
         main_module = importlib.import_module("main")
         schema = main_module.SPREADSHEET
         declared = [c for c in output.get("columns", []) if isinstance(c, dict)]
+        # vocabulário fechado, como no gerador: REQUIRED sem motivo, OPTIONAL só com motivo conhecido (sem declaração = obrigatória)
+        for c in declared:
+            requirement, reason = c.get("requirement", "REQUIRED"), c.get("requirementReason")
+            if not (requirement == "REQUIRED" and reason is None or requirement == "OPTIONAL" and reason in OPTIONAL_REASONS):
+                return False, "OUTPUT_REQUIREMENT_MISMATCH"
         required = {str(c.get("field")): c.get("requirement", "REQUIRED") == "REQUIRED" for c in declared}
         in_code = {c.field: c.required for c in schema.columns}
         headers = [c.header for c in schema.columns] == [c.get("header") for c in declared]
@@ -102,6 +110,7 @@ def output_requirement(output: dict[str, Any], processo: Any) -> tuple[bool, str
         # todas obrigatórias: a linha recusa qualquer coluna vazia (sem REQUIRED_FIELDS); com opcional: só as da tupla
         row = listed is None if all(required.values()) else listed is not None and tuple(listed) == expected
         key = in_code.get(schema.key_field) is True and required.get(schema.key_field) is True
+        key = key and output.get("keyField", schema.key_field) == schema.key_field
         ok = headers and required == in_code and row and key
         return ok, "" if ok else "OUTPUT_REQUIREMENT_MISMATCH"
     except Exception:  # noqa: BLE001 - esquema ausente ou recusado é falha do contrato

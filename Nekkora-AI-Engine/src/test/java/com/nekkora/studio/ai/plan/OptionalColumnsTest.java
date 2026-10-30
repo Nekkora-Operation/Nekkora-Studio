@@ -345,6 +345,40 @@ class OptionalColumnsTest {
     }
 
     @Test
+    @DisplayName("[Python real] V5 tão estrita quanto o gerador: obrigatoriedade fora do vocabulário, opcional sem motivo e chave divergente do manifesto são recusados")
+    void contratoV5RecusaManifestoForaDoVocabulario() throws Exception {
+        Path py = PythonForTests.framework();
+        Assumptions.assumeTrue(py != null, "sem o interpretador do framework neste ambiente");
+        Path original = tmp.resolve("v5-original");
+        OutputWriter.write(original, deathOptional().result().files());
+        assertEquals(PythonChecks.Status.PASS, contract(py, original).status(), "controle: o projeto gerado passa");
+        Map<String, String> mutants = new LinkedHashMap<>();
+        mutants.put("requisito-desconhecido", "\"requirement\": \"QUALQUER_COISA\"");
+        mutants.put("opcional-sem-motivo", "\"requirementReason\": null");
+        mutants.put("chave-divergente", "\"keyField\": \"full_name\"");
+        for (Map.Entry<String, String> e : mutants.entrySet()) {
+            Path m = tmp.resolve("v5-" + e.getKey());
+            OutputWriter.write(m, deathOptional().result().files());
+            Path manifest = m.resolve("manifest.json");
+            String text = Files.readString(manifest, StandardCharsets.UTF_8);
+            String changed = switch (e.getKey()) {
+                case "requisito-desconhecido" -> text.replaceFirst("\"requirement\"\\s*:\\s*\"OPTIONAL\"", e.getValue());
+                case "opcional-sem-motivo" -> text.replaceFirst("\"requirementReason\"\\s*:\\s*\"[A-Z_]+\"", e.getValue());
+                default -> text.replaceFirst("\"keyField\"\\s*:\\s*\"url\"", e.getValue());
+            };
+            assertNotEquals(text, changed, "mutante aplicado: " + e.getKey());
+            Files.writeString(manifest, changed, StandardCharsets.UTF_8);
+            PythonChecks.Check c = contract(py, m);
+            assertTrue(c.codes().containsKey("OUTPUT_REQUIREMENT_MISMATCH"), e.getKey() + " deveria ser recusado: " + c.status() + " " + c.codes());
+        }
+    }
+
+    private static PythonChecks.Check contract(Path py, Path project) throws Exception {
+        return PythonChecks.run(PythonChecks.resolve(Optional.of(py), project).orElseThrow(), project, () -> false).stream()
+                .filter(c -> c.id().equals("CONTRACT_TESTS")).findFirst().orElseThrow();
+    }
+
+    @Test
     @DisplayName("[Python real] XLSX pelo framework: célula Morte verdadeiramente vazia com o cabeçalho; data gravada; obrigatória vazia recusada; V4/V5/VQ PASS")
     void planilhaReal() throws Exception {
         Path py = PythonForTests.framework();
