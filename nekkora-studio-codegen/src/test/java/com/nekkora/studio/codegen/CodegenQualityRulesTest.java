@@ -105,6 +105,14 @@ class CodegenQualityRulesTest {
         assertTrue(LocatorPolicy.positional("xpath", "//table//tr[3]/td"));
         assertTrue(LocatorPolicy.positional("xpath", "(//td)[last()]"));
         assertTrue(LocatorPolicy.positional("xpath", "//tr[position()=2]//td"));
+        // INTEGRATION-CONSOLIDATION-001: índice depois de um grupo e pseudo-classes de posição (qualquer caixa) também são posição
+        assertTrue(LocatorPolicy.positional("xpath", "(//td)[2]"));
+        assertTrue(LocatorPolicy.positional("xpath", "(//div[@class='x'])[3]"));
+        assertTrue(LocatorPolicy.positional("css", "li:NTH-CHILD(2)"));
+        assertTrue(LocatorPolicy.positional("css", "div:first-of-type"));
+        assertTrue(LocatorPolicy.positional("css", "li:last-of-type"));
+        assertTrue(LocatorPolicy.positional("css", "li:only-child"));
+        assertTrue(LocatorPolicy.positional("css", "p:only-of-type"));
         assertFalse(LocatorPolicy.positional("xpath", "//tr[th[normalize-space(.)=\"Nome completo\"]]//td"));
         assertFalse(LocatorPolicy.positional("xpath", "//dd[preceding-sibling::dt[1][normalize-space(.)=\"Nascimento\"]]"));
         assertFalse(LocatorPolicy.positional("css", "header input[name=\"search\"]"));
@@ -114,6 +122,15 @@ class CodegenQualityRulesTest {
         assertEquals(LocatorPolicy.Kind.SCOPED, LocatorPolicy.kind(target("css", "header input[name=\"search\"]")));
         assertEquals(LocatorPolicy.Kind.POSITIONAL, LocatorPolicy.kind(target("css", "tr:nth-of-type(3) > td")));
         assertEquals(LocatorPolicy.Kind.LABEL, LocatorPolicy.kind(Map.of("preferred", Map.of("strategy", "label", "text", "Usuário"))));
+    }
+
+    @Test
+    @DisplayName("INTEGRATION-CONSOLIDATION-001: texto em docstring — barra dobrada, \"\"\" e aspas no fim escapadas; texto comum sai igual")
+    void textoDeDocstring() {
+        assertEquals("Lê a ficha “Nome completo”.", Py.docText("Lê a ficha “Nome completo”."));
+        assertEquals("C:\\\\Users \\\\N", Py.docText("C:\\Users \\N"));
+        assertEquals("a \\\"\\\"\\\" b", Py.docText("a \"\"\" b"));
+        assertEquals("fim \\\"", Py.docText("fim \""));
     }
 
     @Test

@@ -30,7 +30,10 @@ public final class LocatorPolicy {
         }
     }
 
-    private static final Pattern CSS_POSITION = Pattern.compile(":nth-(child|of-type|last-child|last-of-type)\\s*\\(|:first-child|:last-child|>>\\s*nth=|:eq\\(");
+    private static final Pattern CSS_POSITION = Pattern.compile(
+            ":nth-(child|of-type|last-child|last-of-type)\\s*\\(|:(first|last|only)-(child|of-type)|>>\\s*nth=|:eq\\(", Pattern.CASE_INSENSITIVE);
+    /** índice depois de um grupo: {@code (//td)[2]} (INTEGRATION-CONSOLIDATION-001). */
+    private static final Pattern XPATH_GROUP_INDEX = Pattern.compile("\\)\\s*\\[\\s*\\d+\\s*]");
     private static final Pattern XPATH_ABSOLUTE = Pattern.compile("^\\(?\\s*/(html|body)\\b|^\\(?\\s*/[a-z]");
     private static final Pattern XPATH_POSITION_FN = Pattern.compile("position\\s*\\(|last\\s*\\(");
     /** índice numérico [n] — permitido só logo depois de um eixo de irmão (following/preceding-sibling::x[1]). */
@@ -46,6 +49,7 @@ public final class LocatorPolicy {
         if ("xpath".equals(strategy)) {
             if (XPATH_ABSOLUTE.matcher(e).find() && !e.startsWith("//") && !e.startsWith("(//")) return true;
             if (XPATH_POSITION_FN.matcher(e).find()) return true;
+            if (XPATH_GROUP_INDEX.matcher(e).find()) return true;
             var m = XPATH_INDEX.matcher(e);
             while (m.find()) if (m.group(1) == null) return true;
         }
