@@ -271,6 +271,8 @@ final class SemanticEmitter {
             doc(b, indent, summary);
             return;
         }
+        summary = Py.docText(summary);
+        detail = Py.docText(detail);
         String q = "\"\"\"";
         List<String> first = wrapWords(summary, 116 - indent.length() - 3);
         b.append(indent).append(q).append(first.get(0)).append('\n');
@@ -282,7 +284,7 @@ final class SemanticEmitter {
 
     /** Docstring de uma linha, ou várias (quebra em palavras até a coluna 116). */
     static void doc(StringBuilder b, String indent, String text) {
-        List<String> lines = wrapWords(text, 116 - indent.length() - 3);
+        List<String> lines = wrapWords(Py.docText(text), 116 - indent.length() - 3);
         String q = "\"\"\"";
         if (lines.size() == 1) {
             b.append(indent).append(q).append(lines.get(0)).append(q).append('\n');
@@ -537,7 +539,7 @@ final class SemanticEmitter {
             b.append("\"\"\"\n");
         } else {
             b.append("\n\n");
-            rules.forEach(b::append);
+            rules.forEach(r -> b.append(Py.docText(r)));
             b.append("    \"\"\"\n");
         }
         b.append("    row: dict[str, object] = {\n");

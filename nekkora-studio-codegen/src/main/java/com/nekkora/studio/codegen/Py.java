@@ -21,6 +21,17 @@ final class Py {
         return quote(s, dq > sq ? '\'' : '"');
     }
 
+    /**
+     * Texto dentro de uma docstring {@code """…"""} (INTEGRATION-CONSOLIDATION-001): barra invertida dobrada (senão
+     * {@code \N}, {@code \x}… não compilam e as demais caem no W605), {@code """} e aspas no fim escapadas (fechariam a
+     * docstring antes da hora). Texto sem esses caracteres sai igual.
+     */
+    static String docText(String s) {
+        if (s == null) return null;
+        String t = s.replace("\\", "\\\\").replace("\"\"\"", "\\\"\\\"\\\"");
+        return t.endsWith("\"") && !t.endsWith("\\\"") ? t.substring(0, t.length() - 1) + "\\\"" : t;
+    }
+
     private static String quote(String s, char q) {
         StringBuilder b = new StringBuilder().append(q);
         for (int i = 0; i < s.length(); i++) {

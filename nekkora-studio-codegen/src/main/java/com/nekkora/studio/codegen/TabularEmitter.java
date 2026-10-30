@@ -430,7 +430,7 @@ final class TabularEmitter {
                 case END -> " once after the rows";
             });
         }
-        for (String l : SemanticEmitter.wrapWords(flow + ". A row with problems found by the spreadsheet reader is rejected before any action ("
+        for (String l : SemanticEmitter.wrapWords(Py.docText(flow.toString()) + ". A row with problems found by the spreadsheet reader is rejected before any action ("
                 + "``TABULAR_ROW_INVALID``).", 116)) b.append(l).append('\n');
         b.append("\"\"\"\n\n");
         b.append("from __future__ import annotations\n\nimport json\nfrom collections.abc import Mapping\nfrom dataclasses import dataclass\nfrom pathlib import Path\n\n");
